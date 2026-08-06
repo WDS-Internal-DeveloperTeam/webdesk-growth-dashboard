@@ -62,9 +62,13 @@
 
 ## Commit record
 
-| Commit              | SHA                                                                                                    | Contents                                                                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 1A foundation | _(recorded after the branch is pushed — see the git-workflow section of this checklist once complete)_ | Turborepo scaffold, 3 app foundations, 6 package foundations, CI workflow, dependency-boundary config, secret scanner, this documentation set |
+| Commit              | SHA                                        | Contents                                                                                                                                      |
+| ------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1A foundation | `cece946e643f46d11b5f7295b6dfc5e1e15e755a` | Turborepo scaffold, 3 app foundations, 6 package foundations, CI workflow, dependency-boundary config, secret scanner, this documentation set |
+
+Branch: `phase-1a-repository-foundation`, pushed to `origin`. Remote SHA independently verified via `git ls-remote origin phase-1a-repository-foundation` — matches local HEAD exactly.
+
+Pull request: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1), base `main` ← `phase-1a-repository-foundation`. Open, not merged — merge is blocked on the sign-off below.
 
 ---
 

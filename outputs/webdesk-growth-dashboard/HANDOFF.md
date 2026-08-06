@@ -62,10 +62,10 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 
 ## Session links
 
-- Last commit: see `docs/project-state/phase-1a-approval-checklist.md`'s "Commit record" (recorded once the Phase 1A branch is pushed)
+- Last commit: `cece946e643f46d11b5f7295b6dfc5e1e15e755a` on `phase-1a-repository-foundation`, pushed to `origin` and independently verified via `git ls-remote` — see `docs/project-state/phase-1a-approval-checklist.md`'s "Commit record"
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
-- Open PRs / issues: recorded in `docs/project-state/phase-1a-approval-checklist.md` once the Phase 1A PR is opened
+- Open PRs / issues: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) — open, not merged, base `main`
 
 ---
 
