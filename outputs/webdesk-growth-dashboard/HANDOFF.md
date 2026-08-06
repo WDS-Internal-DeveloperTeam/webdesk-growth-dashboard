@@ -59,7 +59,7 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 
 ## Session links
 
-- Last commit: see `docs/project-state/phase-0-validation-report.md` (recorded after the baseline commit is made)
+- Last commit: `2aa9cdefbcb924ccb37addee0698a9e25ea5d688` on `main` (Phase 0 foundation; baseline was `1f529bace05b5cdf8be61741139922e585f4a70a`)
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
 - Open PRs / issues: none — no remote repository connected yet, per Phase 0's forbidden actions

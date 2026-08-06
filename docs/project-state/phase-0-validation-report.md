@@ -89,7 +89,7 @@ This is a real, non-example project state file (not the profile's illustrative `
 
 Baseline commit (pre-Phase-0 approved documentation + root control files): `1f529bace05b5cdf8be61741139922e585f4a70a`.
 
-Final Phase 0 commit (adding the directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, and this validation report + the approval checklist) is recorded in `docs/project-state/phase-0-approval-checklist.md` once made — not duplicated here to avoid the two records drifting, per the same convention used in `outputs/webdesk-growth-dashboard/HANDOFF.md`.
+Final Phase 0 commit (adding the directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, and this validation report + the approval checklist): `2aa9cdefbcb924ccb37addee0698a9e25ea5d688` (41 files, 2198 insertions).
 
 ## What this validation does NOT claim
 

@@ -43,7 +43,7 @@
 | Commit | SHA | Contents |
 |---|---|---|
 | Baseline | `1f529bace05b5cdf8be61741139922e585f4a70a` | Pre-Phase-0 approved documentation + root control files |
-| Phase 0 foundation | _(recorded immediately after this file is committed — see the commit that includes this exact file)_ | Directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, validation report, this checklist |
+| Phase 0 foundation | `2aa9cdefbcb924ccb37addee0698a9e25ea5d688` | Directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, validation report, this checklist (41 files) |
 
 ---
 
