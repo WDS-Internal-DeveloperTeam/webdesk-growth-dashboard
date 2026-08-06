@@ -28,10 +28,10 @@
       }
     },
     "repository": {
-      "url": "https://github.com/webdesk-org/webdesk-growth-dashboard",
+      "url": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard.git",
       "default_branch": "main",
       "develop_branch": "staging",
-      "_note": "This URL is a placeholder, not a confirmed repository — no GitHub repository has been created. Type/format-valid so this file validates cleanly; the real URL is a setup-time input, tracked in docs/project-state/setup-input-register.md. Do not treat this as evidence a repository exists."
+      "_note": "Real repository URL, supplied by the project owner 2026-08-06. Registered as a local git remote (origin) in this working directory — not yet pushed to; no push has been made without separate explicit authorization, per the Phase 0 forbidden-actions list. Whether the remote repository itself has been created on GitHub, and whether branch protection is configured, are not verified by this file alone — see docs/repository-plan/branch-and-release-plan.md for what Phase 1 Task 1 still needs to confirm."
     },
     "assigned_team": {
       "pm": "TBD",

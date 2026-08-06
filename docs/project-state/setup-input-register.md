@@ -5,7 +5,7 @@
 | Input | Blocks | Source |
 |---|---|---|
 | Exact Vercel Postgres Marketplace provider (must satisfy East Coast region + Neon exclusion, WDS-002) | **Phase 1 Task 3** (database package) | ADR-0007 |
-| Actual GitHub repository URL | **Phase 1 Task 1** (repository scaffold) | ADR-0001, `project.json.project.repository` |
+| ~~Actual GitHub repository URL~~ | **Resolved 2026-08-06** — `https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard.git`, registered in `project.json` and as a local git remote (`origin`). Not yet pushed to; Phase 1 Task 1 still needs to confirm the remote repository actually exists on GitHub and configure branch protection. | ADR-0001, `project.json.project.repository` |
 | Actual Vercel project IDs / topology | Phase 1 deployment tasks (10, 13) | ADR-0001 |
 | GitHub App creation (App ID, private key, installation ID, target repository list) | **Phase 1 Task 1, 4** (any GitHub-dependent work) | ADR-0011 |
 | Google Workspace OAuth client (client ID, authorized redirect URIs) | **Phase 1 Task 4** (authentication) | ADR-0008 |

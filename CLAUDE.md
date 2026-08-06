@@ -92,8 +92,9 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   "Database" stop-condition. Owner: infrastructure owner.
 - First-login provisioning model (JIT vs. pre-provisioned) — see profile
   `knowledge/05-google-workspace-sso-and-local-admin.md`. Owner: PM.
-- Actual GitHub repository URL — `project.json`'s current value is a type-valid placeholder, not
-  a real repository. Owner: PM / infrastructure owner.
+- ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
+  the local `origin` remote. Still unconfirmed: whether the remote actually exists on GitHub and
+  has branch protection configured (Phase 1 Task 1).
 
 ## Cautions
 
