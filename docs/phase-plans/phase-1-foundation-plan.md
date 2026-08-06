@@ -8,17 +8,17 @@ Thirteen small, approval-gated tasks, in dependency order. No task in this plan 
 
 ### Task 1 — Repository and monorepo scaffold
 
-- **Purpose:** Create the actual GitHub repository and Turborepo workspace per `docs/repository-plan/dashboard-monorepo-plan.md`.
-- **Dependencies:** GitHub repository creation (setup input), ADR-0001 approved.
-- **Authorized role:** Architect, with PM sign-off on the repository itself.
+- **Purpose:** Scaffold the Turborepo workspace (`turbo.json`, `pnpm-workspace.yaml`, empty `apps/*`/`packages/*` stubs) per `docs/repository-plan/dashboard-monorepo-plan.md`, in the git repository already initialized in Phase 0 (`WDS-Dashboard/`, `origin` remote already registered pointing at `WDS-Internal-DeveloperTeam/webdesk-growth-dashboard.git` — **not yet confirmed to exist on GitHub**, and not yet pushed to).
+- **Dependencies:** ADR-0001 approved. **The local scaffold itself does not depend on the remote GitHub repository existing** — it can be built and committed locally first. Pushing to `origin` (a separate sub-step within this task) does depend on the remote existing; if it doesn't yet, create it or confirm with PM/infrastructure owner before that sub-step, without blocking the local scaffold work. **GitHub App creation (ADR-0011, for CI/webhooks) is a separate, later concern and does not block this task at all.**
+- **Authorized role:** Architect, with PM sign-off before any push to the remote.
 - **Inputs:** `docs/repository-plan/dashboard-monorepo-plan.md`, `docs/architecture/decisions/0001-*.md`.
 - **Expected files:** `turbo.json`, `pnpm-workspace.yaml`, empty `apps/*`/`packages/*` directories with minimal `package.json` stubs.
-- **Acceptance criteria:** `turbo run build` succeeds against the empty scaffold; import-boundary rules configured per ADR-0001.
-- **Required tests:** CI pipeline runs successfully on the initial commit.
+- **Acceptance criteria:** `turbo run build` succeeds against the empty scaffold; import-boundary rules configured per ADR-0001; local commit made. Push to `origin` (if the remote is confirmed to exist and PM has authorized it) is a distinct, separately-recorded step, not implied by "acceptance."
+- **Required tests:** CI pipeline runs successfully — locally at first (`turbo run lint test build`); against the remote once pushed and CI is wired (Task 12).
 - **Security checks:** none yet (no code, no secrets).
 - **Approval gate:** G0 → G1 boundary.
-- **Forbidden actions:** no application logic written yet — scaffold only.
-- **Rollback:** delete the repository; no data exists yet to lose.
+- **Forbidden actions:** no application logic written yet — scaffold only. No push to `origin` without separate PM authorization, per the general rule that pushing code is a shared-state action.
+- **Rollback:** revert the feature branch or commit that introduced the scaffold — never delete the repository. If already pushed and the push itself needs undoing, revert via a new commit or coordinate a force-push with the team, never delete the remote.
 
 ### Task 2 — Shared configuration and TypeScript standards
 

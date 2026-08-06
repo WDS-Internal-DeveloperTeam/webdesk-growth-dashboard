@@ -17,7 +17,8 @@
 | Actual SMTP credentials and dedicated sending account | Phase 1 notification work | ADR-0015 |
 | Operational contacts (Security Owner, WordPress Technical Lead, infrastructure owner) | G5.5 (pre-launch) | `knowledge/11-retention-backup-and-operations.md` |
 | Actual GA4/GTM/Clarity analytics IDs | Phase 1+ analytics work | Technical Discovery document |
-| Upload-size threshold for Vercel Blob | Phase 4 upload-flow implementation | ADR-0014, `gap-analysis.md` item 11 |
+| ~~Upload-size threshold for Vercel Blob~~ | **Resolved — was never actually open.** `01_Dashboard_Master_Specification.md §15` already specifies 25 MB (images/documents) and 250 MB (MP4). Corrected 2026-08-06 after an earlier Phase 0 draft incorrectly listed this as deferred. | ADR-0014 |
+| Vercel Function request-body size limit (the proxied-vs-direct-upload threshold, a separate, smaller platform fact) | Phase 1 upload-flow implementation | ADR-0014, profile `knowledge/08-vercel-blob-and-file-handling.md` |
 | Future malware-scanning provider | Post-V1, explicitly deferred | ADR-0014 |
 | Complete Service and SEO Library production data | Phase 3 content population | `knowledge/00-scope-and-precedence.md §6` |
 | Real client timezone (currently defaulted to America/Toronto) | Non-blocking — cosmetic until confirmed | `project.json.project.timezone` |

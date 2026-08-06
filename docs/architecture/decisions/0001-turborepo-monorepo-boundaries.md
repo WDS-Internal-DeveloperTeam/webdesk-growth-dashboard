@@ -12,20 +12,29 @@ Use a Turborepo monorepo with this structure:
 
 ```
 apps/
-├── dashboard-web/       (Next.js App Router — UI, no direct DB access)
-├── dashboard-api/       (NestJS — the only app with direct DB access, all business logic)
-└── dashboard-worker/    (Vercel Function handlers for background jobs — see ADR-0004)
+├── dashboard-web/       (Next.js App Router — presentation only, no DB access, no business logic)
+├── dashboard-api/       (NestJS — synchronous APIs, authorization, webhooks, user-request orchestration)
+└── dashboard-worker/    (Vercel Function handlers — asynchronous/scheduled execution, see ADR-0004)
 
 packages/
-├── database/            (Sequelize models, migrations — the ONLY package/app that runs migrations)
+├── database/            (Sequelize models, connection, migrations — the SOLE implementation
+│                          boundary for all three; the ONLY package/app that runs migrations)
 ├── shared-types/        (TypeScript types shared across apps)
 ├── validation/           (shared validation schemas)
 ├── ui/                   (shared React components)
-├── integrations/         (GitHub, WordPress, Google Workspace adapters)
+├── integrations/         (GitHub, WordPress, Google Workspace adapters — shared by dashboard-api
+│                          and dashboard-worker)
 └── configuration/        (shared config loading/env validation)
 ```
 
-`dashboard-web` never queries the database directly — it calls `dashboard-api`. `dashboard-worker` shares `packages/database` and `packages/integrations` with `dashboard-api` but is deployed and scaled independently, since it runs on a different trigger model (queue/cron, not HTTP request).
+**Ownership, stated precisely (corrected from an earlier draft of this ADR that described `dashboard-api` as "the only app with database access" — an overstatement that contradicted ADR-0004/0006's own, correct description of `dashboard-worker`):**
+
+- `dashboard-web` never queries the database directly and holds no business logic — it calls `dashboard-api` for everything.
+- `dashboard-api` owns synchronous, request-triggered business logic: HTTP APIs, authorization checks, webhook receivers, user-request orchestration.
+- `dashboard-worker` owns asynchronous, trigger-triggered business logic: scheduled jobs, queue/workflow-driven background work — using the *same* shared `packages/database` repositories, `packages/integrations` adapters, and application services as `dashboard-api`, not a separate, duplicated implementation of business rules. Per ADR-0004, it is never a permanent process.
+- `packages/database` is the sole Sequelize model/connection/migration implementation boundary — both `dashboard-api` and `dashboard-worker` depend on it; neither instantiates its own connection or defines its own models (WDS-011).
+
+"All business logic" and "all database access" belong to *the API + worker layer as a whole*, relative to `dashboard-web` — not to `dashboard-api` alone, relative to `dashboard-worker`.
 
 ## Alternatives considered
 

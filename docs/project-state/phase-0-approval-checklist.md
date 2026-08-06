@@ -11,7 +11,7 @@
 - [x] **3. Integration contracts are complete.** 7 of 7 — `docs/contracts/*.md`.
 - [x] **4. Repository and environment plans are complete.** 4 files — `docs/repository-plan/*.md`.
 - [x] **5. Security foundation documents are complete.** 5 files — `docs/security/*.md`, including the threat-model plan that resolves the previously "Still Blocked" formal-threat-modelling gap.
-- [x] **6. Requirements traceability is complete.** `docs/traceability/phase-0-requirements-traceability.md` — all 12 Dashboard Documentation Pack files traced; no requirement marked implemented.
+- [x] **6. Requirements traceability is complete.** `docs/traceability/phase-0-requirements-traceability.md` — all 13 Dashboard Documentation Pack Markdown documents traced (corrected 2026-08-06 from an earlier miscount of "12"), expanded to ~87 rows covering all 43 V1 modules individually, workflow states, roles/permissions, and retention/upload/backup/notification/import-export/release concerns; no requirement marked implemented.
 - [x] **7. The Phase 1 plan is complete.** `docs/phase-plans/phase-1-foundation-plan.md` — 13 tasks in dependency order.
 - [x] **8. Validation passes.** `docs/project-state/phase-0-validation-report.md` — real command output, no application code/dependencies/migrations/secrets found; every ADR/contract has a status; `project.json` validates against the patched schema.
 - [x] **9. The Phase 0 commit SHA is recorded.** See "Commit record" below.
@@ -32,7 +32,7 @@
 
 ## Reviewer's own checklist
 
-- [ ] **Confirm the Dashboard Documentation Pack is genuinely present**, not just referenced. `ls webdesk-dashboard-documentation-v1/` should show 13 files (12 numbered documents + README... actually 00_README + 01–12 + MANIFEST.txt = 14 entries including the pack's own manifest).
+- [ ] **Confirm the Dashboard Documentation Pack is genuinely present**, not just referenced. `ls webdesk-dashboard-documentation-v1/` should show 14 entries: 13 Markdown documents (`00_README.md` and `01` through `12`) plus the pack's own `MANIFEST.txt` — confirmed present in the supplied pack itself (verified twice: once in the original zip backup, once in a fresh copy the project owner re-supplied 2026-08-06; both byte-identical, both containing `MANIFEST.txt`, 450 bytes).
 - [ ] **Spot-check 3–4 ADRs against their cited source** (e.g., ADR-0020 against `01_Dashboard_Master_Specification.md` and `canonical-inputs/Owner_Clarifications_2026-08-05.md`) to confirm this Phase 0 work formalized existing decisions rather than inventing new ones.
 - [ ] **Confirm the open/blocking setup inputs in `docs/project-state/setup-input-register.md`** match your own understanding of what's still outstanding — this register drives what Phase 1 can and cannot start with.
 - [ ] **Re-run the validation commands** in `docs/project-state/phase-0-validation-report.md` yourself.
@@ -49,9 +49,18 @@
 
 ## Sign-off
 
+Still unsigned as of this correction pass — kept unsigned until human review, per the review's own explicit instruction (item 8, "Keep the approval checklist unsigned until human review").
+
+| Field | Value |
+|---|---|
+| Approved by | _(blank — record name here on approval)_ |
+| Approval date | _(blank)_ |
+| Exact approved commit SHA | _(blank — record the SHA of the commit that includes this exact, signed version of this file)_ |
+| Authorization scope | _(blank — e.g. "Phase 1A only" or "Full Phase 1 plan")_ |
+
 | Role | Name | Decision | Date |
 |---|---|---|---|
 | Reviewer (Tech Lead / Architect) | | ☐ Approved ☐ Changes requested | |
 | PM | | ☐ Approved ☐ Changes requested | |
 
-**On approval:** Phase 1, Task 1 (Repository and monorepo scaffold) per `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically by this session.
+**On approval:** whatever scope is recorded above (e.g. Phase 1 Task 1 only, or "Phase 1A"). Not the full Phase 1 plan by default, and not started automatically by this session — the approver's stated scope governs, not this document's own assumption.

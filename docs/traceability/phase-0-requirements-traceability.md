@@ -1,41 +1,153 @@
 # Phase 0 Requirements Traceability Matrix
 
-**Status:** Draft. No requirement below is marked implemented — Phase 0 produces architecture and contracts, not code. Statuses used: Documented, Architecture Defined, Contract Defined, Deferred to Environment Setup, Deferred to Implementation, Requires Human Approval, Blocked.
+**Status:** Draft, expanded 2026-08-06 following review feedback that the initial 27-row version (module-level summaries only) did not trace enough of the source material individually. No requirement below is marked implemented — Phase 0 produces architecture and contracts, not code. Statuses used: Documented, Architecture Defined, Contract Defined, Deferred to Environment Setup, Deferred to Implementation, Requires Human Approval, Blocked.
+
+---
+
+## A. Core architecture requirements
 
 | Req ID | Source | Phase | Owning App/Package | Delivery Role | Business Agent | ADR | Contract | Test Type | Gate | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| REQ-001 | `01_Dashboard_Master_Specification.md` — overall architecture | 0 | apps/*, packages/* | Architect | — | ADR-0001, 0002 | — | N/A (structural) | G1 | Architecture Defined | Monorepo boundaries and Next.js/NestJS split |
+| REQ-001 | `01_Dashboard_Master_Specification.md` — overall architecture | 0 | apps/*, packages/* | Architect | — | ADR-0001, 0002 | — | N/A (structural) | G1 | Architecture Defined | Monorepo boundaries; ownership corrected 2026-08-06 (dashboard-worker's role clarified) |
 | REQ-002 | `01_...md` — Vercel hosting | 0 | dashboard-api, dashboard-worker | Architect | — | ADR-0003, 0004, 0005 | vercel-background-jobs | Integration test | G1 | Architecture Defined | No permanent worker process (WDS-005) |
 | REQ-003 | `01_...md` — PostgreSQL + Sequelize | 0 | packages/database | Architect, DBA | — | ADR-0006, 0007 | database | Migration test | G-Schema | Architecture Defined | Provider unconfirmed (blocked on setup input) |
-| REQ-004 | `01_...md` — No ACF/ACF Local JSON | 0 | apps/dashboard-web (WordPress theme, separate repo) | Architect | WordPress Engineering Agent (taxonomy 2, product data) | ADR-0020 | wordpress-integration | N/A (policy) | G1 | Architecture Defined | Conflict resolved — see ADR-0020 |
+| REQ-004 | `01_...md` — No ACF/ACF Local JSON | 0 | apps/dashboard-web (WordPress theme, separate repo) | Architect | WordPress Engineering Agent (taxonomy 2, product data) | ADR-0020 | wordpress-integration | N/A (policy) | G1 | Architecture Defined | Provenance framing corrected 2026-08-06 |
 | REQ-005 | `01_...md` — Google Workspace SSO | 0 | dashboard-api | Architect | — | ADR-0008, 0009 | google-workspace-auth | Auth flow test | G1 | Requires Human Approval | JIT vs. pre-provisioned decision open |
 | REQ-006 | `01_...md` — Google Workspace SMTP only, no third-party email API | 0 | dashboard-api, dashboard-worker | Architect | — | ADR-0015 | google-workspace-smtp | Integration test | G1 | Architecture Defined | WDS-004 absolute rule |
-| REQ-007 | `01_...md` — GitHub App integration | 0 | dashboard-api | Architect | Release and Memory Coordinator (taxonomy 2) | ADR-0011 | github-integration | Webhook signature test | G-Contracts | Architecture Defined | App creation is a setup-time input |
-| REQ-008 | `01_...md` — Vercel Blob private storage | 0 | dashboard-api | Architect | — | ADR-0014 | vercel-blob | Access-control test | G-Contracts | Architecture Defined | Upload-size threshold deferred |
-| REQ-009 | `02_Version_1_Module_Inclusion_Matrix.md` — V1 module scope | 1+ | apps/dashboard-web, dashboard-api | PM | (varies by module) | — | — | — | G1 | Documented | Module-by-module implementation deferred to Phase 1+ |
-| REQ-010 | `03_Detailed_Module_Specifications.md` — Agent Directory / Agent Specification Library | 6+ | dashboard-api, dashboard-web | Backend, Frontend | Website Growth Director (owns the directory content, taxonomy 2) | ADR-0019 | — | Module test | G4 | Documented | Taxonomy separation resolved (ADR-0019); implementation deferred |
-| REQ-011 | `03_...md` — Ready for Claude Queue | 5+ | dashboard-api, dashboard-web | Backend, Frontend, Delivery Head | — | ADR-0011, 0018 | github-integration | Module test | G4 | Documented | Manual-execution boundary fixed (ADR-0018) |
-| REQ-012 | `03_...md` — Notification Center | 2+ | dashboard-worker, dashboard-api | Backend | — | ADR-0004, 0005, 0015 | google-workspace-smtp, vercel-background-jobs | Module test | G4 | Documented | |
-| REQ-013 | `03_...md` — Scan Center | 6+ | dashboard-worker, dashboard-api | Backend | Site Intelligence and Inventory Agent (taxonomy 2) | ADR-0004, 0005 | vercel-background-jobs | Module test | G4 | Documented | |
-| REQ-014 | `04_Data_Model_and_Ownership.md` — full data model | 0/1 | packages/database | Architect, DBA | — | ADR-0006, 0016, 0017 | database | Migration test | G-Schema | Architecture Defined | Full schema authored at G-Schema, Phase 1 |
-| REQ-015 | `05_Workflow_State_Machines.md` — approval workflows | 1+ | dashboard-api | Backend | — | ADR-0010, 0018 | — | Module test | G4 | Documented | Implementation deferred |
-| REQ-016 | `06_Roles_and_Permissions.md` — RBAC model | 0/1 | dashboard-api | Architect, Backend | — | ADR-0010 | — | Authz test | G1/G-Contracts | Architecture Defined | Full role-permission matrix implemented Phase 1 |
-| REQ-017 | `06_...md` — separation of duties | 0 | dashboard-api | Architect | — | ADR-0010 | — | Authz test | G1 | Architecture Defined | Restated from skill's own security-controls rule |
-| REQ-018 | `07_Low_Fidelity_Wireframes.md` — UI structure | 3+ | dashboard-web | Designer, Frontend | — | ADR-0002 | — | Visual/UX test | G4 | Documented | Implementation deferred |
-| REQ-019 | `08_API_and_Integration_Contracts.md` — GitHub/WordPress/Google contracts | 0 | dashboard-api | Architect | — | ADR-0011, 0012, 0013, 0008, 0015 | all 7 contracts | Contract test | G-Contracts | Contract Defined | This Phase 0's own §7 deliverable |
-| REQ-020 | `09_Security_Backup_Retention_Operations.md` — backup cadence | 0 | packages/database, WordPress theme repo | Architect, Security Owner | — | ADR-0007, 0017 | database | Backup restore test | G1/G5.5 | Architecture Defined | Cadence confirmed (35-day/1-year); execution deferred |
-| REQ-021 | `09_...md` — audit logging | 0 | packages/database | Architect | — | ADR-0017 | database | Immutability test | G-Schema | Architecture Defined | |
-| REQ-022 | `09_...md` — formal threat model | 0 | N/A (documentation) | Architect, Security Owner | — | — | — | N/A | G1 | Documented | See `docs/security/threat-model-plan.md` — this Phase 0's own §10 deliverable, resolves the previously-deferred item |
-| REQ-023 | `10_WordPress_Integration_and_Migration.md` — REST/Application Passwords | 0 | dashboard-api (WordPress theme, separate repo) | Architect | — | ADR-0012 | wordpress-integration | Integration test | G-Contracts | Contract Defined | REST API availability unconfirmed |
-| REQ-024 | `10_...md` — controlled production WP-CLI | 0 | N/A (operational policy) | Architect, DevOps | — | ADR-0013 | wordpress-integration | N/A (policy) | G-Contracts | Architecture Defined | |
-| REQ-025 | `10_...md` — CaseStudy/Portfolio migration (Option A) | 5+ | WordPress theme repo | WordPress-role delivery agent | WordPress Engineering Agent (taxonomy 2) | ADR-0020 | wordpress-integration | Migration test | G4 | Documented | Meta-key mappings already confirmed; implementation deferred |
-| REQ-026 | `11_Acceptance_Criteria_and_Test_Plan.md` — test strategy | 1+ | all apps | QA | — | — | — | (defines test types) | G4/G5 | Documented | WordPress CI-safe testing strategy gap still open, see `docs/skill-build/unresolved-items.md §C` |
-| REQ-027 | `12_Open_Items_and_Implementation_Inputs.md` — setup inputs | 0 | N/A | PM | — | — | — | N/A | N/A | Documented | Captured in `docs/project-state/setup-input-register.md` — this Phase 0's own §12 deliverable |
+| REQ-007 | `01_...md` — GitHub App integration | 0 | dashboard-api | Architect | Release and Memory Coordinator (taxonomy 2) | ADR-0011 | github-integration | Webhook signature test | G-Contracts | Architecture Defined | App creation does not block local scaffolding (Phase 1 Task 1) |
+| REQ-008 | `01_...md §15` — Vercel Blob private storage, upload rules | 0 | dashboard-api | Architect | — | ADR-0014 | vercel-blob | Access-control + upload-validation test | G-Contracts | Architecture Defined | 25MB/250MB limits confirmed approved 2026-08-06; only Function request-body threshold + malware provider remain open |
+
+---
+
+## B. All 43 Version 1 modules (`02_Version_1_Module_Inclusion_Matrix.md`)
+
+None marked implemented. "Owning app(s)" is Phase 1+ implementation intent, not built.
+
+| # | Module | V1 Classification | Priority | Owning App(s) | ADR/Contract | Notes |
+|---:|---|---|---|---|---|---|
+| 1 | Home | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0002 | Project health, approvals, tasks, blockers, Git/release status |
+| 2 | Projects | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0002 | |
+| 3 | Business Knowledge Center | Full V1 | P0 | dashboard-web, dashboard-api | — | Persona, marketing profile, service taxonomy, VTO |
+| 4 | Website Strategy Center | Full V1 | P0 | dashboard-web, dashboard-api | — | Navigation, page clusters, conversion, search, internal links |
+| 5 | Page Inventory | Full V1 | P0 | dashboard-web, dashboard-api | — | Canonical page registry |
+| 6 | Page Workspace | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0010, 0018 | End-to-end page workflow — see §C REQ-W03 |
+| 7 | Case Study Studio | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0010 | Intake through publishing — see §C REQ-W05 |
+| 8 | Case Study Library | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0020 (CaseStudy migration) | |
+| 9 | Portfolio Library | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0020 (Portfolio migration) | See §C REQ-W06 |
+| 10 | Brand Library | Simplified V1 | P1 | dashboard-web, dashboard-api | — | |
+| 11 | Design Reference Library | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 12 | Asset Library | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0014, vercel-blob | Private assets, permissions, retention |
+| 13 | Design Token Library | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 14 | Component Library | Full V1 | P0 | dashboard-web, dashboard-api | — | |
+| 15 | Section and Pattern Library | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 16 | Page Template Library | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 17 | Wireframe Library | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 18 | Motion and Interaction Library | Simplified V1 | P2 | dashboard-web, dashboard-api | — | Advanced preview tooling deferred |
+| 19 | Design Review Center | Full V1 | P1 | dashboard-web, dashboard-api | ADR-0010 | |
+| 20 | Service Library | Full V1 | P0 | dashboard-web, dashboard-api | — | No pricing by default |
+| 21 | Persona Library | Full V1 | P0 | dashboard-web, dashboard-api | — | |
+| 22 | Proof and Claims Library | Full V1 | P0 | dashboard-web, dashboard-api | — | |
+| 23 | Keyword and Entity Library | Full V1 | P0 | dashboard-web, dashboard-api | — | SEO research input, advisory until approved (WDS-014) |
+| 24 | Internal Linking Library | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 25 | Content Template Library | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 26 | Agent Directory | Foundation Only | P1 | dashboard-web, dashboard-api | ADR-0019 | Taxonomy 2 data; Website Growth Director owns content |
+| 27 | Agent Specification Library | Foundation Only | P1 | dashboard-web, dashboard-api | ADR-0019 | 19-section format, Batch 1 registered |
+| 28 | Knowledge Library | Full V1 | P0 | dashboard-web, dashboard-api | — | Approved/advisory sources, confidentiality |
+| 29 | Workflow and Task Template Library | Full V1 | P0 | dashboard-web, dashboard-api | — | Manual Claude task packages |
+| 30 | Ready for Claude Queue | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0011, 0018 | Manual execution only — see §C REQ-W04 |
+| 31 | Review and Approval Center | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0010 | |
+| 32 | Scan Center | Full V1 | P0 | dashboard-web, dashboard-api, dashboard-worker | ADR-0004, 0005 | Background jobs — see §C REQ-W07 |
+| 33 | Change Center | Full V1 | P0 | dashboard-web, dashboard-api | — | See §C REQ-W08 |
+| 34 | Import and Export Center | Full V1 | P0 | dashboard-web, dashboard-api, dashboard-worker | ADR-0004, 0005 | See §E REQ-E01–E03 and §C REQ-W09 |
+| 35 | Technical Center | Full V1 | P0 | dashboard-web, dashboard-api | — | Code/lint/test/coverage/dependency reports |
+| 36 | Release Center | Full V1 | P0 | dashboard-web, dashboard-api | ADR-0011, 0018 | See §E REQ-E04 (release manifests/SHAs) and §C REQ-W10 |
+| 37 | Decision and Activity Log | Full V1 | P0 | dashboard-api | ADR-0017 | Immutable, 7-year retention |
+| 38 | Help Center | Full V1 | P1 | dashboard-web, dashboard-api | — | |
+| 39 | Notification Center | Full V1 | P0 | dashboard-worker, dashboard-api | ADR-0004, 0005, 0015 | See §E REQ-E05 (notification states) |
+| 40 | Users, Roles and Permissions | Full V1 | P0 | dashboard-api | ADR-0008, 0009, 0010 | SSO, emergency accounts, deny-by-default — see §D |
+| 41 | Integrations | Full V1 | P0 | dashboard-api, dashboard-worker | ADR-0011–0015 | GitHub, WordPress, Blob, SMTP, queues, Sentry, uptime |
+| 42 | System Settings | Full V1 | P0 | dashboard-web, dashboard-api | — | Configurable statuses, categories, limits, contacts |
+| 43 | Audit Logs and System Health | Full V1 | P0 | dashboard-api | ADR-0017 | Immutable events, jobs, cron, scans, backups, health |
+
+Deferred integrations (`02_Version_1_Module_Inclusion_Matrix.md §"Deferred integrations"`): Anthropic API execution, automated agent orchestration from dashboard buttons, mandatory malware-scanning integration — all consistent with ADR-0018 and ADR-0014's own deferrals.
+
+---
+
+## C. Workflow states and approval gates (`05_Workflow_State_Machines.md`)
+
+| Req ID | Source section | Owning App(s) | ADR | Status | Notes |
+|---|---|---|---|---|---|
+| REQ-W01 | §1 General rules | dashboard-api | ADR-0010 | Documented | Governs every workflow below — deny-by-default transitions |
+| REQ-W02 | §2 Generic artifact lifecycle | dashboard-api | ADR-0010 | Documented | Base state machine most libraries extend |
+| REQ-W03 | §3 Page lifecycle | dashboard-web, dashboard-api | ADR-0010 | Documented | Module 6, Page Workspace |
+| REQ-W04 | §4 Ready for Claude task | dashboard-api | ADR-0011, 0018 | Documented | Manual trigger/review at every stage — no autonomous execution |
+| REQ-W05 | §5 Case study workflow | dashboard-web, dashboard-api | ADR-0010 | Documented | Module 7, Case Study Studio — intake, missing info, proof, approval, publish |
+| REQ-W06 | §6 Portfolio workflow | dashboard-web, dashboard-api | ADR-0020 | Documented | Coordinates with the CaseStudy/Portfolio plugin migration (Option A) |
+| REQ-W07 | §7 Scan workflow | dashboard-worker, dashboard-api | ADR-0004, 0005 | Documented | Module 32, Scan Center — background job |
+| REQ-W08 | §8 Change Center workflow | dashboard-web, dashboard-api | ADR-0010 | Documented | Before/after, accept/reject/defer/apply |
+| REQ-W09 | §9 Import workflow | dashboard-worker, dashboard-api | ADR-0004, 0005 | Documented | Dry-run, rollback, no-silent-overwrite — see §E REQ-E01–E03 |
+| REQ-W10 | §10 Release workflow | dashboard-api | ADR-0011, 0018 | Documented | Staging → production, exact commit SHA per `docs/repository-plan/branch-and-release-plan.md` |
+| REQ-W11 | §11 Security finding workflow | dashboard-api | ADR-0010, 0017 | Documented | Feeds `docs/security/threat-model-plan.md` |
+| REQ-W12 | §12 Approval record requirements | dashboard-api | ADR-0010, 0017 | Documented | Every approval is an immutable audit event |
+
+---
+
+## D. Roles, permissions, and separation of duties (`06_Roles_and_Permissions.md`)
+
+| Req ID | Source section | Owning App(s) | ADR | Status | Notes |
+|---|---|---|---|---|---|
+| REQ-R01 | §1 Roles | dashboard-api | ADR-0010 | Documented | Full role list — implemented at Phase 1 Task 6 |
+| REQ-R02 | §2 Action legend | dashboard-api | ADR-0010 | Documented | Defines the permission vocabulary every module's RBAC check uses |
+| REQ-R03 | §3 High-level matrix | dashboard-api | ADR-0010 | Documented | Role × module × action — not reproduced here; source is authoritative |
+| REQ-R04 | §4 Separation of duties | dashboard-api | ADR-0010, 0018 | Architecture Defined | Author ≠ approver; restated as a hard rule in ADR-0010 |
+| REQ-R05 | §5 Field-level controls | dashboard-api | ADR-0010 | Documented | Confidential-field access — see `docs/security/data-classification.md` |
+| REQ-R06 | §6 Audit requirements | dashboard-api | ADR-0017 | Documented | Feeds the audit-event model directly |
+
+---
+
+## E. Retention, uploads, background jobs, notifications, import/export, releases
+
+| Req ID | Source | Owning App(s) | ADR/Contract | Status | Notes |
+|---|---|---|---|---|---|
+| REQ-E01 | `09_...md §6` — Retention matrix (24 categories incl. legal holds) | packages/database | ADR-0016, 0017 | Architecture Defined | 7-year audit retention corrected 2026-08-06; legal-hold override per `knowledge/11-retention-backup-and-operations.md` |
+| REQ-E02 | `09_...md §7` — Retention deletion job | dashboard-worker | ADR-0004, 0005 | Documented | Vercel Cron-triggered; every skip on `legal_hold=true` counted and auditable |
+| REQ-E03 | `03_...md` — Import/Export Center dry-run, rollback, no-silent-overwrite | dashboard-web, dashboard-api, dashboard-worker | ADR-0004, 0005 | Documented | Module 34; Service/SEO workbook import is the first concrete case (advisory-only, WDS-014) |
+| REQ-E04 | `03_...md` — Release Center manifests and exact repository SHAs | dashboard-api | ADR-0011, `docs/repository-plan/branch-and-release-plan.md` | Documented | Every deployment records commit SHA, approver, deployment time, smoke-test results |
+| REQ-E05 | `03_...md` — Notification Center states (queued, sent, failed, retried) | dashboard-worker, dashboard-api | ADR-0004, 0005, 0015 | Documented | `docs/contracts/google-workspace-smtp-contract.md`'s retry/idempotency section |
+| REQ-E06 | `01_...md §15` — Upload rules (file types, sizes, blocked formats) | dashboard-api | ADR-0014, vercel-blob | Architecture Defined | Corrected 2026-08-06 — see §A REQ-008 |
+| REQ-E07 | `09_...md §4` — Backup policy (database, Blob, WordPress) | packages/database, dashboard-api | ADR-0007, 0014, database, vercel-blob | Architecture Defined | Blob backup corrected 2026-08-06 (was incorrectly "not designed for V1") |
+| REQ-E08 | `09_...md §5` — Recovery targets (RPO/RTO, production and staging) | All apps | `docs/security/security-verification-plan.md` | Documented | Implementation must document actual achieved RPO before launch |
+| REQ-E09 | `docs/repository-plan/environment-plan.md` — Environment isolation and cleanup | All apps | ADR-0001 | Documented | Separate credentials/DBs/storage/queues per environment; inactive-environment cleanup is a Phase 1+ operational task, not yet scheduled |
+
+---
+
+## F. WordPress integration, migration, and native metadata
+
+| Req ID | Source | Owning App(s) | ADR/Contract | Status | Notes |
+|---|---|---|---|---|---|
+| REQ-F01 | `10_WordPress_Integration_and_Migration.md` — REST/Application Passwords | dashboard-api (WordPress theme repo separately) | ADR-0012, wordpress-integration | Contract Defined | REST API availability unconfirmed |
+| REQ-F02 | `10_...md` — Controlled production WP-CLI | N/A (operational policy) | ADR-0013, wordpress-integration | Architecture Defined | |
+| REQ-F03 | `10_...md` — CaseStudy/Portfolio migration (Option A) | WordPress theme repo | ADR-0020, wordpress-integration | Documented | Exact meta-key mappings already confirmed |
+| REQ-F04 | `01_...md`, `canonical-inputs/Owner_Clarifications_2026-08-05.md` — Native metadata, no ACF | WordPress theme repo | ADR-0020 | Architecture Defined | Provenance framing corrected 2026-08-06 |
+| REQ-F05 | Technical Discovery document's own verification checklist | N/A | `docs/security/security-verification-plan.md` | Deferred to Implementation | REST API, WP-CLI provisioning, Application Passwords, forms/Podio mapping, analytics ownership, security-tool installation, file-integrity, plugin licensing — all explicitly kickoff-time checks, not resolved by Phase 0 |
+
+---
+
+## G. Remaining cross-cutting requirements
+
+| Req ID | Source | Phase | Owning App/Package | Status | Notes |
+|---|---|---|---|---|---|
+| REQ-020 | `09_...md` — audit logging | 0 | packages/database | Architecture Defined | See REQ-E01 for full retention detail |
+| REQ-022 | `09_...md` — formal threat model | 0 | N/A (documentation) | Documented | `docs/security/threat-model-plan.md` — resolves the previously-deferred item |
+| REQ-026 | `11_Acceptance_Criteria_and_Test_Plan.md` — test strategy | 1+ | all apps | Documented | WordPress CI-safe testing strategy gap still open, `docs/skill-build/unresolved-items.md §C` |
+| REQ-027 | `12_Open_Items_and_Implementation_Inputs.md` — setup inputs | 0 | N/A | Documented | `docs/project-state/setup-input-register.md` |
+
+---
 
 ## Coverage note
 
-Every one of the 12 Dashboard Documentation Pack files has at least one row above; module-level detail (individual features within `03_Detailed_Module_Specifications.md`) is intentionally summarized at the module level for Phase 0 rather than exploded into dozens of rows — a finer-grained traceability matrix is a natural Phase 1+ artifact, built once implementation actually begins and real file paths/PRs exist to trace to.
+All 43 V1 modules now have an individual row (§B). Workflow state machines (12 sections), roles/permissions (6 sections), and the retention/upload/backup/notification/import-export/release cross-cutting concerns (§E) are each individually traced rather than folded into module-level summaries. WordPress migration and native-metadata requirements are traced separately in §F. Individual code paths within a module remain deferred to Phase 1+ implementation — this matrix traces requirements to owning apps and governing ADRs/contracts, not to file paths that don't exist yet.
 
 ## What Phase 0 does NOT claim
 
-No row above is marked "Implemented" or "Tested" — Phase 0 produces architecture decisions, contracts, and plans. The earliest any row can move to an implementation-related status is Phase 1, gated on human approval of this Phase 0 foundation.
+No row above is marked "Implemented" or "Tested." Phase 0 produces architecture decisions, contracts, and plans. The earliest any row can move to an implementation-related status is Phase 1, gated on human approval of `docs/project-state/phase-0-approval-checklist.md`.

@@ -8,7 +8,12 @@ Provide private (default) object storage for dashboard file uploads, per ADR-001
 
 ## Trust boundary
 
-`dashboard-api`'s Blob adapter (`packages/integrations`) is the only code that holds Blob storage tokens or makes upload/access-control decisions. `dashboard-web` uploads through `dashboard-api`, not directly to Blob with a client-side token, unless a specific feature's performance needs later justify a signed-upload-URL pattern — not assumed by default.
+`dashboard-api`'s Blob adapter (`packages/integrations`) is the only code that holds Blob storage tokens or makes upload/access-control decisions. Two upload paths exist, both authorized by `dashboard-api`:
+
+- **Proxied upload** (files under the Vercel Function request-body limit): `dashboard-web` sends the file to `dashboard-api`, which validates and forwards it to Blob.
+- **Direct authenticated browser upload** (required for files above the Function request-body limit, per ADR-0014 and `01_Dashboard_Master_Specification.md §15`): `dashboard-api` issues a one-time, short-lived upload authorization; the browser uploads directly to Blob using it. This is not an optional future optimization — it is required for any file the Function request limit would otherwise reject (which, given the approved 25 MB/250 MB maximums, is expected to include most MP4 uploads and some larger documents).
+
+Either way, `dashboard-web` never holds a long-lived or broadly-scoped Blob credential — only a single-use authorization for one specific upload.
 
 ## Authentication
 
@@ -25,7 +30,14 @@ Every file's access mode (private vs. public) is an explicit, per-file decision 
 
 ## Validation
 
-Uploaded file type and size are validated before storage; the exact size threshold is an open setup value (see below). Uploaded files are **not** claimed to be malware-free — no scanning is performed in V1, per the dashboard pack's own explicit deferral of malware scanning to post-V1.
+Per `01_Dashboard_Master_Specification.md §15` — approved, not open:
+
+- **Allowed types:** JPEG, PNG, WebP, GIF, PDF, DOCX, XLSX, CSV, TXT, Markdown, MP4.
+- **Maximum sizes:** images and documents 25 MB; MP4 250 MB.
+- **Always blocked:** executables, SVG, archives, macro-enabled documents, any unsupported/prohibited format.
+- Validation is server-side: MIME type, file extension, and checksum are all checked — extension alone is never trusted, and client-reported MIME type is verified against actual file content.
+
+Uploaded files are **not** claimed to be malware-free — no scanning is performed in V1, per the Master Specification's own explicit deferral (§16). Until a scanning provider is configured, uploads are marked `Scan Not Configured`.
 
 ## Error handling
 
@@ -53,7 +65,7 @@ Separate Blob stores (or clearly namespaced paths) per environment — a develop
 
 ## Failure recovery
 
-Standard Vercel Blob durability applies; no separate dashboard-side backup of Blob contents is designed for V1 beyond what `knowledge/11-retention-backup-and-operations.md` already establishes for the project generally.
+Per `09_Security_Backup_Retention_Operations.md §4` ("Blob") — approved, not open: Vercel Blob files are copied daily to an independent, encrypted North America East Coast object store, checksum-verified. Daily versions are retained 35 days; monthly copies are retained 90 days, unless superseded by a later approved policy. This is a real, designed backup mechanism for V1 — not deferred, and not merely "standard Vercel Blob durability."
 
 ## Test requirements
 
@@ -65,4 +77,4 @@ None beyond standard module-level review — file storage itself is not a separa
 
 ## Open items
 
-Upload-size threshold and future malware-scanning provider are both explicitly deferred — see `docs/project-state/setup-input-register.md`, not blocking Phase 0.
+Only the Vercel Function request-body size limit (the threshold separating proxied vs. direct-to-Blob upload — a platform fact, confirmed at implementation time) and the future malware-scanning provider (explicitly deferred to post-V1) remain open — see `docs/project-state/setup-input-register.md`. File type/size limits (25 MB / 250 MB) and Blob backup cadence are approved, not open.

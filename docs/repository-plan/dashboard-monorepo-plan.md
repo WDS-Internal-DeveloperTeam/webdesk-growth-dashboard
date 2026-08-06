@@ -6,9 +6,11 @@
 
 ```
 apps/
-├── dashboard-web/       Next.js App Router — UI only, no direct DB access
-├── dashboard-api/       NestJS on Vercel Functions — all business logic, DB access, auth
-└── dashboard-worker/    Vercel Function handlers for background jobs (no persistent process)
+├── dashboard-web/       Next.js App Router — presentation only, no DB access, no business logic
+├── dashboard-api/       NestJS on Vercel Functions — synchronous APIs, authorization, webhooks
+└── dashboard-worker/    Vercel Function handlers — asynchronous/scheduled jobs, shared services
+                         and repositories with dashboard-api (no duplicated business rules,
+                         no persistent process)
 
 packages/
 ├── database/            Sequelize models + migrations — sole migration owner (WDS-011)
@@ -33,7 +35,7 @@ No directory above exists on disk yet. This plan documents intent for Phase 1's 
 
 ## Repository location
 
-This monorepo is intended to live in its own GitHub repository (`webdesk-org/webdesk-growth-dashboard`, per `outputs/webdesk-growth-dashboard/project.json`'s current placeholder URL — not yet created), separate from the WebDesk Node.js Delivery System skill repository and separate from the WordPress theme repository (`docs/repository-plan/wordpress-repository-interface.md`).
+This monorepo is intended to live in its own GitHub repository, `WDS-Internal-DeveloperTeam/webdesk-growth-dashboard` (per `outputs/webdesk-growth-dashboard/project.json`'s `repository.url`, supplied by the project owner 2026-08-06 and registered as this working directory's local `origin` remote — see `docs/project-state/setup-input-register.md`). **Whether this repository has actually been created on GitHub is not confirmed by this document** — the URL being registered locally is not evidence the remote exists; Phase 1 Task 1 confirms this before scaffolding proceeds. Separate from the WebDesk Node.js Delivery System skill repository and separate from the WordPress theme repository (`docs/repository-plan/wordpress-repository-interface.md`).
 
 ## Turborepo configuration expectations (Phase 1)
 
