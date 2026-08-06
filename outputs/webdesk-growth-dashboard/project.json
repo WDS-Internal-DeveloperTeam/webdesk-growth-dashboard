@@ -1,0 +1,116 @@
+{
+  "project": {
+    "id": "00000000-0000-4000-8000-000000000000",
+    "name": "WebDesk Website Growth Dashboard",
+    "client_slug": "webdesk-growth-dashboard",
+    "schema_version": "1.0.0",
+    "project_type": "custom-app-build",
+    "project_profile": "webdesk-growth-dashboard",
+    "build_context": "nodejs",
+    "integration_targets": ["github", "wordpress", "google-workspace"],
+    "timezone": "America/Toronto",
+    "tenant": {
+      "mode": "per-client",
+      "master": false,
+      "_note": "This project has no cross-client master dashboard concept (single organization — see knowledge/05-google-workspace-sso-and-local-admin.md). 'per-client' here means 'this one WebDesk instance', not a multi-tenant SaaS scope."
+    },
+    "host_target": "vercel",
+    "data_sensitivity": "high",
+    "stage": "discovery",
+    "current_gate": "G0.5",
+    "status": "active",
+    "client": {
+      "name": "WebDesk Solution",
+      "primary_contact": {
+        "name": "TBD — see docs/project-state/setup-input-register.md",
+        "email": "tbd@webdesksolution.com",
+        "role": "TBD"
+      }
+    },
+    "repository": {
+      "url": "https://github.com/webdesk-org/webdesk-growth-dashboard",
+      "default_branch": "main",
+      "develop_branch": "staging",
+      "_note": "This URL is a placeholder, not a confirmed repository — no GitHub repository has been created. Type/format-valid so this file validates cleanly; the real URL is a setup-time input, tracked in docs/project-state/setup-input-register.md. Do not treat this as evidence a repository exists."
+    },
+    "assigned_team": {
+      "pm": "TBD",
+      "architect": "TBD",
+      "designer": "TBD",
+      "backend_lead": "TBD",
+      "frontend_lead": "TBD",
+      "qa_lead": "TBD",
+      "dba": "TBD",
+      "delivery_head": "TBD"
+    },
+    "created_at": "2026-08-06T00:00:00Z",
+    "updated_at": "2026-08-06T00:00:00Z",
+    "version": 1
+  },
+
+  "tech_stack": {
+    "runtime": "node@24",
+    "framework": "nest",
+    "database": "postgresql",
+    "orm": "sequelize",
+    "storage": "vercel-blob",
+    "queue": "vercel-native",
+    "frontend": "next",
+    "_note": "storage='vercel-blob' and queue='vercel-native' are valid only under this project's patched schema (see webdesk-nodejs/skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/contracts/project-profile.schema.json), not the unpatched base schema alone."
+  },
+
+  "vercel_execution": {
+    "host_target": "vercel",
+    "job_execution_model": "serverless-functions-no-permanent-worker",
+    "primary_job_provider": "vercel-queues-workflows-cron",
+    "fallback_job_provider": "upstash-qstash-vercel-cron",
+    "postgres_marketplace_provider": null,
+    "_note": "postgres_marketplace_provider is null until provisioned — see knowledge/01-approved-architecture.md's Database stop-condition. Must never be 'neon' (WDS-002). null is a valid value here (type is ['string','null'])."
+  },
+
+  "lock": {
+    "locked": false,
+    "locked_by": null,
+    "locked_at": null,
+    "expires_at": null,
+    "max_lock_duration_seconds": 300
+  },
+
+  "gates": [],
+
+  "budget": {
+    "token_used": 0,
+    "token_cap": 0,
+    "token_alert_threshold": 0,
+    "hours_budget": 0,
+    "hours_burned": 0,
+    "cost_estimate_usd": 0,
+    "_note": "All zero-valued placeholders — real numbers are recorded at the G1 estimate→ticket step. Zero is a type-valid placeholder; it is not a claim the real budget is zero."
+  },
+
+  "integration_contracts": [
+    { "id": "IC-GITHUB-001", "system": "github", "ref": "docs/contracts/github-integration-contract.md", "status": "draft" },
+    { "id": "IC-WORDPRESS-001", "system": "wordpress", "ref": "docs/contracts/wordpress-integration-contract.md", "status": "draft" },
+    { "id": "IC-GOOGLE-SSO-001", "system": "google-workspace-sso", "ref": "docs/contracts/google-workspace-auth-contract.md", "status": "draft" },
+    { "id": "IC-GOOGLE-SMTP-001", "system": "google-workspace-smtp", "ref": "docs/contracts/google-workspace-smtp-contract.md", "status": "draft" },
+    { "id": "IC-VERCEL-JOBS-001", "system": "vercel-background-jobs", "ref": "docs/contracts/vercel-background-jobs-contract.md", "status": "draft" },
+    { "id": "IC-VERCEL-BLOB-001", "system": "vercel-blob", "ref": "docs/contracts/vercel-blob-contract.md", "status": "draft" },
+    { "id": "IC-DATABASE-001", "system": "database", "ref": "docs/contracts/database-contract.md", "status": "draft" }
+  ],
+
+  "rfcs": [],
+
+  "health_score": null,
+
+  "runbooks_status": {
+    "incident_runbooks": "missing",
+    "queue_recovery": "missing",
+    "webhook_replay": "missing",
+    "db_restore": "missing",
+    "deploy_recovery": "missing",
+    "_note": "knowledge/11-retention-backup-and-operations.md also requires a retention-run-recovery runbook, not part of the base schema's runbooks_status shape — tracked as a project-local addition."
+  },
+
+  "audit_log_path": "outputs/webdesk-growth-dashboard/audit-log.jsonl",
+  "audit_log": []
+}

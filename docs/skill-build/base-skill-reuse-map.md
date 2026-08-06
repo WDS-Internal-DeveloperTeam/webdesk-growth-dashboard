@@ -1,0 +1,47 @@
+# Base-Skill Reuse Map — WebDesk Growth Dashboard
+
+**Status:** Complete. This is the detailed backing for `node-skill-compatibility-review.md`'s §2 Reuse Assessment (from the prior task) and this build's `SKILL.md §5`, listing exactly which base-skill files this profile points to, how, and why none were edited.
+
+---
+
+## Reused unchanged (pointed to, never copied)
+
+| Base-skill file | Reused by (profile file) | How |
+|---|---|---|
+| `_spine/shared-knowledge/CONVENTIONS.md` | `SKILL.md §2` (loading hierarchy), all `knowledge/*.md` frontmatter | Frontmatter format, tier system, task-tag vocabulary followed exactly |
+| `_contracts/gate-format.md` | `SKILL.md §3`, `knowledge/00-scope-and-precedence.md`, `templates/architecture-adr-template.md`, `templates/task-package-template.md` | Gate lifecycle, CONFIRM/REJECT/REVISE/RENEGOTIATE semantics referenced, never restated with different meaning |
+| `_spine/shared-knowledge/git-branch-strategy.md` | `knowledge/06-github-app-integration.md`, `knowledge/07-wordpress-integration.md` | Branch/protection/release model applied to both project repositories unmodified |
+| `_spine/shared-knowledge/forbidden-global.md` (FG-001…FG-012) | `knowledge/15-project-specific-forbidden-actions.md` | Every WDS-xxx rule is explicitly additive to, never a replacement of, an FG-xxx rule |
+| `nodejs/knowledge/09-forbidden.md` (NODE-001…NODE-104) | `knowledge/15-project-specific-forbidden-actions.md`, all knowledge files' rule citations | Same additive relationship for NODE-xxx |
+| `nodejs/knowledge/01-coding-standards.md`, `02-naming-conventions.md` | `knowledge/02-turborepo-boundaries.md`, `knowledge/03-nestjs-on-vercel.md` | Layering, naming conventions applied unmodified within the Nest/Turborepo structure |
+| `nodejs/knowledge/database/01-modeling-and-indexing.md`, `02-migrations-and-rollback.md` | `knowledge/10-data-ownership-and-audit.md` | Sequelize modeling/migration discipline reused in full; base-entity standard is an *extension*, not a replacement |
+| `nodejs/knowledge/security/01-owasp-api.md`, `03-secrets-and-config.md`, `04-webhook-security.md`, `05-pii-and-compliance.md` | `knowledge/06`, `knowledge/07`, `knowledge/08`, `knowledge/09`, `knowledge/12` | Applied verbatim to this project's specific integrations and data |
+| `nodejs/knowledge/frontend/01-react-next-standards.md` | `knowledge/01-approved-architecture.md` | Next.js App Router guidance used as-is |
+| `nodejs/knowledge/testing/01-03` | `knowledge/13-testing-and-acceptance.md` | Test-layer structure and Playwright/axe/Lighthouse stack reused; only the unit-test-runner default (Vitest over `node:test`) is a recorded override, not a structural change |
+
+## Reused with project-specific configuration
+
+| Base-skill file | Configuration applied |
+|---|---|
+| `nodejs/knowledge/database/03-multi-tenancy.md` | Scoping key changed from `tenant_id` to `project_id`; "master" scope reinterpreted as Super Admin role, not a cross-client dashboard — see `knowledge/10-data-ownership-and-audit.md` |
+| `nodejs/knowledge/security/02-authn-authz.md` | Session/RBAC mechanism reused as the **post-SSO** layer only — see `knowledge/05-google-workspace-sso-and-local-admin.md` |
+| `nodejs/knowledge/frontend/02-admin-dashboards.md`, `_spine/designer-agent/knowledge/01-dashboard-standards.md` | SOW-driven module philosophy and RBAC-gated UI reused; the "Master dashboard with per-instance health score" G2 checklist item dropped for this single-organization project |
+| `nodejs/knowledge/technology-selection.md`, `intelligence/database-intelligence.md`, `intelligence/integration-intelligence.md` | Decision framework ("ask-if-missing, record the override") reused; this project's specific answers recorded in `knowledge/01-approved-architecture.md` |
+
+## Extended (new files added alongside, in the profile, not upstream)
+
+See `SKILL.md §4`'s table and `proposed-upstream-patches/README.md` — every extension in this project's `knowledge/*` and `integrations/*` follows an existing base-skill *pattern* (the ERP adapter interface, the webhook-security three-control model, the queue-property requirements) applied to a target the base skill hadn't covered yet.
+
+## Excluded (never loaded for this project)
+
+| Base-skill content | Why excluded |
+|---|---|
+| `nodejs/integrations/bigcommerce/`, `nodejs/integrations/shopify/`, `nodejs/integrations/erp/*` | Not in this project's `integration_targets` (`github`, `wordpress`, `google-workspace`) — excluded by the orchestrator's own context-budget rule, unchanged |
+| `nodejs/projects/integration-middleware/`, `frontend-tool/`, `version-upgrade/`, `maintenance/` | This is a `custom-app-build` project — the other four project-type skills never load |
+| `nodejs/knowledge/integration/01-sync-strategies.md`'s literal ERP-sync framing | This project has no ERP; the file's generalizable sub-patterns (reconciliation, watermark discipline) are referenced as design analogies in `knowledge/04` and the Scan/Change Center notes in `docs/implementation/requirements-traceability-matrix.md`, not the file's ERP-specific content |
+
+---
+
+## Confirmation of zero base-skill edits
+
+Every row above describes a **read** relationship (this profile's files reference or point to a base-skill file) or a **structural addition** (a new file/directory under `profiles/webdesk-growth-dashboard/`, or under two new root-level directories `proposed-upstream-patches/` and `docs/skill-build/` entirely outside the skill tree). No row describes an **edit** to an existing base-skill file's content. This is independently checkable: every base-skill file this build touched was touched only by the `Read` tool during the prior compatibility-review task and this task's research phase, never by `Edit` or `Write`.

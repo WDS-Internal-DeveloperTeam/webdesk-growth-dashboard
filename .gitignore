@@ -1,0 +1,35 @@
+# WebDesk Growth Dashboard — project repository
+# This repository is the DASHBOARD PROJECT (docs, ADRs, contracts, and — from Phase 1
+# onward — the Turborepo application code). It does not own the base Node.js skill,
+# which is a separately-versioned, shared asset installed alongside this project, not
+# part of its own history.
+
+# The base Node.js Delivery System skill — separate asset, not this project's own code.
+# Contains machine-specific local settings (webdesk-nodejs/.claude/settings.local.json)
+# that must never be committed anywhere.
+/webdesk-nodejs/
+
+# Built export artifacts — regenerable from source, not source themselves.
+*.zip
+/webdesk-growth-dashboard-review-package-*/
+
+# macOS / editor cruft
+.DS_Store
+__MACOSX/
+*.swp
+
+# Future application dependencies (Phase 1+, not present yet — listed proactively)
+node_modules/
+.env
+.env.local
+.env.*.local
+.turbo/
+dist/
+build/
+.next/
+coverage/
+
+# Never commit real secrets even if accidentally created under these names
+*.pem
+*.key
+credentials.json

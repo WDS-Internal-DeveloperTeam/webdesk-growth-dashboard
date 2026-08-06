@@ -1,0 +1,103 @@
+# Current WordPress Technical Discovery
+
+**Source:** `Current WordPress Technical Discovery.md` — a native Markdown file, directly supplied by the project owner on 2026-08-06. Part 1 below is its content, reproduced as supplied. **Registered in:** `knowledge/00-scope-and-precedence.md` canonical documents table, precedence level 2 (approved detailed dashboard documentation).
+
+**Provenance note, stated plainly:** an earlier, more detailed round of this same discovery — including a "Round 2" self-review classifying each item into confirmed/target-architecture/needs-verification, and a resolved CaseStudy/Portfolio plugin conflict with exact meta-key mappings — was separately supplied and processed on 2026-08-05, as a PDF (15 pages). That additional detail is preserved below as Part 2, since none of it is contradicted by the 2026-08-06 Markdown version supplied for Part 1 (only not repeated in it, being a shorter document). The PDF itself is no longer bundled in this export now that a native Markdown original exists for Part 1; this note is the historical record of that PDF's processing, not a claim that the PDF is still part of the canonical source set.
+
+**ACF current-state clarification:** see `canonical-inputs/Owner_Clarifications_2026-08-05.md` for the project owner's dated clarification on ACF current-state, which supersedes one specific reading of Part 1's plugin inventory. That file is kept separate from this discovery document rather than edited into it, so both remain independently auditable.
+
+---
+
+## Part 1 — Current WordPress Technical Discovery (as directly supplied, 2026-08-06)
+
+| Discovery item | Current answer |
+|---|---|
+| Production URL | `https://webdesksolution.com/` — active and publicly accessible. |
+| Staging URL | `https://staging-7a61-wdsstage2.wpcomstaging.com/` |
+| WordPress version | **7.0.2** |
+| PHP version | **PHP 8.4** |
+| WordPress.com plan and hosting | Business Plan |
+| Custom theme and repository | Create a new custom WordPress theme specifically for the WebDesk website. Use theme name **WebDesk Custom Theme**, initial version **1.0.0**, and maintain it in a separate private repository under the WebDesk GitHub organization. The final GitHub repository URL will be added after repository creation. |
+| Theme folder structure | Create the new **WebDesk Custom Theme** using the standard structure (PHP templates, reusable template parts, WordPress functions, `acf-json/`, source assets, and compiled production assets — see the theme scaffold in the supplied source for the exact tree). **Note:** this folder-structure recommendation still names an `acf-json/` directory and `inc/acf.php` as part of its suggested scaffold — this is the same target-architecture point already resolved in favor of `01_Dashboard_Master_Specification.md`'s "No ACF" exclusion (see `knowledge/07-wordpress-integration.md` §"ACF conflict — resolved"); it does not indicate ACF is currently installed or in use. The exact files may be extended as requirements are finalized, but the approved separation between source assets, compiled assets, templates, reusable parts, PHP modules, and field-group JSON must be preserved regardless of which field-storage mechanism is used. Compiled CSS and JavaScript must never be edited manually. |
+| Installed and active plugins | Akismet Anti-spam: Spam Protection — 5.7 · All-in-One WP Migration and Backup — 7.106 · CaseStudy — 0.1 · Classic Editor — 1.7.0 · Contact Form 7 — 6.1.6 · Contact Form 7 Spam Killer — 1.8 · Contact Form CFDB7 — 1.3.6 · Country & Phone Field Contact Form 7 — 2.6.5 · IndexNow — 1.0.4 · Jetpack — version not displayed · Jetpack Boost — 4.6.3 · Page Optimize — 0.6.3 · Portfolio — 0.1 · ReCaptcha v2 for Contact Form 7 — 1.5.0 · Redirection — 5.9.0 · WDS Podio API — 1.0 · WordPress Importer — 0.9.5 · WP Mail SMTP — 4.9.0 · WP Robots Txt — 1.3.5 · Yoast SEO — 28.1. **This directly-supplied plugin inventory does not list ACF ("Advanced Custom Fields") as installed** — see the historical note below on where this differs from the earlier-supplied PDF version. |
+| Custom post types | Register the required custom post types within `inc/post-types.php` of the **WebDesk Custom Theme**. Create post types for **Services, Case Studies, Testimonials, Team Members and FAQs**. Use unique prefixed slugs, enable only the required editor features, and expose approved post types through the WordPress REST API. Keep post-type registration in version-controlled theme code; do not depend on a separate Custom Post Type plugin. |
+| Custom taxonomies | Register custom taxonomies in `inc/taxonomies.php` of the **WebDesk Custom Theme**. Create **Service Categories** for Services, **Industries** and **Technologies** for Case Studies, **FAQ Categories** for FAQs, and **Departments** for Team Members. Use uniquely prefixed slugs, enable hierarchical organization where required, and expose approved taxonomies through the WordPress REST API. Keep all taxonomy registration in version-controlled theme code without using a separate taxonomy plugin. |
+| REST API availability | The public `/wp-json/` endpoint could not be verified during the external check. **Confirmation still required**: whether it is enabled, restricted or protected by a security layer. |
+| Application Password availability | Enable **WordPress Application Passwords** and create one dedicated integration account for each environment. Assign a custom least-privilege role that permits approved REST API actions only. Do not use a personal or administrator account. Store credentials in environment variables, exclude them from Git, and allow independent rotation or revocation. |
+| WP-CLI availability | Enable **SSH and WP-CLI access** for development and staging. Permit cache clearing, rewrite flushing, version/status checks, approved imports, database migrations, checksum verification and validated search-and-replace commands. Production WP-CLI commands must run only through the approved deployment workflow after authorization. Unrestricted interactive production access and destructive commands are prohibited. |
+| SCSS/CSS build process | Use **Dart Sass with Vite and PostCSS** in the **WebDesk Custom Theme**. Store SCSS source files in `assets/src/scss/` with `main.scss` as the single entry point. Generate development CSS in `assets/dist/css/main.css` and production CSS in `assets/dist/css/main.min.css`. Run `npm install` for setup, `npm run dev` for local development with file watching and source maps, and `npm run build` for optimized production compilation with Autoprefixer and minification. Enqueue only the compiled CSS through `inc/enqueue.php`; compiled files must not be edited manually. Keep WordPress theme styles, dependencies, configuration and CSS naming isolated from the Next.js dashboard repository and dashboard styling system. |
+| JavaScript build process | Use **Node.js 22 LTS**, **npm** and **Vite** for the WebDesk Custom Theme. Store the main JavaScript entry file at `assets/src/js/main.js` and reusable modules in `assets/src/js/modules/`. Run `npm install` for dependency setup, `npm run dev` for local development with file watching and source maps, and `npm run build` for optimized production bundling and minification. Output compiled JavaScript to `assets/dist/js/main.min.js` and enqueue it through `inc/enqueue.php`. Pin the Node.js version in `.nvmrc` and `package.json`, commit `package-lock.json`, and never edit compiled files manually. Keep the WordPress JavaScript build completely separate from the Next.js dashboard build process. (This Node 22 LTS pin is for the WordPress theme's own build tooling only — a separate system from the dashboard application, which targets Node.js 24 per this profile's `knowledge/01-approved-architecture.md`; the two are not required to match.) |
+| Git branches and workflow | Use the following Git workflow for both repositories: **feature branch → Pull Request → automated code-quality, security and build checks → staging deployment → QA and stakeholder approval → deploy the exact approved commit to production → post-deployment smoke testing**. Protect the staging and production branches, prohibit direct production commits, require Pull Request approval, and record the approved commit SHA in every deployment and rollback record. |
+| Deployment process | Use **WordPress.com GitHub Deployments** connected to the private WebDesk Custom Theme repository. A Pull Request must pass automated PHP, JavaScript, SCSS, security and production-build checks before merging. Merge the approved commit into the staging branch for automatic staging deployment, complete QA and stakeholder approval, and then deploy the exact approved commit to production through the protected production branch. Record the commit SHA, approver, deployment time and smoke-test results. For rollback, redeploy the previous verified commit and restore the database or uploads only when the release changed data or media. Direct SFTP deployment and manual production-file editing are prohibited. |
+| Backup process | Configure **automatic daily WordPress.com backups** covering the database, custom theme, plugins, uploads and configuration. Retain operational backups for **35 days** and store an encrypted monthly backup off-platform for **one year**. Create an additional backup before every production deployment. Document the restoration procedure, restrict restore access to authorized administrators, and perform a **quarterly restore test on staging**. Record the date and result of each restore test. |
+| Forms and CRM integrations | Website contact forms collect lead information and send it to **Podio CRM**. **Confirmation still required**: form plugin, webhook or Make.com workflow, spam protection, field mapping, retry handling and failure notifications. |
+| GA4, GTM and tracking | **GA4** is used for website analytics, **Microsoft Clarity** for behaviour and heatmaps, and **Google Tag Manager** is present on the public website. **Confirmation still required**: container/property IDs, consent behaviour, environments and event ownership. |
+| Security and monitoring | Use **Wordfence Free** for firewall protection, malware scanning, login-attempt limiting and two-factor authentication. Use **WordPress.com CDN and platform security** for hosting-level protection, **WPScan through GitHub Actions** for scheduled vulnerability checks, and **UptimeRobot Free** for availability monitoring. Security alerts must be sent to the **WordPress Technical Lead**. The **Security Owner** will manage confirmed incidents and escalation. |
+| Modified core/plugin/vendor files | Direct modification of **WordPress core, third-party plugin, or vendor files is prohibited**. Verify integrity through Git comparison, `wp core verify-checksums`, and plugin checksum checks where supported. Record every detected modification, its purpose, owner and migration plan. Move required customizations into the **WebDesk Custom Theme**, child-safe custom code, hooks, filters or a version-controlled custom plugin. Restore original core, plugin and vendor files after the customization is safely migrated and tested. |
+| Known technical debt | No confirmed technical debt has been recorded yet. During the initial repository and WordPress audit, create a **Technical Debt Register** covering outdated dependencies, duplicate or unused CSS/JavaScript, PHP warnings, slow database queries, abandoned plugins, hard-coded content, undocumented integrations, deployment gaps and security exceptions. Assign each finding a severity, owner, remediation action and target date. Critical security or stability issues must be resolved before production launch; lower-priority items must be added to the approved backlog. |
+
+**Historical note — a difference between the two supplied source versions, preserved transparently rather than silently resolved:** the PDF version supplied and processed 2026-08-05 listed "Advanced Custom Fields — 6.8.6" in its plugin inventory and included a dedicated "ACF version and field groups" row recommending free-tier ACF + ACF Local JSON. The Markdown version directly supplied 2026-08-06 (Part 1 above, the current source of record) does **not** list ACF in its plugin inventory and has no such dedicated row. This difference is not resolved here by picking one as "correct" — it independently corroborates, rather than contradicts, the current-state clarification in `canonical-inputs/Owner_Clarifications_2026-08-05.md` (no confirmed ACF dependency exists). If ACF is found installed and in active use at implementation kickoff, that would be new information contradicting both this note and the owner clarification, and should be escalated as a fresh conflict.
+
+**Items currently confirmed (per the source document):**
+- Production website: `webdesksolution.com`
+- WordPress.com staging environment is available
+- GA4, Microsoft Clarity, and Podio integration are in use
+- Google Tag Manager is present on the public website
+- WordPress website and dashboard styling systems must remain completely isolated
+
+---
+
+## Part 2 — Round 2 (self-review, classifying the above into fact vs. standard vs. open item)
+
+The source document's own second round explicitly reclassifies the table above into three categories — preserved here because it materially affects how each row should be read:
+
+### Confirmed enough to proceed (dashboard documentation could be written against these)
+Production and staging URLs · WordPress.com Business hosting · target WordPress/PHP versions as stated · new custom-theme architecture · ~~free ACF with Local JSON~~ **(superseded — see `canonical-inputs/Owner_Clarifications_2026-08-05.md`)** · required custom post types and taxonomies · Dart Sass/Vite/PostCSS · WordPress JavaScript build architecture · separate dashboard and WordPress repositories · PR/staging/approval/production workflow · WordPress.com GitHub deployment direction · backup requirements · GA4/GTM/Clarity/Podio usage · WordPress/dashboard styling isolation · WordPress security and monitoring direction · prohibition against editing core/plugin/vendor files · Technical Debt Register requirement.
+
+### Approved future standards — status: "Approved Target Architecture," verification: "Required During Implementation" (i.e., these are decisions, not yet confirmed as operational)
+Create the new custom theme · ~~create ACF field groups~~ **(superseded — see `canonical-inputs/Owner_Clarifications_2026-08-05.md`)** · register new post types/taxonomies · enable Application Passwords · enable WP-CLI and SSH · configure the build system · establish the Git branch workflow · configure automatic backups · install/configure Wordfence/WPScan/UptimeRobot · create the Technical Debt Register.
+
+**These must not be presented as already installed or operational** — this is the same "target architecture vs. confirmed current state" distinction `knowledge/07-wordpress-integration.md` already enforces; this document independently confirms the same discipline is expected.
+
+### Remaining WordPress verification items (facts to confirm at implementation kickoff, not new dashboard questions)
+
+| Item | What still needs confirmation |
+|---|---|
+| Current theme | Exact active production theme, child theme, custom files and dependencies |
+| Existing repository | Whether current WordPress code is already in Git and where |
+| REST API | Whether `/wp-json/` is enabled, restricted, or protected |
+| Application Passwords | Whether enabled on WordPress.com and whether the required integration role can be created |
+| WP-CLI and SSH | Exact development/staging/production availability and WordPress.com restrictions |
+| GitHub Deployments | Repository connection, supported branch mapping, exact staging/production deployment controls |
+| Backup configuration | Whether 35-day, monthly off-platform, and pre-deployment backups are actually configured |
+| ACF plugin presence | One-time verification, per `canonical-inputs/Owner_Clarifications_2026-08-05.md`: confirm whether ACF is installed at all. **No migration is assumed either way** — if found installed but unused, remove via the approved plugin-cleanup process; if found installed and in active use, escalate as a fresh conflict rather than assuming prior guidance still applies. |
+| Existing content model | Current post types, taxonomies, templates, shortcodes, blocks, widgets, custom fields |
+| Forms and Podio | Exact Contact Form 7 forms, field mappings, WDS Podio API behaviour, retry handling, failure alerts |
+| Analytics | GA4 property, GTM container, Clarity events, consent handling, ownership |
+| Security | Whether Wordfence, WPScan, UptimeRobot, and 2FA are currently installed and configured |
+| File integrity | Whether core/plugin/vendor files have been modified |
+| Technical debt | Initial audit results and backlog |
+| Plugin licences | Ownership, renewal responsibility, whether each plugin is still required |
+| Plugin versions | Jetpack version and complete installed-vs-active plugin inventory |
+
+### Resolved: CaseStudy/Portfolio plugin conflict (from the source document's own Q&A)
+
+The source document flagged a conflict — registering the same post types in both the existing plugins and the new theme — and the project owner answered it directly within the document:
+
+- **Which post types do the two plugins currently register?** CaseStudy and Portfolio.
+- **Existing slugs:** `casestudy`, `portfolio`.
+- **CaseStudy fields/taxonomy:** post type slug `casestudy`; supports title/editor/thumbnail/excerpt/comments; archive disabled; flat URL `/{post-slug}/`; taxonomy `casestudy_category` (hierarchical, rewrite `casestudy_category`, extra term field `casestudy_cat_sort`); meta box "Additional Information" with keys `casestudy_logo_meta_key_cs` (upload array), `delivery_date_meta_key` (date string), `cs_sort_order` (number), `casestudy_tech_meta_key_cs` (checkbox array — technology list includes BigCommerce, Volusion, PrestaShop, CS-Cart, WooCommerce, Shift4Shop, Magento, Shopify, Shopify Plus, WordPress, Node.js, Vue.js, PHP, Laravel, React Native, Android Apps, iOS Apps, Flutter, Webflow, Wix), `content_title_cs`/`content_desc_cs`/`content_image_cs` (repeatable content blocks), gallery via `img_gallery_cs` (registered through a `simple_register_metaboxes` filter).
+- **Portfolio fields/taxonomy:** post type slug `portfolio`; supports title/editor/thumbnail/excerpt; archive disabled; URL `/portfolio/{post-slug}/`; taxonomy `portfolio-category` (hierarchical, rewrite `portfolio-category`, extra field `category_type` stored as WP options `category_industry`/`category_technology`, comma-separated term IDs); meta box "Additional Information" with `portfolio_logo_meta_key` (upload array), `delivery_date_meta_key` (date string), `portfolio_tech_meta_key` (checkbox array — similar technology list plus Joomla, eBay store, HTML5, minus a few CaseStudy-only entries); gallery via `img_gallery` (same `simple_register_metaboxes` pattern).
+- **Does current content depend on them?** Yes.
+- **Will the plugins remain, be migrated, or be retired?** **Be migrated.**
+- **Recommended rule, selected option:** **Option A — register post types in the WebDesk Custom Theme.**
+
+This confirms and extends (with exact meta-key mappings) what `10_WordPress_Integration_and_Migration.md §5–§6` already specified — no conflict with prior approved sources on this point, only additional confirmed detail. `knowledge/07-wordpress-integration.md`'s existing "Option A is approved" statement and meta-key table are corroborated, not contradicted, by this document.
+
+### Final status (per the source document)
+
+- Dashboard planning: complete enough to document
+- WordPress target architecture: approved (no ACF — see `canonical-inputs/Owner_Clarifications_2026-08-05.md`)
+- Current WordPress environment: partially verified
+- WordPress implementation discovery: still required at development kickoff
+- Additional input required from the client right now: none

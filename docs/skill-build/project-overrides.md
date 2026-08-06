@@ -1,0 +1,39 @@
+# Project Overrides — WebDesk Growth Dashboard
+
+**Status:** Complete. Every place this project's approved architecture diverges from a base-skill *default* (never a base-skill *rule*), with the override recorded per the base skill's own "ask-if-missing, record the choice" mechanism. Cross-references `docs/implementation/architecture-validation.md` (prior task) and this build's `knowledge/01-approved-architecture.md`.
+
+**No dashboard decision was silently changed by this skill-build.** Every override below is a restatement of a decision already approved in the task brief (§3–§13) or the prior compatibility review, formalized into the skill overlay — this report exists to make each one auditable in one place, not to introduce anything new.
+
+---
+
+| Area | Base-skill default | This project's override | Recorded at | Justification basis |
+|---|---|---|---|---|
+| Backend framework | Express | NestJS | `knowledge/01-approved-architecture.md`, `knowledge/03-nestjs-on-vercel.md` | Schema-anticipated alternative (`tech_stack.framework` enum already includes `nest`) |
+| Runtime version | Node 22 (literal example) | Node 24 | `knowledge/01-approved-architecture.md` | Satisfies the underlying "active LTS, 22+" rule |
+| Monorepo | Single-repo-per-service | Turborepo monorepo | `knowledge/02-turborepo-boundaries.md` | New structural pattern, not a rule change |
+| Compute/job model | Persistent process (Express + node-cron/BullMQ) | Vercel Functions + Vercel Queues/Workflows/Cron, no permanent worker | `knowledge/04-serverless-queues-workflows-and-cron.md` | Explicit, resolved architecture decision (task brief §4) |
+| Object storage | S3 (default) | Vercel Blob | `knowledge/08-vercel-blob-and-file-handling.md` | Behaviorally equivalent; named provider for a generic requirement |
+| Queue/Redis provider | node-cron / BullMQ + generic Redis | Vercel Queues/Workflows/Cron + Upstash Redis | `knowledge/04`, `knowledge/01` | Same reasoning as compute/job model |
+| Authentication | Local JWT username/password | Google Workspace SSO (primary) + local TOTP emergency admin | `knowledge/05-google-workspace-sso-and-local-admin.md` | Explicit approved requirement; base skill had no prior SSO model to override, so this is closer to "new" than "override" — listed here because it inverts the base skill's *primary* auth assumption |
+| Email provider | Unspecified (no base-skill default) | Google Workspace SMTP, explicitly **not** Resend | `knowledge/09-google-workspace-smtp.md` | Explicit exclusion, task brief §10 |
+| Test runner | `node:test` (default) | Vitest/Jest (primary) | `knowledge/13-testing-and-acceptance.md` | Sanctioned escalation under the base skill's own "vitest when its features are actually needed" allowance |
+| Package manager | npm (implied default) | pnpm | `knowledge/01-approved-architecture.md` | Explicitly sanctioned alternative in the base skill's own text |
+| Host target | `local\|aws\|gcp\|cloudflare\|heroku\|vps` (schema enum) | `vercel` | `contracts/project-profile.schema.json` (local extension) | Not in the base schema; extended locally, proposed upstream (Patch 09), not applied to the base schema |
+| Multi-tenancy scoping key | `tenant_id`, per-client + master dashboard | `project_id`, single organization, no master/cross-client dashboard | `knowledge/10-data-ownership-and-audit.md`, `knowledge/05` | Explicit resolution: both SSO domains are one organization (task brief §6) |
+| WordPress custom-field architecture | Not addressed by the base skill | Native `register_post_meta()` only — **ACF is absolutely forbidden** (WDS-001) | `knowledge/07-wordpress-integration.md`, `knowledge/15` | Explicit, absolute exclusion (task brief §8) |
+
+---
+
+## What was explicitly NOT overridden (confirms no silent scope creep)
+
+- **The gate sequence** (`G0.5 → G0 → G1 → G1.5 → G-Contracts → G-Schema → G2 → G3 → G4×n → G5 → G5.5 → G6 → M6`) — unchanged.
+- **The software-delivery agent roster** (PM/Architect/Backend/Frontend/Designer/QA/Code Review/Delivery Head) — unchanged, and explicitly kept distinct from the dashboard's own 15 business agents (`SKILL.md §6`).
+- **No-self-approval, no-auto-deploy, no-auto-merge** — unchanged, restated as project-specific WDS-007/WDS-008 for emphasis, never relaxed.
+- **The controller/service/repository layering and repository-only DB access (NODE-003/FG-004)** — unchanged, applied per-app within the monorepo (`knowledge/02`).
+- **PostgreSQL + Sequelize as the database/ORM** — this is the base skill's own default, not an override at all; listed here only to note that no override exists in this area despite everything else in the stack changing around it.
+
+---
+
+## Verification
+
+Every row above traces to an explicit statement in the skill-build task brief (§3–§13) or the prior `docs/implementation/architecture-validation.md`/`requirements-traceability-matrix.md` — none was invented during this build. See `docs/skill-build/validation-report.md` for the grep-based confirmation that no forbidden term (ACF, Neon, Resend, non-East-Coast region, permanent-worker code) appears anywhere in the profile outside these override statements' own exclusion-rule text.

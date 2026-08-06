@@ -1,0 +1,133 @@
+WebDesk Growth Dashboard — Review/Export Package — file manifest
+Regenerated 2026-08-06 (mechanically, from the actual final package — third remediation round)
+Root: package root (the top level of the exported zip)
+
+This manifest covers the FULL EXPORT PACKAGE, not just the project profile.
+It exists because an earlier export nested docs/implementation/ and docs/skill-build/
+inside the profile directory, which produced spurious validator failures unrelated
+to the profile's actual correctness. This package instead places every top-level
+piece at package root, matching docs/skill-build/project-skill-build-report.md's
+package layout diagram.
+
+The project profile itself has its own separate, narrower manifest scoped to only
+its 51 files: skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/MANIFEST.txt
+Do not duplicate that list here.
+
+This package is deliberately LEAN: it does not bundle the full base Node.js skill
+(webdesk-nodejs/skills/nodejs/_spine/, nodejs/knowledge/, _contracts/, tools/scripts/,
+etc.) — only the project-specific profile subtree, this project's own reports, and
+its canonical source inputs. Running the profile's own tools/validate-all.py from
+inside this package therefore runs in STANDALONE mode (13/14 real checks + 1
+explained, non-failing SKIP for the one check that genuinely needs the real base
+schema) — this is expected, not a defect. Re-run the same script from inside a full
+base-skill checkout for the full 14/14 result. See docs/skill-build/validation-report.md.
+This packaging shape was confirmed with the project owner on 2026-08-06 after a
+review assumed the full base skill was bundled; it is not.
+
+Two validators ship with this package:
+- skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tools/validate-all.py
+  — validates the PROFILE
+- validate-package.py (this package's own root) — validates the PACKAGE as a whole
+  (manifest accuracy, hygiene, canonical-input presence). Run both.
+
+Total files: 88 (including this manifest)
+
+Top-level pieces:
+- skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/   (51 files — the project-specific skill profile; see its own MANIFEST.txt)
+- docs/implementation/                                                         (6 files — Phase 1 compatibility review)
+- docs/skill-build/                                                            (9 files — skill-overlay build report suite)
+- canonical-inputs/                                                            (8 files — WordPress Technical Discovery (native Markdown, two supply rounds) + Owner Clarifications (2026-08-05) + Service/SEO Library workbook v4 + agent-specifications-batch-1/ with 5 files)
+- proposed-upstream-patches/                                                   (12 files — README + 11 proposed base-skill patches; outside the skill tree, never auto-merged)
+- validate-package.py                                                          (root-level package validator)
+- PACKAGE_MANIFEST.txt                                                         (this file)
+
+Full flat file list:
+
+./canonical-inputs/Current_WordPress_Technical_Discovery.md
+./canonical-inputs/Owner_Clarifications_2026-08-05.md
+./canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm
+./canonical-inputs/agent-specifications-batch-1/00_README.md
+./canonical-inputs/agent-specifications-batch-1/01_Website_Growth_Director.md
+./canonical-inputs/agent-specifications-batch-1/02_Site_Intelligence_and_Inventory_Agent.md
+./canonical-inputs/agent-specifications-batch-1/03_Dashboard_Application_Engineering_Agent.md
+./canonical-inputs/agent-specifications-batch-1/04_Release_and_Memory_Coordinator.md
+./docs/implementation/architecture-validation.md
+./docs/implementation/gap-analysis.md
+./docs/implementation/node-skill-compatibility-review.md
+./docs/implementation/open-questions.md
+./docs/implementation/phased-implementation-plan.md
+./docs/implementation/requirements-traceability-matrix.md
+./docs/skill-build/approval-checklist.md
+./docs/skill-build/base-skill-reuse-map.md
+./docs/skill-build/file-inventory.md
+./docs/skill-build/gap-resolution-matrix.md
+./docs/skill-build/project-overrides.md
+./docs/skill-build/project-skill-build-report.md
+./docs/skill-build/proposed-upstream-patches.md
+./docs/skill-build/unresolved-items.md
+./docs/skill-build/validation-report.md
+./proposed-upstream-patches/01-nestjs-adaptation-guidance.md
+./proposed-upstream-patches/02-turborepo-support.md
+./proposed-upstream-patches/03-vercel-functions-guidance.md
+./proposed-upstream-patches/04-vercel-queues-workflows-cron-guidance.md
+./proposed-upstream-patches/05-google-workspace-oidc-guidance.md
+./proposed-upstream-patches/06-github-app-integration-guidance.md
+./proposed-upstream-patches/07-wordpress-integration-guidance.md
+./proposed-upstream-patches/08-smtp-adapter-guidance.md
+./proposed-upstream-patches/09-host-target-vercel-schema-addition.md
+./proposed-upstream-patches/10-storage-vercel-blob-schema-addition.md
+./proposed-upstream-patches/11-generic-project-profile-routing.md
+./proposed-upstream-patches/README.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/CHANGELOG.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/MANIFEST.txt
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/README.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/SKILL.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/contracts/audit-event.schema.json
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/contracts/job-record.schema.json
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/contracts/project-profile.schema.json
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/contracts/release-manifest.schema.json
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/contracts/webhook-event.schema.json
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/github/01-app-auth-and-octokit.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/github/02-webhooks-and-events.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/github/pointers.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/google-workspace/01-oidc-sso.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/google-workspace/02-smtp.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/google-workspace/pointers.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/vercel/01-functions-queues-workflows-cron.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/vercel/02-blob-and-postgres.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/vercel/pointers.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/wordpress/01-rest-api-and-app-passwords.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/wordpress/02-wp-cli-and-deployment.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/integrations/wordpress/pointers.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/00-scope-and-precedence.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/01-approved-architecture.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/02-turborepo-boundaries.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/03-nestjs-on-vercel.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/04-serverless-queues-workflows-and-cron.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/05-google-workspace-sso-and-local-admin.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/06-github-app-integration.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/07-wordpress-integration.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/08-vercel-blob-and-file-handling.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/09-google-workspace-smtp.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/10-data-ownership-and-audit.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/11-retention-backup-and-operations.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/12-dashboard-security-controls.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/13-testing-and-acceptance.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/14-implementation-phases.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/knowledge/15-project-specific-forbidden-actions.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/templates/CLAUDE.md.template
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/templates/HANDOFF.md.template
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/templates/architecture-adr-template.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/templates/integration-contract-template.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/templates/project.json.example
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/templates/setup-input-checklist.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/templates/task-package-template.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tests/context-loading-tests.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tests/precedence-tests.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tests/profile-validation.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tests/routing-validation.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tests/scenario-tests.md
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tools/validate-all.py
+./skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/tools/validate-project-profile.py
+./validate-package.py
+./PACKAGE_MANIFEST.txt
