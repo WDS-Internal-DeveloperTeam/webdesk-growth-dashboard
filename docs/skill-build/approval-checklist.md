@@ -40,7 +40,7 @@ A second external verification review reported 12/14 checks on an exported packa
 
 A third external verification review reported a packaging discrepancy (281 files, `webdesk-nodejs/`-prefixed, containing local developer settings) and requested registering the Service/SEO workbook, correcting WordPress source provenance, separating the ACF clarification into its own file, and adding a package-level validator. Full detail in `docs/skill-build/validation-report.md`'s "V3: packaging-discrepancy investigation" and "Fixed in the V3 remediation" sections:
 
-1. **Packaging discrepancy investigated, not silently accepted.** The described package (281 files, `webdesk-nodejs/` prefix, `.claude/settings.local.json` present) did not match this build's actual export (86 files at the time, no such prefix, no local settings — independently re-verified by MD5 immediately before the review arrived). Running the new package validator against the *raw working directory* (rather than the curated export) reproduced the review's exact complaints, since the raw directory genuinely contains those things. **Put to the project owner directly: keep the export lean, or bundle the full base skill.** Decision: **keep it lean** — matches the explicit V2 spec, and this folder has an independently-diagnosed disk-full/broken-iCloud-sync problem that a much larger bundle would aggravate.
+1. **Packaging discrepancy investigated, not silently accepted.** The described package (281 files, `webdesk-nodejs/` prefix, `.claude/settings.local.json` present) did not match this build's actual export (86 files at the time, no such prefix, no local settings — independently re-verified by MD5 immediately before the review arrived). Running the new package validator against the _raw working directory_ (rather than the curated export) reproduced the review's exact complaints, since the raw directory genuinely contains those things. **Put to the project owner directly: keep the export lean, or bundle the full base skill.** Decision: **keep it lean** — matches the explicit V2 spec, and this folder has an independently-diagnosed disk-full/broken-iCloud-sync problem that a much larger bundle would aggravate.
 2. **Service/SEO workbook registered for real.** A genuine `v4.xlsm` file was directly supplied, inspected (macro-free, no pricing/confidential content in its sample rows), and registered as Under Review per WDS-014.
 3. **WordPress source reconciled, not overwritten.** A native Markdown version of the discovery document was directly supplied and is now the source of record for Part 1; the PDF is no longer bundled (a real Markdown original now exists). The earlier PDF-processed Round 2 content is preserved since it isn't contradicted. **One genuine difference between the two supplied source versions was found and preserved transparently rather than silently resolved:** the PDF's plugin list included ACF 6.8.6; the new Markdown's does not.
 4. **ACF clarification moved to its own file**, `canonical-inputs/Owner_Clarifications_2026-08-05.md`, no longer an inline addendum inside the discovery document.
@@ -76,9 +76,9 @@ Registering the newly-supplied **Current WordPress Technical Discovery** documen
 
 ## Sign-off
 
-| Role | Name | Decision | Date |
-|---|---|---|---|
-| Reviewer (Tech Lead / Architect) | | ☐ Approved ☐ Changes requested | |
-| PM | | ☐ Approved ☐ Changes requested | |
+| Role                             | Name | Decision                       | Date |
+| -------------------------------- | ---- | ------------------------------ | ---- |
+| Reviewer (Tech Lead / Architect) |      | ☐ Approved ☐ Changes requested |      |
+| PM                               |      | ☐ Approved ☐ Changes requested |      |
 
 **On approval:** the next task is **Phase 0 only** — project state, architecture ADRs, integration contracts, repository plan. Not the full application. Not a scaffold. See `docs/skill-build/project-skill-build-report.md §10`.

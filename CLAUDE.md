@@ -8,21 +8,21 @@
 - **Project:** WebDesk Website Growth Dashboard
 - **Build context:** nodejs
 - **Project type:** custom-app-build
-- **Project profile:** webdesk-growth-dashboard   ← loads the profile at
+- **Project profile:** webdesk-growth-dashboard ← loads the profile at
   `webdesk-nodejs/skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/` after the base
   custom-app-build skill, per profile SKILL.md §2. **This file is the routing mechanism — the base
   orchestrator has no code that reads `project.project_profile` and auto-loads a matching profile.**
   If the "Required skill files" list below is ever removed or copied without the profile line, the
   profile stops loading silently.
 - **Integration targets:** ["github", "wordpress", "google-workspace"]
-- **Timezone:** America/Toronto (default — not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)   **Tenant:** per-client (single organization, no master/cross-client scope — see profile knowledge/05)
+- **Timezone:** America/Toronto (default — not yet confirmed by the client; see `docs/project-state/setup-input-register.md`) **Tenant:** per-client (single organization, no master/cross-client scope — see profile knowledge/05)
 - **Host target:** vercel
 - **Tech stack:** Node 24 + TypeScript + NestJS (Vercel Functions) + Next.js App Router;
   PostgreSQL (Vercel-provisioned, Neon excluded) + Sequelize; Vercel Queues/Workflows/Cron
   (no permanent worker); Vercel Blob; Google Workspace SSO + SMTP; GitHub App; Turborepo + pnpm
 - **State file:** `outputs/webdesk-growth-dashboard/project.json`
 
-## Required skill files for this project   ← MANDATORY. The context allow-list.
+## Required skill files for this project ← MANDATORY. The context allow-list.
 
 > Load ONLY these at session start. Loading anything outside this list risks the 200K
 > context wall. Never load another project_type's KB, another profile, or an integration
@@ -30,6 +30,7 @@
 > profile's `SKILL.md` §2 loading hierarchy.
 
 Always (Tier 0):
+
 - `webdesk-nodejs/skills/_spine/persona.md`
 - `webdesk-nodejs/skills/_spine/shared-knowledge/CONVENTIONS.md`
 - `webdesk-nodejs/skills/_spine/shared-knowledge/context-budget.md`
@@ -37,9 +38,11 @@ Always (Tier 0):
 - `webdesk-nodejs/skills/_spine/orchestrator/SKILL.md`
 
 Active agent (one at a time):
-- `webdesk-nodejs/skills/_spine/{active-agent}/SKILL.md`   (e.g. `pm-agent`, `architect-agent`, `qa-agent`, `delivery-head`)
+
+- `webdesk-nodejs/skills/_spine/{active-agent}/SKILL.md` (e.g. `pm-agent`, `architect-agent`, `qa-agent`, `delivery-head`)
 
 Node arm + custom-app-build + this profile:
+
 - `webdesk-nodejs/skills/nodejs/SKILL.md`
 - `webdesk-nodejs/skills/nodejs/projects/custom-app-build/SKILL.md`
 - `webdesk-nodejs/skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/SKILL.md`
@@ -50,6 +53,7 @@ Node arm + custom-app-build + this profile:
 - profile `integrations/vercel/*` (only if the task touches Functions/Queues/Workflows/Cron/Blob)
 
 On demand (Tier 2 — Read when the task needs it; do NOT preload):
+
 - `webdesk-dashboard-documentation-v1/*` (the canonical dashboard spec, by path per the active task)
 - `docs/implementation/*` (the compatibility review — by path)
 - `docs/architecture/decisions/*`, `docs/contracts/*`, `docs/repository-plan/*`, `docs/security/*`,
@@ -64,7 +68,7 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** discovery   **Current gate:** G0.5 (open — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative)
+- **Stage:** discovery **Current gate:** G0.5 (open — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative)
 - **Active phase:** Phase 0 — Discovery, Architecture Decisions, and Governance Setup. See
   `docs/implementation/phased-implementation-plan.md` and profile `knowledge/14-implementation-phases.md`.
   Phase 0 is documentation-only: project control files, 20 ADRs, 7 integration contracts, repository/

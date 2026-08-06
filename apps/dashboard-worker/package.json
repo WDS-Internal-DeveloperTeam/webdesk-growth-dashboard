@@ -1,0 +1,22 @@
+{
+  "name": "@webdesk/dashboard-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Serverless-handler foundation for asynchronous/scheduled work. NEVER a permanent process (WDS-005, ADR-0004) — every job type is a separate stateless handler triggered by a queue message, workflow step, or cron invocation. Phase 1A ships the handler contract and a health/status handler only — no real Vercel Queues/Workflows/Cron/Redis/PostgreSQL connection yet.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@webdesk/configuration": "workspace:*",
+    "@webdesk/shared-types": "workspace:*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

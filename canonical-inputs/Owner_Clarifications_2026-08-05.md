@@ -2,7 +2,7 @@
 
 This file records a project-owner clarification issued **after** the initial WordPress Technical Discovery document was registered, kept separate from that document rather than edited into it, so the discovery document's original content and this later clarification both remain independently auditable.
 
-**Do not read this as a correction of the discovery document's content.** The discovery document (`canonical-inputs/Current_WordPress_Technical_Discovery.md`) is preserved exactly as supplied. This file records a *later* clarification that supersedes one specific reading of it — the plugin-inventory line item that reported ACF ("Advanced Custom Fields") as installed and active — for planning and implementation purposes going forward.
+**Do not read this as a correction of the discovery document's content.** The discovery document (`canonical-inputs/Current_WordPress_Technical_Discovery.md`) is preserved exactly as supplied. This file records a _later_ clarification that supersedes one specific reading of it — the plugin-inventory line item that reported ACF ("Advanced Custom Fields") as installed and active — for planning and implementation purposes going forward.
 
 ---
 

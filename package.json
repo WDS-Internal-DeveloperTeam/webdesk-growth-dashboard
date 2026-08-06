@@ -1,0 +1,35 @@
+{
+  "name": "webdesk-growth-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WebDesk Website Growth Dashboard — Turborepo monorepo. Phase 1A: repository and monorepo foundation only.",
+  "engines": {
+    "node": ">=24.0.0 <25.0.0"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
+    "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "audit": "pnpm audit --audit-level=high",
+    "boundaries:check": "depcruise apps packages --config dependency-cruiser.config.cjs",
+    "scan:secrets": "node scripts/scan-secrets.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.1",
+    "dependency-cruiser": "^16.10.4",
+    "eslint": "^9.17.0",
+    "globals": "^17.9.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.66.0"
+  }
+}

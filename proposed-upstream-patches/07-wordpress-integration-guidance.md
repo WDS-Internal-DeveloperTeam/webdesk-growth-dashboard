@@ -14,7 +14,7 @@ No `nodejs/integrations/wordpress/` directory. No guidance on WordPress Applicat
 
 - **New directory:** `nodejs/integrations/wordpress/` — `01-rest-api-and-app-passwords.md`, `02-wp-cli-and-deployment.md`, `pointers.md`, generalized from this project's equivalent files with the WebDesk-specific Case Study/Portfolio migration detail either removed or presented as a worked example of "migrating an existing plugin-dependent content type to native structured content" rather than universal guidance.
 - **Edit:** `nodejs/SKILL.md` — add `wordpress` as a recognized `integration_targets` value.
-- **Note on the no-ACF stance:** the *reason* ACF is excluded in this project (an explicit client architecture decision, `01_Dashboard_Master_Specification.md`'s "Important exclusions") is project-specific — the upstream patch should present "native `register_post_meta()` vs. ACF" as a **documented choice with trade-offs**, not assert ACF is universally forbidden. Only this project's own `knowledge/15-project-specific-forbidden-actions.md` (WDS-001) makes it an absolute rule.
+- **Note on the no-ACF stance:** the _reason_ ACF is excluded in this project (an explicit client architecture decision, `01_Dashboard_Master_Specification.md`'s "Important exclusions") is project-specific — the upstream patch should present "native `register_post_meta()` vs. ACF" as a **documented choice with trade-offs**, not assert ACF is universally forbidden. Only this project's own `knowledge/15-project-specific-forbidden-actions.md` (WDS-001) makes it an absolute rule.
 
 ## Compatibility impact
 

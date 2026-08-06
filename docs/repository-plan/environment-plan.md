@@ -4,12 +4,12 @@
 
 ## Four environments
 
-| Environment | Purpose | Deploys from |
-|---|---|---|
-| **Development** | Individual developer work, local or preview | Feature branches (Vercel preview deployments) |
-| **Preview** | Per-PR preview deployment for review | Open pull requests |
-| **Staging** | Pre-production QA and stakeholder approval | `staging` branch |
-| **Production** | Live system | Approved commit SHA, deployed explicitly after staging sign-off |
+| Environment     | Purpose                                     | Deploys from                                                    |
+| --------------- | ------------------------------------------- | --------------------------------------------------------------- |
+| **Development** | Individual developer work, local or preview | Feature branches (Vercel preview deployments)                   |
+| **Preview**     | Per-PR preview deployment for review        | Open pull requests                                              |
+| **Staging**     | Pre-production QA and stakeholder approval  | `staging` branch                                                |
+| **Production**  | Live system                                 | Approved commit SHA, deployed explicitly after staging sign-off |
 
 ## Separate per environment (restated from each integration contract, collected here for a single reference point)
 
@@ -21,7 +21,7 @@
 
 ## Why this matters enough to state explicitly
 
-Every integration contract in `docs/contracts/` independently states its own environment-separation requirement; this document exists so there is one place a reviewer can confirm the *pattern* is consistent across all seven integrations, rather than trusting each contract's restatement in isolation.
+Every integration contract in `docs/contracts/` independently states its own environment-separation requirement; this document exists so there is one place a reviewer can confirm the _pattern_ is consistent across all seven integrations, rather than trusting each contract's restatement in isolation.
 
 ## What is NOT provisioned in Phase 0
 

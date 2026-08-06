@@ -1,0 +1,28 @@
+{
+  "name": "@webdesk/validation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared Zod validation schemas — consumed by dashboard-web (client-side) and dashboard-api (server-side ValidationPipe), so both sides validate against the exact same schema. Per profile knowledge/03-nestjs-on-vercel.md: never a parallel class-validator DTO.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

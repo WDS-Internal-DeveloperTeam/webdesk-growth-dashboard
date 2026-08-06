@@ -1,0 +1,28 @@
+{
+  "name": "@webdesk/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Integration adapter INTERFACES only — GitHub, WordPress, Google Workspace (auth+SMTP), Vercel Blob, Vercel background jobs. No implementations at Phase 1A. See docs/contracts/*.md for the full contract each interface formalizes.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@webdesk/configuration": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

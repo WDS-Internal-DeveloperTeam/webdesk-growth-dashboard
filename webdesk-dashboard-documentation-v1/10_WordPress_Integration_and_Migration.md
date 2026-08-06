@@ -144,16 +144,16 @@ Every metadata field defines:
 
 ### Existing post meta
 
-| Field | Meta key | Existing type |
-|---|---|---|
-| Logo | `casestudy_logo_meta_key_cs` | upload-result array |
-| Delivery Date | `delivery_date_meta_key` | date string |
-| Sort Order | `cs_sort_order` | number |
-| Technologies | `casestudy_tech_meta_key_cs` | checkbox array |
-| Content Title | `content_title_cs` | serialized array |
-| Content Description | `content_desc_cs` | array |
-| Content Image | `content_image_cs` | upload-result array |
-| Gallery | `img_gallery_cs` | gallery metadata |
+| Field               | Meta key                     | Existing type       |
+| ------------------- | ---------------------------- | ------------------- |
+| Logo                | `casestudy_logo_meta_key_cs` | upload-result array |
+| Delivery Date       | `delivery_date_meta_key`     | date string         |
+| Sort Order          | `cs_sort_order`              | number              |
+| Technologies        | `casestudy_tech_meta_key_cs` | checkbox array      |
+| Content Title       | `content_title_cs`           | serialized array    |
+| Content Description | `content_desc_cs`            | array               |
+| Content Image       | `content_image_cs`           | upload-result array |
+| Gallery             | `img_gallery_cs`             | gallery metadata    |
 
 ## 6. Existing Portfolio plugin
 
@@ -173,12 +173,12 @@ Every metadata field defines:
 
 ### Existing post meta
 
-| Field | Meta key | Existing type |
-|---|---|---|
-| Logo | `portfolio_logo_meta_key` | upload-result array |
-| Delivery Date | `delivery_date_meta_key` | date string |
-| Technologies | `portfolio_tech_meta_key` | checkbox array |
-| Gallery | `img_gallery` | gallery metadata |
+| Field         | Meta key                  | Existing type       |
+| ------------- | ------------------------- | ------------------- |
+| Logo          | `portfolio_logo_meta_key` | upload-result array |
+| Delivery Date | `delivery_date_meta_key`  | date string         |
+| Technologies  | `portfolio_tech_meta_key` | checkbox array      |
+| Gallery       | `img_gallery`             | gallery metadata    |
 
 ## 7. Migration decision
 

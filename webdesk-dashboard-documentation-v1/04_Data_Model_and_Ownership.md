@@ -214,19 +214,19 @@ Idempotency: source file checksum, template version, and row external ID.
 
 ## 3. Ownership matrix
 
-| Data/artifact | PostgreSQL | GitHub | WordPress | Blob | Env vars |
-|---|---:|---:|---:|---:|---:|
-| Users, roles, sessions | Primary | No | No | No | SSO client secrets only |
-| Task progress | Primary | Final task package snapshot | No | Attachments only | No |
-| Approved Markdown | Metadata/index | Primary | Optional published copy | Large sources only | No |
-| Code | Deployment metadata | Primary | Deployed runtime | No | No |
-| Page publication state | Indexed copy | Approved artifact/history | Primary | No | Credentials only |
-| Comments and review assignments | Primary | Optional approved summary | No | No | No |
-| Scans and progress | Primary | Final approved reports | No | Evidence | Provider keys only |
-| Binary assets | Metadata | Public code assets only | Published media | Primary private storage | No |
-| Secrets | Reference metadata only | Never | Never | Never | Primary |
-| Notifications | Primary | No | No | No | SMTP secret only |
-| Backups | Metadata | Procedures/manifests | Source system | Backup objects | Backup credentials only |
+| Data/artifact                   |              PostgreSQL |                      GitHub |               WordPress |                    Blob |                Env vars |
+| ------------------------------- | ----------------------: | --------------------------: | ----------------------: | ----------------------: | ----------------------: |
+| Users, roles, sessions          |                 Primary |                          No |                      No |                      No | SSO client secrets only |
+| Task progress                   |                 Primary | Final task package snapshot |                      No |        Attachments only |                      No |
+| Approved Markdown               |          Metadata/index |                     Primary | Optional published copy |      Large sources only |                      No |
+| Code                            |     Deployment metadata |                     Primary |        Deployed runtime |                      No |                      No |
+| Page publication state          |            Indexed copy |   Approved artifact/history |                 Primary |                      No |        Credentials only |
+| Comments and review assignments |                 Primary |   Optional approved summary |                      No |                      No |                      No |
+| Scans and progress              |                 Primary |      Final approved reports |                      No |                Evidence |      Provider keys only |
+| Binary assets                   |                Metadata |     Public code assets only |         Published media | Primary private storage |                      No |
+| Secrets                         | Reference metadata only |                       Never |                   Never |                   Never |                 Primary |
+| Notifications                   |                 Primary |                          No |                      No |                      No |        SMTP secret only |
+| Backups                         |                Metadata |        Procedures/manifests |           Source system |          Backup objects | Backup credentials only |
 
 ## 4. Indexing requirements
 

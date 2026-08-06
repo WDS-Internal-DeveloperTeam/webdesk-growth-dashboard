@@ -23,20 +23,20 @@ The dashboard is a private WebDesk application for planning, reviewing, approvin
 
 ## Files in this package
 
-| File | Purpose |
-|---|---|
-| `01_Dashboard_Master_Specification.md` | Product scope, architecture, governance, and system-wide requirements |
-| `02_Version_1_Module_Inclusion_Matrix.md` | Full, simplified, foundation-only, and deferred module scope |
-| `03_Detailed_Module_Specifications.md` | Development specification for all dashboard modules |
-| `04_Data_Model_and_Ownership.md` | PostgreSQL entities, relationships, indexes, retention, and source-of-truth ownership |
-| `05_Workflow_State_Machines.md` | Legal status transitions, approvals, rejections, and activity logging |
-| `06_Roles_and_Permissions.md` | Deny-by-default role and action matrix |
-| `07_Low_Fidelity_Wireframes.md` | Operational screen layouts for key modules |
-| `08_API_and_Integration_Contracts.md` | Next.js, NestJS, GitHub, WordPress, Vercel, SMTP, Blob, and queue contracts |
-| `09_Security_Backup_Retention_Operations.md` | Security, backup, retention, monitoring, and incident operations |
-| `10_WordPress_Integration_and_Migration.md` | Native WordPress architecture and Case Study/Portfolio migration |
-| `11_Acceptance_Criteria_and_Test_Plan.md` | System acceptance criteria and test coverage |
-| `12_Open_Items_and_Implementation_Inputs.md` | Items intentionally deferred until setup or implementation |
+| File                                         | Purpose                                                                               |
+| -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `01_Dashboard_Master_Specification.md`       | Product scope, architecture, governance, and system-wide requirements                 |
+| `02_Version_1_Module_Inclusion_Matrix.md`    | Full, simplified, foundation-only, and deferred module scope                          |
+| `03_Detailed_Module_Specifications.md`       | Development specification for all dashboard modules                                   |
+| `04_Data_Model_and_Ownership.md`             | PostgreSQL entities, relationships, indexes, retention, and source-of-truth ownership |
+| `05_Workflow_State_Machines.md`              | Legal status transitions, approvals, rejections, and activity logging                 |
+| `06_Roles_and_Permissions.md`                | Deny-by-default role and action matrix                                                |
+| `07_Low_Fidelity_Wireframes.md`              | Operational screen layouts for key modules                                            |
+| `08_API_and_Integration_Contracts.md`        | Next.js, NestJS, GitHub, WordPress, Vercel, SMTP, Blob, and queue contracts           |
+| `09_Security_Backup_Retention_Operations.md` | Security, backup, retention, monitoring, and incident operations                      |
+| `10_WordPress_Integration_and_Migration.md`  | Native WordPress architecture and Case Study/Portfolio migration                      |
+| `11_Acceptance_Criteria_and_Test_Plan.md`    | System acceptance criteria and test coverage                                          |
+| `12_Open_Items_and_Implementation_Inputs.md` | Items intentionally deferred until setup or implementation                            |
 
 ## Authority hierarchy
 
