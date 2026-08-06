@@ -1,6 +1,6 @@
 # Phase 0 Approval Checklist
 
-**Status:** Ready for human review. Nothing below is self-approved — consistent with this project's separation-of-duties rule (ADR-0010, `knowledge/12-dashboard-security-controls.md`), the agent that authored this Phase 0 foundation does not also approve it.
+**Status:** **Approved 2026-08-06, scope: Phase 1A only** — see Sign-off below. Nothing below was self-approved — consistent with this project's separation-of-duties rule (ADR-0010, `knowledge/12-dashboard-security-controls.md`), the agent that authored this Phase 0 foundation did not also approve it; approval was given explicitly by the project owner in chat.
 
 ---
 
@@ -49,18 +49,18 @@
 
 ## Sign-off
 
-Still unsigned as of this correction pass — kept unsigned until human review, per the review's own explicit instruction (item 8, "Keep the approval checklist unsigned until human review").
+**Signed 2026-08-06.**
 
 | Field | Value |
 |---|---|
-| Approved by | _(blank — record name here on approval)_ |
-| Approval date | _(blank)_ |
-| Exact approved commit SHA | _(blank — record the SHA of the commit that includes this exact, signed version of this file)_ |
-| Authorization scope | _(blank — e.g. "Phase 1A only" or "Full Phase 1 plan")_ |
+| Approved by | WebDesk Solution |
+| Approval date | 2026-08-06 |
+| Exact approved commit SHA | _(backfilled immediately after this signed version is committed — see the follow-up commit that records it, same convention used for the original Phase 0 commit SHA)_ |
+| Authorization scope | **Phase 1A only** — repository and Turborepo monorepo foundation, per `docs/phase-plans/phase-1-foundation-plan.md` Task 1 and the Phase 1A task brief. Does **not** authorize Phase 1B–1F (database/Sequelize, authentication, RBAC, audit logging, dashboard shell/staging deploy) or any business-module implementation — each requires its own separate authorization. |
 
 | Role | Name | Decision | Date |
 |---|---|---|---|
-| Reviewer (Tech Lead / Architect) | | ☐ Approved ☐ Changes requested | |
-| PM | | ☐ Approved ☐ Changes requested | |
+| Reviewer (Tech Lead / Architect) | WebDesk Solution | ☑ Approved | 2026-08-06 |
+| PM | WebDesk Solution | ☑ Approved | 2026-08-06 |
 
-**On approval:** whatever scope is recorded above (e.g. Phase 1 Task 1 only, or "Phase 1A"). Not the full Phase 1 plan by default, and not started automatically by this session — the approver's stated scope governs, not this document's own assumption.
+**On approval:** Phase 1A (repository and Turborepo monorepo foundation) only, per the authorization scope recorded above. Phase 1B onward requires separate authorization.
