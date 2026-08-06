@@ -102,7 +102,9 @@ This is a real, non-example project state file (not the profile's illustrative `
 
 Baseline commit (pre-Phase-0 approved documentation + root control files): `1f529bace05b5cdf8be61741139922e585f4a70a`.
 
-Final Phase 0 commit (adding the directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, and this validation report + the approval checklist): `2aa9cdefbcb924ccb37addee0698a9e25ea5d688` (41 files, 2198 insertions).
+Final Phase 0 commit (adding the directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, and this validation report + the approval checklist): `2aa9cdefbcb924ccb37addee0698a9e25ea5d688` (41 files, 2198 insertions). Corrections commit (six defects fixed after independent review): `84aca8fb6f2f143526329fdec93763ad9e844fe7`.
+
+**Approved and pushed commit** (signed sign-off, scope Phase 1A only): `a8322186def0c6f0638ee2ba0bf2da5871640953`, pushed to `origin/main` and independently verified via `git ls-remote origin` — this is the commit Phase 1A branches from. `origin/master` (the GitHub repo's default branch) remains a separate, pre-existing, single-commit branch untouched by this push.
 
 ## What this validation does NOT claim
 
