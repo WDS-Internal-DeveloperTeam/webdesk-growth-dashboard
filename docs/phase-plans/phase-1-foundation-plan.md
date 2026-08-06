@@ -8,6 +8,8 @@ Thirteen small, approval-gated tasks, in dependency order. No task in this plan 
 
 ### Task 1 — Repository and monorepo scaffold
 
+**Status: Complete, as "Phase 1A" — awaiting approval.** Executed 2026-08-06 under separate, explicit Phase 1A authorization (see `docs/project-state/phase-1a-approval-checklist.md`). Delivered more than the minimal "empty stubs" scope described below — real, tested foundations (Next.js/NestJS/handler scaffolds, all 6 packages, CI, dependency-boundary enforcement) rather than placeholders — see `docs/project-state/phase-1a-validation-report.md` for the exact validation record. The description below is preserved as the original Task 1 plan, not rewritten after the fact.
+
 - **Purpose:** Scaffold the Turborepo workspace (`turbo.json`, `pnpm-workspace.yaml`, empty `apps/*`/`packages/*` stubs) per `docs/repository-plan/dashboard-monorepo-plan.md`, in the git repository already initialized in Phase 0 (`WDS-Dashboard/`, `origin` remote already registered pointing at `WDS-Internal-DeveloperTeam/webdesk-growth-dashboard.git` — **not yet confirmed to exist on GitHub**, and not yet pushed to).
 - **Dependencies:** ADR-0001 approved. **The local scaffold itself does not depend on the remote GitHub repository existing** — it can be built and committed locally first. Pushing to `origin` (a separate sub-step within this task) does depend on the remote existing; if it doesn't yet, create it or confirm with PM/infrastructure owner before that sub-step, without blocking the local scaffold work. **GitHub App creation (ADR-0011, for CI/webhooks) is a separate, later concern and does not block this task at all.**
 - **Authorized role:** Architect, with PM sign-off before any push to the remote.

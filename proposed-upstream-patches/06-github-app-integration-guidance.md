@@ -4,7 +4,7 @@
 
 ## Reason
 
-The base skill's `integrations/` directory covers `bigcommerce/`, `shopify/`, `erp/*` — commerce and ERP systems the sync engine talks to — but has no module for GitHub-as-a-product-integration (distinct from the base skill's own use of GitHub for its delivery process, covered by `git-branch-strategy.md`). Any custom-app-build project whose *product* reads/writes GitHub state (a CI dashboard, a deployment-tracking tool, this project's Ready for Claude Queue/Release Center) needs this and currently has to build it from scratch, as this project did in `profiles/webdesk-growth-dashboard/knowledge/06-github-app-integration.md` and `integrations/github/*`.
+The base skill's `integrations/` directory covers `bigcommerce/`, `shopify/`, `erp/*` — commerce and ERP systems the sync engine talks to — but has no module for GitHub-as-a-product-integration (distinct from the base skill's own use of GitHub for its delivery process, covered by `git-branch-strategy.md`). Any custom-app-build project whose _product_ reads/writes GitHub state (a CI dashboard, a deployment-tracking tool, this project's Ready for Claude Queue/Release Center) needs this and currently has to build it from scratch, as this project did in `profiles/webdesk-growth-dashboard/knowledge/06-github-app-integration.md` and `integrations/github/*`.
 
 ## Current gap
 

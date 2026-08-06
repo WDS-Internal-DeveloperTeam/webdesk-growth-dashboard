@@ -89,13 +89,48 @@
   },
 
   "integration_contracts": [
-    { "id": "IC-GITHUB-001", "system": "github", "ref": "docs/contracts/github-integration-contract.md", "status": "draft" },
-    { "id": "IC-WORDPRESS-001", "system": "wordpress", "ref": "docs/contracts/wordpress-integration-contract.md", "status": "draft" },
-    { "id": "IC-GOOGLE-SSO-001", "system": "google-workspace-sso", "ref": "docs/contracts/google-workspace-auth-contract.md", "status": "draft" },
-    { "id": "IC-GOOGLE-SMTP-001", "system": "google-workspace-smtp", "ref": "docs/contracts/google-workspace-smtp-contract.md", "status": "draft" },
-    { "id": "IC-VERCEL-JOBS-001", "system": "vercel-background-jobs", "ref": "docs/contracts/vercel-background-jobs-contract.md", "status": "draft" },
-    { "id": "IC-VERCEL-BLOB-001", "system": "vercel-blob", "ref": "docs/contracts/vercel-blob-contract.md", "status": "draft" },
-    { "id": "IC-DATABASE-001", "system": "database", "ref": "docs/contracts/database-contract.md", "status": "draft" }
+    {
+      "id": "IC-GITHUB-001",
+      "system": "github",
+      "ref": "docs/contracts/github-integration-contract.md",
+      "status": "draft"
+    },
+    {
+      "id": "IC-WORDPRESS-001",
+      "system": "wordpress",
+      "ref": "docs/contracts/wordpress-integration-contract.md",
+      "status": "draft"
+    },
+    {
+      "id": "IC-GOOGLE-SSO-001",
+      "system": "google-workspace-sso",
+      "ref": "docs/contracts/google-workspace-auth-contract.md",
+      "status": "draft"
+    },
+    {
+      "id": "IC-GOOGLE-SMTP-001",
+      "system": "google-workspace-smtp",
+      "ref": "docs/contracts/google-workspace-smtp-contract.md",
+      "status": "draft"
+    },
+    {
+      "id": "IC-VERCEL-JOBS-001",
+      "system": "vercel-background-jobs",
+      "ref": "docs/contracts/vercel-background-jobs-contract.md",
+      "status": "draft"
+    },
+    {
+      "id": "IC-VERCEL-BLOB-001",
+      "system": "vercel-blob",
+      "ref": "docs/contracts/vercel-blob-contract.md",
+      "status": "draft"
+    },
+    {
+      "id": "IC-DATABASE-001",
+      "system": "database",
+      "ref": "docs/contracts/database-contract.md",
+      "status": "draft"
+    }
   ],
 
   "rfcs": [],

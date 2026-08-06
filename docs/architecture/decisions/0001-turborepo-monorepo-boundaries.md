@@ -31,10 +31,10 @@ packages/
 
 - `dashboard-web` never queries the database directly and holds no business logic — it calls `dashboard-api` for everything.
 - `dashboard-api` owns synchronous, request-triggered business logic: HTTP APIs, authorization checks, webhook receivers, user-request orchestration.
-- `dashboard-worker` owns asynchronous, trigger-triggered business logic: scheduled jobs, queue/workflow-driven background work — using the *same* shared `packages/database` repositories, `packages/integrations` adapters, and application services as `dashboard-api`, not a separate, duplicated implementation of business rules. Per ADR-0004, it is never a permanent process.
+- `dashboard-worker` owns asynchronous, trigger-triggered business logic: scheduled jobs, queue/workflow-driven background work — using the _same_ shared `packages/database` repositories, `packages/integrations` adapters, and application services as `dashboard-api`, not a separate, duplicated implementation of business rules. Per ADR-0004, it is never a permanent process.
 - `packages/database` is the sole Sequelize model/connection/migration implementation boundary — both `dashboard-api` and `dashboard-worker` depend on it; neither instantiates its own connection or defines its own models (WDS-011).
 
-"All business logic" and "all database access" belong to *the API + worker layer as a whole*, relative to `dashboard-web` — not to `dashboard-api` alone, relative to `dashboard-worker`.
+"All business logic" and "all database access" belong to _the API + worker layer as a whole_, relative to `dashboard-web` — not to `dashboard-api` alone, relative to `dashboard-worker`.
 
 ## Alternatives considered
 

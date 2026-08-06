@@ -18,7 +18,7 @@
 __MACOSX/
 *.swp
 
-# Future application dependencies (Phase 1+, not present yet — listed proactively)
+# Application dependencies and build output (Phase 1A onward)
 node_modules/
 .env
 .env.local
@@ -28,6 +28,12 @@ dist/
 build/
 .next/
 coverage/
+*.tsbuildinfo
+.pnpm-store/
+playwright-report/
+test-results/
+blob-report/
+.vitest-cache/
 
 # Never commit real secrets even if accidentally created under these names
 *.pem

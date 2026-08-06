@@ -11,20 +11,20 @@
 
 ## Classification by data category
 
-| Category | Level | Notes |
-|---|---|---|
-| Published dashboard content (approved Case Studies, Services) | Public | Only once through the module's own approval workflow |
-| Unpublished/draft content | Confidential | Visible only to roles with content-authoring/review permission |
-| User accounts (dashboard staff) | Internal | Identity comes from Google Workspace; dashboard stores role assignment, not credentials |
-| Client contact details (`project.json.project.client`) | Confidential | |
-| Audit events | Restricted | Append-only (ADR-0017); access to view is itself a permission, not universally readable |
-| Emergency-administrator account list and TOTP state | Restricted | See ADR-0009 |
-| Service/SEO Library workbook content | Confidential, Advisory-only | Never treated as approved business truth regardless of classification level, per WDS-014 — classification here is about who may *see* it, not whether it may be *acted on* automatically |
-| WordPress integration credentials | Restricted (secret, not application data) | See `docs/security/secrets-management-plan.md` |
-| GitHub App private key | Restricted (secret) | |
-| SMTP credentials | Restricted (secret) | |
-| Uploaded files (general) | Confidential by default | Per-file override to Public requires explicit action (ADR-0014) |
-| Scan results | Internal to Confidential | Depends on module — a scan result referencing unpublished content inherits that content's classification |
+| Category                                                      | Level                                     | Notes                                                                                                                                                                                    |
+| ------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Published dashboard content (approved Case Studies, Services) | Public                                    | Only once through the module's own approval workflow                                                                                                                                     |
+| Unpublished/draft content                                     | Confidential                              | Visible only to roles with content-authoring/review permission                                                                                                                           |
+| User accounts (dashboard staff)                               | Internal                                  | Identity comes from Google Workspace; dashboard stores role assignment, not credentials                                                                                                  |
+| Client contact details (`project.json.project.client`)        | Confidential                              |                                                                                                                                                                                          |
+| Audit events                                                  | Restricted                                | Append-only (ADR-0017); access to view is itself a permission, not universally readable                                                                                                  |
+| Emergency-administrator account list and TOTP state           | Restricted                                | See ADR-0009                                                                                                                                                                             |
+| Service/SEO Library workbook content                          | Confidential, Advisory-only               | Never treated as approved business truth regardless of classification level, per WDS-014 — classification here is about who may _see_ it, not whether it may be _acted on_ automatically |
+| WordPress integration credentials                             | Restricted (secret, not application data) | See `docs/security/secrets-management-plan.md`                                                                                                                                           |
+| GitHub App private key                                        | Restricted (secret)                       |                                                                                                                                                                                          |
+| SMTP credentials                                              | Restricted (secret)                       |                                                                                                                                                                                          |
+| Uploaded files (general)                                      | Confidential by default                   | Per-file override to Public requires explicit action (ADR-0014)                                                                                                                          |
+| Scan results                                                  | Internal to Confidential                  | Depends on module — a scan result referencing unpublished content inherits that content's classification                                                                                 |
 
 ## Handling rules
 

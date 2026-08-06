@@ -1,0 +1,28 @@
+{
+  "name": "@webdesk/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The SOLE Sequelize model/connection/migration implementation boundary (WDS-011, ADR-0006). Phase 1A ships configuration and interface placeholders ONLY — no Sequelize models, no migrations, no database connection. See docs/architecture/decisions/0006-postgresql-sequelize-architecture.md and 0007-database-provider-independence-east-coast.md. Real implementation is Phase 1B, gated on the Postgres Marketplace provider being confirmed (docs/project-state/setup-input-register.md).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@webdesk/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

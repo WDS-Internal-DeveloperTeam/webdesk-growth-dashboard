@@ -35,33 +35,33 @@ Version 1 is a private, multi-user, approval-driven dashboard.
 
 ## 5. Approved technology stack
 
-| Area | Approved technology |
-|---|---|
-| Runtime | Node.js 24 LTS for dashboard applications |
-| Language | TypeScript |
-| Frontend | Next.js with App Router and React |
-| Backend APIs | NestJS |
-| Styling | Tailwind CSS with isolated dashboard design tokens |
-| Database | PostgreSQL provisioned through Vercel in North America East Coast; Neon excluded |
-| ORM and migrations | Sequelize ORM with version-controlled migrations |
-| API documentation | OpenAPI/Swagger |
-| Validation | Zod and NestJS validation |
-| Search | PostgreSQL full-text search and `pg_trgm` |
-| GitHub | GitHub App, webhooks, Octokit, GitHub Actions |
-| WordPress | REST API, Application Passwords, WordPress.com GitHub Deployments, controlled WP-CLI |
-| Markdown | `react-markdown`, `remark-gfm`, `rehype-sanitize` |
-| Logging | Pino structured logs |
-| Error tracking | Sentry |
-| Testing | Vitest/Jest, Supertest, Playwright |
-| Package manager | pnpm |
-| Monorepo | Turborepo |
-| Hosting | Vercel Pro, North America East Coast |
-| Object storage | Private Vercel Blob, North America East Coast |
-| Redis | Upstash Redis, North America East Coast |
-| Primary background jobs | Vercel Queues, Workflows, Functions, Cron Jobs |
-| Fallback background jobs | Upstash QStash plus Vercel Cron Jobs |
-| Authentication | Google Workspace SSO plus restricted local emergency-admin accounts |
-| Email | Configurable SMTP, initially Google Workspace/Gmail |
+| Area                     | Approved technology                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| Runtime                  | Node.js 24 LTS for dashboard applications                                            |
+| Language                 | TypeScript                                                                           |
+| Frontend                 | Next.js with App Router and React                                                    |
+| Backend APIs             | NestJS                                                                               |
+| Styling                  | Tailwind CSS with isolated dashboard design tokens                                   |
+| Database                 | PostgreSQL provisioned through Vercel in North America East Coast; Neon excluded     |
+| ORM and migrations       | Sequelize ORM with version-controlled migrations                                     |
+| API documentation        | OpenAPI/Swagger                                                                      |
+| Validation               | Zod and NestJS validation                                                            |
+| Search                   | PostgreSQL full-text search and `pg_trgm`                                            |
+| GitHub                   | GitHub App, webhooks, Octokit, GitHub Actions                                        |
+| WordPress                | REST API, Application Passwords, WordPress.com GitHub Deployments, controlled WP-CLI |
+| Markdown                 | `react-markdown`, `remark-gfm`, `rehype-sanitize`                                    |
+| Logging                  | Pino structured logs                                                                 |
+| Error tracking           | Sentry                                                                               |
+| Testing                  | Vitest/Jest, Supertest, Playwright                                                   |
+| Package manager          | pnpm                                                                                 |
+| Monorepo                 | Turborepo                                                                            |
+| Hosting                  | Vercel Pro, North America East Coast                                                 |
+| Object storage           | Private Vercel Blob, North America East Coast                                        |
+| Redis                    | Upstash Redis, North America East Coast                                              |
+| Primary background jobs  | Vercel Queues, Workflows, Functions, Cron Jobs                                       |
+| Fallback background jobs | Upstash QStash plus Vercel Cron Jobs                                                 |
+| Authentication           | Google Workspace SSO plus restricted local emergency-admin accounts                  |
+| Email                    | Configurable SMTP, initially Google Workspace/Gmail                                  |
 
 ## 6. Repository structure
 

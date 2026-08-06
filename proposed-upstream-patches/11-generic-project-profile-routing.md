@@ -28,4 +28,4 @@ Low-medium. The orchestrator session-start protocol is a frequently-exercised pa
 
 ## Reusability scope
 
-**Generally reusable** — the profile pattern this project pioneered (a project-type skill with named, swappable sub-configurations) is a reasonable general capability, not WebDesk-Dashboard-specific. Once this patch lands, this project's own `CLAUDE.md.template` should be simplified to drop the manual routing-list line and rely on the new automatic behavior — but that simplification is itself a follow-up change to make *after* the patch is reviewed and applied, not before.
+**Generally reusable** — the profile pattern this project pioneered (a project-type skill with named, swappable sub-configurations) is a reasonable general capability, not WebDesk-Dashboard-specific. Once this patch lands, this project's own `CLAUDE.md.template` should be simplified to drop the manual routing-list line and rely on the new automatic behavior — but that simplification is itself a follow-up change to make _after_ the patch is reviewed and applied, not before.

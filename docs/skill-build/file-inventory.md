@@ -8,18 +8,18 @@
 
 `webdesk-nodejs/skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/` — **51 files**
 
-| Directory | File count | Purpose |
-|---|---:|---|
-| (root) | 4 | `SKILL.md`, `README.md`, `MANIFEST.txt`, `CHANGELOG.md` |
-| `knowledge/` | 16 | Numbered 00–15, per the required structure in the skill-build task §14 |
-| `integrations/github/` | 3 | GitHub App auth/Octokit, webhooks/events, doc pointers |
-| `integrations/wordpress/` | 3 | REST/App Passwords, WP-CLI/deployment, doc pointers |
-| `integrations/google-workspace/` | 3 | OIDC SSO, SMTP, doc pointers |
-| `integrations/vercel/` | 3 | Functions/Queues/Workflows/Cron, Blob/Postgres, doc pointers |
-| `contracts/` | 5 | `job-record`, `release-manifest`, `audit-event`, `webhook-event`, `project-profile` schemas |
-| `templates/` | 7 | `project.json.example`, `setup-input-checklist.md` (added in remediation), `CLAUDE.md.template`, `HANDOFF.md.template`, `architecture-adr-template.md`, `integration-contract-template.md`, `task-package-template.md` |
-| `tests/` | 5 | `profile-validation`, `routing-validation`, `precedence-tests`, `context-loading-tests`, `scenario-tests` |
-| `tools/` | 2 | **New in remediation:** `validate-all.py` (master executable validator), `validate-project-profile.py` (offline JSON Schema patch-and-validate tool) |
+| Directory                        | File count | Purpose                                                                                                                                                                                                                |
+| -------------------------------- | ---------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (root)                           |          4 | `SKILL.md`, `README.md`, `MANIFEST.txt`, `CHANGELOG.md`                                                                                                                                                                |
+| `knowledge/`                     |         16 | Numbered 00–15, per the required structure in the skill-build task §14                                                                                                                                                 |
+| `integrations/github/`           |          3 | GitHub App auth/Octokit, webhooks/events, doc pointers                                                                                                                                                                 |
+| `integrations/wordpress/`        |          3 | REST/App Passwords, WP-CLI/deployment, doc pointers                                                                                                                                                                    |
+| `integrations/google-workspace/` |          3 | OIDC SSO, SMTP, doc pointers                                                                                                                                                                                           |
+| `integrations/vercel/`           |          3 | Functions/Queues/Workflows/Cron, Blob/Postgres, doc pointers                                                                                                                                                           |
+| `contracts/`                     |          5 | `job-record`, `release-manifest`, `audit-event`, `webhook-event`, `project-profile` schemas                                                                                                                            |
+| `templates/`                     |          7 | `project.json.example`, `setup-input-checklist.md` (added in remediation), `CLAUDE.md.template`, `HANDOFF.md.template`, `architecture-adr-template.md`, `integration-contract-template.md`, `task-package-template.md` |
+| `tests/`                         |          5 | `profile-validation`, `routing-validation`, `precedence-tests`, `context-loading-tests`, `scenario-tests`                                                                                                              |
+| `tools/`                         |          2 | **New in remediation:** `validate-all.py` (master executable validator), `validate-project-profile.py` (offline JSON Schema patch-and-validate tool)                                                                   |
 
 Matches the required structure in skill-build task §14, extended with a `tools/` directory (not in the original required list) to hold the executable validators the remediation required — a structural addition, explained here per §14's "you may improve the structure when technically justified, but explain every change" allowance.
 

@@ -11,7 +11,7 @@ Each item states: the question, why it cannot be resolved from the documentation
 
 **Question:** Which specific Postgres product satisfies both "PostgreSQL provisioned through Vercel" (`01_Dashboard_Master_Specification.md §5`) and "Neon excluded" (same line) simultaneously?
 
-**Why this can't be resolved from the documentation:** The two clauses sit in the same table row without reconciliation, and Vercel's own first-party Postgres offering has been built on Neon's underlying technology — the pack doesn't say whether "Neon excluded" means excluding Neon *as a standalone, self-managed product* (fine, use Vercel's integrated Postgres regardless of what powers it underneath) or excluding *any* Neon-based offering (in which case "provisioned through Vercel" and "Neon excluded" may be in direct tension, depending on what Vercel's Postgres marketplace/integration options look like at implementation time). Neither the dashboard pack nor the skill has any opinion on Vercel's product lineup.
+**Why this can't be resolved from the documentation:** The two clauses sit in the same table row without reconciliation, and Vercel's own first-party Postgres offering has been built on Neon's underlying technology — the pack doesn't say whether "Neon excluded" means excluding Neon _as a standalone, self-managed product_ (fine, use Vercel's integrated Postgres regardless of what powers it underneath) or excluding _any_ Neon-based offering (in which case "provisioned through Vercel" and "Neon excluded" may be in direct tension, depending on what Vercel's Postgres marketplace/integration options look like at implementation time). Neither the dashboard pack nor the skill has any opinion on Vercel's product lineup.
 
 **What's at stake:** This is a G-Schema blocker — the database provider must be selected before the data model is approved and before any migration runs. Choosing wrong means either violating an explicit exclusion or failing to meet the "through Vercel" requirement, either of which likely means a database migration (in the literal, painful sense) after data already exists.
 
@@ -35,7 +35,7 @@ Each item states: the question, why it cannot be resolved from the documentation
 
 **Question:** `webdesksolution.com` and `webdeskinc.com` are both listed as verified Google Workspace domains for standard-user authentication (`01_Dashboard_Master_Specification.md §14`). Are these two email domains belonging to **one single organization** (e.g., a legal-entity or branding history reason for two domains), or do they represent **two related but distinct business entities** whose data might need some degree of separation within the dashboard?
 
-**Why this can't be resolved from the documentation:** Nothing in the pack explains why two domains are named, and nothing describes any data-partitioning behavior tied to which domain a user authenticated from. The pack's V1 exclusions ("No public client portal," "No multi-client SaaS billing") rule out the skill's *default* multi-client-SaaS interpretation, but they don't by themselves rule out a narrower two-entity partitioning need specific to these two named domains.
+**Why this can't be resolved from the documentation:** Nothing in the pack explains why two domains are named, and nothing describes any data-partitioning behavior tied to which domain a user authenticated from. The pack's V1 exclusions ("No public client portal," "No multi-client SaaS billing") rule out the skill's _default_ multi-client-SaaS interpretation, but they don't by themselves rule out a narrower two-entity partitioning need specific to these two named domains.
 
 **What's at stake:** This is the one place where the skill's tenant-scoping machinery (`nodejs/knowledge/database/03-multi-tenancy.md`, NODE-104) might turn out to be **literally applicable rather than just conceptually adjacent** — every other part of this review treats the dashboard as effectively single-tenant and reinterprets `project_id` as the scoping key instead of `tenant_id` (`requirements-traceability-matrix.md` Part C notes). If the two domains in fact represent entities whose data must not cross-contaminate, that changes the RBAC and repository-scoping design materially, and is far cheaper to build correctly from Phase 1 than to retrofit after Phase 3+ content modules exist.
 
@@ -57,11 +57,11 @@ Each item states: the question, why it cannot be resolved from the documentation
 
 ## Summary
 
-| ID | Question | Blocks | Urgency |
-|---|---|---|---|
-| OQ-01 | Postgres provisioning path vs. Neon exclusion | G-Schema | Before Phase 1 |
-| OQ-02 | Vercel execution model for API + worker apps | G1.5 architecture ADR, all job-handling code | Before Phase 0 exits |
-| OQ-03 | Relationship between the two SSO domains | RBAC/scoping design | Before Phase 1 |
-| OQ-04 | Agent Directory / Agent Specification Library scope | Phase 7 data model only | Before Phase 7 |
+| ID    | Question                                            | Blocks                                       | Urgency              |
+| ----- | --------------------------------------------------- | -------------------------------------------- | -------------------- |
+| OQ-01 | Postgres provisioning path vs. Neon exclusion       | G-Schema                                     | Before Phase 1       |
+| OQ-02 | Vercel execution model for API + worker apps        | G1.5 architecture ADR, all job-handling code | Before Phase 0 exits |
+| OQ-03 | Relationship between the two SSO domains            | RBAC/scoping design                          | Before Phase 1       |
+| OQ-04 | Agent Directory / Agent Specification Library scope | Phase 7 data model only                      | Before Phase 7       |
 
 Everything else surfaced during this review — including every item in `gap-analysis.md` not listed above — has either an existing answer in one of the two source documents, an explicit "resolve at setup" deferral already recorded in `12_Open_Items_and_Implementation_Inputs.md`, or a clear owning role and gate identified in `phased-implementation-plan.md` that does not require new information from the client to proceed.

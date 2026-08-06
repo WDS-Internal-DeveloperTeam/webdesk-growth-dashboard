@@ -1,17 +1,18 @@
 # Architecture Validation — Approved Dashboard Architecture vs. WebDesk Node.js Delivery System Skill
 
 **Status:** Draft for review. No application code, migrations, or scaffolding produced.
-**Ground rule applied throughout:** per the review brief, an approved technology is never replaced merely because the skill prefers a different default. Every item below is validated as **approved-and-kept**; the only question answered per item is *how it fits the skill's process*, not *whether it should be swapped out*.
+**Ground rule applied throughout:** per the review brief, an approved technology is never replaced merely because the skill prefers a different default. Every item below is validated as **approved-and-kept**; the only question answered per item is _how it fits the skill's process_, not _whether it should be swapped out_.
 **Companion documents:** `node-skill-compatibility-review.md`, `requirements-traceability-matrix.md`, `gap-analysis.md`, `phased-implementation-plan.md`, `open-questions.md`.
 
 ## How validation was performed
 
 For each approved component, this document checks it against three things the skill actually constrains:
+
 1. **Layering/forbidden-pattern compatibility** — does the component obstruct controller/service/repository separation, repository-only DB access (NODE-003/FG-004), or any other NODE-xxx/FG-xxx rule?
 2. **Documented-alternative status** — is the component already named as an approved alternative in `technology-selection.md`, `project-json.schema.json`, or `intelligence/*` (in which case it needs only a recorded justification, per the skill's own "ask-if-missing" rule), or is it entirely outside the skill's vocabulary (in which case it needs new knowledge authored, not a rule change)?
 3. **Gate impact** — which gate (G1.5, G-Contracts, G-Schema, G2) is the natural place to record and approve the choice, per `_contracts/gate-format.md`.
 
-No item below was found to require *removing or weakening* any skill rule (layering, validation-at-the-boundary, idempotency, tenant/project scoping, no-secrets, no-auto-deploy). Every approved technology is implementable **within** the skill's existing forbidden-pattern and layering discipline.
+No item below was found to require _removing or weakening_ any skill rule (layering, validation-at-the-boundary, idempotency, tenant/project scoping, no-secrets, no-auto-deploy). Every approved technology is implementable **within** the skill's existing forbidden-pattern and layering discipline.
 
 ---
 
@@ -21,13 +22,15 @@ No item below was found to require *removing or weakening* any skill rule (layer
 
 The skill's canonical project layout (`nodejs/knowledge/01-coding-standards.md`) and service-skeleton template (`nodejs/templates/service-skeleton/`) both assume one deployable service per repository. Turborepo is not mentioned anywhere in the skill. This is a genuine structural gap, not friction with a documented default — the skill simply has never modeled a monorepo before.
 
-What *does* transfer cleanly into a Turborepo layout, unchanged:
+What _does_ transfer cleanly into a Turborepo layout, unchanged:
+
 - The controller/service/repository layering (`00-overview.md`) applies **per app** (`apps/dashboard-api`, `apps/dashboard-worker`) exactly as documented.
-- The architecture-fitness enforcement (dependency-cruiser config, `nodejs/templates/architecture-tests/dependency-cruiser.config.cjs`) needs one config per app rather than one at repo root, but the *rule* it enforces (no DB access outside `repositories/`, FG-004) is unchanged.
+- The architecture-fitness enforcement (dependency-cruiser config, `nodejs/templates/architecture-tests/dependency-cruiser.config.cjs`) needs one config per app rather than one at repo root, but the _rule_ it enforces (no DB access outside `repositories/`, FG-004) is unchanged.
 - Forbidden-pattern rules (NODE-xxx) apply uniformly across every package/app in the workspace — nothing in them is repo-topology-dependent.
 - The single-package-manager rule (`backend/02-node-lts-and-engines.md`: "one manager per repo, no mixing") is satisfied trivially — a Turborepo workspace has exactly one root lockfile by design.
 
 What needs new decisions, recorded at **G1.5**:
+
 - Build/dependency graph between `packages/database`, `packages/shared-types`, `packages/validation`, `packages/ui`, `packages/integrations`, `packages/configuration` and the three apps (which packages are TypeScript-project-referenced vs. published-and-consumed; Turborepo pipeline `dependsOn` ordering).
 - Migration ownership: exactly one app/package may run Sequelize migrations against a shared environment (see `requirements-traceability-matrix.md` DASH-ARCH-05) — the skill's "migrations are reviewed like code, CI dry-runs them" discipline (`database/02-migrations-and-rollback.md`) needs a single home to attach to.
 - CI wiring: the skill's CI sequence (`testing/01-api-and-integration-tests.md`: install → lint → typecheck → test → audit → migration dry-run) needs to become Turborepo-pipeline-aware (`turbo run lint test build --filter=...`) so unaffected packages aren't rebuilt/retested on every PR.
@@ -50,19 +53,19 @@ No action needed beyond normal G2 (design approval) and G3 (scaffold) execution.
 
 **Validation: Approved and kept. Anticipated alternative — needs a recorded justification and a small adaptation note, not a rule change.**
 
-This is worth stating plainly: NestJS is **not** an unlisted, off-menu framework. `_contracts/project-json.schema.json`'s `tech_stack.framework` enum is `["express", "fastify", "nest", "next"]` — Nest is already a first-class, schema-recognized choice. Only the skill's *narrative* text and worked examples default to Express; the schema itself already anticipated this exact override.
+This is worth stating plainly: NestJS is **not** an unlisted, off-menu framework. `_contracts/project-json.schema.json`'s `tech_stack.framework` enum is `["express", "fastify", "nest", "next"]` — Nest is already a first-class, schema-recognized choice. Only the skill's _narrative_ text and worked examples default to Express; the schema itself already anticipated this exact override.
 
 Everything the skill actually enforces maps onto Nest cleanly:
 
-| Skill rule | Express shape (skill's examples) | NestJS shape (same rule, different syntax) |
-|---|---|---|
-| Controllers HTTP-only, no business logic (NODE-003 companion) | Express route handler | Nest `@Controller()` class — arguably *easier* to keep thin since Nest's convention already separates controllers from providers |
-| Business logic in services, no `req`/`res` (`01-coding-standards.md`) | plain service module | Nest `@Injectable()` service — DI makes the "service never touches HTTP objects" rule structurally natural |
-| Repository-only DB access (NODE-003, FG-004) | `repositories/*.js` | Nest repository provider (e.g. injected `Repository`/custom provider wrapping Sequelize) — same isolation, enforced by the same dependency-cruiser fitness test pattern |
-| Validate all external input at the boundary (NODE-005) | zod `.parse()` in the controller | Nest `ValidationPipe` — can be wired to the **same Zod schemas** (via a custom Zod-backed pipe) rather than parallel `class-validator` DTOs, keeping one schema source per `requirements-traceability-matrix.md` DASH-ARCH-10 |
-| Centralized error handling, typed errors (NODE-006/007) | Express error-handling middleware (4-arg, mounted last) | Nest exception filters (`@Catch()`) — same centralization, Nest-native mechanism |
-| Middleware order incl. raw-body-before-JSON for webhook HMAC (`backend/01`) | explicit Express `app.use()` ordering | Nest middleware/guards/interceptors execution order — **order-sensitive in the same way**; raw-body capture must still precede JSON body-parsing for any webhook route (GitHub webhooks, DASH-ARCH-12) |
-| Health endpoints (`backend/01`) | `app.get('/healthz', ...)` | Nest controller equivalent, same liveness/readiness split |
+| Skill rule                                                                  | Express shape (skill's examples)                        | NestJS shape (same rule, different syntax)                                                                                                                                                                                    |
+| --------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Controllers HTTP-only, no business logic (NODE-003 companion)               | Express route handler                                   | Nest `@Controller()` class — arguably _easier_ to keep thin since Nest's convention already separates controllers from providers                                                                                              |
+| Business logic in services, no `req`/`res` (`01-coding-standards.md`)       | plain service module                                    | Nest `@Injectable()` service — DI makes the "service never touches HTTP objects" rule structurally natural                                                                                                                    |
+| Repository-only DB access (NODE-003, FG-004)                                | `repositories/*.js`                                     | Nest repository provider (e.g. injected `Repository`/custom provider wrapping Sequelize) — same isolation, enforced by the same dependency-cruiser fitness test pattern                                                       |
+| Validate all external input at the boundary (NODE-005)                      | zod `.parse()` in the controller                        | Nest `ValidationPipe` — can be wired to the **same Zod schemas** (via a custom Zod-backed pipe) rather than parallel `class-validator` DTOs, keeping one schema source per `requirements-traceability-matrix.md` DASH-ARCH-10 |
+| Centralized error handling, typed errors (NODE-006/007)                     | Express error-handling middleware (4-arg, mounted last) | Nest exception filters (`@Catch()`) — same centralization, Nest-native mechanism                                                                                                                                              |
+| Middleware order incl. raw-body-before-JSON for webhook HMAC (`backend/01`) | explicit Express `app.use()` ordering                   | Nest middleware/guards/interceptors execution order — **order-sensitive in the same way**; raw-body capture must still precede JSON body-parsing for any webhook route (GitHub webhooks, DASH-ARCH-12)                        |
+| Health endpoints (`backend/01`)                                             | `app.get('/healthz', ...)`                              | Nest controller equivalent, same liveness/readiness split                                                                                                                                                                     |
 
 **Gap, not conflict:** the skill has no NestJS-specific worked example anywhere. This is a documentation gap the project will hit immediately at scaffold time, not an architectural obstacle.
 
@@ -78,7 +81,7 @@ Everything the skill actually enforces maps onto Nest cleanly:
 
 Shape 3 explicitly fires **G1.5** (async work is a listed trigger) and requires **queue visibility** at G5.5 observability — both already implied by the dashboard's own requirements (09, 08 §8).
 
-The one adjustment needed is structural, not behavioral: Shape 3 assumes a standalone repo; here it's a workspace package sharing `packages/database` with `apps/dashboard-api` (see §1). The job-execution *properties* Shape 3 requires (idempotency, capped retries+DLQ, no overlapping runs, watermark/lock discipline) apply unchanged regardless of whether the underlying execution mechanism is a persistent BullMQ worker or Vercel Queues/Workflows invocations (see §5).
+The one adjustment needed is structural, not behavioral: Shape 3 assumes a standalone repo; here it's a workspace package sharing `packages/database` with `apps/dashboard-api` (see §1). The job-execution _properties_ Shape 3 requires (idempotency, capped retries+DLQ, no overlapping runs, watermark/lock discipline) apply unchanged regardless of whether the underlying execution mechanism is a persistent BullMQ worker or Vercel Queues/Workflows invocations (see §5).
 
 **Recommended action:** Adopt Shape 3's gate set as-is for `apps/dashboard-worker`; resolve the shared-database-package structure as part of the §1 ADR.
 
@@ -136,12 +139,12 @@ Zod is the skill's own default validation library (`01-coding-standards.md` NODE
 
 This is the one place in the entire architecture where "approved technology, skill needs adaptation" is a substantial adaptation rather than a documentation nicety. The distinction matters:
 
-- **What is fully compatible, unchanged:** every *property* the skill requires of background work — idempotency keyed on a stable external/natural key (NODE-102), capped retries with exponential backoff and jitter terminating in a DLQ (NODE-101), overlapping-run prevention via a per-entity lock with a TTL, timezone-aware scheduling computed from Settings and stored UTC, and a watermark that only advances after durable persistence (`integration/01-sync-strategies.md`) — is a description of *required behavior*, not of *BullMQ or node-cron specifically*. Vercel Queues, Vercel Workflows, and Vercel Cron Jobs can each satisfy every one of these properties; they just satisfy them through a managed-service API surface instead of an in-process library.
-- **What genuinely doesn't transfer:** the skill's worked *mechanism* examples (`backend/01-runtime-and-frameworks.md`'s graceful-shutdown sequence — "stop scheduler, drain queue workers, close DB pool, then exit" — and `integration/02-queues-and-jobs.md`'s BullMQ `Worker` instantiation) assume a **persistent process** that can be told to stop accepting new work and finish in-flight work before exiting. A Vercel Cron Job invokes an HTTP endpoint; a Vercel Function is invoked per-request/per-message with no long-lived process to "drain." There is nothing wrong with this model, but it is a different one, and the skill's shutdown guidance simply does not apply to it as written.
+- **What is fully compatible, unchanged:** every _property_ the skill requires of background work — idempotency keyed on a stable external/natural key (NODE-102), capped retries with exponential backoff and jitter terminating in a DLQ (NODE-101), overlapping-run prevention via a per-entity lock with a TTL, timezone-aware scheduling computed from Settings and stored UTC, and a watermark that only advances after durable persistence (`integration/01-sync-strategies.md`) — is a description of _required behavior_, not of _BullMQ or node-cron specifically_. Vercel Queues, Vercel Workflows, and Vercel Cron Jobs can each satisfy every one of these properties; they just satisfy them through a managed-service API surface instead of an in-process library.
+- **What genuinely doesn't transfer:** the skill's worked _mechanism_ examples (`backend/01-runtime-and-frameworks.md`'s graceful-shutdown sequence — "stop scheduler, drain queue workers, close DB pool, then exit" — and `integration/02-queues-and-jobs.md`'s BullMQ `Worker` instantiation) assume a **persistent process** that can be told to stop accepting new work and finish in-flight work before exiting. A Vercel Cron Job invokes an HTTP endpoint; a Vercel Function is invoked per-request/per-message with no long-lived process to "drain." There is nothing wrong with this model, but it is a different one, and the skill's shutdown guidance simply does not apply to it as written.
 
-The dashboard pack's own design already anticipates this: `08_API_and_Integration_Contracts.md §8` defines `JobQueueAdapter`/`WorkflowAdapter` interfaces (`enqueue()`, `cancel()`, `getStatus()`, `start()`, `signal()`, `cancel()`) with Vercel Queues/Workflows as the primary implementation and Upstash QStash + Vercel Cron as the documented fallback — this is precisely the adapter-behind-an-interface pattern the skill already uses for ERP integrations (`integrations/erp/_erp-adapter-pattern.md`), applied one layer down to the job-execution provider itself. That the dashboard pack arrived at the same isolation pattern independently is a strong compatibility signal, even though the skill has never modeled *this* adapter before.
+The dashboard pack's own design already anticipates this: `08_API_and_Integration_Contracts.md §8` defines `JobQueueAdapter`/`WorkflowAdapter` interfaces (`enqueue()`, `cancel()`, `getStatus()`, `start()`, `signal()`, `cancel()`) with Vercel Queues/Workflows as the primary implementation and Upstash QStash + Vercel Cron as the documented fallback — this is precisely the adapter-behind-an-interface pattern the skill already uses for ERP integrations (`integrations/erp/_erp-adapter-pattern.md`), applied one layer down to the job-execution provider itself. That the dashboard pack arrived at the same isolation pattern independently is a strong compatibility signal, even though the skill has never modeled _this_ adapter before.
 
-**Open question this creates (see `open-questions.md` OQ-02):** whether `apps/dashboard-worker` is a persistent process (in which case the skill's graceful-shutdown and BullMQ-worker guidance apply largely unmodified, with the worker itself calling into Vercel Queues as a client) or is itself decomposed into Vercel Function handlers with no persistent process at all (in which case that guidance doesn't apply, and the relevant skill content becomes only the *properties* table above, not the *shutdown-sequence* mechanism).
+**Open question this creates (see `open-questions.md` OQ-02):** whether `apps/dashboard-worker` is a persistent process (in which case the skill's graceful-shutdown and BullMQ-worker guidance apply largely unmodified, with the worker itself calling into Vercel Queues as a client) or is itself decomposed into Vercel Function handlers with no persistent process at all (in which case that guidance doesn't apply, and the relevant skill content becomes only the _properties_ table above, not the _shutdown-sequence_ mechanism).
 
 **Recommended action:** Produce an ADR at G1.5 ("Job execution model on Vercel") mapping each required property to its Vercel-native mechanism, and stating explicitly which of the two worker-execution models above is chosen. This is exactly the kind of decision `_spine/architect-agent/knowledge/02-complexity-triggers.md`-style architecture review exists for, and it is squarely inside G1.5's trigger list (async/cron work, new datastore, estimate likely >80hrs).
 
@@ -173,8 +176,9 @@ The skill's queue-escalation guidance (`technology-selection.md`, `intelligence/
 
 This is worth being direct about: the skill's authentication model, everywhere it appears — `security/02-authn-authz.md`, `frontend/01-react-next-standards.md`'s auth-handling section, and the login-page design module (`_spine/designer-agent/knowledge/dashboard-modules/08-login.md`) — is built around **local username/password credentials** (argon2/bcrypt hashing, a login form with show/hide password fields, "wrong password" vs. "user not found" non-leaking error messages). There is no OIDC, SAML, or SSO federation guidance anywhere in the ~200 files that make up this skill. The dashboard's requirement — Google Workspace SSO as the primary path for standard users, with MFA enforced by Workspace itself, and TOTP-secured local accounts reserved for emergency access only — is architecturally sound and well-specified in the dashboard pack (`01 §14`, `08 §10`, `11 §2`), but it inverts which path is primary versus emergency-only relative to everything the skill currently models.
 
-What *does* transfer directly, once Google Workspace OIDC has established identity:
-- The skill's session model downstream of authentication — short-lived access token + rotating refresh token, server-side revocation via a `tokenVersion`/revocation list, role-change bumping the version to invalidate outstanding tokens (`security/02-authn-authz.md`) — is exactly the right shape for the dashboard's own first-party API session, minted *after* Google Workspace SSO succeeds. The front door changes; the session/authorization layer behind it does not.
+What _does_ transfer directly, once Google Workspace OIDC has established identity:
+
+- The skill's session model downstream of authentication — short-lived access token + rotating refresh token, server-side revocation via a `tokenVersion`/revocation list, role-change bumping the version to invalidate outstanding tokens (`security/02-authn-authz.md`) — is exactly the right shape for the dashboard's own first-party API session, minted _after_ Google Workspace SSO succeeds. The front door changes; the session/authorization layer behind it does not.
 - Per-module RBAC enforcement (`security/02`, `frontend/02`) is entirely orthogonal to how identity was established and applies unmodified.
 - Domain allowlisting (`webdesksolution.com`, `webdeskinc.com`) is a straightforward addition to the OIDC callback handler — a new but small piece of logic, not a new pattern.
 
@@ -198,9 +202,9 @@ No skill knowledge file addresses outbound email/SMTP specifically. However, the
 
 **Validation: Approved and kept. Security/idempotency pattern fully compatible; GitHub-specific adapter knowledge does not yet exist in the skill.**
 
-`security/04-webhook-security.md`'s three-control model — verify the HMAC signature over the *raw* request body with a constant-time comparison, reject replays via a timestamp window and event-ID dedupe, and process idempotently via upsert-keyed-on-external-id with a fast `2xx` ack — applies to GitHub webhooks exactly as written; only the specific header names change (`X-Hub-Signature-256`, `X-GitHub-Delivery`). The existing `integrations/bigcommerce/04-webhooks.md` module is a usable structural template for a new GitHub-specific one.
+`security/04-webhook-security.md`'s three-control model — verify the HMAC signature over the _raw_ request body with a constant-time comparison, reject replays via a timestamp window and event-ID dedupe, and process idempotently via upsert-keyed-on-external-id with a fast `2xx` ack — applies to GitHub webhooks exactly as written; only the specific header names change (`X-Hub-Signature-256`, `X-GitHub-Delivery`). The existing `integrations/bigcommerce/04-webhooks.md` module is a usable structural template for a new GitHub-specific one.
 
-What's missing is GitHub-specific *adapter* knowledge: GitHub App installation-token auth, Octokit conventions, and the specific API shapes the dashboard needs (branch creation, PR metadata, commit-existence verification, check/review/deployment status) — none of which exist anywhere in `nodejs/integrations/`, since that directory currently only covers `bigcommerce/`, `shopify/`, and `erp/*`.
+What's missing is GitHub-specific _adapter_ knowledge: GitHub App installation-token auth, Octokit conventions, and the specific API shapes the dashboard needs (branch creation, PR metadata, commit-existence verification, check/review/deployment status) — none of which exist anywhere in `nodejs/integrations/`, since that directory currently only covers `bigcommerce/`, `shopify/`, and `erp/*`.
 
 **Recommended action:** Author `nodejs/integrations/github/` (mirroring the `bigcommerce`/`shopify` module structure) before writing GitHub integration code, and get it client-approved at **G-Contracts** per the skill's "no integration code against a draft contract" rule (NODE-008 applies directly: GitHub's API surface and rate limits must be verified against real docs, never assumed).
 
@@ -228,23 +232,23 @@ Two things point the same direction here. First, the skill's ERP adapter pattern
 
 ## Summary
 
-| Component | Kept as approved? | Skill relationship |
-|---|---|---|
-| Turborepo monorepo | Yes | Structural gap — needs new knowledge/ADR, no rule conflict |
-| Next.js App Router | Yes | Skill's own default |
-| NestJS | Yes | Schema-anticipated alternative — needs adaptation note |
-| Separate worker app | Yes | Matches existing Shape 3 directly |
-| TypeScript | Yes | Compatible, strengthens existing rules |
-| PostgreSQL via Vercel (Neon excluded) | Yes | Skill's own default; provisioning path needs setup-time confirmation |
-| Sequelize + migrations | Yes | Exact match to skill default |
-| Zod + NestJS validation | Yes | Skill's own default, natural pairing |
-| Vercel Functions/Queues/Workflows/Cron | Yes | Largest real adaptation — properties transfer, mechanism needs an ADR |
-| Upstash Redis | Yes | Named provider for an already-generic skill requirement |
-| Vercel Blob | Yes | Behaviorally equivalent to skill's S3 default |
-| Google Workspace SSO | Yes | Largest true knowledge gap — new skill content needed |
-| Google Workspace SMTP | Yes | No dedicated file, but pattern transfers cleanly |
-| GitHub App + webhooks | Yes | Security pattern compatible; adapter knowledge needs authoring |
-| WordPress REST API + WP-CLI | Yes | Best-aligned integration; adapter knowledge needs authoring |
-| Separate repositories | Yes | Fully compatible with existing branch/release model |
+| Component                              | Kept as approved? | Skill relationship                                                    |
+| -------------------------------------- | ----------------- | --------------------------------------------------------------------- |
+| Turborepo monorepo                     | Yes               | Structural gap — needs new knowledge/ADR, no rule conflict            |
+| Next.js App Router                     | Yes               | Skill's own default                                                   |
+| NestJS                                 | Yes               | Schema-anticipated alternative — needs adaptation note                |
+| Separate worker app                    | Yes               | Matches existing Shape 3 directly                                     |
+| TypeScript                             | Yes               | Compatible, strengthens existing rules                                |
+| PostgreSQL via Vercel (Neon excluded)  | Yes               | Skill's own default; provisioning path needs setup-time confirmation  |
+| Sequelize + migrations                 | Yes               | Exact match to skill default                                          |
+| Zod + NestJS validation                | Yes               | Skill's own default, natural pairing                                  |
+| Vercel Functions/Queues/Workflows/Cron | Yes               | Largest real adaptation — properties transfer, mechanism needs an ADR |
+| Upstash Redis                          | Yes               | Named provider for an already-generic skill requirement               |
+| Vercel Blob                            | Yes               | Behaviorally equivalent to skill's S3 default                         |
+| Google Workspace SSO                   | Yes               | Largest true knowledge gap — new skill content needed                 |
+| Google Workspace SMTP                  | Yes               | No dedicated file, but pattern transfers cleanly                      |
+| GitHub App + webhooks                  | Yes               | Security pattern compatible; adapter knowledge needs authoring        |
+| WordPress REST API + WP-CLI            | Yes               | Best-aligned integration; adapter knowledge needs authoring           |
+| Separate repositories                  | Yes               | Fully compatible with existing branch/release model                   |
 
 **No approved technology was found to be incompatible with the skill's non-negotiable rules** (layering, repository-only DB access, boundary validation, idempotency, no-secrets, no-auto-deploy, deny-by-default). Every item above is a "how," never a "whether."

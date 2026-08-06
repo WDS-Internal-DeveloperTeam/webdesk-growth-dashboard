@@ -40,14 +40,14 @@
 
 ## Commit record
 
-| Commit | SHA | Contents |
-|---|---|---|
-| Baseline | `1f529bace05b5cdf8be61741139922e585f4a70a` | Pre-Phase-0 approved documentation + root control files |
-| Phase 0 foundation | `2aa9cdefbcb924ccb37addee0698a9e25ea5d688` | Directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, validation report, this checklist (41 files) |
-| Phase 0 SHA backfill | `1add4ea` | Recorded the foundation commit SHA into its own validation records |
-| GitHub URL registered | `7f02271` | Real repository URL registered in `project.json`, `origin` remote added locally |
-| Phase 0 corrections | `84aca8f` | Six defects fixed following independent review — see `docs/project-state/phase-0-validation-report.md`'s "Corrections applied" |
-| **Sign-off (this checklist)** | `a832218` local / **`a8322186def0c6f0638ee2ba0bf2da5871640953` pushed to `origin/main`** | Phase 0 approved, scope Phase 1A only — **this is the approved Phase 0 commit Phase 1A branches from** |
+| Commit                        | SHA                                                                                      | Contents                                                                                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Baseline                      | `1f529bace05b5cdf8be61741139922e585f4a70a`                                               | Pre-Phase-0 approved documentation + root control files                                                                                                                                |
+| Phase 0 foundation            | `2aa9cdefbcb924ccb37addee0698a9e25ea5d688`                                               | Directory structure, 20 ADRs, 7 contracts, repository plan, traceability matrix, security foundation, Phase 1 plan, setup-input register, validation report, this checklist (41 files) |
+| Phase 0 SHA backfill          | `1add4ea`                                                                                | Recorded the foundation commit SHA into its own validation records                                                                                                                     |
+| GitHub URL registered         | `7f02271`                                                                                | Real repository URL registered in `project.json`, `origin` remote added locally                                                                                                        |
+| Phase 0 corrections           | `84aca8f`                                                                                | Six defects fixed following independent review — see `docs/project-state/phase-0-validation-report.md`'s "Corrections applied"                                                         |
+| **Sign-off (this checklist)** | `a832218` local / **`a8322186def0c6f0638ee2ba0bf2da5871640953` pushed to `origin/main`** | Phase 0 approved, scope Phase 1A only — **this is the approved Phase 0 commit Phase 1A branches from**                                                                                 |
 
 ---
 
@@ -55,16 +55,16 @@
 
 **Signed 2026-08-06.**
 
-| Field | Value |
-|---|---|
-| Approved by | WebDesk Solution |
-| Approval date | 2026-08-06 |
+| Field                     | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Approved by               | WebDesk Solution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Approval date             | 2026-08-06                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Exact approved commit SHA | `a8322186def0c6f0638ee2ba0bf2da5871640953` — pushed to `origin/main` and independently verified via `git ls-remote origin` (not just local git state). Note: the remote repository's default branch is still `master` (a separate, unrelated single-commit branch — GitHub's own auto-generated "Initial commit" with a 1-line README, pre-existing before this project pushed anything). Changing the GitHub default branch to `main` is a repository-settings action, not done by this push — flagged for the project owner to do via GitHub if desired. |
-| Authorization scope | **Phase 1A only** — repository and Turborepo monorepo foundation, per `docs/phase-plans/phase-1-foundation-plan.md` Task 1 and the Phase 1A task brief. Does **not** authorize Phase 1B–1F (database/Sequelize, authentication, RBAC, audit logging, dashboard shell/staging deploy) or any business-module implementation — each requires its own separate authorization. |
+| Authorization scope       | **Phase 1A only** — repository and Turborepo monorepo foundation, per `docs/phase-plans/phase-1-foundation-plan.md` Task 1 and the Phase 1A task brief. Does **not** authorize Phase 1B–1F (database/Sequelize, authentication, RBAC, audit logging, dashboard shell/staging deploy) or any business-module implementation — each requires its own separate authorization.                                                                                                                                                                                 |
 
-| Role | Name | Decision | Date |
-|---|---|---|---|
+| Role                             | Name             | Decision   | Date       |
+| -------------------------------- | ---------------- | ---------- | ---------- |
 | Reviewer (Tech Lead / Architect) | WebDesk Solution | ☑ Approved | 2026-08-06 |
-| PM | WebDesk Solution | ☑ Approved | 2026-08-06 |
+| PM                               | WebDesk Solution | ☑ Approved | 2026-08-06 |
 
 **On approval:** Phase 1A (repository and Turborepo monorepo foundation) only, per the authorization scope recorded above. Phase 1B onward requires separate authorization.

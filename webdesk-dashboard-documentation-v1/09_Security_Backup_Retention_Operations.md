@@ -82,36 +82,36 @@ Implementation must document the actual achieved RPO before launch.
 
 ## 6. Retention matrix
 
-| Category | Retention |
-|---|---:|
-| Active sessions | Until logout/expiry, max 7 days |
-| Expired session records | 30 days |
-| Authentication logs | 30 days |
-| General application logs | 90 days |
-| Sentry error records | 90 days |
-| Audit records | 7 years |
-| Approval history operational view | 1 year |
-| Immutable approval audit events | 7 years |
-| Notification history | 30 days |
-| Completed jobs | 30 days |
-| Failed jobs | 120 days |
-| Scan reports | 90 days |
-| Scan evidence/screenshots | 1 year |
-| Security logs | 1 year |
-| Closed security findings/incidents | 3 years |
-| Malware findings/review decisions | 3 years after closure when scanning is enabled |
-| Clean uploads | While active, then 90 days after closure/deletion/replacement |
-| Rejected/infected uploads | 30-day quarantine, then permanent deletion |
-| Import files | 7 days |
-| Export files | 7 days |
-| Soft-deleted records | 30 days |
-| Daily database backups | 35 days |
-| Monthly database backups | 1 year |
-| Daily Blob backups | 35 days |
-| Monthly Blob backups | 90 days |
-| SMTP/webhook delivery events | 30 days |
-| Deployment logs | 30 days |
-| Deployment approvals/audit events | 7 years |
+| Category                           |                                                     Retention |
+| ---------------------------------- | ------------------------------------------------------------: |
+| Active sessions                    |                               Until logout/expiry, max 7 days |
+| Expired session records            |                                                       30 days |
+| Authentication logs                |                                                       30 days |
+| General application logs           |                                                       90 days |
+| Sentry error records               |                                                       90 days |
+| Audit records                      |                                                       7 years |
+| Approval history operational view  |                                                        1 year |
+| Immutable approval audit events    |                                                       7 years |
+| Notification history               |                                                       30 days |
+| Completed jobs                     |                                                       30 days |
+| Failed jobs                        |                                                      120 days |
+| Scan reports                       |                                                       90 days |
+| Scan evidence/screenshots          |                                                        1 year |
+| Security logs                      |                                                        1 year |
+| Closed security findings/incidents |                                                       3 years |
+| Malware findings/review decisions  |                3 years after closure when scanning is enabled |
+| Clean uploads                      | While active, then 90 days after closure/deletion/replacement |
+| Rejected/infected uploads          |                    30-day quarantine, then permanent deletion |
+| Import files                       |                                                        7 days |
+| Export files                       |                                                        7 days |
+| Soft-deleted records               |                                                       30 days |
+| Daily database backups             |                                                       35 days |
+| Monthly database backups           |                                                        1 year |
+| Daily Blob backups                 |                                                       35 days |
+| Monthly Blob backups               |                                                       90 days |
+| SMTP/webhook delivery events       |                                                       30 days |
+| Deployment logs                    |                                                       30 days |
+| Deployment approvals/audit events  |                                                       7 years |
 
 ## 7. Retention deletion job
 
@@ -162,11 +162,11 @@ Each area supports:
 ## 9. Incident response targets
 
 | Severity | Initial response target |
-|---|---:|
-| Critical | 15 minutes |
-| High | 1 hour |
-| Medium | One business day |
-| Low | Scheduled maintenance |
+| -------- | ----------------------: |
+| Critical |              15 minutes |
+| High     |                  1 hour |
+| Medium   |        One business day |
+| Low      |   Scheduled maintenance |
 
 These targets are configurable and separate from resolution targets.
 

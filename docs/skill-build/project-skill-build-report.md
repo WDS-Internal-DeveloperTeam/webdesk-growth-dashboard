@@ -8,7 +8,7 @@ An external review found the initial build "approximately 85–90% ready" with f
 
 1. A JSON Schema `allOf`/`$ref` composition claim that didn't actually work (an intersection, not an override) — replaced with a patch-spec + offline validator (`tools/validate-project-profile.py`, `tools/validate-all.py`), both re-run and confirmed against deliberately-broken inputs, not just the happy path.
 2. Profile-routing documentation that implied automatic orchestrator behavior that doesn't exist — corrected to state plainly that the project's own root `CLAUDE.md` is the actual V1 mechanism.
-3. A forbidden-content scanner design flaw that reported its own teaching examples as violations — redesigned around file *role* (structural data vs. policy prose vs. test fixtures) instead of blanket text search.
+3. A forbidden-content scanner design flaw that reported its own teaching examples as violations — redesigned around file _role_ (structural data vs. policy prose vs. test fixtures) instead of blanket text search.
 4. Packaging/manifest mechanics (a `sed` bug, two stray `.DS_Store` files, an export that apparently didn't include all three top-level pieces).
 
 Separately, two of the three documents this build had marked as not-yet-supplied (WordPress Technical Discovery, Agent Specification Batch 1) were supplied in the same review cycle and are now registered — including surfacing and resolving one genuine architecture conflict (ACF) rather than applying either source silently. See `knowledge/07-wordpress-integration.md` §"ACF conflict — resolved" and `docs/skill-build/unresolved-items.md §D`.
@@ -33,11 +33,11 @@ Base-skill decision points that exist specifically to be configured per-project 
 
 ## 4. What was extended
 
-Four genuinely new integration surfaces (GitHub, WordPress, Google Workspace SSO, Google Workspace SMTP) and one genuinely new architectural surface (Vercel's serverless execution model) had no prior base-skill content to configure — these needed new knowledge authored *within* the base skill's existing structural patterns (the adapter-behind-an-interface pattern from `integrations/erp/_erp-adapter-pattern.md`; the webhook three-control model from `security/04-webhook-security.md`; the required-job-properties list from `integration/01-02`). Sixteen `knowledge/*` files and twelve `integrations/*` files carry this new content. None of it required inventing a new *kind* of rule — every extension follows an existing base-skill pattern, applied to a target the base skill hadn't reached yet.
+Four genuinely new integration surfaces (GitHub, WordPress, Google Workspace SSO, Google Workspace SMTP) and one genuinely new architectural surface (Vercel's serverless execution model) had no prior base-skill content to configure — these needed new knowledge authored _within_ the base skill's existing structural patterns (the adapter-behind-an-interface pattern from `integrations/erp/_erp-adapter-pattern.md`; the webhook three-control model from `security/04-webhook-security.md`; the required-job-properties list from `integration/01-02`). Sixteen `knowledge/*` files and twelve `integrations/*` files carry this new content. None of it required inventing a new _kind_ of rule — every extension follows an existing base-skill pattern, applied to a target the base skill hadn't reached yet.
 
 ## 5. What was overridden
 
-Nine specific technology/architecture choices diverge from a base-skill *default* (never a base-skill *rule*) — see `docs/skill-build/project-overrides.md` for the complete table with justification-basis citations. Every override was already approved in the skill-build task brief; this build's job was to record each one in the skill overlay so no future agent working this project re-derives or re-questions it.
+Nine specific technology/architecture choices diverge from a base-skill _default_ (never a base-skill _rule_) — see `docs/skill-build/project-overrides.md` for the complete table with justification-basis citations. Every override was already approved in the skill-build task brief; this build's job was to record each one in the skill overlay so no future agent working this project re-derives or re-questions it.
 
 ## 6. What was excluded
 
@@ -57,7 +57,7 @@ Seven-step hierarchy, detailed in `SKILL.md §2` and verified in `tests/routing-
 
 ## 9. What must be approved before application development begins
 
-See `docs/skill-build/approval-checklist.md` for the complete, checkable list. In short: the skill profile must pass structural validation (`tests/profile-validation.md`, run and recorded in `validation-report.md`), no dashboard decision may have been silently changed (verified against `project-overrides.md` — every override traces to an already-approved source), the base skill must remain provably unmodified (`file-inventory.md §4`, `base-skill-reuse-map.md`'s "Confirmation of zero base-skill edits"), and the ten proposed upstream patches must be reviewed *separately*, on their own timeline, by whoever maintains the base skill — none of them gate this project's own Phase 0.
+See `docs/skill-build/approval-checklist.md` for the complete, checkable list. In short: the skill profile must pass structural validation (`tests/profile-validation.md`, run and recorded in `validation-report.md`), no dashboard decision may have been silently changed (verified against `project-overrides.md` — every override traces to an already-approved source), the base skill must remain provably unmodified (`file-inventory.md §4`, `base-skill-reuse-map.md`'s "Confirmation of zero base-skill edits"), and the ten proposed upstream patches must be reviewed _separately_, on their own timeline, by whoever maintains the base skill — none of them gate this project's own Phase 0.
 
 ---
 
