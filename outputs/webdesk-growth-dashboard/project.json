@@ -64,8 +64,9 @@
     "job_execution_model": "serverless-functions-no-permanent-worker",
     "primary_job_provider": "vercel-queues-workflows-cron",
     "fallback_job_provider": "upstash-qstash-vercel-cron",
-    "postgres_marketplace_provider": null,
-    "_note": "postgres_marketplace_provider is null until provisioned — see knowledge/01-approved-architecture.md's Database stop-condition. Must never be 'neon' (WDS-002). null is a valid value here (type is ['string','null'])."
+    "postgres_marketplace_provider": "supabase",
+    "postgres_marketplace_region": "us-east-1",
+    "_note": "postgres_marketplace_provider confirmed 2026-08-07 — Supabase, satisfying both ADR-0007 constraints: North America East Coast (us-east-1 / N. Virginia — Supabase also offers us-east-2 / Ohio, but us-east-1 has fuller feature parity per Supabase's own region docs, e.g. read-replica support) and not Neon (WDS-002). Chosen over the other verified qualifying option, Amazon Aurora PostgreSQL (also us-east-1/us-east-2 via Vercel's native AWS integration), by explicit project-owner decision — see docs/project-state/setup-input-register.md for the full record. No database has actually been provisioned yet; this only records the confirmed provider/region, not a live resource."
   },
 
   "lock": {

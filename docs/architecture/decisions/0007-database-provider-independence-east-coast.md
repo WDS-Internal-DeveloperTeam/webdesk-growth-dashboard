@@ -1,6 +1,8 @@
 # ADR-0007 — Database Provider-Independence and East Coast Requirement
 
-**Status:** Accepted, with one open stop-condition (see Open setup values)
+**Status:** Accepted. The stop-condition below did not trigger — see "Open setup values" for the
+2026-08-07 resolution (dated addendum; the decision and rule below are unchanged from Phase 0
+sign-off).
 
 ## Context
 
@@ -47,4 +49,15 @@ Profile `knowledge/01-approved-architecture.md`; WDS-002 (absolute rule, never s
 
 ## Open setup values
 
-**Blocking:** the exact Vercel Postgres Marketplace provider is not yet chosen. Tracked in `docs/project-state/setup-input-register.md` as a blocker for database-dependent implementation work (not a blocker for Phase 0 documentation itself, which can proceed with `postgres_marketplace_provider: null`).
+**Resolved 2026-08-07 (dated addendum):** two Marketplace providers were verified to genuinely
+satisfy both constraints — Supabase (`us-east-1`/N. Virginia, `us-east-2`/Ohio) and Amazon Aurora
+PostgreSQL (same two regions, via Vercel's native AWS integration). Neither is Neon, and both
+offer a qualifying East Coast region, so the stop-condition above did not trigger — no escalation
+was needed. The project owner chose **Supabase, `us-east-1`**, recorded in
+`project.json.vercel_execution.{postgres_marketplace_provider,postgres_marketplace_region}`. See
+`docs/project-state/setup-input-register.md` for the full record.
+
+This resolves _which provider_, not provisioning — no database instance exists yet. Actual
+provisioning remains gated on Phase 1B Task 3's own separate execution authorization
+(`docs/task-packages/phase-1b-database-foundation.md` §24), consistent with the "PM/infrastructure-owner
+sign-off before G2" requirement above.
