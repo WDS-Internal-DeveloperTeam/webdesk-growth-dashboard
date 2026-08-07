@@ -7,3 +7,37 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   sharp: true
+
+# Targeted security-patch overrides only. Every range has BOTH a floor (the
+# patched version) and a ceiling (one major above the version this package was
+# resolving to before this override) -- an unbounded ">=x" range silently let
+# glob jump 10.x -> 13.x and body-parser jump 1.x -> 2.x on first install here,
+# a real regression risk (body-parser 2.x is what Express 5 expects, not the
+# 4.x line this project pins), caught only by re-running the full validation
+# suite after installing, not by reading the override alone. Each bump stays
+# within (or, for qs/body-parser, one patch version beyond express@4.22.2's
+# own pin, since no newer express@4.x exists yet) what its parent package
+# already tolerates. Deliberately NOT overridden: multer, file-type (both
+# exact-pinned internally by @nestjs/* 10.x, no fix exists anywhere in the
+# 10.x line -- forcing them out-of-range risks breaking NestJS internals we
+# don't control), postcss, sharp (both pinned/ranged by next@15.5.22, no
+# newer stable 15.x exists), vite/vitest (a vitest 2.x->3.x major bump,
+# deferred pending review), @nestjs/core's own CVE (fixed only in 11.x, a
+# NestJS major-version decision, deferred pending review), and ajv (a blanket
+# override broke ESLint's own bundled ajv -- `TypeError: Cannot set
+# properties of undefined (setting 'defaultMeta')` -- and pnpm's multi-hop
+# scoped-selector syntax (`@angular-devkit/core>ajv-formats>ajv`) isn't
+# supported, so this one is left unpatched: dev/build-tool-only, moderate
+# severity, exploitable only if the vulnerable `$data` schema option is fed
+# attacker-controlled input, which no code path in this repo does).
+# See docs/project-state/dependency-audit-2026-08-07.md for the full record.
+overrides:
+  glob: '>=10.5.0 <11.0.0'
+  picomatch: '>=4.0.4 <5.0.0'
+  tmp: '>=0.2.6 <0.3.0'
+  esbuild: '>=0.25.0 <0.26.0'
+  webpack: '>=5.104.1 <6.0.0'
+  js-yaml: '>=4.3.1 <5.0.0'
+  lodash: '>=4.17.24 <5.0.0'
+  qs: '>=6.15.2 <7.0.0'
+  body-parser: '>=1.20.6 <2.0.0'
