@@ -2,7 +2,7 @@
   "name": "@webdesk/database",
   "version": "0.1.0",
   "private": true,
-  "description": "The SOLE Sequelize model/connection/migration implementation boundary (WDS-011, ADR-0006). Phase 1A ships configuration and interface placeholders ONLY — no Sequelize models, no migrations, no database connection. See docs/architecture/decisions/0006-postgresql-sequelize-architecture.md and 0007-database-provider-independence-east-coast.md. Real implementation is Phase 1B, gated on the Postgres Marketplace provider being confirmed (docs/project-state/setup-input-register.md).",
+  "description": "The SOLE Sequelize model/connection/migration implementation boundary (WDS-011, ADR-0006). Phase 1B: real Sequelize/PostgreSQL connection, migration framework, transaction and repository foundations, proven against a minimal test-only model — no business entities (projects/users) yet, those require a separate authorization (docs/task-packages/phase-1b-database-foundation.md §9/§24). See docs/architecture/decisions/0006-postgresql-sequelize-architecture.md and 0007-database-provider-independence-east-coast.md.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,12 +16,23 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "migrate": "pnpm build && node dist/migrate.js up",
+    "migrate:down": "pnpm build && node dist/migrate.js down",
+    "migrate:test": "pnpm build && node dist/migrate.js up && node dist/migrate.js down"
   },
   "dependencies": {
-    "@webdesk/shared-types": "workspace:*"
+    "@webdesk/configuration": "workspace:*",
+    "@webdesk/shared-types": "workspace:*",
+    "pg": "^8.22.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.0",
+    "umzug": "^3.8.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }

@@ -1,25 +1,62 @@
+import { Sequelize } from "sequelize";
+import { loadDatabaseEnv, type DatabaseEnv } from "./env.js";
+
 /**
- * Connection configuration SHAPE only — no Sequelize import, no actual
- * connection logic. Real implementation is Phase 1B, once the Postgres
- * Marketplace provider is confirmed (see
- * docs/architecture/decisions/0007-database-provider-independence-east-coast.md
- * and docs/project-state/setup-input-register.md — currently blocking).
+ * Cached at module scope so a warm Vercel Function invocation reuses the
+ * same Sequelize instance instead of reconstructing it per request — a cold
+ * start still gets a fresh instance, which is expected and fine. See
+ * docs/task-packages/phase-1b-database-foundation.md §13.
  */
-export interface DatabaseConnectionConfig {
-  readonly host: string;
-  readonly port: number;
-  readonly database: string;
-  readonly ssl: boolean;
+let cachedConnection: Sequelize | null = null;
+
+/**
+ * Constructs (or returns the cached) Sequelize connection. Construction is
+ * lazy — Sequelize does not open a socket until the first query or an
+ * explicit `.authenticate()` call, so calling this alone does not prove
+ * connectivity. Use `checkDatabaseHealth` (./health.js) for a liveness
+ * check.
+ *
+ * Pool sizing is small and serverless-aware by default (§13) — never a
+ * persistent-process-style pool (`max: 10`+). SSL is required by default in
+ * every environment (§12); the one carved-out exception is a local/CI
+ * disposable test database, which sets DATABASE_SSL=false explicitly (no
+ * TLS-enabled Postgres image is used for throwaway test data) — never for a
+ * real staging/production connection string.
+ */
+export function getConnection(env: DatabaseEnv = loadDatabaseEnv()): Sequelize {
+  if (cachedConnection) {
+    return cachedConnection;
+  }
+
+  cachedConnection = new Sequelize(env.DATABASE_URL, {
+    dialect: "postgres",
+    logging: false,
+    dialectOptions: env.DATABASE_SSL ? { ssl: { require: true, rejectUnauthorized: true } } : {},
+    pool: {
+      max: env.DATABASE_POOL_MAX,
+      min: env.DATABASE_POOL_MIN,
+      idle: env.DATABASE_POOL_IDLE_MS,
+      acquire: env.DATABASE_POOL_ACQUIRE_MS,
+    },
+  });
+
+  return cachedConnection;
 }
 
 /**
- * Placeholder — intentionally throws. Prevents any Phase 1A code from
- * accidentally depending on a working connection before Phase 1B exists.
+ * Test-only escape hatch: clears the cached instance so the next
+ * `getConnection()` call builds a fresh one (e.g. between test files
+ * pointed at different disposable databases). Never called from
+ * application code.
  */
-export function getConnection(): never {
-  throw new Error(
-    "packages/database has no real connection implementation yet — this is a Phase 1A " +
-      "interface placeholder. Real Sequelize connection setup is Phase 1B, gated on the " +
-      "Postgres Marketplace provider (see docs/project-state/setup-input-register.md).",
-  );
+export function resetConnectionForTests(): void {
+  cachedConnection = null;
+}
+
+/** Closes the pooled connection and clears the cache. */
+export async function closeConnection(): Promise<void> {
+  if (cachedConnection) {
+    await cachedConnection.close();
+    cachedConnection = null;
+  }
 }

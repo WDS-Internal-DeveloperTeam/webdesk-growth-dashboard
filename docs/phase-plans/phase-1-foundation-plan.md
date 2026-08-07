@@ -38,6 +38,15 @@ Thirteen small, approval-gated tasks, in dependency order. No task in this plan 
 
 ### Task 3 — Database package and migration framework
 
+**Status: Complete, as "Phase 1B" — awaiting approval.** Executed 2026-08-07 once its own
+setup-input dependency (Postgres provider) resolved and explicit execution authorization was
+given. Real Sequelize connection, umzug migration framework, transaction and repository
+foundations, all validated against a real disposable database (19 unit + 8 integration tests) —
+see `docs/project-state/phase-1b-validation-report.md`. Proven against a test-only table only, per
+the task package's own two-tier gate (`docs/task-packages/phase-1b-database-foundation.md` §9/§24)
+— no business entity (`projects`/`users`) was created. The description below is preserved as the
+original Task 3 plan, not rewritten after the fact.
+
 - **Purpose:** `packages/database` scaffold, Sequelize connection setup, first migration (schema TBD at G-Schema).
 - **Dependencies:** Task 1, Task 2, ADR-0006/0007 approved, Postgres Marketplace provider confirmed (setup input — **resolved 2026-08-07, Supabase/us-east-1**, see `docs/project-state/setup-input-register.md`). This clears the setup-input dependency; Task 3 still requires its own separate execution authorization, per the Phase 1B task package's own approval gates (`docs/task-packages/phase-1b-database-foundation.md`).
 - **Authorized role:** Architect, DBA.

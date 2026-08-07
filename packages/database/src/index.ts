@@ -1,2 +1,6 @@
 export type { Repository } from "./repository.js";
-export { getConnection, type DatabaseConnectionConfig } from "./connection.js";
+export { SequelizeRepository } from "./base-repository.js";
+export { closeConnection, getConnection, resetConnectionForTests } from "./connection.js";
+export { databaseEnvSchema, loadDatabaseEnv, type DatabaseEnv } from "./env.js";
+export { withTransaction } from "./transaction.js";
+export { checkDatabaseHealth } from "./health.js";
