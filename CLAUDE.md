@@ -75,18 +75,20 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   dependency-boundary enforcement — see `docs/project-state/phase-1a-validation-report.md`. **Still no
   business modules, authentication, database entities, or real external integrations** — Phase 1B covers
   those and requires its own separate approval.
-- **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs that gate
-  Phase 1B (Postgres Marketplace provider is the specific blocker for Task 3; Google Workspace OAuth client,
-  WordPress Application Password account, and real timezone confirmation block later tasks).
+- **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
+  Postgres Marketplace provider is **resolved** (Supabase, `us-east-1` — confirmed 2026-08-07, not yet
+  provisioned). Google Workspace OAuth client, WordPress Application Password account, and real timezone
+  confirmation still block later tasks.
 
 ## Active tasks (this sprint)
 
-1. Resolve the Postgres Marketplace provider setup input (`docs/project-state/setup-input-register.md`) —
-   blocks Phase 1B Task 3 (database package, Sequelize, migrations).
-2. Decide whether to merge PR #1 (`phase-1a-repository-foundation` → `main`, approved, not yet merged) now
-   or hold it open until Phase 1B lands alongside it.
-3. On the Postgres provider being confirmed and Phase 1B separately authorized: Phase 1B per
-   `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
+1. Phase 1B execution authorization: the database task package (`docs/task-packages/phase-1b-database-foundation.md`)
+   is approved (PR #2, merged) and its blocking setup input (Postgres provider) is now resolved — Task 3
+   still requires a separate, explicit execution authorization per the package's own approval gates before
+   any code is written.
+2. Resolve remaining Phase 1B+ setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
+   creation, Google Workspace OAuth client, WordPress Application Password account).
+3. Provision the actual Supabase project once Task 3 is authorized — not before.
 
 ## Recent decisions
 
@@ -98,18 +100,30 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   monorepo foundation built and validated under that authorization — see
   `docs/project-state/phase-1a-validation-report.md`.
 - `[2026-08-07]` Phase 1A signed off (G1 gate passed, scope Phase 1A only) — see
-  `docs/project-state/phase-1a-approval-checklist.md`'s "Sign-off". PR #1 open, not merged.
+  `docs/project-state/phase-1a-approval-checklist.md`'s "Sign-off". PR #1 merged 2026-08-07.
+- `[2026-08-07]` Phase 1B database-foundation task package prepared and approved (PR #2, merged) —
+  see `docs/task-packages/phase-1b-database-foundation.md`. Documentation/planning only; Phase 1B
+  implementation itself remains unauthorized.
+- `[2026-08-07]` 9 transitive dependency vulnerabilities patched via bounded `pnpm-workspace.yaml`
+  overrides (PR #3, merged) — `pnpm audit` 35 → 18 findings. Two version-line decisions (NestJS
+  10.x→11.x, Vitest 2.x→3.x) deferred pending review — see
+  `docs/project-state/dependency-audit-2026-08-07.md`.
+- `[2026-08-07]` Postgres Marketplace provider confirmed: Supabase, `us-east-1` (N. Virginia) —
+  satisfies ADR-0007 (North America East Coast + not Neon, WDS-002). Chosen over the other
+  verified qualifying candidate, Amazon Aurora PostgreSQL, by explicit project-owner decision.
+  Not yet provisioned. See `docs/project-state/setup-input-register.md`.
 
 ## Open client blockers
 
-- Postgres provider vs. Neon exclusion — see profile `knowledge/01-approved-architecture.md`
-  "Database" stop-condition. Owner: infrastructure owner.
 - First-login provisioning model (JIT vs. pre-provisioned) — see profile
   `knowledge/05-google-workspace-sso-and-local-admin.md`. Owner: PM.
 - ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
   the local `origin` remote; confirmed real and reachable (Phase 0 pushed to `origin/main`,
-  Phase 1A branch pushed and PR #1 opened 2026-08-06). Still unconfirmed: whether branch
-  protection is configured on `main` (`docs/repository-plan/branch-and-release-plan.md`).
+  Phase 1A branch pushed and PR #1 opened 2026-08-06, merged 2026-08-07). Still unconfirmed:
+  whether branch protection is configured on `main` (`docs/repository-plan/branch-and-release-plan.md`).
+- ~~Postgres provider vs. Neon exclusion~~ — resolved 2026-08-07, Supabase/`us-east-1` — see
+  profile `knowledge/01-approved-architecture.md` "Database" stop-condition for the rule this
+  satisfies. Not yet provisioned.
 
 ## Cautions
 
@@ -120,13 +134,20 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - Do NOT wire Resend or any transactional-email API — WDS-004, use Google Workspace SMTP only.
 - Do NOT conflate the software-delivery agent roster with the dashboard's 15 business
   agents — see profile `SKILL.md §6`.
-- Do NOT begin Phase 1B (database entities, migrations, authentication, RBAC, audit persistence,
-  business modules, real external-integration implementations, or any cloud-resource creation)
-  without explicit human approval of `docs/project-state/phase-1a-approval-checklist.md`'s scope
-  covering it — Phase 1A's own approval is scoped to Phase 1A only and does not authorize this.
+- Do NOT begin Phase 1B implementation (writing code, installing dependencies, creating
+  migrations, connecting to any database, authentication, RBAC, audit persistence, business
+  modules, real external-integration implementations, or any cloud-resource creation) without a
+  separate, explicit execution authorization — the database task package
+  (`docs/task-packages/phase-1b-database-foundation.md`) is approved as a _plan_ (PR #2, merged),
+  and its Postgres-provider blocker is resolved, but the package's own §24 requires its own
+  distinct authorization before any of its in-scope work starts, plus a further separate
+  authorization before either of its two proposed entities may actually be created.
+- Do NOT provision the Supabase database (create the actual project/instance) without that same
+  separate execution authorization — confirming the provider (`project.json`) is not provisioning
+  it.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1A sign-off recorded)
+Last touched: 2026-08-07 · by Claude (Postgres Marketplace provider confirmed)

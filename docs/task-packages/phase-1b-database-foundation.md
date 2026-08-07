@@ -1,10 +1,16 @@
 # Phase 1B Task Package — Database Foundation
 
-**Status:** Documentation and planning only. Not started, not authorized. This package must be
-reviewed and separately approved before any of its in-scope work begins — approving this package
-does **not** itself authorize creating the two proposed foundational entities (§9/§11); that
-requires an additional, explicit go-ahead within the approved execution package, per the brief's
-own instruction.
+**Status:** Approved as a plan (PR #2, merged 2026-08-07). Implementation itself is still not
+authorized — this package must receive a separate, explicit execution go-ahead before any
+in-scope work begins, and approving it does **not** authorize creating the two proposed
+foundational entities (§9/§11); that needs a further, explicit authorization within the approved
+execution package, per the brief's own instruction.
+
+**Addendum, 2026-08-07 (dated, not a silent edit — §0/§6/§27 below are the point-in-time record
+of what was true when this package was written):** the Postgres Marketplace provider blocker
+referenced throughout is now resolved — **Supabase, `us-east-1`** — see
+`docs/project-state/setup-input-register.md` and ADR-0007's own dated addendum. This clears the
+one blocking item §27 identified; it does not itself authorize Task 3's execution.
 
 ---
 
