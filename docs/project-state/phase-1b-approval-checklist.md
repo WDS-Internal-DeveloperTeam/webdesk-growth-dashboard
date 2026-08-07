@@ -1,7 +1,8 @@
 # Phase 1B Approval Checklist — Database Foundation
 
-**Status:** Ready for human review. Unsigned — nothing below is self-approved, consistent with
-the separation-of-duties rule already applied to every prior phase's checklist (ADR-0010,
+**Status:** Approved 2026-08-07, scope Phase 1B only (see "Sign-off" below). Signed by the human
+approver via chat and via merging [PR #5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) directly — not by the authoring agent — consistent with the
+separation-of-duties rule already applied to every prior phase's checklist (ADR-0010,
 `knowledge/12-dashboard-security-controls.md`).
 
 ---
@@ -39,19 +40,19 @@ the separation-of-duties rule already applied to every prior phase's checklist (
 
 ## Forbidden-actions check (task package §25/§27) — verified, not assumed
 
-| Forbidden action                                                 | Status                                                                                                                                         |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Create `projects`, `users`, or any other business entity         | **Not done.** Only `_framework_probe`, an explicitly-named non-business test-only table, exists — `git diff` shows exactly one migration file. |
-| Create roles, permissions, role-permission joins                 | **Not done.** No such table/model anywhere.                                                                                                    |
-| Implement authentication or RBAC                                 | **Not done.** No auth code exists in this change.                                                                                              |
-| Use `sync()`/`sync({ alter: true })` or any schema-auto-sync     | **Not done.** `grep -rn "\.sync(" packages/database/src` → no matches; migrations are the only schema-change path.                             |
-| Add a second migration path anywhere outside `packages/database` | **Not done.** `dependency-cruiser`'s `only-database-package-touches-sequelize` rule (now live, not a no-op) passes with 0 errors.              |
-| Wire `dashboard-api`/`dashboard-worker` to the new repository    | **Not done.** Neither app's source was touched by this change — `git diff --stat` confirms.                                                    |
-| Provision the actual Supabase database                           | **Not done.** No Vercel/Supabase API call anywhere; all testing used a local/CI disposable instance.                                           |
-| Add real credentials anywhere                                    | **Not done.** `pnpm scan:secrets` clean, 189 files; `.env.example` contains placeholders only.                                                 |
-| Modify the base Node.js skill                                    | **Not done.** `webdesk-nodejs/` untouched (gitignored, unchanged).                                                                             |
-| Merge automatically                                              | **Not done.** No PR merge performed.                                                                                                           |
-| Begin Phase 1C automatically                                     | **Not done.** Stopping here for review, per this document.                                                                                     |
+| Forbidden action                                                 | Status                                                                                                                                                                 |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Create `projects`, `users`, or any other business entity         | **Not done.** Only `_framework_probe`, an explicitly-named non-business test-only table, exists — `git diff` shows exactly one migration file.                         |
+| Create roles, permissions, role-permission joins                 | **Not done.** No such table/model anywhere.                                                                                                                            |
+| Implement authentication or RBAC                                 | **Not done.** No auth code exists in this change.                                                                                                                      |
+| Use `sync()`/`sync({ alter: true })` or any schema-auto-sync     | **Not done.** `grep -rn "\.sync(" packages/database/src` → no matches; migrations are the only schema-change path.                                                     |
+| Add a second migration path anywhere outside `packages/database` | **Not done.** `dependency-cruiser`'s `only-database-package-touches-sequelize` rule (now live, not a no-op) passes with 0 errors.                                      |
+| Wire `dashboard-api`/`dashboard-worker` to the new repository    | **Not done.** Neither app's source was touched by this change — `git diff --stat` confirms.                                                                            |
+| Provision the actual Supabase database                           | **Not done.** No Vercel/Supabase API call anywhere; all testing used a local/CI disposable instance.                                                                   |
+| Add real credentials anywhere                                    | **Not done.** `pnpm scan:secrets` clean, 206 tracked files; `.env.example` contains placeholders only.                                                                 |
+| Modify the base Node.js skill                                    | **Not done.** `webdesk-nodejs/` untouched (gitignored, unchanged).                                                                                                     |
+| Merge automatically                                              | **Not done.** PR #5 was merged only after an explicit, separate "merge PR #5" instruction from the human approver — the agent never merges a PR on its own initiative. |
+| Begin Phase 1C automatically                                     | **Not done.** Stopping here for review, per this document.                                                                                                             |
 
 ---
 
@@ -81,25 +82,36 @@ its remote SHA recorded.
 
 ## Commit record
 
-_(recorded after the branch is pushed — see the git-workflow section of this checklist once
-complete)_
+| Commit                        | SHA                                        | Contents                                                                                                                                                                                                           |
+| ----------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Phase 1B database foundation  | `dbe14dac20497bab9c7c5165b12ed21920c09dd9` | Real Sequelize connection, migration framework, transaction/repository/health foundations, tests, docs                                                                                                             |
+| Fix CI dependency-build order | `80bd118b252ba2292af40d2ac8cecd217257ebc4` | `database-migration-test` CI job built `packages/database` in isolation, failing on a fresh checkout since its workspace dependencies weren't built first — fixed via `turbo run build --filter=@webdesk/database` |
+
+Branch: `phase-1b-database-foundation`, pushed to `origin`, tip independently verified via
+`git ls-remote origin phase-1b-database-foundation` matching local `HEAD` at push time.
+
+Pull request: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5),
+base `main` ← `phase-1b-database-foundation`. **Merged** — merge commit
+`df8cb6f3b84e1a5415cd895b7f7a60b94cfe2e77`, by `jitesh-webdeskinc`, 2026-08-07. All CI checks
+passed except the known, non-blocking `Dependency vulnerability audit` job
+(`continue-on-error: true`, same as every prior PR in this project).
 
 ---
 
 ## Sign-off
 
-| Field                     | Value                                    |
-| ------------------------- | ---------------------------------------- |
-| Approved by               | _(blank)_                                |
-| Approval date             | _(blank)_                                |
-| Exact approved commit SHA | _(blank)_                                |
-| Authorization scope       | _(blank — e.g. "Phase 1C" once granted)_ |
+| Field                     | Value                                                                                                                                                                                                                |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Approved by               | WebDesk Solution                                                                                                                                                                                                     |
+| Approval date             | 2026-08-07                                                                                                                                                                                                           |
+| Exact approved commit SHA | `80bd118b252ba2292af40d2ac8cecd217257ebc4` (branch tip, `phase-1b-database-foundation`, merged as `df8cb6f3b84e1a5415cd895b7f7a60b94cfe2e77`)                                                                        |
+| Authorization scope       | Phase 1B only — Phase 1C (Google Workspace authentication, emergency local administrator authentication, session management) requires its own separate authorization, per its own task brief's explicit precondition |
 
-| Role                                   | Name | Decision                       | Date |
-| -------------------------------------- | ---- | ------------------------------ | ---- |
-| Reviewer (Tech Lead / Architect / DBA) |      | ☐ Approved ☐ Changes requested |      |
-| PM                                     |      | ☐ Approved ☐ Changes requested |      |
+| Role                                   | Name             | Decision   | Date       |
+| -------------------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (Tech Lead / Architect / DBA) | WebDesk Solution | ☑ Approved | 2026-08-07 |
+| PM                                     | WebDesk Solution | ☑ Approved | 2026-08-07 |
 
-**On approval:** whatever scope is recorded above. Phase 1C (Google Workspace authentication,
-emergency local administrator authentication, session management) is the next candidate, per its
-own task brief — not started automatically.
+**On approval:** Phase 1C (Google Workspace authentication, emergency local administrator
+authentication, session management) is the next candidate, per its own task brief — not started
+automatically.

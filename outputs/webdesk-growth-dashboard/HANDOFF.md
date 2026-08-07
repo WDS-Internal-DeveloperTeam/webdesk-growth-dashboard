@@ -2,11 +2,11 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Architect/Backend roles (Phase 1B database foundation — built and validated, awaiting approval)
+- **Last active agent:** Architect/Backend roles (Phase 1B database foundation — approved, PR #5 merged)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1B — Database foundation (see `docs/phase-plans/phase-1-foundation-plan.md` Task 3) — **built and validated 2026-08-07, not yet approved** (`docs/project-state/phase-1b-approval-checklist.md`, unsigned). Phase 1A remains approved (scope Phase 1A only).
-- **Current gate:** G1 (Phase 1A) — passed 2026-08-07 — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). G-Schema (Phase 1B) has NOT been recorded there yet — only added once a human actually approves the checklist, same as G1 was.
+- **Active phase:** Phase 1B — Database foundation (see `docs/phase-plans/phase-1-foundation-plan.md` Task 3) — **approved 2026-08-07, scope Phase 1B only** (`docs/project-state/phase-1b-approval-checklist.md`). Phase 1A also remains approved (scope Phase 1A only).
+- **Current gate:** G-Schema (Phase 1B) — passed 2026-08-07 — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
@@ -20,38 +20,47 @@ the approved task package, **built and validated the real Phase 1B database foun
 connection (serverless-aware pooling, SSL by default), umzug migration framework, transaction
 helper, generic Sequelize-backed repository, health check — all proven against a real disposable
 PostgreSQL database (19 unit + 8 integration tests, migration up/down round-trip verified twice,
-both the compiled-CLI and Vitest-direct execution paths). See
-`docs/project-state/phase-1b-validation-report.md`. **Per the task package's own two-tier gate, no
-business entity (`projects`/`users`) was created** — only a test-only `_framework_probe` table
-proving the framework. The actual Supabase database was not provisioned; every test ran against a
-local/CI disposable instance.
+both the compiled-CLI and Vitest-direct execution paths). **Per the task package's own two-tier
+gate, no business entity (`projects`/`users`) was created** — only a test-only `_framework_probe`
+table proving the framework. The actual Supabase database was not provisioned; every test ran
+against a local/CI disposable instance.
 
-A mid-session Phase 1C (authentication/session) task brief arrived twice while this work was in
-progress — correctly held, since its own preconditions (Phase 1B approved, SHA recorded) aren't
-met yet. Phase 1C cannot begin until this Phase 1B work is reviewed and approved.
+PR #5 was opened, and CI caught a real bug the local testing had missed: the new
+`database-migration-test` CI job failed on a fresh checkout because `packages/database`'s own
+isolated build didn't build its workspace dependencies first — fixed via `turbo run build
+--filter=@webdesk/database` (turbo's task graph already knows to build dependencies first; the
+package-local `pnpm build` script doesn't). Re-verified from a fully clean state, pushed, CI
+passed, and the user then explicitly instructed the merge. **PR #5 is merged; Phase 1B is signed
+off, scope Phase 1B only** — see `docs/project-state/phase-1b-approval-checklist.md`'s "Sign-off"
+and `project.json`'s `gates[]` (`G-Schema`, passed).
+
+A Phase 1C (authentication/session) task brief arrived twice while Phase 1B work was in progress
+— correctly held both times, since its own precondition (Phase 1B approved, SHA recorded) wasn't
+met yet. **That precondition is now met** — Phase 1C has not been started, awaiting its own
+explicit go-ahead.
 
 ## Files committed this session
 
 See each PR's own commit history (`main`'s log) for exact file lists — not duplicated here to
-avoid drift between records. PRs merged so far: #1 (Phase 1A foundation), #2 (Phase 1B task
-package), #3 (dependency-audit fixes), #4 (Postgres provider confirmation). The Phase 1B
-implementation itself is on branch `phase-1b-database-foundation`, pending commit/push/PR.
+avoid drift between records. PRs merged: #1 (Phase 1A foundation), #2 (Phase 1B task package), #3
+(dependency-audit fixes), #4 (Postgres provider confirmation), #5 (Phase 1B database foundation).
 
 ## Files pending commit (work in progress)
 
-| File                                                                                                                                                                                                                                                                                                                                                                                                                 | Status                                                             | Blocker                                       |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------- |
-| `packages/database/src/*` (connection, env, transaction, migrate, base-repository, health, one migration), `packages/database/test/*`, `packages/configuration/src/logging.ts`, `.github/workflows/ci.yml`, this file, `CLAUDE.md`, `docs/project-state/phase-1b-{validation-report,approval-checklist}.md`, `docs/traceability/phase-0-requirements-traceability.md`, `docs/phase-plans/phase-1-foundation-plan.md` | Fully built and validated on branch `phase-1b-database-foundation` | None — pending commit/push/PR in this session |
+| File                                                                                                                                          | Status                                              | Blocker                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------ |
+| `outputs/webdesk-growth-dashboard/project.json`, this file, `CLAUDE.md`, `docs/project-state/phase-1b-approval-checklist.md` (sign-off table) | Recording the Phase 1B sign-off after PR #5's merge | None — pending commit/push in this session |
 
 ## Next 3 tasks (queued)
 
-1. Land the `phase-1b-database-foundation` branch (commit, push, PR — no merge).
-2. Human review and sign-off on `docs/project-state/phase-1b-approval-checklist.md` — Phase 1B is
-   not complete until this is approved, and Phase 1C's own task brief explicitly cannot start
-   until it is.
-3. Resolve the remaining Phase 1B+ setup inputs in `docs/project-state/setup-input-register.md`
-   (GitHub App creation, Google Workspace OAuth client, WordPress Application Password account) —
-   needed for Phase 1C and later, not for Phase 1B itself.
+1. Land the sign-off-recording commit above via its own small branch + PR (not a direct push to
+   `main` — that was explicitly authorized once for Phase 1A's own sign-off record, not standing
+   permission for future pushes).
+2. Await explicit authorization to begin Phase 1C (Google Workspace authentication, emergency
+   local admin, session management) — its own precondition is now met, but that isn't itself the
+   go-ahead to start.
+3. Resolve the remaining Phase 1C+ setup inputs in `docs/project-state/setup-input-register.md`
+   (GitHub App creation, Google Workspace OAuth client, WordPress Application Password account).
 
 ## Client blockers (waiting on)
 
@@ -79,7 +88,9 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - `[2026-08-07]` Phase 1B database-foundation task package prepared and approved, PR #2 merged — see `docs/task-packages/phase-1b-database-foundation.md`. Planning only, no code.
 - `[2026-08-07]` 9 transitive dependency vulnerabilities patched via bounded `pnpm-workspace.yaml` overrides, PR #3 merged — `pnpm audit` 35 → 18 findings. NestJS 10.x→11.x and Vitest 2.x→3.x bumps deliberately deferred — see `docs/project-state/dependency-audit-2026-08-07.md`.
 - `[2026-08-07]` Postgres Marketplace provider confirmed: Supabase, `us-east-1` (N. Virginia) — satisfies ADR-0007 (North America East Coast, not Neon per WDS-002). Verified real region availability for both qualifying candidates (Supabase, Amazon Aurora PostgreSQL) before the project owner chose Supabase. Not yet provisioned.
-- `[2026-08-07]` Phase 1B database foundation built and validated, per explicit user authorization to execute the already-approved task package. Real Sequelize/PostgreSQL connection, umzug migration framework, transaction and repository foundations — 19 unit + 8 real-database integration tests, all passing. No business entity created (`_framework_probe` test-only table only) — see `docs/project-state/phase-1b-validation-report.md`. Not yet approved.
+- `[2026-08-07]` Phase 1B database foundation built and validated, per explicit user authorization to execute the already-approved task package. Real Sequelize/PostgreSQL connection, umzug migration framework, transaction and repository foundations — 19 unit + 8 real-database integration tests, all passing. No business entity created (`_framework_probe` test-only table only) — see `docs/project-state/phase-1b-validation-report.md`.
+- `[2026-08-07]` A CI-only bug found and fixed after PR #5 was opened: `database-migration-test`'s job built `packages/database` in isolation, failing on a fresh checkout since its workspace dependencies weren't built first. Fixed via `turbo run build --filter=@webdesk/database`; re-verified from a fully clean local state before pushing.
+- `[2026-08-07]` Phase 1B signed off (G-Schema gate passed), scope Phase 1B only, approved commit `80bd118b252ba2292af40d2ac8cecd217257ebc4` — see `docs/project-state/phase-1b-approval-checklist.md`'s "Sign-off" and `project.json`'s `gates[]`/`audit_log`. PR #5 merged (`df8cb6f3b84e1a5415cd895b7f7a60b94cfe2e77`). Phase 1C implementation remains a separate, not-yet-granted authorization.
 
 ## Token / context usage this session (optional)
 
@@ -91,7 +102,7 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - Do NOT load `nodejs/integrations/{bigcommerce,shopify,erp}/*` — not this project's scope.
 - Do NOT create `projects`, `users`, or any other business entity in `packages/database` without a separate, explicit authorization beyond Phase 1B's own approval — the task package's own §9/§24 two-tier gate. `_framework_probe` (test-only) is the only table that exists.
 - Do NOT provision the actual Supabase database — the provider/region are confirmed (`project.json`), but confirming is not provisioning; every test so far ran against a local/CI disposable instance.
-- Do NOT begin Phase 1C (Google Workspace authentication, emergency local admin, session management) — its own task brief explicitly requires Phase 1B to be validated, reviewed, and approved first, with the approved remote SHA recorded. Not yet true as of this HANDOFF.
+- Do NOT begin Phase 1C (Google Workspace authentication, emergency local admin, session management) without its own separate, explicit go-ahead — its stated precondition (Phase 1B approved, SHA recorded) is now met, but that alone doesn't authorize starting it.
 - Do NOT treat the Service/SEO Library workbook (`canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm`) as approved business content, even where its own internal "Approval Status" column says "Approved" — that is the client's internal tracking field, not this project's own approval gate. See `knowledge/00-scope-and-precedence.md §4`.
 - Do NOT push to `origin` without separate PM authorization for that specific push — the Phase 1A branch push itself is being tracked explicitly in the git-workflow record, not treated as blanket standing permission for future pushes.
 
@@ -103,10 +114,10 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   "Commit record").
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
-- Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation)
-- Open PRs / issues: none currently open — the Phase 1B database-foundation implementation
-  branch (`phase-1b-database-foundation`) is pending its own PR
+- Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation), [#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) (Phase 1B database foundation)
+- Open PRs / issues: none currently open — the Phase 1B sign-off-recording branch is pending its
+  own small PR
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1B database foundation built and validated)
+Last touched: 2026-08-07 · by Claude (Phase 1B sign-off recorded)
