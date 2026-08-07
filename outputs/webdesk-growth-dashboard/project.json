@@ -16,8 +16,8 @@
     },
     "host_target": "vercel",
     "data_sensitivity": "high",
-    "stage": "discovery",
-    "current_gate": "G0.5",
+    "stage": "scaffolding",
+    "current_gate": "G1",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -31,7 +31,7 @@
       "url": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard.git",
       "default_branch": "main",
       "develop_branch": "staging",
-      "_note": "Real repository URL, supplied by the project owner 2026-08-06. Registered as a local git remote (origin) in this working directory — not yet pushed to; no push has been made without separate explicit authorization, per the Phase 0 forbidden-actions list. Whether the remote repository itself has been created on GitHub, and whether branch protection is configured, are not verified by this file alone — see docs/repository-plan/branch-and-release-plan.md for what Phase 1 Task 1 still needs to confirm."
+      "_note": "Real repository URL, supplied by the project owner 2026-08-06. Registered as a local git remote (origin). Phase 0 was pushed to origin/main (2026-08-06); the Phase 1A branch (phase-1a-repository-foundation) was pushed and PR #1 opened (2026-08-06), then approved (2026-08-07) — see docs/project-state/phase-1a-approval-checklist.md. Branch protection on main is not verified by this file alone — still tracked in docs/repository-plan/branch-and-release-plan.md."
     },
     "assigned_team": {
       "pm": "TBD",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-06T00:00:00Z",
-    "version": 1
+    "updated_at": "2026-08-07T00:00:00Z",
+    "version": 2
   },
 
   "tech_stack": {
@@ -76,7 +76,30 @@
     "max_lock_duration_seconds": 300
   },
 
-  "gates": [],
+  "gates": [
+    {
+      "id": "G0.5",
+      "type": "architecture-review",
+      "scope": "project",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-06T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Phase 0 foundation (20 ADRs, 7 integration contracts, repository/environment plan, requirements traceability, security foundation, Phase 1 plan) approved, scope 'Phase 1A only' — see docs/project-state/phase-0-approval-checklist.md."
+    },
+    {
+      "id": "G1",
+      "type": "scaffold-verification",
+      "scope": "project",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-07T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Phase 1A repository/monorepo foundation approved, scope 'Phase 1A only' — see docs/project-state/phase-1a-approval-checklist.md. Approved commit efdb301a0740b074893b010df0fa317b5c3dac69 on branch phase-1a-repository-foundation, PR #1. Phase 1B (database/Sequelize) requires its own separate gate and remains blocked on the Postgres Marketplace provider being confirmed."
+    }
+  ],
 
   "budget": {
     "token_used": 0,
@@ -147,5 +170,20 @@
   },
 
   "audit_log_path": "outputs/webdesk-growth-dashboard/audit-log.jsonl",
-  "audit_log": []
+  "audit_log": [
+    {
+      "timestamp": "2026-08-07T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved Phase 1A (G1 gate), scope Phase 1A only",
+      "details": {
+        "commit_sha": "efdb301a0740b074893b010df0fa317b5c3dac69",
+        "branch": "phase-1a-repository-foundation",
+        "pull_request": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1",
+        "approval_record": "docs/project-state/phase-1a-approval-checklist.md"
+      },
+      "project_version_before": 1,
+      "project_version_after": 2
+    }
+  ]
 }

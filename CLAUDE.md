@@ -68,20 +68,25 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** discovery **Current gate:** G0.5 (open — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative)
-- **Active phase:** Phase 0 — Discovery, Architecture Decisions, and Governance Setup. See
-  `docs/implementation/phased-implementation-plan.md` and profile `knowledge/14-implementation-phases.md`.
-  Phase 0 is documentation-only: project control files, 20 ADRs, 7 integration contracts, repository/
-  environment plan, requirements traceability, security foundation, Phase 1 plan. **No application code,
-  no scaffolding, no installed dependencies, no cloud resources, no external API calls.**
-- **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs
-  (Postgres Marketplace provider, GitHub repository, Google Workspace OAuth client, WordPress
-  Application Password account, real timezone confirmation).
+- **Stage:** scaffolding **Current gate:** G1 (passed 2026-08-07 — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative)
+- **Active phase:** Phase 1A — Repository and monorepo foundation, **approved 2026-08-07, scope Phase 1A only**
+  (`docs/project-state/phase-1a-approval-checklist.md`). Delivered a real, tested Turborepo/pnpm monorepo:
+  3 app foundations (`dashboard-web`, `dashboard-api`, `dashboard-worker`), 6 package foundations, CI, and
+  dependency-boundary enforcement — see `docs/project-state/phase-1a-validation-report.md`. **Still no
+  business modules, authentication, database entities, or real external integrations** — Phase 1B covers
+  those and requires its own separate approval.
+- **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs that gate
+  Phase 1B (Postgres Marketplace provider is the specific blocker for Task 3; Google Workspace OAuth client,
+  WordPress Application Password account, and real timezone confirmation block later tasks).
 
 ## Active tasks (this sprint)
 
-1. Human review and sign-off on `docs/project-state/phase-0-approval-checklist.md`.
-2. On approval: Phase 1 Task 1 (repository and monorepo scaffold) per `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
+1. Resolve the Postgres Marketplace provider setup input (`docs/project-state/setup-input-register.md`) —
+   blocks Phase 1B Task 3 (database package, Sequelize, migrations).
+2. Decide whether to merge PR #1 (`phase-1a-repository-foundation` → `main`, approved, not yet merged) now
+   or hold it open until Phase 1B lands alongside it.
+3. On the Postgres provider being confirmed and Phase 1B separately authorized: Phase 1B per
+   `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
 
 ## Recent decisions
 
@@ -89,6 +94,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - `[2026-08-06]` Phase 0 foundation authored: 20 ADRs, 7 integration contracts, repository plan, requirements
   traceability, security foundation, Phase 1 plan — all formalizing already-resolved architecture, not new
   decisions. See `docs/project-state/phase-0-validation-report.md`.
+- `[2026-08-06]` Phase 0 signed off (scope: Phase 1A only) and pushed to `origin/main`. Phase 1A repository/
+  monorepo foundation built and validated under that authorization — see
+  `docs/project-state/phase-1a-validation-report.md`.
+- `[2026-08-07]` Phase 1A signed off (G1 gate passed, scope Phase 1A only) — see
+  `docs/project-state/phase-1a-approval-checklist.md`'s "Sign-off". PR #1 open, not merged.
 
 ## Open client blockers
 
@@ -97,8 +107,9 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - First-login provisioning model (JIT vs. pre-provisioned) — see profile
   `knowledge/05-google-workspace-sso-and-local-admin.md`. Owner: PM.
 - ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
-  the local `origin` remote. Still unconfirmed: whether the remote actually exists on GitHub and
-  has branch protection configured (Phase 1 Task 1).
+  the local `origin` remote; confirmed real and reachable (Phase 0 pushed to `origin/main`,
+  Phase 1A branch pushed and PR #1 opened 2026-08-06). Still unconfirmed: whether branch
+  protection is configured on `main` (`docs/repository-plan/branch-and-release-plan.md`).
 
 ## Cautions
 
@@ -109,11 +120,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - Do NOT wire Resend or any transactional-email API — WDS-004, use Google Workspace SMTP only.
 - Do NOT conflate the software-delivery agent roster with the dashboard's 15 business
   agents — see profile `SKILL.md §6`.
-- Do NOT begin Phase 1 scaffolding, package installation, migrations, or cloud-resource
-  creation without explicit human approval of `docs/project-state/phase-0-approval-checklist.md`.
+- Do NOT begin Phase 1B (database entities, migrations, authentication, RBAC, audit persistence,
+  business modules, real external-integration implementations, or any cloud-resource creation)
+  without explicit human approval of `docs/project-state/phase-1a-approval-checklist.md`'s scope
+  covering it — Phase 1A's own approval is scoped to Phase 1A only and does not authorize this.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-06 · by Claude (Phase 0 foundation authoring)
+Last touched: 2026-08-07 · by Claude (Phase 1A sign-off recorded)
