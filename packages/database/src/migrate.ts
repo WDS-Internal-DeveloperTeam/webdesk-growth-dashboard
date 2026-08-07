@@ -32,7 +32,30 @@ function buildMigrationsGlob(): string {
 export function buildMigrator(env = loadDatabaseEnv()) {
   const sequelize = getConnection(env);
   return new Umzug({
-    migrations: { glob: buildMigrationsGlob() },
+    migrations: {
+      glob: buildMigrationsGlob(),
+      // Strips the `.js`/`.ts` extension from the tracked migration name.
+      // Without this, umzug's SequelizeStorage records
+      // "00002-create-users.js" when run via the compiled CLI
+      // (migrate.js) but "00002-create-users.ts" when run via Vitest
+      // (which transforms src/migrate.ts on the fly, per
+      // buildMigrationsGlob()'s own comment) — two different logical
+      // names for the same migration. CI's database-migration-test job
+      // runs both paths back-to-back against one disposable database
+      // (migrate:test's CLI round-trip, then test:integration's
+      // Vitest-direct suite), so without this the second path's `up()`
+      // sees the first path's migrations as "not yet applied" and
+      // re-runs them, and its later `down({ to: 0 })` reverts using its
+      // own name list — leaving the two bookkeeping views inconsistent
+      // and, once FK-dependent tables existed to expose it (Phase 1C),
+      // producing a real "cannot drop table users because other objects
+      // depend on it" failure. One logical name regardless of execution
+      // path is the correct fix, not a per-test workaround.
+      resolve: (params) => ({
+        ...Umzug.defaultResolver(params),
+        name: params.name.replace(/\.(js|ts)$/, ""),
+      }),
+    },
     context: sequelize.getQueryInterface(),
     storage: new SequelizeStorage({ sequelize }),
     logger: console,
