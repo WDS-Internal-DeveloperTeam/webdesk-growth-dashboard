@@ -2,8 +2,10 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { baseEnvSchema, loadEnv } from "@webdesk/configuration";
+import cookieParser from "cookie-parser";
 import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
+import { loadAuthEnv } from "./auth/config/auth-env.js";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter.js";
 
 /**
@@ -18,6 +20,16 @@ async function bootstrap(): Promise<void> {
 
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new AllExceptionsFilter());
+  // Required for every Phase 1C auth route: session/OIDC-transaction
+  // cookies are read via `req.cookies`, which Express does not populate
+  // without this middleware.
+  app.use(cookieParser());
+  // `dashboard-web` calls this API cross-origin with cookies
+  // (docs/contracts/google-workspace-auth-contract.md's "Trust boundary").
+  // Restricted to exactly the configured frontend origin, never a
+  // wildcard, since credentials are involved.
+  const authEnv = loadAuthEnv();
+  app.enableCors({ origin: authEnv.WEB_APP_ORIGIN, credentials: true });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("WebDesk Growth Dashboard API")

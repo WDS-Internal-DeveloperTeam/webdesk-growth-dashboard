@@ -62,3 +62,49 @@ export interface HealthCheckResult {
   readonly timestamp: string;
   readonly checks?: Readonly<Record<string, HealthStatus>>;
 }
+
+/**
+ * Phase 1C — authentication and session shapes (ADR-0008, ADR-0009,
+ * docs/contracts/google-workspace-auth-contract.md). Identity only: no
+ * role/permission fields here — RBAC (ADR-0010) is a separate, later
+ * authorization and layers on top of `AuthenticatedUser.id`, not this type.
+ */
+export type AuthMethod = "google_sso" | "emergency_local";
+
+export interface AuthenticatedUser {
+  readonly id: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly authMethod: AuthMethod;
+}
+
+/** What `GET /auth/session` returns — never includes the raw session token itself. */
+export interface SessionInfo {
+  readonly user: AuthenticatedUser;
+  readonly expiresAt: string;
+  /** True once the emergency-local two-step (password, then TOTP) has fully completed. Always true for `google_sso`. */
+  readonly mfaVerified: boolean;
+}
+
+/**
+ * Every event knowledge/05-google-workspace-sso-and-local-admin.md's "Login
+ * audit events" section requires. Narrow and login-scoped — not the
+ * general-purpose ADR-0017 audit-log subsystem (Task 7, separate
+ * authorization); this exists so Task 7 can later adopt/extend it, not so it
+ * competes with it.
+ */
+export type AuthEventType =
+  | "sso_login_succeeded"
+  | "sso_login_rejected"
+  | "emergency_login_succeeded"
+  | "emergency_login_failed"
+  | "emergency_totp_failed"
+  | "account_lockout_triggered"
+  | "recovery_request_created"
+  | "recovery_request_approved"
+  | "recovery_request_denied"
+  | "session_revoked";
+
+/** Reasons a session can end, per knowledge/05's "Logout / session revocation" requirement. */
+export type SessionRevocationReason =
+  "user-initiated" | "role-change" | "admin-forced" | "security-incident" | "expired";
