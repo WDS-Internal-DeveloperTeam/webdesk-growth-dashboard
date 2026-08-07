@@ -23,6 +23,9 @@ export const DEFAULT_REDACT_PATHS: readonly string[] = [
   "*.cookie",
   "req.headers.authorization",
   "req.headers.cookie",
+  "*.connectionString",
+  "*.databaseUrl",
+  "*.DATABASE_URL",
 ];
 
 export interface PinoLikeOptions {

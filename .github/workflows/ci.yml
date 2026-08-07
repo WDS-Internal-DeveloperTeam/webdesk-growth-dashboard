@@ -1,9 +1,11 @@
 name: CI
 
-# Phase 1A foundation CI: install, typecheck, lint, format, unit tests,
-# integration tests (no external services), production build, workspace
-# boundary check, secret-pattern scan. NO deploy job exists — deploying
-# from CI is out of scope until a later, separately-authorized phase
+# Foundation CI: install, typecheck, lint, format, unit tests, integration
+# tests (no external services), a database migration test (Phase 1B — a
+# disposable postgres:16 service container, not the real chosen Marketplace
+# provider), production build, workspace boundary check, secret-pattern
+# scan. NO deploy job exists — deploying from CI is out of scope until a
+# later, separately-authorized phase
 # (docs/repository-plan/branch-and-release-plan.md). No production
 # credentials are referenced anywhere in this file.
 #
@@ -141,6 +143,46 @@ jobs:
         run: pnpm --filter @webdesk/dashboard-web exec playwright install --with-deps chromium
       - name: dashboard-web smoke test
         run: pnpm --filter @webdesk/dashboard-web test:integration
+
+  database-migration-test:
+    name: Database migration test
+    runs-on: ubuntu-latest
+    needs: install
+    # Real disposable PostgreSQL service container — provider-agnostic, not
+    # the actual chosen Marketplace provider (Supabase). Never staging or
+    # production, per docs/contracts/database-contract.md's "Test
+    # requirements". No real credentials — the password below is a
+    # throwaway value for a container that only exists for this job's
+    # lifetime.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: webdesk_ci
+          POSTGRES_PASSWORD: webdesk_ci_disposable
+          POSTGRES_DB: webdesk_phase1b_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://webdesk_ci:webdesk_ci_disposable@localhost:5432/webdesk_phase1b_ci
+      DATABASE_SSL: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migration up/down round-trip
+        run: pnpm --filter @webdesk/database migrate:test
+      - name: Database foundation integration tests
+        run: pnpm --filter @webdesk/database test:integration
 
   build:
     name: Production build

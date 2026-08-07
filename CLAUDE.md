@@ -68,27 +68,31 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** scaffolding **Current gate:** G1 (passed 2026-08-07 — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative)
-- **Active phase:** Phase 1A — Repository and monorepo foundation, **approved 2026-08-07, scope Phase 1A only**
-  (`docs/project-state/phase-1a-approval-checklist.md`). Delivered a real, tested Turborepo/pnpm monorepo:
-  3 app foundations (`dashboard-web`, `dashboard-api`, `dashboard-worker`), 6 package foundations, CI, and
-  dependency-boundary enforcement — see `docs/project-state/phase-1a-validation-report.md`. **Still no
-  business modules, authentication, database entities, or real external integrations** — Phase 1B covers
-  those and requires its own separate approval.
+- **Stage:** scaffolding **Current gate:** G1 (Phase 1A, passed 2026-08-07 — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative). **G-Schema (Phase 1B) not
+  yet recorded there** — added only once a human approves it, same as G1 was.
+- **Active phase:** Phase 1B — Database foundation (Task 3), **built and validated 2026-08-07 under
+  explicit user authorization to execute the already-approved task package
+  (`docs/task-packages/phase-1b-database-foundation.md`), NOT yet approved**
+  (`docs/project-state/phase-1b-approval-checklist.md`, unsigned). Real Sequelize/PostgreSQL connection,
+  umzug migration framework, transaction and repository foundations — 19 unit + 8 real-database
+  integration tests — see `docs/project-state/phase-1b-validation-report.md`. **No business entity
+  (`projects`/`users`) created** — only a test-only `_framework_probe` table proving the framework, per
+  the task package's own two-tier gate. Phase 1A remains approved, scope Phase 1A only.
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
-  Postgres Marketplace provider is **resolved** (Supabase, `us-east-1` — confirmed 2026-08-07, not yet
-  provisioned). Google Workspace OAuth client, WordPress Application Password account, and real timezone
-  confirmation still block later tasks.
+  Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
+  ran against a local/CI disposable database. Google Workspace OAuth client, WordPress Application
+  Password account, and real timezone confirmation still block Phase 1C+ tasks.
 
 ## Active tasks (this sprint)
 
-1. Phase 1B execution authorization: the database task package (`docs/task-packages/phase-1b-database-foundation.md`)
-   is approved (PR #2, merged) and its blocking setup input (Postgres provider) is now resolved — Task 3
-   still requires a separate, explicit execution authorization per the package's own approval gates before
-   any code is written.
-2. Resolve remaining Phase 1B+ setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
-   creation, Google Workspace OAuth client, WordPress Application Password account).
-3. Provision the actual Supabase project once Task 3 is authorized — not before.
+1. Land the `phase-1b-database-foundation` branch (commit, push, PR — no merge) and get human
+   review/sign-off on `docs/project-state/phase-1b-approval-checklist.md`.
+2. A Phase 1C task brief (Google Workspace authentication, emergency local admin, session
+   management) has already arrived, twice — its own stated precondition (Phase 1B approved, SHA
+   recorded) is not yet met, so it has not been started. Do not begin it until item 1 is done.
+3. Resolve remaining Phase 1C+ setup inputs in `docs/project-state/setup-input-register.md`
+   (GitHub App creation, Google Workspace OAuth client, WordPress Application Password account).
 
 ## Recent decisions
 
@@ -112,6 +116,12 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   satisfies ADR-0007 (North America East Coast + not Neon, WDS-002). Chosen over the other
   verified qualifying candidate, Amazon Aurora PostgreSQL, by explicit project-owner decision.
   Not yet provisioned. See `docs/project-state/setup-input-register.md`.
+- `[2026-08-07]` Phase 1B database foundation built and validated, per explicit user
+  authorization ("Execute Phase 1B now") to execute the already-approved task package. Real
+  Sequelize connection, migration framework, transaction/repository/health foundations — 19 unit
+  - 8 real-database integration tests, migration up/down verified via both the compiled CLI and
+    the Vitest-direct execution path. No business entity created. Not yet approved — see
+    `docs/project-state/phase-1b-approval-checklist.md`.
 
 ## Open client blockers
 
@@ -134,20 +144,19 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - Do NOT wire Resend or any transactional-email API — WDS-004, use Google Workspace SMTP only.
 - Do NOT conflate the software-delivery agent roster with the dashboard's 15 business
   agents — see profile `SKILL.md §6`.
-- Do NOT begin Phase 1B implementation (writing code, installing dependencies, creating
-  migrations, connecting to any database, authentication, RBAC, audit persistence, business
-  modules, real external-integration implementations, or any cloud-resource creation) without a
-  separate, explicit execution authorization — the database task package
-  (`docs/task-packages/phase-1b-database-foundation.md`) is approved as a _plan_ (PR #2, merged),
-  and its Postgres-provider blocker is resolved, but the package's own §24 requires its own
-  distinct authorization before any of its in-scope work starts, plus a further separate
-  authorization before either of its two proposed entities may actually be created.
-- Do NOT provision the Supabase database (create the actual project/instance) without that same
-  separate execution authorization — confirming the provider (`project.json`) is not provisioning
-  it.
+- Do NOT create `projects`, `users`, or any other business entity in `packages/database` without
+  a separate, explicit authorization beyond Phase 1B's own approval — the task package's own
+  §9/§24 two-tier gate. `_framework_probe` (test-only) is the only table that exists.
+- Do NOT provision the actual Supabase database (create the real project/instance) — confirming
+  the provider (`project.json`) is not provisioning it; every test so far used a local/CI
+  disposable database.
+- Do NOT begin Phase 1C (Google Workspace authentication, emergency local admin, session
+  management, per its own task brief) without explicit human approval of
+  `docs/project-state/phase-1b-approval-checklist.md` first — that brief's own stated
+  precondition, not yet met.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Postgres Marketplace provider confirmed)
+Last touched: 2026-08-07 · by Claude (Phase 1B database foundation built and validated)

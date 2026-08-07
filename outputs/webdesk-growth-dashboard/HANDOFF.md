@@ -2,48 +2,56 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Architect/Backend roles (Phase 1A repository and monorepo foundation, now approved)
+- **Last active agent:** Architect/Backend roles (Phase 1B database foundation — built and validated, awaiting approval)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1A — Repository and monorepo foundation (see `docs/phase-plans/phase-1-foundation-plan.md` Task 1) — **approved 2026-08-07, scope Phase 1A only** (`docs/project-state/phase-1a-approval-checklist.md`).
-- **Current gate:** G1 — passed 2026-08-07 — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative)
+- **Active phase:** Phase 1B — Database foundation (see `docs/phase-plans/phase-1-foundation-plan.md` Task 3) — **built and validated 2026-08-07, not yet approved** (`docs/project-state/phase-1b-approval-checklist.md`, unsigned). Phase 1A remains approved (scope Phase 1A only).
+- **Current gate:** G1 (Phase 1A) — passed 2026-08-07 — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). G-Schema (Phase 1B) has NOT been recorded there yet — only added once a human actually approves the checklist, same as G1 was.
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
 ## Where we left off
 
 Phase 1A (repository/monorepo foundation) was signed off and its PR merged. Since then, this
-session also: prepared and got approval on the Phase 1B database-foundation task package
-(planning/documentation only — no code); triaged CI's `pnpm audit` findings, patching 9
-transitive dependency vulnerabilities via bounded `pnpm-workspace.yaml` overrides (35 → 18
-findings, two version-line decisions deliberately deferred); and confirmed the Postgres
-Marketplace provider setup input (Supabase, `us-east-1`) after verifying real region availability
-for the two qualifying candidates. **No Phase 1B code has been written, no dependency installed
-for the database itself, no migration created, no database connected or provisioned.**
+session also: prepared and got approval on the Phase 1B database-foundation task package;
+patched 9 transitive dependency vulnerabilities (`pnpm audit` 35 → 18); confirmed the Postgres
+Marketplace provider (Supabase, `us-east-1`); and, once the user explicitly authorized executing
+the approved task package, **built and validated the real Phase 1B database foundation**: Sequelize
+connection (serverless-aware pooling, SSL by default), umzug migration framework, transaction
+helper, generic Sequelize-backed repository, health check — all proven against a real disposable
+PostgreSQL database (19 unit + 8 integration tests, migration up/down round-trip verified twice,
+both the compiled-CLI and Vitest-direct execution paths). See
+`docs/project-state/phase-1b-validation-report.md`. **Per the task package's own two-tier gate, no
+business entity (`projects`/`users`) was created** — only a test-only `_framework_probe` table
+proving the framework. The actual Supabase database was not provisioned; every test ran against a
+local/CI disposable instance.
+
+A mid-session Phase 1C (authentication/session) task brief arrived twice while this work was in
+progress — correctly held, since its own preconditions (Phase 1B approved, SHA recorded) aren't
+met yet. Phase 1C cannot begin until this Phase 1B work is reviewed and approved.
 
 ## Files committed this session
 
 See each PR's own commit history (`main`'s log) for exact file lists — not duplicated here to
 avoid drift between records. PRs merged so far: #1 (Phase 1A foundation), #2 (Phase 1B task
-package), #3 (dependency-audit fixes). This session's Postgres-provider-confirmation commit is in
-progress on branch `infra/confirm-postgres-provider`.
+package), #3 (dependency-audit fixes), #4 (Postgres provider confirmation). The Phase 1B
+implementation itself is on branch `phase-1b-database-foundation`, pending commit/push/PR.
 
 ## Files pending commit (work in progress)
 
-| File                                                                                                                                                                                          | Status                                                                            | Blocker                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------- |
-| `project.json`, `CLAUDE.md`, this file, `docs/project-state/setup-input-register.md`, `docs/phase-plans/phase-1-foundation-plan.md`, `docs/traceability/phase-0-requirements-traceability.md` | Postgres provider confirmation recorded, branch `infra/confirm-postgres-provider` | None — pending commit/push/PR in this session |
+| File                                                                                                                                                                                                                                                                                                                                                                                                                 | Status                                                             | Blocker                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------- |
+| `packages/database/src/*` (connection, env, transaction, migrate, base-repository, health, one migration), `packages/database/test/*`, `packages/configuration/src/logging.ts`, `.github/workflows/ci.yml`, this file, `CLAUDE.md`, `docs/project-state/phase-1b-{validation-report,approval-checklist}.md`, `docs/traceability/phase-0-requirements-traceability.md`, `docs/phase-plans/phase-1-foundation-plan.md` | Fully built and validated on branch `phase-1b-database-foundation` | None — pending commit/push/PR in this session |
 
 ## Next 3 tasks (queued)
 
-1. Land the Postgres-provider-confirmation branch (commit, push, PR, same flow as every prior
-   change this session).
-2. Obtain a separate, explicit execution authorization for Phase 1B Task 3 — the task package is
-   approved as a _plan_ and its Postgres-provider blocker is resolved, but the package's own §24
-   requires its own distinct go-ahead before any implementation starts (and a further separate
-   authorization before either proposed entity, `projects`/`users`, may actually be created).
+1. Land the `phase-1b-database-foundation` branch (commit, push, PR — no merge).
+2. Human review and sign-off on `docs/project-state/phase-1b-approval-checklist.md` — Phase 1B is
+   not complete until this is approved, and Phase 1C's own task brief explicitly cannot start
+   until it is.
 3. Resolve the remaining Phase 1B+ setup inputs in `docs/project-state/setup-input-register.md`
-   (GitHub App creation, Google Workspace OAuth client, WordPress Application Password account).
+   (GitHub App creation, Google Workspace OAuth client, WordPress Application Password account) —
+   needed for Phase 1C and later, not for Phase 1B itself.
 
 ## Client blockers (waiting on)
 
@@ -71,6 +79,7 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - `[2026-08-07]` Phase 1B database-foundation task package prepared and approved, PR #2 merged — see `docs/task-packages/phase-1b-database-foundation.md`. Planning only, no code.
 - `[2026-08-07]` 9 transitive dependency vulnerabilities patched via bounded `pnpm-workspace.yaml` overrides, PR #3 merged — `pnpm audit` 35 → 18 findings. NestJS 10.x→11.x and Vitest 2.x→3.x bumps deliberately deferred — see `docs/project-state/dependency-audit-2026-08-07.md`.
 - `[2026-08-07]` Postgres Marketplace provider confirmed: Supabase, `us-east-1` (N. Virginia) — satisfies ADR-0007 (North America East Coast, not Neon per WDS-002). Verified real region availability for both qualifying candidates (Supabase, Amazon Aurora PostgreSQL) before the project owner chose Supabase. Not yet provisioned.
+- `[2026-08-07]` Phase 1B database foundation built and validated, per explicit user authorization to execute the already-approved task package. Real Sequelize/PostgreSQL connection, umzug migration framework, transaction and repository foundations — 19 unit + 8 real-database integration tests, all passing. No business entity created (`_framework_probe` test-only table only) — see `docs/project-state/phase-1b-validation-report.md`. Not yet approved.
 
 ## Token / context usage this session (optional)
 
@@ -78,10 +87,11 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 
 ## What NOT to do on resume
 
-- Do NOT design or scaffold `dashboard-worker` as a permanent process (resolved decision, profile `knowledge/04-serverless-queues-workflows-and-cron.md`, WDS-005) — the Phase 1A handler foundation already respects this; keep it that way in Phase 1B+.
+- Do NOT design or scaffold `dashboard-worker` as a permanent process (resolved decision, profile `knowledge/04-serverless-queues-workflows-and-cron.md`, WDS-005) — the Phase 1A handler foundation already respects this; keep it that way in Phase 1C+.
 - Do NOT load `nodejs/integrations/{bigcommerce,shopify,erp}/*` — not this project's scope.
-- Do NOT begin Phase 1B implementation (database/Sequelize, authentication, RBAC, audit persistence, business modules, real integration implementations) — the task package (`docs/task-packages/phase-1b-database-foundation.md`) is approved as a _plan_, but its own §24 requires a separate, explicit execution authorization before any of it starts, plus a further authorization before either proposed entity may be created.
-- Do NOT provision the Supabase database — the provider/region are confirmed (`project.json`), but confirming is not provisioning; that also needs the Task 3 execution authorization above.
+- Do NOT create `projects`, `users`, or any other business entity in `packages/database` without a separate, explicit authorization beyond Phase 1B's own approval — the task package's own §9/§24 two-tier gate. `_framework_probe` (test-only) is the only table that exists.
+- Do NOT provision the actual Supabase database — the provider/region are confirmed (`project.json`), but confirming is not provisioning; every test so far ran against a local/CI disposable instance.
+- Do NOT begin Phase 1C (Google Workspace authentication, emergency local admin, session management) — its own task brief explicitly requires Phase 1B to be validated, reviewed, and approved first, with the approved remote SHA recorded. Not yet true as of this HANDOFF.
 - Do NOT treat the Service/SEO Library workbook (`canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm`) as approved business content, even where its own internal "Approval Status" column says "Approved" — that is the client's internal tracking field, not this project's own approval gate. See `knowledge/00-scope-and-precedence.md §4`.
 - Do NOT push to `origin` without separate PM authorization for that specific push — the Phase 1A branch push itself is being tracked explicitly in the git-workflow record, not treated as blanket standing permission for future pushes.
 
@@ -93,10 +103,10 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   "Commit record").
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
-- Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes)
-- Open PRs / issues: none currently open — the Postgres-provider-confirmation branch
-  (`infra/confirm-postgres-provider`) is pending its own PR
+- Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation)
+- Open PRs / issues: none currently open — the Phase 1B database-foundation implementation
+  branch (`phase-1b-database-foundation`) is pending its own PR
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Postgres Marketplace provider confirmed)
+Last touched: 2026-08-07 · by Claude (Phase 1B database foundation built and validated)
