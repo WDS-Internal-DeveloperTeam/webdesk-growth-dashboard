@@ -1,6 +1,6 @@
 # Phase 1A Approval Checklist
 
-**Status:** Ready for human review. Unsigned — nothing below is self-approved, consistent with the separation-of-duties rule already applied to Phase 0's own checklist (ADR-0010, `knowledge/12-dashboard-security-controls.md`).
+**Status:** Approved 2026-08-07, scope Phase 1A only (see "Sign-off" below). Signed by the human approver via chat, not by the authoring agent — consistent with the separation-of-duties rule already applied to Phase 0's own checklist (ADR-0010, `knowledge/12-dashboard-security-controls.md`).
 
 ---
 
@@ -77,16 +77,16 @@ Pull request: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#1](https://gi
 
 ## Sign-off
 
-| Field                     | Value                                    |
-| ------------------------- | ---------------------------------------- |
-| Approved by               | _(blank)_                                |
-| Approval date             | _(blank)_                                |
-| Exact approved commit SHA | _(blank)_                                |
-| Authorization scope       | _(blank — e.g. "Phase 1B" once granted)_ |
+| Field                     | Value                                                                                                                                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Approved by               | WebDesk Solution                                                                                                                                                                                                                                 |
+| Approval date             | 2026-08-07                                                                                                                                                                                                                                       |
+| Exact approved commit SHA | `efdb301a0740b074893b010df0fa317b5c3dac69` (branch tip, `phase-1a-repository-foundation`)                                                                                                                                                        |
+| Authorization scope       | Phase 1A only — Phase 1B (Task 3: PostgreSQL package, Sequelize, migration framework) requires its own separate approval and remains blocked on the Postgres Marketplace provider being confirmed (`docs/project-state/setup-input-register.md`) |
 
-| Role                             | Name | Decision                       | Date |
-| -------------------------------- | ---- | ------------------------------ | ---- |
-| Reviewer (Tech Lead / Architect) |      | ☐ Approved ☐ Changes requested |      |
-| PM                               |      | ☐ Approved ☐ Changes requested |      |
+| Role                             | Name             | Decision   | Date       |
+| -------------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (Tech Lead / Architect) | WebDesk Solution | ☑ Approved | 2026-08-07 |
+| PM                               | WebDesk Solution | ☑ Approved | 2026-08-07 |
 
 **On approval:** whatever scope is recorded above. Phase 1B (Task 3: PostgreSQL package, Sequelize, migration framework) is the next candidate, per `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.

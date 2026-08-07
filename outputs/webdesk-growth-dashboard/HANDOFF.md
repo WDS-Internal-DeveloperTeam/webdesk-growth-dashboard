@@ -1,12 +1,12 @@
 # HANDOFF — webdesk-growth-dashboard
 
-- **Session ended:** 2026-08-06 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
+- **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Architect/Backend roles (Phase 1A repository and monorepo foundation — first actual code in this project, scaffold-only)
+- **Last active agent:** Architect/Backend roles (Phase 1A repository and monorepo foundation, now approved)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1A — Repository and monorepo foundation (see `docs/phase-plans/phase-1-foundation-plan.md` Task 1). Phase 0 is signed off (scope: authorize Phase 1A only — `docs/project-state/phase-0-approval-checklist.md`).
-- **Current gate:** G0 → G1 boundary (per Task 1's own approval gate) — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative; update once this phase is formally gated)
+- **Active phase:** Phase 1A — Repository and monorepo foundation (see `docs/phase-plans/phase-1-foundation-plan.md` Task 1) — **approved 2026-08-07, scope Phase 1A only** (`docs/project-state/phase-1a-approval-checklist.md`).
+- **Current gate:** G1 — passed 2026-08-07 — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative)
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
@@ -26,9 +26,9 @@ See the Phase 1A commit recorded in `docs/project-state/phase-1a-approval-checkl
 
 ## Next 3 tasks (queued)
 
-1. Human review and sign-off on `docs/project-state/phase-1a-approval-checklist.md` — Phase 1A is not complete until this is approved.
-2. On approval: Phase 1B (Task 3: PostgreSQL package, Sequelize, migration framework) per `docs/phase-plans/phase-1-foundation-plan.md` — blocked on the Postgres Marketplace provider being confirmed first; not started automatically either way.
-3. Resolve the setup-time inputs in `docs/project-state/setup-input-register.md` that block specific Phase 1B+ tasks (Postgres Marketplace provider, GitHub App creation, Google Workspace OAuth client, WordPress Application Password account).
+1. Resolve the setup-time inputs in `docs/project-state/setup-input-register.md` that block Phase 1B (Postgres Marketplace provider is the specific blocker for Task 3; GitHub App creation, Google Workspace OAuth client, and WordPress Application Password account block later tasks).
+2. Once the Postgres Marketplace provider is confirmed: Phase 1B (Task 3: PostgreSQL package, Sequelize, migration framework) per `docs/phase-plans/phase-1-foundation-plan.md` — requires its own separate approval; Phase 1A's sign-off does not cover it and it is not started automatically.
+3. Decide whether to merge PR #1 (`phase-1a-repository-foundation` → `main`) now that it's approved, or hold it open until Phase 1B is ready to land alongside it — this project's own git-workflow record doesn't mandate either.
 
 ## Client blockers (waiting on)
 
@@ -47,6 +47,7 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - `[2026-08-06]` ADR-0001 through ADR-0020 — all 20 Phase 0 architecture decisions drafted, recorded, and corrected after an independent review found 6 real defects (see `docs/project-state/phase-0-validation-report.md`'s "Corrections applied").
 - `[2026-08-06]` Phase 0 signed off, scope Phase 1A only, pushed to `origin/main` (`a8322186def0c6f0638ee2ba0bf2da5871640953`).
 - `[2026-08-06]` Phase 1A (repository/monorepo foundation) executed under that authorization and validated — no new architecture decisions, only ADR-0001's already-approved boundaries turned into a real, tested scaffold.
+- `[2026-08-07]` Phase 1A signed off (G1 gate passed), scope Phase 1A only, approved commit `efdb301a0740b074893b010df0fa317b5c3dac69` — see `docs/project-state/phase-1a-approval-checklist.md`'s "Sign-off" and `project.json`'s `gates[]`/`audit_log`. Phase 1B remains a separate, not-yet-granted authorization.
 
 ## Token / context usage this session (optional)
 
@@ -62,11 +63,11 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 
 ## Session links
 
-- Last commit: `636fd76bfb1b5e889adabfe1f986647934cf26bb` on `phase-1a-repository-foundation` (branch tip, 3 commits past the original `cece946` foundation commit — a nest-cli.json dev-crash fix and two documentation corrections found during independent re-verification), pushed to `origin` and independently verified via `git ls-remote` — see `docs/project-state/phase-1a-approval-checklist.md`'s "Commit record" for the full list
+- Last commit: `efdb301a0740b074893b010df0fa317b5c3dac69` on `phase-1a-repository-foundation` — the approved commit (see `project.json`'s `gates[]`). Note this line and the approval checklist's own commit table both trail the true tip by whatever documentation-only commits record them; `git rev-parse HEAD` / `git ls-remote origin phase-1a-repository-foundation` is always the live answer — see `docs/project-state/phase-1a-approval-checklist.md`'s "Commit record" for the full list
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
 - Open PRs / issues: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) — open, not merged, base `main`
 
 ---
 
-Last touched: 2026-08-06 · by Claude (Phase 1A repository/monorepo foundation)
+Last touched: 2026-08-07 · by Claude (Phase 1A sign-off recorded)
