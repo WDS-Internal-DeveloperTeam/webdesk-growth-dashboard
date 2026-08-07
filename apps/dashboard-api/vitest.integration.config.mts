@@ -8,6 +8,11 @@ export default defineConfig({
   test: {
     include: ["test/**/*.e2e-spec.ts"],
     root: ".",
+    // Every e2e-spec file runs its own full migrate-up/migrate-down cycle
+    // against the SAME shared disposable database (packages/database/README.md) —
+    // running files in parallel races two concurrent schema migrations against
+    // one database and fails non-deterministically. Sequential is correct here.
+    fileParallelism: false,
   },
   plugins: [swc.vite()],
 });

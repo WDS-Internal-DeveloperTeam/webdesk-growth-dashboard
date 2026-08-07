@@ -105,6 +105,16 @@ original Task 5 plan, not rewritten after the fact.
 
 ### Task 6 — RBAC and authorization
 
+**Status: Complete, as "Phase 1D" — awaiting approval.** Executed 2026-08-07 — deny-by-default
+`PermissionService`/`PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
+`06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface (proving the
+framework; the other 20 business modules' endpoints don't exist as code yet, so `PermissionGuard`
+is not yet applied to them) — see `docs/project-state/phase-1d-validation-report.md` and
+`docs/security/threat-model-authorization-rbac.md` (self-review only, one flagged, unresolved
+separation-of-duties design decision on role self-assignment — see that document's Elevation of
+Privilege table). The description below is preserved as the original Task 6 plan, not rewritten
+after the fact.
+
 - **Purpose:** Role/permission model per `06_Roles_and_Permissions.md` and ADR-0010, enforced server-side in `dashboard-api`.
 - **Dependencies:** Task 3, Task 5.
 - **Authorized role:** Backend, reviewed by Architect.

@@ -5,6 +5,8 @@ import type {
   RecoveryRequestRepository,
 } from "@webdesk/database";
 import { AUTH_EVENT_REPOSITORY, RECOVERY_REQUEST_REPOSITORY } from "../config/auth.constants.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
+import { SeparationOfDutiesService } from "../common/separation-of-duties.service.js";
 
 /**
  * Foundation only (ADR-0009, knowledge/05 separation-of-duties) — request
@@ -18,6 +20,7 @@ export class RecoveryService {
   constructor(
     @Inject(RECOVERY_REQUEST_REPOSITORY) private readonly requests: RecoveryRequestRepository,
     @Inject(AUTH_EVENT_REPOSITORY) private readonly events: AuthEventRepository,
+    private readonly separationOfDuties: SeparationOfDutiesService,
   ) {}
 
   async createRequest(input: {
@@ -48,11 +51,11 @@ export class RecoveryService {
     if (request.status !== "pending") {
       throw new ForbiddenException(`Recovery request already decided: ${input.requestId}`);
     }
-    if (request.targetUserId === input.decidedByUserId) {
-      throw new ForbiddenException(
-        "A single administrator cannot approve or reject their own recovery request — separation of duties (ADR-0009).",
-      );
-    }
+    this.separationOfDuties.assertDistinctActors(
+      input.decidedByUserId,
+      request.targetUserId,
+      "target of the recovery request",
+    );
 
     const decided = await this.requests.decide(input.requestId, {
       status: input.approve ? "approved" : "rejected",

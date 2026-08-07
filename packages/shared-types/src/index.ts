@@ -103,8 +103,21 @@ export type AuthEventType =
   | "recovery_request_created"
   | "recovery_request_approved"
   | "recovery_request_denied"
-  | "session_revoked";
+  | "session_revoked"
+  | "role_assigned"
+  | "role_revoked";
 
 /** Reasons a session can end, per knowledge/05's "Logout / session revocation" requirement. */
 export type SessionRevocationReason =
   "user-initiated" | "role-change" | "admin-forced" | "security-incident" | "expired";
+
+/**
+ * Phase 1D — RBAC (ADR-0010). API-facing shape for a role — deliberately
+ * omits internal timestamps a client has no use for, same reasoning as
+ * `AuthenticatedUser` never including a raw session token.
+ */
+export interface RoleSummary {
+  readonly id: string;
+  readonly key: string;
+  readonly name: string;
+}

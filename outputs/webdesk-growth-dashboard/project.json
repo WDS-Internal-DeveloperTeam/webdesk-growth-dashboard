@@ -31,7 +31,7 @@
       "url": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard.git",
       "default_branch": "main",
       "develop_branch": "staging",
-      "_note": "Real repository URL, supplied by the project owner 2026-08-06. Registered as a local git remote (origin). Phase 0 pushed to origin/main (2026-08-06). PRs merged to main so far: #1 Phase 1A foundation, #2 Phase 1B task package, #3 dependency-audit fixes, #4 Postgres provider confirmation, #5 Phase 1B database foundation (all 2026-08-06/07) — see docs/project-state/{phase-1a,phase-1b}-approval-checklist.md. Branch protection on main is not verified by this file alone — still tracked in docs/repository-plan/branch-and-release-plan.md."
+      "_note": "Real repository URL, supplied by the project owner 2026-08-06. Registered as a local git remote (origin). Phase 0 pushed to origin/main (2026-08-06). PRs merged to main so far: #1 Phase 1A foundation, #2 Phase 1B task package, #3 dependency-audit fixes, #4 Postgres provider confirmation, #5 Phase 1B database foundation, #7 Phase 1C authentication/session management (all 2026-08-06/07) — see docs/project-state/{phase-1a,phase-1b}-approval-checklist.md and docs/project-state/phase-1c-validation-report.md (Phase 1C has no separate approval-checklist document yet, unlike 1A/1B). Branch protection on main is not verified by this file alone — still tracked in docs/repository-plan/branch-and-release-plan.md."
     },
     "assigned_team": {
       "pm": "TBD",
@@ -44,7 +44,7 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-07T00:00:00Z",
+    "updated_at": "2026-08-07T12:00:00Z",
     "version": 3
   },
 
