@@ -179,6 +179,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # packages/database depends on @webdesk/shared-types and
+      # @webdesk/configuration (read from their dist/*.d.ts at compile
+      # time) -- `pnpm --filter @webdesk/database build` alone only runs
+      # that one package's own `tsc`, which fails on a fresh checkout
+      # where those dependencies haven't been built yet. `turbo run build`
+      # respects turbo.json's `dependsOn: ["^build"]` and builds them
+      # first.
+      - name: Build @webdesk/database and its workspace dependencies
+        run: npx turbo run build --filter=@webdesk/database
       - name: Migration up/down round-trip
         run: pnpm --filter @webdesk/database migrate:test
       - name: Database foundation integration tests

@@ -147,6 +147,68 @@ glob's extension from `import.meta.url` itself (`.ts` when running from source, 
 running compiled) instead of a single ambiguous multi-extension pattern — caught by actually
 executing the compiled CLI end-to-end against a real database, not by reading the code.
 
+## 8. A second real bug, caught only by CI (not by local testing)
+
+After pushing, CI's `database-migration-test` job failed on `pnpm build`:
+
+```
+error TS2307: Cannot find module '@webdesk/shared-types' or its corresponding type declarations.
+error TS2307: Cannot find module '@webdesk/configuration' or its corresponding type declarations.
+```
+
+Every local run in this report succeeded because this session had already run `turbo run build`
+across the whole monorepo many times before this work started, leaving
+`packages/{shared-types,configuration}/dist/*.d.ts` on disk — `packages/database`'s own `pnpm
+build` script is just `tsc -p tsconfig.json`, which resolves those two workspace dependencies'
+types from their `dist/` output, not their source. On a genuinely fresh checkout (CI, or a new
+clone), those `dist/` directories don't exist yet, and `packages/database`'s isolated build
+fails.
+
+**Reproduced locally** by deleting every `dist/` directory and `tsconfig.tsbuildinfo` file in the
+repo first, to simulate a fresh checkout exactly:
+
+```
+$ rm -rf packages/*/dist apps/*/dist packages/*/tsconfig.tsbuildinfo apps/*/tsconfig.tsbuildinfo
+$ pnpm --filter @webdesk/database migrate:test
+src/base-repository.test.ts(1,33): error TS2307: Cannot find module '@webdesk/shared-types' ...
+[same errors as CI]
+```
+
+**Fixed** by building through `turbo run build --filter=@webdesk/database` instead of the
+package-local `pnpm build` — `turbo.json`'s `build` task already declares `dependsOn: ["^build"]`,
+so turbo builds `@webdesk/shared-types` and `@webdesk/configuration` first regardless of the
+`--filter` scope. `.github/workflows/ci.yml`'s `database-migration-test` job now runs this as its
+own step before `migrate:test`/`test:integration`.
+
+**Re-verified from the same fully-clean state** (all `dist/` deleted again):
+
+```
+$ npx turbo run build --filter=@webdesk/database --force
+@webdesk/configuration:build: $ tsc -p tsconfig.json
+@webdesk/shared-types:build: $ tsc -p tsconfig.json
+@webdesk/database:build: $ tsc -p tsconfig.json
+ Tasks:    3 successful, 3 total
+
+$ pnpm --filter @webdesk/database migrate:test
+Applied 1 migration(s): 00001-create-framework-probe.js
+Reverted 1 migration(s): 00001-create-framework-probe.js
+
+$ pnpm --filter @webdesk/database test:integration
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+```
+
+Full monorepo suite re-run once more from the same clean state, to confirm this fix didn't affect
+anything else: `turbo run typecheck lint test build --force` — 36/36 tasks; `pnpm
+boundaries:check` — 0 errors; `pnpm scan:secrets` — 206 tracked files (up from 189 — this count
+reflects files already staged from the Phase 1B commit), clean; `pnpm format` — clean.
+
+**What this means for the earlier sections of this report**: every command shown in §3-§7 above
+did run and did produce the output shown — nothing was fabricated — but they ran in an
+environment with pre-existing build artifacts that masked this specific fresh-checkout failure
+mode. This is exactly why CI, not just local testing, is part of this project's own validation
+discipline.
+
 ## 7. `dashboard-api`/`dashboard-web` regression check
 
 Re-ran both apps' own suites as part of the full `turbo run` above (not skipped): `dashboard-api`
