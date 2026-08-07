@@ -1,5 +1,6 @@
 import type { AuthEventRepository, RecoveryRequestRepository } from "@webdesk/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SeparationOfDutiesService } from "../common/separation-of-duties.service.js";
 import { RecoveryService } from "./recovery.service.js";
 
 describe("RecoveryService", () => {
@@ -17,6 +18,7 @@ describe("RecoveryService", () => {
     service = new RecoveryService(
       requests as unknown as RecoveryRequestRepository,
       events as unknown as AuthEventRepository,
+      new SeparationOfDutiesService(),
     );
   });
 
@@ -39,7 +41,7 @@ describe("RecoveryService", () => {
 
     await expect(
       service.decide({ requestId: "r1", decidedByUserId: "u1", approve: true }),
-    ).rejects.toThrow(/separation of duties/);
+    ).rejects.toThrow(/Separation of duties/);
 
     expect(requests.decide).not.toHaveBeenCalled();
   });

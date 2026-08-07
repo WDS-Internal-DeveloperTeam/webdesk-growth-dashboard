@@ -3,7 +3,9 @@ import { AuthConfigModule } from "./config/auth-config.module.js";
 import { authRepositoryProviders } from "./database.providers.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
 import { OriginCheckGuard } from "./common/origin-check.guard.js";
+import { SeparationOfDutiesService } from "./common/separation-of-duties.service.js";
 import { SessionService } from "./session/session.service.js";
+import { SessionGuard } from "./session/session.guard.js";
 import { SessionController } from "./session/session.controller.js";
 import { GoogleAuthService } from "./google/google-auth.service.js";
 import { GoogleAuthController } from "./google/google-auth.controller.js";
@@ -17,11 +19,17 @@ import { RecoveryService } from "./recovery/recovery.service.js";
  * Phase 1C — Google Workspace SSO, restricted emergency-local
  * authentication, and session management
  * (docs/task-packages/phase-1c-authentication-sessions.md). Deliberately
- * does not include: RBAC/roles (Task 6), the general audit-log subsystem
- * (Task 7), user-management CRUD (Task 8), or an HTTP surface for
- * `RecoveryService` — recovery decisions need an authorization check this
- * phase has no mechanism for yet (Task 6), so it is a service-layer
- * capability only until that exists, not a prematurely-exposed endpoint.
+ * does not include: the general audit-log subsystem (Task 7),
+ * user-management CRUD (Task 8), or an HTTP surface for `RecoveryService`
+ * — no real approval workflow exists yet to wire it into
+ * (docs/task-packages/phase-1d-rbac-authorization.md §5).
+ *
+ * Exports `SessionService`/`SessionGuard`/`SeparationOfDutiesService` for
+ * `AuthzModule` (Phase 1D) to consume — `AuthzModule` imports this module,
+ * never the reverse, to avoid a circular module dependency (its
+ * role-assignment feature needs session revocation and the session guard;
+ * `RecoveryService` here needs the separation-of-duties primitive, which
+ * lives in `auth/common` rather than `authz/` for exactly this reason).
  */
 @Module({
   imports: [AuthConfigModule],
@@ -30,12 +38,14 @@ import { RecoveryService } from "./recovery/recovery.service.js";
     ...authRepositoryProviders,
     RateLimitService,
     OriginCheckGuard,
+    SeparationOfDutiesService,
     SessionService,
+    SessionGuard,
     GoogleAuthService,
     EmergencyAdminService,
     RecoveryService,
     { provide: EMERGENCY_ADMIN_LOGIN_NOTIFIER, useClass: LoggingEmergencyAdminLoginNotifier },
   ],
-  exports: [SessionService, RecoveryService],
+  exports: [SessionService, SessionGuard, SeparationOfDutiesService, RecoveryService],
 })
 export class AuthModule {}

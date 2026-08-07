@@ -2,6 +2,7 @@ import { Module, type MiddlewareConsumer, type NestModule } from "@nestjs/common
 import { buildLoggerOptions, loadEnv, baseEnvSchema } from "@webdesk/configuration";
 import { LoggerModule } from "nestjs-pino";
 import { AuthModule } from "./auth/auth.module.js";
+import { AuthzModule } from "./authz/authz.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { HealthModule } from "./health/health.module.js";
 
@@ -30,6 +31,7 @@ const loggerOptions = buildLoggerOptions(env, "dashboard-api");
     }),
     HealthModule,
     AuthModule,
+    AuthzModule,
   ],
 })
 export class AppModule implements NestModule {

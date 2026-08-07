@@ -70,37 +70,47 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 - **Stage:** development **Current gate:** G-Schema (Phase 1B, passed 2026-08-07) remains the last
   _approved_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative.
-  Phase 1C (below) is built and validated but **not yet approved** — no new gate has been recorded.
-- **Active phase:** Phase 1C — Authentication and session management (Tasks 4/5, combined),
-  **built and validated 2026-08-07, not yet approved** — see
+  Phase 1C is built, validated, and **merged to `main`** (PR #7) but has no recorded gate yet.
+  Phase 1D (below) is built and validated but **not yet approved** — no new gate has been recorded.
+- **Merged:** Phase 1C — Authentication and session management (Tasks 4/5, combined) — merged to
+  `main` via PR #7 at commit `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`. See
   `docs/task-packages/phase-1c-authentication-sessions.md` and
-  `docs/project-state/phase-1c-validation-report.md`. Google Workspace OIDC (Authorization
-  Code+PKCE, tested against mocked/offline configuration — no real Google OAuth client exists),
-  restricted emergency-administrator TOTP (two-step: password then code), session
-  issuance/validation/revocation, DB-backed account lockout, CSRF defenses, an operator-run
-  emergency-admin provisioning CLI, and 6 `dashboard-web` auth pages — 115 unit + 15
-  real-database integration/e2e tests, all passing. First-login provisioning model resolved:
-  **pre-provisioned only**, no JIT account creation. **Does not include** RBAC (Task 6), the
-  general audit-log subsystem (Task 7), or user-management CRUD (Task 8) — all separate, later
-  authorizations. Phase 1A and 1B remain approved, each scoped to itself only.
+  `docs/project-state/phase-1c-validation-report.md`. Google Workspace OIDC, restricted
+  emergency-administrator TOTP, session issuance/validation/revocation, DB-backed account lockout,
+  CSRF defenses, an operator-run emergency-admin provisioning CLI, and 6 `dashboard-web` auth
+  pages — 115 unit + 15 real-database integration/e2e tests, all passing. First-login provisioning
+  model resolved: **pre-provisioned only**, no JIT account creation.
+- **Active phase:** Phase 1D — RBAC and authorization (Task 6), **built and validated
+  2026-08-07, not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md` and
+  `docs/project-state/phase-1d-validation-report.md`. Deny-by-default `PermissionService`/
+  `PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
+  `06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface (proving the
+  framework — the other 20 business modules' endpoints don't exist as code yet) — 146 unit + 63
+  real-database integration/e2e tests, all passing. STRIDE pass flags one genuinely **unresolved**
+  design gap: no separation-of-duties check on role self-assignment — see
+  `docs/security/threat-model-authorization-rbac.md`. **Does not include** the 21 real business
+  modules, the confidential-field axis, the general audit-log subsystem (Task 7), or
+  user-management CRUD (Task 8) — all separate, later authorizations. Phase 1A and 1B remain
+  approved, each scoped to itself only.
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
   ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
-  not Phase 1C's own code completion), the real emergency-administrator account list, WordPress
+  not any phase's own code completion), the real emergency-administrator account list, WordPress
   Application Password account, `dashboard-web`'s real deployed origin, and real timezone confirmation
   still block later tasks/a real deployment.
 
 ## Active tasks (this sprint)
 
-1. Await explicit review/approval of Phase 1C (this checklist's own approval record:
-   `docs/task-packages/phase-1c-authentication-sessions.md` has no separate approval-checklist
-   document yet — unlike Phase 1A/1B, follow up on whether one is expected before merge).
-2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
+1. Commit, push, and open a PR for Phase 1D (branch `phase-1d-rbac-authorization`) — pending in
+   this same session; do not merge without a separate, explicit "merge" instruction.
+2. Await explicit review/approval of Phase 1D, including a decision on the flagged
+   self-assignment separation-of-duties gap (`docs/security/threat-model-authorization-rbac.md`).
+3. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
-3. Provision the actual Supabase database once a later task actually needs a live connection —
+4. Provision the actual Supabase database once a later task actually needs a live connection —
    not before, and not automatically.
-4. Once Phase 1C is approved: RBAC (Task 6) is the next candidate per
+5. Once Phase 1D is approved: the 21 real business-module endpoints are the next candidate per
    `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
 
 ## Recent decisions
@@ -147,14 +157,31 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   provisioning CLI, and a STRIDE threat-model pass
   (`docs/security/threat-model-authentication-session-handling.md`, self-reviewed only — still
   needs a second-role human review). 115 unit + 15 real-database integration/e2e tests, all
-  passing. Not yet approved/merged.
+  passing.
+- `[2026-08-07]` Phase 1C merged to `main` via PR #7 at commit
+  `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`, under explicit separate "merge the PR"
+  authorization. Two real CI-only bugs found and fixed on the branch before merge: a
+  `SequelizeStorage` migration-name mismatch between the compiled-CLI and Vitest-transformed-TS
+  execution paths, and a CI "Integration tests" job missing both a build-order step and a
+  database service container it newly needed.
+- `[2026-08-07]` Phase 1D (RBAC/authorization) built and validated under explicit user
+  authorization ("Begin RBAC (Task 6)") — `docs/task-packages/phase-1d-rbac-authorization.md`,
+  `docs/project-state/phase-1d-validation-report.md`. 5 new migrations seeding the real, already-
+  approved 7-role/21-module/458-grant matrix from `06_Roles_and_Permissions.md §3`, a
+  deny-by-default `PermissionService`/`PermissionGuard`, and the "Users/roles" module's own real
+  HTTP surface (the other 20 business modules don't exist as code yet). A STRIDE threat-model
+  pass (`docs/security/threat-model-authorization-rbac.md`, self-reviewed only) flags one
+  genuinely **unresolved** design gap: no separation-of-duties check on role self-assignment —
+  surfaced explicitly for the required second-role reviewer's decision, not silently resolved
+  either way. 146 unit + 63 real-database integration/e2e tests, all passing. Not yet
+  approved/merged.
 
 ## Open client blockers
 
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
 - The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a
-  real deployment, not Phase 1C's own code completion (built and tested against mocked/offline
+  real deployment, not any phase's own code completion (built and tested against mocked/offline
   configuration). Owner: infrastructure owner.
 - The real emergency-administrator account list — the provisioning _mechanism_ is built
   (`apps/dashboard-api/src/auth/scripts/provision-emergency-admin.ts`), but no real accounts exist
@@ -184,22 +211,30 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - Do NOT provision the actual Supabase database (create the real project/instance) — confirming
   the provider (`project.json`) is not provisioning it; every test so far used a local/CI
   disposable database.
-- Do NOT begin RBAC (Task 6), the general ADR-0017 audit-log subsystem (Task 7), or
-  user-management CRUD (Task 8) without a separate, explicit go-ahead — Phase 1C's own approval
-  (once granted) covers Phase 1C only, per its task package's §5 out-of-scope list.
+- Do NOT begin the 21 real business-module endpoints, the confidential-field axis
+  (`view_confidential`/`edit_confidential`), the general ADR-0017 audit-log subsystem (Task 7), or
+  user-management CRUD beyond role assignment (Task 8) without a separate, explicit go-ahead —
+  Phase 1D's own approval (once granted) covers Phase 1D only, per its task package's out-of-scope
+  list.
+- Do NOT unilaterally resolve the flagged self-assignment separation-of-duties gap in
+  `RoleAssignmentService` (a Super Admin can currently re-role themselves with no second
+  approver) — it is an open design decision for the second-role reviewer, documented in
+  `docs/security/threat-model-authorization-rbac.md`'s Elevation of Privilege table, not a bug to
+  silently patch or silently leave without flagging.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
-  Workspace account — Phase 1C's own OIDC implementation is tested against mocked/offline
-  configuration for exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
+  Workspace account — the OIDC implementation is tested against mocked/offline configuration for
+  exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
 - Do NOT wire a real SMTP send for emergency-admin login alerts — Google Workspace SMTP
   integration (`knowledge/09-google-workspace-smtp.md`) doesn't exist yet; the notifier interface
   (`apps/dashboard-api/src/auth/emergency/emergency-admin-login-notifier.ts`) exists specifically
   so a real implementation can be swapped in later without touching the login flow itself.
-- Do NOT treat `docs/security/threat-model-authentication-session-handling.md` as a completed,
-  approved security review — it is explicitly a self-review only, pending the required second-role
-  human review per ADR-0010's separation-of-duties principle.
+- Do NOT treat either `docs/security/threat-model-authentication-session-handling.md` or
+  `docs/security/threat-model-authorization-rbac.md` as a completed, approved security review —
+  both are explicitly self-reviews only, pending the required second-role human review per
+  ADR-0010's separation-of-duties principle.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1C built and validated, not yet approved)
+Last touched: 2026-08-07 · by Claude (Phase 1C merged; Phase 1D built and validated, not yet approved)
