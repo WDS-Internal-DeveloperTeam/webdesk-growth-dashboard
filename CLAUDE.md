@@ -68,17 +68,15 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** scaffolding **Current gate:** G1 (Phase 1A, passed 2026-08-07 — see
-  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative). **G-Schema (Phase 1B) not
-  yet recorded there** — added only once a human approves it, same as G1 was.
-- **Active phase:** Phase 1B — Database foundation (Task 3), **built and validated 2026-08-07 under
-  explicit user authorization to execute the already-approved task package
-  (`docs/task-packages/phase-1b-database-foundation.md`), NOT yet approved**
-  (`docs/project-state/phase-1b-approval-checklist.md`, unsigned). Real Sequelize/PostgreSQL connection,
-  umzug migration framework, transaction and repository foundations — 19 unit + 8 real-database
-  integration tests — see `docs/project-state/phase-1b-validation-report.md`. **No business entity
-  (`projects`/`users`) created** — only a test-only `_framework_probe` table proving the framework, per
-  the task package's own two-tier gate. Phase 1A remains approved, scope Phase 1A only.
+- **Stage:** development **Current gate:** G-Schema (Phase 1B, passed 2026-08-07 — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative).
+- **Active phase:** Phase 1B — Database foundation (Task 3), **approved 2026-08-07, scope Phase 1B
+  only** (`docs/project-state/phase-1b-approval-checklist.md`, PR #5 merged). Real Sequelize/PostgreSQL
+  connection, umzug migration framework, transaction and repository foundations — 19 unit + 8
+  real-database integration tests — see `docs/project-state/phase-1b-validation-report.md`. **No
+  business entity (`projects`/`users`) created** — only a test-only `_framework_probe` table proving
+  the framework, per the task package's own two-tier gate. Phase 1A remains approved, scope Phase 1A
+  only.
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
   ran against a local/CI disposable database. Google Workspace OAuth client, WordPress Application
@@ -86,13 +84,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. Land the `phase-1b-database-foundation` branch (commit, push, PR — no merge) and get human
-   review/sign-off on `docs/project-state/phase-1b-approval-checklist.md`.
-2. A Phase 1C task brief (Google Workspace authentication, emergency local admin, session
+1. A Phase 1C task brief (Google Workspace authentication, emergency local admin, session
    management) has already arrived, twice — its own stated precondition (Phase 1B approved, SHA
-   recorded) is not yet met, so it has not been started. Do not begin it until item 1 is done.
-3. Resolve remaining Phase 1C+ setup inputs in `docs/project-state/setup-input-register.md`
+   recorded) is now met. Awaiting the explicit go-ahead to begin it.
+2. Resolve remaining Phase 1C+ setup inputs in `docs/project-state/setup-input-register.md`
    (GitHub App creation, Google Workspace OAuth client, WordPress Application Password account).
+3. Provision the actual Supabase database once Phase 1C or a later task actually needs a live
+   connection — not before, and not automatically.
 
 ## Recent decisions
 
@@ -120,8 +118,12 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   authorization ("Execute Phase 1B now") to execute the already-approved task package. Real
   Sequelize connection, migration framework, transaction/repository/health foundations — 19 unit
   - 8 real-database integration tests, migration up/down verified via both the compiled CLI and
-    the Vitest-direct execution path. No business entity created. Not yet approved — see
-    `docs/project-state/phase-1b-approval-checklist.md`.
+    the Vitest-direct execution path. No business entity created.
+- `[2026-08-07]` Phase 1B signed off (G-Schema gate passed, scope Phase 1B only), approved commit
+  `80bd118b252ba2292af40d2ac8cecd217257ebc4` — see
+  `docs/project-state/phase-1b-approval-checklist.md`'s "Sign-off" and `project.json`'s
+  `gates[]`/`audit_log`. PR #5 merged. Phase 1C implementation remains a separate, not-yet-granted
+  authorization.
 
 ## Open client blockers
 
@@ -151,12 +153,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   the provider (`project.json`) is not provisioning it; every test so far used a local/CI
   disposable database.
 - Do NOT begin Phase 1C (Google Workspace authentication, emergency local admin, session
-  management, per its own task brief) without explicit human approval of
-  `docs/project-state/phase-1b-approval-checklist.md` first — that brief's own stated
-  precondition, not yet met.
+  management, per its own task brief) without a separate, explicit go-ahead — Phase 1B's approval
+  clears that brief's stated precondition, but does not itself authorize starting Phase 1C.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1B database foundation built and validated)
+Last touched: 2026-08-07 · by Claude (Phase 1B sign-off recorded)

@@ -16,8 +16,8 @@
     },
     "host_target": "vercel",
     "data_sensitivity": "high",
-    "stage": "scaffolding",
-    "current_gate": "G1",
+    "stage": "development",
+    "current_gate": "G-Schema",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -31,7 +31,7 @@
       "url": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard.git",
       "default_branch": "main",
       "develop_branch": "staging",
-      "_note": "Real repository URL, supplied by the project owner 2026-08-06. Registered as a local git remote (origin). Phase 0 was pushed to origin/main (2026-08-06); the Phase 1A branch (phase-1a-repository-foundation) was pushed and PR #1 opened (2026-08-06), then approved (2026-08-07) — see docs/project-state/phase-1a-approval-checklist.md. Branch protection on main is not verified by this file alone — still tracked in docs/repository-plan/branch-and-release-plan.md."
+      "_note": "Real repository URL, supplied by the project owner 2026-08-06. Registered as a local git remote (origin). Phase 0 pushed to origin/main (2026-08-06). PRs merged to main so far: #1 Phase 1A foundation, #2 Phase 1B task package, #3 dependency-audit fixes, #4 Postgres provider confirmation, #5 Phase 1B database foundation (all 2026-08-06/07) — see docs/project-state/{phase-1a,phase-1b}-approval-checklist.md. Branch protection on main is not verified by this file alone — still tracked in docs/repository-plan/branch-and-release-plan.md."
     },
     "assigned_team": {
       "pm": "TBD",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-07T00:00:00Z",
-    "version": 2
+    "version": 3
   },
 
   "tech_stack": {
@@ -99,6 +99,17 @@
       "decided_at": "2026-08-07T00:00:00Z",
       "decision": "CONFIRM",
       "notes": "Phase 1A repository/monorepo foundation approved, scope 'Phase 1A only' — see docs/project-state/phase-1a-approval-checklist.md. Approved commit efdb301a0740b074893b010df0fa317b5c3dac69 on branch phase-1a-repository-foundation, PR #1. Phase 1B (database/Sequelize) requires its own separate gate and remains blocked on the Postgres Marketplace provider being confirmed."
+    },
+    {
+      "id": "G-Schema",
+      "type": "schema-approval",
+      "scope": "project",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-07T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Phase 1B database foundation approved, scope 'Phase 1B only' — see docs/project-state/phase-1b-approval-checklist.md. Real Sequelize connection, migration framework, transaction/repository/health foundations, validated against a real disposable database (19 unit + 8 integration tests). No business entity created. Approved commit 80bd118b252ba2292af40d2ac8cecd217257ebc4 on branch phase-1b-database-foundation, merged as df8cb6f3b84e1a5415cd895b7f7a60b94cfe2e77 via PR #5. Phase 1C (authentication/session) requires its own separate authorization."
     }
   ],
 
@@ -185,6 +196,21 @@
       },
       "project_version_before": 1,
       "project_version_after": 2
+    },
+    {
+      "timestamp": "2026-08-07T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved Phase 1B (G-Schema gate), scope Phase 1B only, via merging PR #5",
+      "details": {
+        "commit_sha": "80bd118b252ba2292af40d2ac8cecd217257ebc4",
+        "merge_commit_sha": "df8cb6f3b84e1a5415cd895b7f7a60b94cfe2e77",
+        "branch": "phase-1b-database-foundation",
+        "pull_request": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5",
+        "approval_record": "docs/project-state/phase-1b-approval-checklist.md"
+      },
+      "project_version_before": 2,
+      "project_version_after": 3
     }
   ]
 }
