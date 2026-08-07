@@ -62,7 +62,7 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 
 ## Session links
 
-- Last commit: `cece946e643f46d11b5f7295b6dfc5e1e15e755a` on `phase-1a-repository-foundation`, pushed to `origin` and independently verified via `git ls-remote` — see `docs/project-state/phase-1a-approval-checklist.md`'s "Commit record"
+- Last commit: `636fd76bfb1b5e889adabfe1f986647934cf26bb` on `phase-1a-repository-foundation` (branch tip, 3 commits past the original `cece946` foundation commit — a nest-cli.json dev-crash fix and two documentation corrections found during independent re-verification), pushed to `origin` and independently verified via `git ls-remote` — see `docs/project-state/phase-1a-approval-checklist.md`'s "Commit record" for the full list
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
 - Open PRs / issues: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) — open, not merged, base `main`

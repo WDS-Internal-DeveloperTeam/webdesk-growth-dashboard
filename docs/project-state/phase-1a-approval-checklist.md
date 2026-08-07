@@ -62,11 +62,14 @@
 
 ## Commit record
 
-| Commit              | SHA                                        | Contents                                                                                                                                      |
-| ------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 1A foundation | `cece946e643f46d11b5f7295b6dfc5e1e15e755a` | Turborepo scaffold, 3 app foundations, 6 package foundations, CI workflow, dependency-boundary config, secret scanner, this documentation set |
+| Commit                           | SHA                                        | Contents                                                                                                                                            |
+| -------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1A foundation              | `cece946e643f46d11b5f7295b6dfc5e1e15e755a` | Turborepo scaffold, 3 app foundations, 6 package foundations, CI workflow, dependency-boundary config, secret scanner, this documentation set       |
+| Record verified SHA + PR link    | `6228f70cf6c97b70676aeb7dc1877b472daf99d`  | Backfilled this table and `HANDOFF.md`'s session links once the foundation commit and PR existed                                                    |
+| Fix `dashboard-api` dev crash    | `4879294b4a000fc87991a82591ffd7f2f37dc0f`  | `nest-cli.json`: `deleteOutDir: true` raced the watch compiler's first build, crashing `pnpm --filter @webdesk/dashboard-api dev` on cold start     |
+| Correct upstream-patches wording | `636fd76bfb1b5e889adabfe1f986647934cf26bb` | Forbidden-actions table said `proposed-upstream-patches/` was "unchanged"; corrected to note it was touched only by the repo-wide Prettier reformat |
 
-Branch: `phase-1a-repository-foundation`, pushed to `origin`. Remote SHA independently verified via `git ls-remote origin phase-1a-repository-foundation` — matches local HEAD exactly.
+**Branch tip (what a reviewer should check out):** `636fd76bfb1b5e889adabfe1f986647934cf26bb` on `phase-1a-repository-foundation`. Independently verified via `git ls-remote origin phase-1a-repository-foundation` matching local `HEAD` at the time each commit above was pushed — the branch has moved 3 commits past the original foundation commit since this table was first written, so review the tip, not `cece946` alone.
 
 Pull request: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1), base `main` ← `phase-1a-repository-foundation`. Open, not merged — merge is blocked on the sign-off below.
 
