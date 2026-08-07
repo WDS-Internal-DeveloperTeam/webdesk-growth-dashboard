@@ -2,7 +2,7 @@
   "name": "@webdesk/dashboard-api",
   "version": "0.1.0",
   "private": true,
-  "description": "NestJS API — synchronous APIs, authorization, webhooks, request orchestration (ADR-0002, ADR-0003). Phase 1A: bootstrap, config, logging, validation, exception handling, correlation IDs, /health, /ready, OpenAPI foundation only — no business entities, no authentication.",
+  "description": "NestJS API — synchronous APIs, authorization, webhooks, request orchestration (ADR-0002, ADR-0003). Phase 1A: bootstrap, config, logging, validation, exception handling, correlation IDs, /health, /ready, OpenAPI foundation. Phase 1C: Google Workspace OIDC + restricted local emergency-admin authentication, session management (ADR-0008/0009, docs/contracts/google-workspace-auth-contract.md) — no RBAC, no general audit-log subsystem, no user-management CRUD yet.",
   "type": "commonjs",
   "scripts": {
     "build": "nest build",
@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src test --max-warnings=0",
     "test": "vitest run --config vitest.config.mts",
-    "test:integration": "vitest run --config vitest.integration.config.mts"
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "provision:emergency-admin": "node dist/auth/scripts/provision-emergency-admin.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -18,10 +19,15 @@
     "@nestjs/platform-express": "^10.4.0",
     "@nestjs/swagger": "^8.1.0",
     "@webdesk/configuration": "workspace:*",
+    "@webdesk/database": "workspace:*",
     "@webdesk/shared-types": "workspace:*",
     "@webdesk/validation": "workspace:*",
+    "argon2": "^0.41.0",
+    "cookie-parser": "^1.4.0",
     "express": "^4.21.0",
     "nestjs-pino": "^4.3.0",
+    "openid-client": "^6.1.0",
+    "otplib": "^12.0.0",
     "pino-http": "^10.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.0",
@@ -32,6 +38,7 @@
     "@nestjs/cli": "^10.4.0",
     "@nestjs/testing": "^10.4.0",
     "@swc/core": "^1.9.0",
+    "@types/cookie-parser": "^1.4.0",
     "@types/express": "^4.17.0",
     "@types/supertest": "^6.0.0",
     "@types/uuid": "^10.0.0",

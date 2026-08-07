@@ -61,6 +61,15 @@ original Task 3 plan, not rewritten after the fact.
 
 ### Task 4 — Authentication
 
+**Status: Complete, as "Phase 1C" (combined with Task 5) — awaiting approval.** Executed
+2026-08-07 under explicit Phase 1C authorization
+(`docs/task-packages/phase-1c-authentication-sessions.md`). Google Workspace OIDC (Authorization
+Code + PKCE, built and tested against mocked/offline configuration — no real Google OAuth client
+exists yet) plus the restricted emergency-administrator TOTP path, both with real, tested
+domain-allowlist/pre-provisioned-user-matching/lockout/audit-event behavior — see
+`docs/project-state/phase-1c-validation-report.md`. The description below is preserved as the
+original Task 4 plan, not rewritten after the fact.
+
 - **Purpose:** Google Workspace OIDC flow in `dashboard-api`, per ADR-0008 and `docs/contracts/google-workspace-auth-contract.md`.
 - **Dependencies:** Task 3, Google Workspace OAuth client created (setup input), first-login provisioning model decided (setup input — **blocking**).
 - **Authorized role:** Backend.
@@ -74,6 +83,13 @@ original Task 3 plan, not rewritten after the fact.
 - **Rollback:** feature-flagged; disable the login route if a critical issue is found.
 
 ### Task 5 — Sessions
+
+**Status: Complete, as "Phase 1C" (combined with Task 4) — awaiting approval.** Executed
+2026-08-07 alongside Task 4 — opaque, server-hashed session tokens (never a self-contained JWT),
+httpOnly/Secure/SameSite cookies, the two-step emergency-admin pending→elevated session model, and
+explicit server-side revocation with a recorded reason — see
+`docs/project-state/phase-1c-validation-report.md`. The description below is preserved as the
+original Task 5 plan, not rewritten after the fact.
 
 - **Purpose:** Session issuance/expiry/invalidation following successful authentication.
 - **Dependencies:** Task 4.

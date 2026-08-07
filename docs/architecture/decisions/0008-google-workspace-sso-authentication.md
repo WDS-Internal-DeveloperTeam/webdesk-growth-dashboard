@@ -45,4 +45,11 @@ Profile `knowledge/05-google-workspace-sso-and-local-admin.md`; WDS-003 (Google 
 
 ## Open setup values
 
-**Blocking Phase 1 auth implementation:** first-login provisioning model (JIT vs. pre-provisioned-only) — needs a PM/client decision, tracked in `docs/project-state/setup-input-register.md` and originally surfaced in `docs/skill-build/unresolved-items.md §C`. Google Workspace OAuth client details (client ID, authorized redirect URIs) are also unconfirmed setup-time inputs.
+~~**Blocking Phase 1 auth implementation:** first-login provisioning model (JIT vs. pre-provisioned-only)~~ —
+**resolved 2026-08-07: pre-provisioned only**, confirmed directly by the project owner and
+implemented in Phase 1C (`docs/task-packages/phase-1c-authentication-sessions.md` §2,
+`apps/dashboard-api/src/auth/google/google-auth.service.ts`). Google Workspace OAuth client
+details (client ID, authorized redirect URIs) remain unconfirmed setup-time inputs — Phase 1C's
+own OIDC implementation was built and tested against mocked/offline configuration per
+`docs/contracts/google-workspace-auth-contract.md`'s "Test requirements," so this does not block
+code-level completion, only a real deployment (`docs/project-state/setup-input-register.md`).

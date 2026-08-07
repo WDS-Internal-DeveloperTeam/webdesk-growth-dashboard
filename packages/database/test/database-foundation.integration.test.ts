@@ -47,8 +47,15 @@ describe("Phase 1B database foundation (real disposable database)", () => {
   });
 
   afterAll(async () => {
+    // `{ to: 0 }` reverts every applied migration, not just the most recent
+    // one — necessary now that Phase 1C migrations share this same
+    // migrations directory: a plain `down()` here would revert only
+    // 00008 and leave 00002-00007 applied when this file's afterAll runs
+    // before phase1c-auth.integration.test.ts's own (both integration
+    // suites share one physical test database within a single `vitest
+    // run`, per vitest.integration.config.mts's `fileParallelism: false`).
     const migrator = buildMigrator();
-    await migrator.down();
+    await migrator.down({ to: 0 });
     await closeConnection();
   });
 

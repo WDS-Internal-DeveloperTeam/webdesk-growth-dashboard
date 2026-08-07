@@ -1,11 +1,14 @@
 name: CI
 
 # Foundation CI: install, typecheck, lint, format, unit tests, integration
-# tests (no external services), a database migration test (Phase 1B — a
-# disposable postgres:16 service container, not the real chosen Marketplace
-# provider), production build, workspace boundary check, secret-pattern
-# scan. NO deploy job exists — deploying from CI is out of scope until a
-# later, separately-authorized phase
+# tests (apps/dashboard-api's own auth e2e suite plus dashboard-web's
+# Playwright smoke test — needs a disposable postgres:16 service container
+# as of Phase 1C, since dashboard-api's AuthModule genuinely needs a real
+# database to construct), a database migration test (Phase 1B — its own
+# separate disposable postgres:16 service container, not the real chosen
+# Marketplace provider), production build, workspace boundary check,
+# secret-pattern scan. NO deploy job exists — deploying from CI is out of
+# scope until a later, separately-authorized phase
 # (docs/repository-plan/branch-and-release-plan.md). No production
 # credentials are referenced anywhere in this file.
 #
@@ -126,9 +129,38 @@ jobs:
       - run: pnpm test
 
   integration-test:
-    name: Integration tests (no external services)
+    name: Integration tests
     runs-on: ubuntu-latest
     needs: install
+    # dashboard-api's own auth e2e suite (test/auth.e2e-spec.ts, Phase 1C)
+    # boots a real AuthModule, whose repositories construct a real
+    # @webdesk/database connection — a disposable service container, same
+    # shape as database-migration-test's (a separate container/job, not
+    # shared state; no port/name collision risk running in parallel).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: webdesk_ci
+          POSTGRES_PASSWORD: webdesk_ci_disposable
+          POSTGRES_DB: webdesk_phase1c_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://webdesk_ci:webdesk_ci_disposable@localhost:5432/webdesk_phase1c_ci
+      DATABASE_SSL: "false"
+      # Fixture values only — this job never touches a real Google OAuth
+      # client or SMTP account (docs/task-packages/phase-1c-authentication-sessions.md).
+      GOOGLE_OAUTH_CLIENT_ID: ci-fixture-client-id
+      GOOGLE_OAUTH_CLIENT_SECRET: ci-fixture-client-secret
+      GOOGLE_OAUTH_REDIRECT_URI: https://api.example.com/auth/google/callback
+      WEB_APP_ORIGIN: https://dashboard.example.com
+      TOTP_ENCRYPTION_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -137,6 +169,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # dashboard-api's test:integration imports @webdesk/database's real
+      # runtime exports (repositories, buildMigrator) — Vite must resolve
+      # an actually-built dist/, not just type declarations. Same
+      # fresh-checkout build-order issue documented in
+      # docs/project-state/phase-1b-validation-report.md §8: turbo's own
+      # `dependsOn: ["^build"]` builds every workspace dependency first,
+      # a package-local `pnpm build` would not.
+      - name: Build dashboard-api, dashboard-web, and their workspace dependencies
+        run: npx turbo run build --filter=@webdesk/dashboard-api --filter=@webdesk/dashboard-web
       - name: dashboard-api integration tests
         run: pnpm --filter @webdesk/dashboard-api test:integration
       - name: dashboard-web Playwright browsers

@@ -11,6 +11,16 @@ Sequelize-backed repository base — all proven against a minimal test-only tabl
 require a separate, explicit authorization beyond this package's own scope — see
 `docs/task-packages/phase-1b-database-foundation.md` §9/§24.
 
+**Phase 1C status:** the first real business entities — `users`, `external_auth_identities`,
+`emergency_admin_credentials`, `sessions`, `auth_lockout_state`, `recovery_requests`,
+`auth_events` (migrations `00002`–`00008`, models and repositories under `src/auth/`) — built
+under explicit Phase 1C authorization
+(`docs/task-packages/phase-1c-authentication-sessions.md`). `users` here is identity-only
+(email, display name, account status) — full user-management CRUD is Task 8, a separate,
+not-yet-authorized scope. `auth_events` is a narrow, login-scoped event log, not the
+general-purpose ADR-0017 audit-log subsystem (Task 7). See
+`docs/project-state/phase-1c-validation-report.md` for the full test record.
+
 ## Local development setup
 
 You need a real, disposable PostgreSQL instance — never staging/production, never a shared

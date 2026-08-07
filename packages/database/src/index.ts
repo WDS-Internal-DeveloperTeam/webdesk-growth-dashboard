@@ -4,3 +4,5 @@ export { closeConnection, getConnection, resetConnectionForTests } from "./conne
 export { databaseEnvSchema, loadDatabaseEnv, type DatabaseEnv } from "./env.js";
 export { withTransaction } from "./transaction.js";
 export { checkDatabaseHealth } from "./health.js";
+export { buildMigrator } from "./migrate.js";
+export * from "./auth/index.js";

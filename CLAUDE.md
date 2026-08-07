@@ -68,29 +68,40 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** development **Current gate:** G-Schema (Phase 1B, passed 2026-08-07 — see
-  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative).
-- **Active phase:** Phase 1B — Database foundation (Task 3), **approved 2026-08-07, scope Phase 1B
-  only** (`docs/project-state/phase-1b-approval-checklist.md`, PR #5 merged). Real Sequelize/PostgreSQL
-  connection, umzug migration framework, transaction and repository foundations — 19 unit + 8
-  real-database integration tests — see `docs/project-state/phase-1b-validation-report.md`. **No
-  business entity (`projects`/`users`) created** — only a test-only `_framework_probe` table proving
-  the framework, per the task package's own two-tier gate. Phase 1A remains approved, scope Phase 1A
-  only.
+- **Stage:** development **Current gate:** G-Schema (Phase 1B, passed 2026-08-07) remains the last
+  _approved_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative.
+  Phase 1C (below) is built and validated but **not yet approved** — no new gate has been recorded.
+- **Active phase:** Phase 1C — Authentication and session management (Tasks 4/5, combined),
+  **built and validated 2026-08-07, not yet approved** — see
+  `docs/task-packages/phase-1c-authentication-sessions.md` and
+  `docs/project-state/phase-1c-validation-report.md`. Google Workspace OIDC (Authorization
+  Code+PKCE, tested against mocked/offline configuration — no real Google OAuth client exists),
+  restricted emergency-administrator TOTP (two-step: password then code), session
+  issuance/validation/revocation, DB-backed account lockout, CSRF defenses, an operator-run
+  emergency-admin provisioning CLI, and 6 `dashboard-web` auth pages — 115 unit + 15
+  real-database integration/e2e tests, all passing. First-login provisioning model resolved:
+  **pre-provisioned only**, no JIT account creation. **Does not include** RBAC (Task 6), the
+  general audit-log subsystem (Task 7), or user-management CRUD (Task 8) — all separate, later
+  authorizations. Phase 1A and 1B remain approved, each scoped to itself only.
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
-  ran against a local/CI disposable database. Google Workspace OAuth client, WordPress Application
-  Password account, and real timezone confirmation still block Phase 1C+ tasks.
+  ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
+  not Phase 1C's own code completion), the real emergency-administrator account list, WordPress
+  Application Password account, `dashboard-web`'s real deployed origin, and real timezone confirmation
+  still block later tasks/a real deployment.
 
 ## Active tasks (this sprint)
 
-1. A Phase 1C task brief (Google Workspace authentication, emergency local admin, session
-   management) has already arrived, twice — its own stated precondition (Phase 1B approved, SHA
-   recorded) is now met. Awaiting the explicit go-ahead to begin it.
-2. Resolve remaining Phase 1C+ setup inputs in `docs/project-state/setup-input-register.md`
-   (GitHub App creation, Google Workspace OAuth client, WordPress Application Password account).
-3. Provision the actual Supabase database once Phase 1C or a later task actually needs a live
-   connection — not before, and not automatically.
+1. Await explicit review/approval of Phase 1C (this checklist's own approval record:
+   `docs/task-packages/phase-1c-authentication-sessions.md` has no separate approval-checklist
+   document yet — unlike Phase 1A/1B, follow up on whether one is expected before merge).
+2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
+   creation, Google Workspace OAuth client, the real emergency-administrator account list,
+   WordPress Application Password account, `dashboard-web`'s real deployed origin).
+3. Provision the actual Supabase database once a later task actually needs a live connection —
+   not before, and not automatically.
+4. Once Phase 1C is approved: RBAC (Task 6) is the next candidate per
+   `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
 
 ## Recent decisions
 
@@ -124,11 +135,32 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   `docs/project-state/phase-1b-approval-checklist.md`'s "Sign-off" and `project.json`'s
   `gates[]`/`audit_log`. PR #5 merged. Phase 1C implementation remains a separate, not-yet-granted
   authorization.
+- `[2026-08-07]` First-login provisioning model resolved directly with the project owner:
+  **pre-provisioned only** — Google SSO links/activates an existing admin-created `users` row
+  matched by email; an unmatched login is rejected, never auto-creates a user. Clears ADR-0008's
+  own blocking open item.
+- `[2026-08-07]` Phase 1C (Google Workspace authentication, restricted emergency-local TOTP,
+  session management) built and validated under explicit user authorization to begin —
+  `docs/task-packages/phase-1c-authentication-sessions.md`,
+  `docs/project-state/phase-1c-validation-report.md`. 7 new database entities/migrations, a full
+  `dashboard-api` `AuthModule`, 6 `dashboard-web` auth pages, an operator-run emergency-admin
+  provisioning CLI, and a STRIDE threat-model pass
+  (`docs/security/threat-model-authentication-session-handling.md`, self-reviewed only — still
+  needs a second-role human review). 115 unit + 15 real-database integration/e2e tests, all
+  passing. Not yet approved/merged.
 
 ## Open client blockers
 
-- First-login provisioning model (JIT vs. pre-provisioned) — see profile
-  `knowledge/05-google-workspace-sso-and-local-admin.md`. Owner: PM.
+- ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
+  pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
+- The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a
+  real deployment, not Phase 1C's own code completion (built and tested against mocked/offline
+  configuration). Owner: infrastructure owner.
+- The real emergency-administrator account list — the provisioning _mechanism_ is built
+  (`apps/dashboard-api/src/auth/scripts/provision-emergency-admin.ts`), but no real accounts exist
+  yet. Owner: PM/security owner.
+- `dashboard-web`'s real deployed origin (`WEB_APP_ORIGIN` on the `dashboard-api` side, CORS/CSRF
+  allowlist) — every test uses a fixture origin. Owner: infrastructure owner.
 - ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
   the local `origin` remote; confirmed real and reachable (Phase 0 pushed to `origin/main`,
   Phase 1A branch pushed and PR #1 opened 2026-08-06, merged 2026-08-07). Still unconfirmed:
@@ -152,12 +184,22 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - Do NOT provision the actual Supabase database (create the real project/instance) — confirming
   the provider (`project.json`) is not provisioning it; every test so far used a local/CI
   disposable database.
-- Do NOT begin Phase 1C (Google Workspace authentication, emergency local admin, session
-  management, per its own task brief) without a separate, explicit go-ahead — Phase 1B's approval
-  clears that brief's stated precondition, but does not itself authorize starting Phase 1C.
+- Do NOT begin RBAC (Task 6), the general ADR-0017 audit-log subsystem (Task 7), or
+  user-management CRUD (Task 8) without a separate, explicit go-ahead — Phase 1C's own approval
+  (once granted) covers Phase 1C only, per its task package's §5 out-of-scope list.
+- Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
+  Workspace account — Phase 1C's own OIDC implementation is tested against mocked/offline
+  configuration for exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
+- Do NOT wire a real SMTP send for emergency-admin login alerts — Google Workspace SMTP
+  integration (`knowledge/09-google-workspace-smtp.md`) doesn't exist yet; the notifier interface
+  (`apps/dashboard-api/src/auth/emergency/emergency-admin-login-notifier.ts`) exists specifically
+  so a real implementation can be swapped in later without touching the login flow itself.
+- Do NOT treat `docs/security/threat-model-authentication-session-handling.md` as a completed,
+  approved security review — it is explicitly a self-review only, pending the required second-role
+  human review per ADR-0010's separation-of-duties principle.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1B sign-off recorded)
+Last touched: 2026-08-07 · by Claude (Phase 1C built and validated, not yet approved)
