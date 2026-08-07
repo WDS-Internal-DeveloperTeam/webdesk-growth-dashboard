@@ -182,7 +182,7 @@ request through `supertest` against the **real seeded matrix**, not a mocked `Pe
    passed regardless of this bug, since they never reached the pipe.
 2. **`vitest.integration.config.mts` had no `fileParallelism: false`.** With only one e2e-spec
    file (Phase 1C), this was invisible; adding a second file (`authz.e2e-spec.ts`) that also runs
-   its own full `migrator.up()`/`down({to:0})` against the *same* shared disposable database caused
+   its own full `migrator.up()`/`down({to:0})` against the _same_ shared disposable database caused
    Vitest's default parallel-file execution to race two concurrent schema migrations, intermittently
    failing with a Postgres unique-constraint violation on the ENUM type Sequelize creates for
    `_framework_probe`. Fixed by setting `fileParallelism: false` in the integration config, with a
