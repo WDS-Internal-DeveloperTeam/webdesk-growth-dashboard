@@ -2,23 +2,28 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Phase 1D (PR #8) merged, gate not yet approved; Phase 1C's gate recorded via explicit OVERRIDE with a second-role review still outstanding; a much larger "Phase 1D" brief received and recorded as BLOCKED pending that same review)
+- **Last active agent:** Backend role (Phase 1D (PR #8) merged, gate not yet approved; Phase 1C's second-role security review completed 2026-08-07; a much larger "Phase 1D" brief recorded as BLOCKED pending explicit authorization to begin)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1D — RBAC and authorization (Task 6), built, validated, and merged to `main` via PR #8, **gate not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md` and `docs/project-state/phase-1d-validation-report.md`. Phase 1C (Google Workspace SSO, restricted emergency-local TOTP, session management) was merged this session (PR #7) and its G4-1C gate approved this session **via explicit OVERRIDE** (second-role security review still outstanding — see below). Phase 1A and 1B remain approved, each scoped to itself only.
-- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"`, not a clean pass — see `docs/project-state/phase-1c-approval-checklist.md`. No gate has been recorded for Phase 1D yet.
+- **Active phase:** Phase 1D — RBAC and authorization (Task 6), built, validated, and merged to `main` via PR #8, **gate not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md` and `docs/project-state/phase-1d-validation-report.md`. Phase 1C (Google Workspace SSO, restricted emergency-local TOTP, session management) was merged this session (PR #7), its G4-1C gate approved this session **via explicit OVERRIDE**, and — later in this same session — the second-role security review that OVERRIDE was pending on **has now been completed and recorded**. Phase 1A, 1B, and 1C remain approved, each scoped to itself only.
+- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. No gate has been recorded for Phase 1D yet.
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
 > **A much larger "Phase 1D" brief (RBAC, fine-grained permissions, confidential-field access, a
 > centralized policy/authorization service, separation-of-duties across many more scenarios) was
 > received 2026-08-07 and recorded verbatim in
-> `docs/task-packages/phase-1d-rbac-permissions-expanded.md` — explicitly BLOCKED, not started.
-> Asked directly, the user chose: (1) wait for the real second-role security review of Phase 1C's
-> threat model before starting it (the OVERRIDE-based gate approval does not itself satisfy this
-> brief's own precondition), and (2) treat it as superseding/expanding the already-merged, narrower
-> Phase 1D from PR #8 — build on that `AuthzModule`, don't rebuild it. Do not begin any part of
-> that expanded scope without first confirming the review has actually happened.**
+> `docs/task-packages/phase-1d-rbac-permissions-expanded.md` — still explicitly BLOCKED, not
+> started, though its own precondition has now been satisfied. Asked directly, the user chose:
+> (1) wait for the real second-role security review of Phase 1C's threat model before starting it
+> (the OVERRIDE-based gate approval did not itself satisfy this brief's own precondition) — **that
+> review has since been completed** (WebDesk Solution reviewed and approved
+> `docs/security/threat-model-authentication-session-handling.md`, recorded in
+> `docs/project-state/phase-1c-approval-checklist.md` and `project.json`'s `audit_log`); and
+> (2) treat it as superseding/expanding the already-merged, narrower Phase 1D from PR #8 — build on
+> that `AuthzModule`, don't rebuild it. **The precondition being satisfied is not itself
+> authorization to begin — do not start any part of that expanded scope without a separate,
+> explicit "begin" instruction.**
 
 ## Where we left off
 
@@ -80,6 +85,19 @@ still-outstanding open item** — not silently marked complete, not left unrecor
 entry (not a clean `CONFIRM`) for exactly this reason. `CLAUDE.md`, this file, and
 `docs/project-state/setup-input-register.md` were all updated to carry the same open item forward.
 
+**The user then asked "Phase 1C do Completed security review."** Clarified first (given ADR-0010's
+requirement that the reviewer be a human role distinct from the implementing agent — the model
+itself cannot satisfy this by reviewing its own work again, no matter how thoroughly) what
+"completed" meant; the user confirmed they had reviewed
+`docs/security/threat-model-authentication-session-handling.md` themselves and asked for their
+sign-off to be recorded. Updated: the threat model's own "Review status"/"Next steps" sections,
+`docs/project-state/phase-1c-approval-checklist.md` (item 11 checked, new "Second-role security
+review" section, the "Open condition" section marked resolved without deleting the original
+historical record), `project.json` (new `audit_log` entry — the G4-1C gate's own historical entry
+left unmodified, since it accurately reflects the state at approval time), `CLAUDE.md`, and this
+file. The expanded Phase 1D brief's own precondition (the Phase 1C review) is now satisfied, but no
+"begin" instruction has been given — it remains explicitly not started.
+
 The 21 real business-module endpoints, the confidential-field axis
 (`view_confidential`/`edit_confidential`), the general ADR-0017 audit-log subsystem (Task 7), and
 user-management CRUD (Task 8) remain explicitly out of scope for everything shipped so far.
@@ -116,11 +134,16 @@ recording Phase 1C's G4-1C gate approval.
 
 ## Client blockers (waiting on)
 
-- `[2026-08-07]` — Second-role human review of `docs/security/threat-model-authentication-session-handling.md`
-  (Phase 1C, gate already approved via OVERRIDE) and, once its own gate is reached,
-  `docs/security/threat-model-authorization-rbac.md` (Phase 1D). Blocked on a second, human role
-  distinct from the implementing agent existing at all — `project.json`'s `assigned_team` is
-  entirely `TBD`. Owner: to be assigned.
+- ~~`[2026-08-07]` Second-role human review of `docs/security/threat-model-authentication-session-handling.md` (Phase 1C)~~ —
+  **resolved 2026-08-07**, reviewed and approved by WebDesk Solution. See
+  `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review".
+- `[2026-08-07]` — Second-role human review of `docs/security/threat-model-authorization-rbac.md`
+  (Phase 1D, PR #8) — separate document, still outstanding once its own gate is reached. Blocked on
+  a second, human role distinct from the implementing agent existing at all — `project.json`'s
+  `assigned_team` is entirely `TBD`. Owner: to be assigned. Note: this is a different document from
+  the one `docs/task-packages/phase-1d-rbac-permissions-expanded.md` was waiting on — that brief's
+  own precondition was specifically the Phase 1C review (now done, see the resolved item above),
+  not this Phase 1D one.
 - `[2026-08-06]` — Timezone confirmation (currently defaulted to America/Toronto, not yet
   confirmed by the client). Owner: PM.
 - `[2026-08-07]` — The real Google Workspace OAuth client (client ID, secret, authorized redirect
@@ -170,6 +193,20 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   `docs/project-state/phase-1c-approval-checklist.md`. Asked directly whether the second-role
   threat-model review had happened, should be waited for, or skipped informally, the approver
   chose to approve the gate now with the review recorded as a still-outstanding open item.
+- `[2026-08-07]` Received a much larger "Phase 1D" brief (RBAC, fine-grained permissions,
+  confidential-field access, centralized policy/authorization service, separation-of-duties across
+  many more scenarios) — recorded verbatim in
+  `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, explicitly not started. Asked
+  directly: (1) whether the Phase 1C OVERRIDE-based approval satisfies this brief's own
+  precondition of a completed security review — the user chose to wait for the real second-role
+  review instead; (2) how this brief relates to the already-merged, narrower Phase 1D (PR #8) —
+  the user chose "supersedes/expands," build on top of PR #8's `AuthzModule`, not rebuild it.
+- `[2026-08-07]` The second-role human review of `docs/security/threat-model-authentication-session-handling.md`
+  (the open item from the G4-1C OVERRIDE, and the precondition the expanded Phase 1D brief above
+  was waiting on) was completed: WebDesk Solution reviewed and approved the document. See
+  `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review" and
+  `project.json`'s `audit_log`. This satisfies that one precondition but is not itself
+  authorization to begin the expanded Phase 1D brief.
 
 ## Token / context usage this session (optional)
 
@@ -213,4 +250,4 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1D merged; Phase 1C's G4-1C gate approved via OVERRIDE, second-role review still outstanding)
+Last touched: 2026-08-07 · by Claude (Phase 1D (PR #8) merged, gate not yet approved; Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed; a larger Phase 1D brief recorded as BLOCKED pending explicit authorization to begin)

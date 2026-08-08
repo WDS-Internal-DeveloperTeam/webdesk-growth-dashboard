@@ -8,11 +8,15 @@ issuance/expiry/invalidation). Covers exactly the scope
 general audit-log subsystem (ADR-0017) are separate, not-yet-implemented areas with their own
 future STRIDE passes.
 
-**Review status:** authored by the same agent that implemented this phase. Per
-`docs/security/threat-model-plan.md`'s procedure and ADR-0010's separation-of-duties principle,
-this pass requires review by a second, human role before the implementation is considered ready
-for its QA gate (G4) — that second review has **not** happened yet. This document is a rigorous
-self-review, not a substitute for it; do not treat it as satisfying the gate on its own.
+**Review status:** originally authored by the same agent that implemented this phase, as a
+self-review. Per `docs/security/threat-model-plan.md`'s procedure and ADR-0010's separation-of-duties
+principle, this pass required review by a second, human role before the implementation is
+considered ready for its QA gate (G4). **That second-role review is now complete** — WebDesk
+Solution (a human role distinct from the implementing agent) reviewed this document on 2026-08-07
+and approved it; see `docs/project-state/phase-1c-approval-checklist.md`'s Sign-off record and
+`project.json`'s `audit_log` for the recorded decision. This document's own STRIDE content and
+"Summary of accepted gaps" below are unchanged by that review — the review approved the analysis
+as written, it did not request or make any edit.
 
 ---
 
@@ -93,5 +97,5 @@ Every mitigation claimed above that references a specific test file was verified
 
 ## Next steps
 
-- A second, human role reviews this document against the actual diff before Phase 1C is considered ready for G4.
-- Re-review this pass once Task 6 (RBAC) or Task 7 (audit subsystem) land, since both extend the surface this document currently treats as out of scope.
+- ~~A second, human role reviews this document against the actual diff before Phase 1C is considered ready for G4.~~ **Done 2026-08-07** — see "Review status" above.
+- Re-review this pass once Task 6 (RBAC) or Task 7 (audit subsystem) land, since both extend the surface this document currently treats as out of scope. (Task 6/RBAC has since landed as Phase 1D, PR #8 — its own STRIDE pass is `docs/security/threat-model-authorization-rbac.md`, a separate document with its own, still-outstanding second-role review requirement; it is not a re-review of this document.)

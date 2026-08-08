@@ -1,17 +1,18 @@
 # Phase 1D (Expanded) Task Package — RBAC, Fine-Grained Permissions, Confidential-Field Access, and Separation of Duties
 
-**Status: BLOCKED — not authorized to begin.** Received verbatim from the user 2026-08-07 as a
-brief for "Phase 1D," recorded here rather than acted on immediately, per two explicit decisions
-the user made when asked directly:
+**Status: BLOCKED — precondition satisfied, but not yet authorized to begin.** Received verbatim
+from the user 2026-08-07 as a brief for "Phase 1D," recorded here rather than acted on
+immediately, per two explicit decisions the user made when asked directly:
 
-1. **Precondition:** the brief's own §2 requires Phase 1C to have "Completed security review" and
-   "received human approval" before this work begins. Phase 1C's G4-1C gate was approved this same
-   session (`docs/project-state/phase-1c-approval-checklist.md`), but as an explicit **OVERRIDE**,
-   not a clean pass — the required second-role human review of
-   `docs/security/threat-model-authentication-session-handling.md` has **not** happened. Asked
-   whether to treat the override as sufficient or wait for the real review, the user chose **wait
-   for the review to actually happen** before starting this brief's work. That review remains the
-   blocking precondition — see `docs/project-state/setup-input-register.md`'s entry for it.
+1. **Precondition — SATISFIED 2026-08-07.** The brief's own §2 requires Phase 1C to have
+   "Completed security review" and "received human approval" before this work begins. Phase 1C's
+   G4-1C gate was approved via explicit **OVERRIDE**, not a clean pass, because the required
+   second-role human review of `docs/security/threat-model-authentication-session-handling.md` had
+   not happened yet at that time. Asked whether to treat the override as sufficient or wait for the
+   real review, the user chose to **wait for the review to actually happen** — and it has: WebDesk
+   Solution reviewed and approved that document 2026-08-07, recorded in
+   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review" section and
+   `project.json`'s `audit_log`. **This precondition is now met.**
 2. **Scope relationship to already-merged work:** a narrower "Phase 1D — RBAC and authorization"
    already exists, built, validated, and merged to `main` via
    [PR #8](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8) —
@@ -24,12 +25,12 @@ the user made when asked directly:
 
 **Do not begin implementing this brief until:**
 
-- The second-role human review of `docs/security/threat-model-authentication-session-handling.md`
-  has actually happened and is recorded (updating that document's own "Review status" section and
-  `docs/project-state/phase-1c-approval-checklist.md`'s item 11 / "Open condition").
-- Someone in this session or a future one confirms the precondition is now satisfied and gives
-  explicit authorization to begin — the same discipline every prior phase in this project has
-  followed (a task package existing is not itself authorization to execute).
+- ~~The second-role human review of `docs/security/threat-model-authentication-session-handling.md`
+  has actually happened and is recorded~~ — **done 2026-08-07**, see item 1 above.
+- Someone in this session or a future one gives **explicit authorization to begin** — the
+  precondition being satisfied is not itself that authorization. The same discipline every prior
+  phase in this project has followed applies here too: a task package existing (or its own
+  precondition being met) is not authorization to execute.
 
 **The `<INSERT APPROVED PHASE 1C REMOTE SHA>` placeholder in the original brief (§0) was left
 unfilled by the user.** For the record: the actual approved Phase 1C remote SHA is

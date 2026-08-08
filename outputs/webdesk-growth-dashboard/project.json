@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-07T13:00:00Z",
-    "version": 4
+    "updated_at": "2026-08-07T14:00:00Z",
+    "version": 5
   },
 
   "tech_stack": {
@@ -238,6 +238,20 @@
       },
       "project_version_before": 3,
       "project_version_after": 4
+    },
+    {
+      "timestamp": "2026-08-07T14:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "completed the required second-role human security review of docs/security/threat-model-authentication-session-handling.md, resolving the open item recorded against the G4-1C gate",
+      "details": {
+        "document_reviewed": "docs/security/threat-model-authentication-session-handling.md",
+        "decision": "Approved",
+        "approval_record": "docs/project-state/phase-1c-approval-checklist.md#second-role-security-review",
+        "note": "Reviewer is a human role distinct from the agent that implemented Phase 1C and authored the original self-review, satisfying ADR-0010's separation-of-duties requirement. This closes the open item from the G4-1C gate audit_log entry above; that entry itself is left unmodified as the accurate historical record of the gate's approval-time state. Phase 1D's own STRIDE pass (docs/security/threat-model-authorization-rbac.md) is a separate document and still requires its own second-role review."
+      },
+      "project_version_before": 4,
+      "project_version_after": 5
     }
   ]
 }

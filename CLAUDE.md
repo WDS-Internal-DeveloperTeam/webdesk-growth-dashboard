@@ -72,15 +72,17 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   clean CONFIRM** — see below) is the last recorded gate — see
   `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative.
   Phase 1D (below) is built and validated but **not yet approved** — no new gate has been recorded.
-- **Approved (with an open condition):** Phase 1C — Authentication and session management (Tasks 4/5,
-  combined) — merged to `main` via PR #7 at commit `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`, and
-  the G4-1C gate approved 2026-08-07 — see `docs/project-state/phase-1c-approval-checklist.md`.
-  **The approval was an explicit OVERRIDE, not a clean pass**: the required second-role human
+- **Approved:** Phase 1C — Authentication and session management (Tasks 4/5, combined) — merged to
+  `main` via PR #7 at commit `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`, and the G4-1C gate
+  approved 2026-08-07 — see `docs/project-state/phase-1c-approval-checklist.md`. **The gate
+  approval was an explicit OVERRIDE, not a clean pass**, because the required second-role human
   review of `docs/security/threat-model-authentication-session-handling.md` (ADR-0010
-  separation-of-duties) has **not** happened — the human approver was asked directly and chose to
-  approve the gate now anyway, with that review recorded as a still-outstanding open item (see
-  "Open client blockers" below), not silently marked complete. See
-  `docs/task-packages/phase-1c-authentication-sessions.md` and
+  separation-of-duties) had not happened yet at that time — the human approver was asked directly
+  and chose to approve the gate then anyway, with that review recorded as a still-outstanding open
+  item, not silently marked complete. **That review has since been completed (2026-08-07)** —
+  WebDesk Solution reviewed and approved the document; see
+  `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review" section and
+  `project.json`'s `audit_log`. See `docs/task-packages/phase-1c-authentication-sessions.md` and
   `docs/project-state/phase-1c-validation-report.md` for the underlying work. Google Workspace
   OIDC, restricted emergency-administrator TOTP, session issuance/validation/revocation, DB-backed
   account lockout, CSRF defenses, an operator-run emergency-admin provisioning CLI, and 6
@@ -107,20 +109,28 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. Obtain the required second-role human review of
-   `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) — outstanding since
-   before the G4-1C gate was approved via explicit OVERRIDE; see
-   `docs/project-state/phase-1c-approval-checklist.md`'s "Open condition".
-2. Await explicit review/approval of Phase 1D, including a decision on the flagged
-   self-assignment separation-of-duties gap (`docs/security/threat-model-authorization-rbac.md`)
-   and, separately, the required second-role review of that same document.
+1. ~~Obtain the required second-role human review of
+   `docs/security/threat-model-authentication-session-handling.md` (Phase 1C)~~ — **done
+   2026-08-07**, reviewed and approved by WebDesk Solution; see
+   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review". This
+   satisfies precondition (1) that `docs/task-packages/phase-1d-rbac-permissions-expanded.md`
+   itself set before starting that brief — **explicit authorization to actually begin it has still
+   not been given** (a precondition being met is not itself a "begin" instruction; see that
+   document's own "Do not begin implementing this brief until" list, item 2).
+2. Await explicit review/approval of the already-merged Phase 1D (PR #8), including a decision on
+   the flagged self-assignment separation-of-duties gap
+   (`docs/security/threat-model-authorization-rbac.md`) and, separately, the required second-role
+   review of that same document — still outstanding, unaffected by Phase 1C's review completing.
 3. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
 4. Provision the actual Supabase database once a later task actually needs a live connection —
    not before, and not automatically.
-5. Once Phase 1D is approved: the 21 real business-module endpoints are the next candidate per
-   `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
+5. Once explicitly authorized: begin `docs/task-packages/phase-1d-rbac-permissions-expanded.md`,
+   building on the already-merged `AuthzModule` from PR #8 rather than rebuilding it (per the
+   user's explicit "supersedes/expands" decision) — not started automatically just because its own
+   precondition is now met. The 21 real business-module endpoints remain a separate, later
+   candidate per `docs/phase-plans/phase-1-foundation-plan.md`.
 
 ## Recent decisions
 
@@ -200,14 +210,23 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   precondition of a completed security review — the user chose to wait for the real second-role
   review instead; (2) how this brief relates to the already-merged, narrower Phase 1D (PR #8) —
   the user chose "supersedes/expands," i.e. build on top of PR #8's `AuthzModule`, not rebuild it.
+- `[2026-08-07]` The required second-role human review of
+  `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) — the open item from
+  the G4-1C OVERRIDE — was completed: WebDesk Solution reviewed and approved the document. See
+  `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review" and
+  `project.json`'s `audit_log`. The G4-1C gate's own historical record is left unmodified (it
+  accurately reflects the state at approval time); this is recorded as a separate, later event.
+  This satisfies one precondition of `docs/task-packages/phase-1d-rbac-permissions-expanded.md`
+  but does not itself authorize starting that work.
 
 ## Open client blockers
 
-- Second-role human review of `docs/security/threat-model-authentication-session-handling.md`
-  (Phase 1C) — the G4-1C gate was approved via explicit OVERRIDE 2026-08-07 with this review
-  recorded as a still-outstanding open item, not completed. See
-  `docs/project-state/phase-1c-approval-checklist.md`. Owner: a second, human role distinct from
-  the implementing agent (ADR-0010 separation-of-duties) — not yet assigned; `project.json`'s
+- ~~Second-role human review of `docs/security/threat-model-authentication-session-handling.md`
+  (Phase 1C)~~ — resolved 2026-08-07, reviewed and approved by WebDesk Solution. See
+  `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review".
+- Second-role human review of `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8)
+  — separate document, still outstanding. Owner: a second, human role distinct from the
+  implementing agent (ADR-0010 separation-of-duties) — not yet assigned; `project.json`'s
   `assigned_team` is entirely `TBD`.
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
@@ -259,13 +278,15 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   integration (`knowledge/09-google-workspace-smtp.md`) doesn't exist yet; the notifier interface
   (`apps/dashboard-api/src/auth/emergency/emergency-admin-login-notifier.ts`) exists specifically
   so a real implementation can be swapped in later without touching the login flow itself.
-- Do NOT treat either `docs/security/threat-model-authentication-session-handling.md` or
-  `docs/security/threat-model-authorization-rbac.md` as a completed, approved security review —
-  both are explicitly self-reviews only, pending the required second-role human review per
-  ADR-0010's separation-of-duties principle.
+- Do NOT treat `docs/security/threat-model-authorization-rbac.md` (Phase 1D) as a completed,
+  approved security review — it is still a self-review only, pending the required second-role
+  human review per ADR-0010's separation-of-duties principle.
+  `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) is different: its
+  second-role review completed 2026-08-07 (see "Recent decisions") — it may now be treated as
+  reviewed.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1C's G4-1C gate approved via OVERRIDE, second-role review still outstanding; Phase 1D (PR #8) merged, gate not yet approved; a larger Phase 1D brief received and recorded as BLOCKED pending that same review)
+Last touched: 2026-08-07 · by Claude (Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed; Phase 1D (PR #8) merged, gate not yet approved; a larger Phase 1D brief recorded as BLOCKED pending explicit authorization to begin)

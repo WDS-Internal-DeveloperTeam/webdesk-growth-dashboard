@@ -11,20 +11,26 @@ either merge. See "A note on sequencing" below.
 
 ---
 
-## Open condition — read before treating this gate as fully closed
+## Open condition — RESOLVED 2026-08-07
+
+**Update 2026-08-07:** the second-role review this section originally flagged as outstanding is
+now complete — WebDesk Solution reviewed `docs/security/threat-model-authentication-session-handling.md`
+and approved it. See the "Second-role security review" section below for the recorded decision.
+The rest of this section is preserved as the original open-condition record, not rewritten, so the
+history of what was outstanding and when it closed stays traceable.
 
 `docs/security/threat-model-authentication-session-handling.md` (the required STRIDE pass for
 "Authentication" and "Session handling", per `docs/security/threat-model-plan.md`'s procedure and
-this task package's own §7/§8) is **still a self-review only, authored by the same agent that
-built Phase 1C**. ADR-0010's separation-of-duties principle and the threat-model plan's own
-procedure both require a second, human role to review it before the implementation is normally
-considered ready for its G4 gate.
+this task package's own §7/§8) was **at G4-1C approval time** a self-review only, authored by the
+same agent that built Phase 1C. ADR-0010's separation-of-duties principle and the threat-model
+plan's own procedure both require a second, human role to review it before the implementation is
+normally considered ready for its G4 gate.
 
-That second-role review **has not happened**. The human approver explicitly chose, when asked, to
-approve this gate now anyway, with the review recorded as a still-outstanding action item — not to
-wait for the review, and not to have the review silently marked complete. See "Sign-off" for the
-exact decision recorded and `docs/project-state/setup-input-register.md` for this item being
-tracked as a standing blocker going forward.
+That second-role review had not happened at G4-1C approval time. The human approver explicitly
+chose, when asked, to approve this gate then anyway, with the review recorded as a still-outstanding
+action item — not to wait for the review, and not to have the review silently marked complete. See
+the original "Sign-off" for that decision, and the new "Second-role security review" section below
+for how it was subsequently resolved.
 
 ---
 
@@ -58,9 +64,10 @@ tracked as a standing blocker going forward.
       `docs/phase-plans/phase-1-foundation-plan.md` (Tasks 4/5 marked complete).
 - [x] **9. A verified remote commit/merge SHA is recorded.** See "Commit record" below.
 - [x] **10. The Phase 1C approval checklist is produced.** This document.
-- [ ] **11. Required second-role human security review completed.** **Not done — the open
-      condition above.** Explicitly left unchecked rather than marked complete; tracked as a
-      standing follow-up action, not silently absorbed into this approval.
+- [x] **11. Required second-role human security review completed.** **Done 2026-08-07** — see
+      "Second-role security review" below. Originally left unchecked at G4-1C approval time
+      (tracked as a standing follow-up, not silently absorbed); checked off only once the review
+      genuinely happened, not retroactively.
 
 ---
 
@@ -76,6 +83,28 @@ tracked as a standing blocker going forward.
 | Provision the actual Supabase database                         | **Not done.** All testing used a local/CI disposable database.                                                                                                                                     |
 | Add real credentials anywhere                                  | **Not done.** `pnpm scan:secrets` clean.                                                                                                                                                           |
 | Merge automatically                                            | **Not done.** PR #7 was merged only after an explicit, separate "merge the PR" instruction from the human approver.                                                                                |
+
+---
+
+## Second-role security review
+
+**Completed 2026-08-07.** WebDesk Solution — a human role distinct from the agent that implemented
+Phase 1C and authored the original self-review — reviewed
+`docs/security/threat-model-authentication-session-handling.md` and approved it. This satisfies the
+open condition recorded above and ADR-0010's separation-of-duties requirement for this document.
+
+| Field             | Value                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| Reviewer          | WebDesk Solution                                                                          |
+| Review date       | 2026-08-07                                                                                |
+| Document reviewed | `docs/security/threat-model-authentication-session-handling.md`                           |
+| Decision          | Approved                                                                                  |
+| Recorded in       | `project.json`'s `audit_log`; this checklist's item 11 and "Open condition" section above |
+
+This review covers `docs/security/threat-model-authentication-session-handling.md` only — Phase
+1D's own STRIDE pass, `docs/security/threat-model-authorization-rbac.md`, is a separate document
+with its own, still-outstanding second-role review requirement (tracked in
+`docs/project-state/setup-input-register.md` and `CLAUDE.md`'s "Open client blockers").
 
 ---
 
@@ -134,5 +163,8 @@ authorization.
 | PM                                     | WebDesk Solution | ☑ Approved                                                              | 2026-08-07 |
 
 **On approval:** the second-role human review of `docs/security/threat-model-authentication-session-handling.md`
-remains an open follow-up action, tracked in `docs/project-state/setup-input-register.md` and
-`CLAUDE.md`'s "Open client blockers" — not closed by this gate.
+was, at the time this table was signed, an open follow-up action. **It has since been completed
+(2026-08-07)** — see the "Second-role security review" section above. This paragraph is preserved
+as the original sign-off record, not rewritten, so the historical sequence (gate approved via
+OVERRIDE first, review completed afterward) stays visible rather than implying the review happened
+before the gate.
