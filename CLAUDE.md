@@ -192,6 +192,14 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   review happened nor leaves the gate itself unrecorded. This approval was recorded retroactively:
   PR #7 (Phase 1C) and PR #8 (Phase 1D, a separate, independently-authorized phase) had both
   already merged before this gate was formalized.
+- `[2026-08-07]` Received a much larger "Phase 1D" brief (RBAC, fine-grained permissions,
+  confidential-field access, centralized policy/authorization service, project-scoped
+  authorization, separation-of-duties across many more scenarios) — recorded verbatim in
+  `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, explicitly **not started**. Asked
+  directly: (1) whether the Phase 1C OVERRIDE-based approval satisfies this brief's own
+  precondition of a completed security review — the user chose to wait for the real second-role
+  review instead; (2) how this brief relates to the already-merged, narrower Phase 1D (PR #8) —
+  the user chose "supersedes/expands," i.e. build on top of PR #8's `AuthzModule`, not rebuild it.
 
 ## Open client blockers
 
@@ -260,4 +268,4 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1C's G4-1C gate approved via OVERRIDE, second-role review still outstanding; Phase 1D built, validated, and merged, not yet approved)
+Last touched: 2026-08-07 · by Claude (Phase 1C's G4-1C gate approved via OVERRIDE, second-role review still outstanding; Phase 1D (PR #8) merged, gate not yet approved; a larger Phase 1D brief received and recorded as BLOCKED pending that same review)

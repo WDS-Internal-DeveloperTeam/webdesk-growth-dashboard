@@ -2,13 +2,23 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Phase 1D merged, gate not yet approved; Phase 1C's gate recorded via explicit OVERRIDE with a second-role review still outstanding)
+- **Last active agent:** Backend role (Phase 1D (PR #8) merged, gate not yet approved; Phase 1C's gate recorded via explicit OVERRIDE with a second-role review still outstanding; a much larger "Phase 1D" brief received and recorded as BLOCKED pending that same review)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
 - **Active phase:** Phase 1D — RBAC and authorization (Task 6), built, validated, and merged to `main` via PR #8, **gate not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md` and `docs/project-state/phase-1d-validation-report.md`. Phase 1C (Google Workspace SSO, restricted emergency-local TOTP, session management) was merged this session (PR #7) and its G4-1C gate approved this session **via explicit OVERRIDE** (second-role security review still outstanding — see below). Phase 1A and 1B remain approved, each scoped to itself only.
 - **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"`, not a clean pass — see `docs/project-state/phase-1c-approval-checklist.md`. No gate has been recorded for Phase 1D yet.
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
+
+> **A much larger "Phase 1D" brief (RBAC, fine-grained permissions, confidential-field access, a
+> centralized policy/authorization service, separation-of-duties across many more scenarios) was
+> received 2026-08-07 and recorded verbatim in
+> `docs/task-packages/phase-1d-rbac-permissions-expanded.md` — explicitly BLOCKED, not started.
+> Asked directly, the user chose: (1) wait for the real second-role security review of Phase 1C's
+> threat model before starting it (the OVERRIDE-based gate approval does not itself satisfy this
+> brief's own precondition), and (2) treat it as superseding/expanding the already-merged, narrower
+> Phase 1D from PR #8 — build on that `AuthzModule`, don't rebuild it. Do not begin any part of
+> that expanded scope without first confirming the review has actually happened.**
 
 ## Where we left off
 
