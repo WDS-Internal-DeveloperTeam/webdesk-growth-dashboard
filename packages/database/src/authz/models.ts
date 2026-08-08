@@ -7,6 +7,8 @@ export interface AuthzModels {
   readonly Module: ModelStatic<Model>;
   readonly RolePermission: ModelStatic<Model>;
   readonly UserRole: ModelStatic<Model>;
+  readonly ModuleRegistry: ModelStatic<Model>;
+  readonly AuthorizationAction: ModelStatic<Model>;
 }
 
 const cache = new WeakMap<Sequelize, AuthzModels>();
@@ -55,11 +57,43 @@ export function getAuthzModels(sequelize: Sequelize = getConnection()): AuthzMod
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       userId: { type: DataTypes.UUID, allowNull: false },
       roleId: { type: DataTypes.UUID, allowNull: false },
+      projectId: { type: DataTypes.UUID, allowNull: true },
     },
     { tableName: "user_roles", underscored: true, timestamps: true, paranoid: false },
   );
 
-  const models: AuthzModels = { Role, Module, RolePermission, UserRole };
+  const ModuleRegistry = sequelize.define(
+    "ModuleRegistry",
+    {
+      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+      key: { type: DataTypes.STRING(64), allowNull: false, unique: true },
+      name: { type: DataTypes.STRING, allowNull: false },
+      permissionGroupId: { type: DataTypes.UUID, allowNull: false },
+    },
+    { tableName: "module_registry", underscored: true, timestamps: true, paranoid: false },
+  );
+
+  const AuthorizationAction = sequelize.define(
+    "AuthorizationAction",
+    {
+      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+      actorId: { type: DataTypes.UUID, allowNull: false },
+      actionType: { type: DataTypes.STRING(64), allowNull: false },
+      resourceType: { type: DataTypes.STRING(64), allowNull: false },
+      resourceId: { type: DataTypes.STRING(128), allowNull: false },
+      occurredAt: { type: DataTypes.DATE, allowNull: false },
+    },
+    { tableName: "authorization_actions", underscored: true, timestamps: true, paranoid: false },
+  );
+
+  const models: AuthzModels = {
+    Role,
+    Module,
+    RolePermission,
+    UserRole,
+    ModuleRegistry,
+    AuthorizationAction,
+  };
   cache.set(sequelize, models);
   return models;
 }

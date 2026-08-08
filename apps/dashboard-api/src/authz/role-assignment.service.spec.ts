@@ -6,6 +6,7 @@ import type {
 } from "@webdesk/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionService } from "../auth/session/session.service.js";
+import { SeparationOfDutiesService } from "../auth/common/separation-of-duties.service.js";
 import { RoleAssignmentService } from "./role-assignment.service.js";
 
 const ROLE = { id: "role-1", key: "owner", name: "Owner" };
@@ -41,6 +42,7 @@ describe("RoleAssignmentService", () => {
       users as unknown as UserRepository,
       events as unknown as AuthEventRepository,
       sessionService as unknown as SessionService,
+      new SeparationOfDutiesService({ findActorsForResource: vi.fn(), record: vi.fn() } as never),
     );
   });
 
@@ -70,6 +72,25 @@ describe("RoleAssignmentService", () => {
   });
 
   describe("assignRole", () => {
+    it("throws when the actor targets their own account, before touching any repository", async () => {
+      await expect(service.assignRole("actor-1", "role-1", "actor-1", NOW)).rejects.toThrow(
+        /Separation of duties/,
+      );
+      expect(users.findById).not.toHaveBeenCalled();
+      expect(userRoles.assign).not.toHaveBeenCalled();
+    });
+
+    it("records a separation_of_duties_denied event when the actor targets their own account", async () => {
+      await expect(service.assignRole("actor-1", "role-1", "actor-1", NOW)).rejects.toThrow();
+      expect(events.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "separation_of_duties_denied",
+          userId: "actor-1",
+          success: false,
+        }),
+      );
+    });
+
     it("throws when the target user does not exist", async () => {
       users.findById.mockResolvedValue(null);
       await expect(service.assignRole("no-such-user", "role-1", "actor-1", NOW)).rejects.toThrow(
@@ -118,6 +139,25 @@ describe("RoleAssignmentService", () => {
   });
 
   describe("revokeRole", () => {
+    it("throws when the actor targets their own account, before touching any repository", async () => {
+      await expect(service.revokeRole("actor-1", "role-1", "actor-1", NOW)).rejects.toThrow(
+        /Separation of duties/,
+      );
+      expect(users.findById).not.toHaveBeenCalled();
+      expect(userRoles.revoke).not.toHaveBeenCalled();
+    });
+
+    it("records a separation_of_duties_denied event when the actor targets their own account", async () => {
+      await expect(service.revokeRole("actor-1", "role-1", "actor-1", NOW)).rejects.toThrow();
+      expect(events.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "separation_of_duties_denied",
+          userId: "actor-1",
+          success: false,
+        }),
+      );
+    });
+
     it("throws when the target user does not exist", async () => {
       users.findById.mockResolvedValue(null);
       await expect(service.revokeRole("no-such-user", "role-1", "actor-1", NOW)).rejects.toThrow(

@@ -1,11 +1,15 @@
 import type { Provider } from "@nestjs/common";
 import {
+  AuthorizationActionRepository,
+  ModuleRegistryRepository,
   ModuleRepository,
   RolePermissionRepository,
   RoleRepository,
   UserRoleRepository,
 } from "@webdesk/database";
 import {
+  AUTHORIZATION_ACTION_REPOSITORY,
+  MODULE_REGISTRY_REPOSITORY,
   MODULE_REPOSITORY,
   ROLE_PERMISSION_REPOSITORY,
   ROLE_REPOSITORY,
@@ -18,4 +22,9 @@ export const authzRepositoryProviders: Provider[] = [
   { provide: MODULE_REPOSITORY, useFactory: () => new ModuleRepository() },
   { provide: ROLE_PERMISSION_REPOSITORY, useFactory: () => new RolePermissionRepository() },
   { provide: USER_ROLE_REPOSITORY, useFactory: () => new UserRoleRepository() },
+  { provide: MODULE_REGISTRY_REPOSITORY, useFactory: () => new ModuleRegistryRepository() },
+  {
+    provide: AUTHORIZATION_ACTION_REPOSITORY,
+    useFactory: () => new AuthorizationActionRepository(),
+  },
 ];

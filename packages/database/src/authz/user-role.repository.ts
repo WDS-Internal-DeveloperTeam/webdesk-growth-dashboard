@@ -1,4 +1,4 @@
-import type { Model } from "sequelize";
+import { Op, type Model } from "sequelize";
 import { getAuthzModels } from "./models.js";
 import type { UserRoleEntity } from "./entities.js";
 
@@ -8,6 +8,7 @@ function toEntity(instance: Model): UserRoleEntity {
     id: json.id as string,
     userId: json.userId as string,
     roleId: json.roleId as string,
+    projectId: (json.projectId as string | null) ?? null,
     createdAt: (json.createdAt as Date).toISOString(),
     updatedAt: (json.updatedAt as Date).toISOString(),
   };
@@ -16,8 +17,19 @@ function toEntity(instance: Model): UserRoleEntity {
 export class UserRoleRepository {
   private readonly model = getAuthzModels().UserRole;
 
-  async findRoleIdsForUser(userId: string): Promise<readonly string[]> {
-    const rows = await this.model.findAll({ where: { userId }, attributes: ["roleId"] });
+  /**
+   * Role ids held by a user at global scope (`project_id IS NULL`) plus, when `projectId` is
+   * given, role ids additionally held scoped to that specific project — never the other way
+   * around (a grant scoped to project A never applies inside project B). Migration 00016.
+   */
+  async findRoleIdsForUser(userId: string, projectId?: string): Promise<readonly string[]> {
+    const rows = await this.model.findAll({
+      where: {
+        userId,
+        projectId: projectId ? { [Op.in]: [null, projectId] } : null,
+      },
+      attributes: ["roleId"],
+    });
     return rows.map((row) => row.get("roleId") as string);
   }
 
@@ -26,19 +38,29 @@ export class UserRoleRepository {
     return rows.map(toEntity);
   }
 
-  async hasRole(userId: string, roleId: string): Promise<boolean> {
-    const instance = await this.model.findOne({ where: { userId, roleId } });
+  async hasRole(userId: string, roleId: string, projectId: string | null = null): Promise<boolean> {
+    const instance = await this.model.findOne({ where: { userId, roleId, projectId } });
     return instance !== null;
   }
 
-  async assign(userId: string, roleId: string): Promise<UserRoleEntity> {
-    const instance = await this.model.create({ userId, roleId });
+  async assign(
+    userId: string,
+    roleId: string,
+    projectId: string | null = null,
+  ): Promise<UserRoleEntity> {
+    const instance = await this.model.create({ userId, roleId, projectId });
     return toEntity(instance);
   }
 
   /** Returns whether a row was actually removed (idempotent — revoking a role the user doesn't hold is not an error). */
-  async revoke(userId: string, roleId: string): Promise<boolean> {
-    const count = await this.model.destroy({ where: { userId, roleId } });
+  async revoke(userId: string, roleId: string, projectId: string | null = null): Promise<boolean> {
+    const count = await this.model.destroy({ where: { userId, roleId, projectId } });
     return count > 0;
+  }
+
+  /** True if any user (at any project scope) currently holds this role — the Super Admin bootstrap gate's own "no authorized administrator exists yet" check. */
+  async anyUserHoldsRole(roleId: string): Promise<boolean> {
+    const instance = await this.model.findOne({ where: { roleId } });
+    return instance !== null;
   }
 }

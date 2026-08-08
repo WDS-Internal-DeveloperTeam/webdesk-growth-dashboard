@@ -9,6 +9,8 @@ import type {
 import { AUTH_EVENT_REPOSITORY, USER_REPOSITORY } from "../auth/config/auth.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
 import { SessionService } from "../auth/session/session.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as SessionService above.
+import { SeparationOfDutiesService } from "../auth/common/separation-of-duties.service.js";
 import { ROLE_REPOSITORY, USER_ROLE_REPOSITORY } from "./authz.constants.js";
 
 /**
@@ -19,6 +21,18 @@ import { ROLE_REPOSITORY, USER_ROLE_REPOSITORY } from "./authz.constants.js";
  * (`SessionService.revokeAllForUser`, `"role-change"`) — knowledge/12's
  * "Operational considerations": a demoted/promoted user's outstanding
  * session must not keep operating under the stale permission set.
+ *
+ * **Self-role-assignment is blocked** (`SeparationOfDutiesService`) — a
+ * user can never assign or revoke their own role, even a Super Admin.
+ * This resolves the gap `docs/security/threat-model-authorization-rbac.md`
+ * flagged as an open decision for the second-role reviewer in PR #8 — it
+ * is being closed now because
+ * `docs/task-packages/phase-1d-rbac-permissions-expanded.md` §21/§33
+ * explicitly directs it ("Do not allow self-assignment of privileged
+ * roles"), i.e. per the user's own explicit instruction in this brief,
+ * not a unilateral decision made by the implementing agent. Every denial
+ * records a `separation_of_duties_denied` auth event (§22's required
+ * event vocabulary) before rethrowing.
  */
 @Injectable()
 export class RoleAssignmentService {
@@ -28,6 +42,7 @@ export class RoleAssignmentService {
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(AUTH_EVENT_REPOSITORY) private readonly events: AuthEventRepository,
     private readonly sessionService: SessionService,
+    private readonly separationOfDuties: SeparationOfDutiesService,
   ) {}
 
   async listRoles(): Promise<readonly RoleEntity[]> {
@@ -47,6 +62,7 @@ export class RoleAssignmentService {
     actorId: string,
     now = new Date(),
   ): Promise<void> {
+    await this.assertNotSelfTargeting(actorId, targetUserId, "role-assignment actor");
     await this.requireUser(targetUserId);
     const role = await this.requireRole(roleId);
 
@@ -70,6 +86,7 @@ export class RoleAssignmentService {
     actorId: string,
     now = new Date(),
   ): Promise<void> {
+    await this.assertNotSelfTargeting(actorId, targetUserId, "role-revocation actor");
     await this.requireUser(targetUserId);
     const role = await this.requireRole(roleId);
 
@@ -84,6 +101,25 @@ export class RoleAssignmentService {
       reason: `role:${role.key} revoked_by:${actorId}`,
     });
     await this.sessionService.revokeAllForUser(targetUserId, "role-change", now);
+  }
+
+  /** Wraps `SeparationOfDutiesService.assertDistinctActors`: on denial, records a `separation_of_duties_denied` event (§22) before rethrowing, so the block itself is auditable. */
+  private async assertNotSelfTargeting(
+    actorId: string,
+    targetUserId: string,
+    context: string,
+  ): Promise<void> {
+    try {
+      this.separationOfDuties.assertDistinctActors(actorId, targetUserId, context);
+    } catch (error) {
+      await this.events.record({
+        eventType: "separation_of_duties_denied",
+        userId: actorId,
+        success: false,
+        reason: `context:${context} target:${targetUserId}`,
+      });
+      throw error;
+    }
   }
 
   private async requireUser(userId: string): Promise<void> {

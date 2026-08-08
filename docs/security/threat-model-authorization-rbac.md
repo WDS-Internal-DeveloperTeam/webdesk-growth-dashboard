@@ -98,3 +98,19 @@ the full run record.
 - Re-review this pass once the 21 real business modules, the confidential-field axis, or Task 7's
   general audit subsystem land, since each extends the surface this document currently treats as
   out of scope.
+
+---
+
+## Resolution note (added by the Phase 1D expansion, not part of the original pass)
+
+Accepted-gap #1 above ("no separation-of-duties check on role self-assignment") is **now closed**,
+under `docs/task-packages/phase-1d-rbac-permissions-expanded.md` §21/§33's explicit instruction
+("Do not allow self-assignment of privileged roles") — the user's own direction on this brief, not
+a unilateral resolution of a gap this document deliberately left open for the second-role
+reviewer. `RoleAssignmentService.assignRole`/`revokeRole` now call
+`SeparationOfDutiesService.assertDistinctActors` before any other check, recording a
+`separation_of_duties_denied` auth event on denial. This historical row is left unmodified above
+(the gap was real at the time this document was authored); see
+`docs/implementation/phase-1d-security-review.md` for the expanded pass covering this and the rest
+of the Phase 1D-expanded surface. Accepted-gap #5 ("confidential-field axis unimplemented") is
+likewise now partially addressed — see that document's own confidential-field section.

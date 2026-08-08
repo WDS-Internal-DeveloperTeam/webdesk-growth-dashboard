@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { INestApplication } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import {
+  AuthEventRepository,
   buildMigrator,
   closeConnection,
   RoleRepository,
@@ -54,6 +55,7 @@ describe("Phase 1D authz endpoints (e2e, real disposable database)", () => {
   let users: UserRepository;
   let roles: RoleRepository;
   let userRoles: UserRoleRepository;
+  let authEvents: AuthEventRepository;
   let sessionService: SessionService;
   let authEnv: AuthEnv;
 
@@ -109,6 +111,7 @@ describe("Phase 1D authz endpoints (e2e, real disposable database)", () => {
     users = new UserRepository();
     roles = new RoleRepository();
     userRoles = new UserRoleRepository();
+    authEvents = new AuthEventRepository();
 
     const superAdminUser = await users.create({
       email: "authz.super-admin.e2e@webdesksolution.com",
@@ -301,6 +304,108 @@ describe("Phase 1D authz endpoints (e2e, real disposable database)", () => {
         .set("Origin", WEB_APP_ORIGIN as string)
         .set("Cookie", ownerCookie);
       expect(response.status).toBe(403);
+    });
+  });
+
+  describe("privilege escalation: self-role-assignment is blocked (Phase 1D expanded §21/§33)", () => {
+    it("denies a super_admin assigning a role to themselves, even though they hold users_roles:edit", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer())
+        .post(`/authz/users/${superAdminUserId}/roles`)
+        .set("Origin", WEB_APP_ORIGIN as string)
+        .set("Cookie", adminCookie)
+        .send({ roleId: ownerRoleId });
+      expect(response.status).toBe(403);
+      expect(response.body.error.message).toContain("Separation of duties");
+
+      const events = await authEvents.findRecentByUserId(superAdminUserId, 5);
+      expect(events[0]).toMatchObject({ eventType: "separation_of_duties_denied", success: false });
+    });
+
+    it("denies a super_admin revoking their own role", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer())
+        .delete(`/authz/users/${superAdminUserId}/roles/${ownerRoleId}`)
+        .set("Origin", WEB_APP_ORIGIN as string)
+        .set("Cookie", adminCookie);
+      expect(response.status).toBe(403);
+      expect(response.body.error.message).toContain("Separation of duties");
+
+      const events = await authEvents.findRecentByUserId(superAdminUserId, 5);
+      expect(events[0]).toMatchObject({ eventType: "separation_of_duties_denied", success: false });
+    });
+  });
+
+  describe("GET /me/capabilities (Phase 1D expanded §15/§20)", () => {
+    it("rejects with 401 when there is no session cookie", async () => {
+      const response = await request(app.getHttpServer()).get("/me/capabilities");
+      expect(response.status).toBe(401);
+    });
+
+    it("returns the caller's own effective capabilities without requiring users_roles:view", async () => {
+      // noAccessUser holds read_only, which has no grant at all on users_roles — proves this
+      // route is intentionally reachable without any PermissionGuard check (own doc comment).
+      const cookie = await cookieForNewSession(noAccessUserId);
+      const response = await request(app.getHttpServer())
+        .get("/me/capabilities")
+        .set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      expect(response.body.data.business_knowledge).toContain("view");
+      expect(response.body.data.users_roles).toBeUndefined();
+    });
+
+    it("never exposes another user's capabilities — only the caller's own", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer())
+        .get("/me/capabilities")
+        .set("Cookie", adminCookie);
+      expect(response.status).toBe(200);
+      expect(response.body.data.users_roles).toContain("edit");
+    });
+  });
+
+  describe("GET /authz/modules and /authz/module-registry (Phase 1D expanded catalog)", () => {
+    it("rejects with 401 when there is no session cookie", async () => {
+      const modulesResponse = await request(app.getHttpServer()).get("/authz/modules");
+      expect(modulesResponse.status).toBe(401);
+      const registryResponse = await request(app.getHttpServer()).get("/authz/module-registry");
+      expect(registryResponse.status).toBe(401);
+    });
+
+    it("denies a no-access user (read_only holds no users_roles grant)", async () => {
+      const cookie = await cookieForNewSession(noAccessUserId);
+      const modulesResponse = await request(app.getHttpServer())
+        .get("/authz/modules")
+        .set("Cookie", cookie);
+      expect(modulesResponse.status).toBe(403);
+      const registryResponse = await request(app.getHttpServer())
+        .get("/authz/module-registry")
+        .set("Cookie", cookie);
+      expect(registryResponse.status).toBe(403);
+    });
+
+    it("returns the 21 seeded permission groups for super_admin", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer())
+        .get("/authz/modules")
+        .set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(21);
+    });
+
+    it("returns the 43 real modules mapped to their permission group key for super_admin", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer())
+        .get("/authz/module-registry")
+        .set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(43);
+      expect(
+        response.body.data.every(
+          (entry: { permissionGroupKey: string }) =>
+            Boolean(entry.permissionGroupKey) && entry.permissionGroupKey !== "unknown",
+        ),
+      ).toBe(true);
     });
   });
 });

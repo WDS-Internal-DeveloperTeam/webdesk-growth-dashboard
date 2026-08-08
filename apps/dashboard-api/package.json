@@ -11,7 +11,8 @@
     "lint": "eslint src test --max-warnings=0",
     "test": "vitest run --config vitest.config.mts",
     "test:integration": "vitest run --config vitest.integration.config.mts",
-    "provision:emergency-admin": "node dist/auth/scripts/provision-emergency-admin.js"
+    "provision:emergency-admin": "node dist/auth/scripts/provision-emergency-admin.js",
+    "bootstrap:super-admin": "node dist/authz/scripts/bootstrap-super-admin.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

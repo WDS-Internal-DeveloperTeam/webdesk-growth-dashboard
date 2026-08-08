@@ -18,7 +18,7 @@ describe("RecoveryService", () => {
     service = new RecoveryService(
       requests as unknown as RecoveryRequestRepository,
       events as unknown as AuthEventRepository,
-      new SeparationOfDutiesService(),
+      new SeparationOfDutiesService({ findActorsForResource: vi.fn(), record: vi.fn() } as never),
     );
   });
 

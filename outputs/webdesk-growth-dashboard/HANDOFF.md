@@ -2,28 +2,22 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Phase 1D (PR #8) merged, gate not yet approved; Phase 1C's second-role security review completed 2026-08-07; a much larger "Phase 1D" brief recorded as BLOCKED pending explicit authorization to begin)
+- **Last active agent:** Backend role (Phase 1D-expanded — RBAC/permissions/separation-of-duties — built, validated, documented, committed, pushed, and opened as [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9), under explicit authorization at each step; **CI green on every real check, not merged, no gate requested yet**. PR #8's narrower Phase 1D remains merged with its own gate not yet approved. Phase 1C's second-role security review completed 2026-08-07)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1D — RBAC and authorization (Task 6), built, validated, and merged to `main` via PR #8, **gate not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md` and `docs/project-state/phase-1d-validation-report.md`. Phase 1C (Google Workspace SSO, restricted emergency-local TOTP, session management) was merged this session (PR #7), its G4-1C gate approved this session **via explicit OVERRIDE**, and — later in this same session — the second-role security review that OVERRIDE was pending on **has now been completed and recorded**. Phase 1A, 1B, and 1C remain approved, each scoped to itself only.
-- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. No gate has been recorded for Phase 1D yet.
+- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, and documentation complete; committed (`9973b70`), pushed, and open as PR #9. Not merged, no gate requested.** See `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved) and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D gate is also still not approved. Phase 1A, 1B, and 1C remain approved, each scoped to itself only.
+- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. No gate has been recorded for either Phase 1D (PR #8) or Phase 1D-expanded (PR #9) yet.
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
-> **A much larger "Phase 1D" brief (RBAC, fine-grained permissions, confidential-field access, a
-> centralized policy/authorization service, separation-of-duties across many more scenarios) was
-> received 2026-08-07 and recorded verbatim in
-> `docs/task-packages/phase-1d-rbac-permissions-expanded.md` — still explicitly BLOCKED, not
-> started, though its own precondition has now been satisfied. Asked directly, the user chose:
-> (1) wait for the real second-role security review of Phase 1C's threat model before starting it
-> (the OVERRIDE-based gate approval did not itself satisfy this brief's own precondition) — **that
-> review has since been completed** (WebDesk Solution reviewed and approved
-> `docs/security/threat-model-authentication-session-handling.md`, recorded in
-> `docs/project-state/phase-1c-approval-checklist.md` and `project.json`'s `audit_log`); and
-> (2) treat it as superseding/expanding the already-merged, narrower Phase 1D from PR #8 — build on
-> that `AuthzModule`, don't rebuild it. **The precondition being satisfied is not itself
-> authorization to begin — do not start any part of that expanded scope without a separate,
-> explicit "begin" instruction.**
+> **The expanded "Phase 1D" brief (RBAC, fine-grained permissions, confidential-field access, a
+> centralized policy/authorization service, separation-of-duties across many more scenarios),
+> recorded verbatim in `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, was explicitly
+> authorized to begin this session ("Begin Phase 1D expanded scope") and has been built,
+> validated, documented, committed, pushed, and opened as PR #9** — CI green on every real check.
+> See "Where we left off" below for the complete summary. **No gate has been requested and the PR
+> has not been merged** — each remains a next concrete step requiring its own separate explicit
+> authorization per this project's standing discipline.
 
 ## Where we left off
 
@@ -98,9 +92,67 @@ left unmodified, since it accurately reflects the state at approval time), `CLAU
 file. The expanded Phase 1D brief's own precondition (the Phase 1C review) is now satisfied, but no
 "begin" instruction has been given — it remains explicitly not started.
 
-The 21 real business-module endpoints, the confidential-field axis
-(`view_confidential`/`edit_confidential`), the general ADR-0017 audit-log subsystem (Task 7), and
-user-management CRUD (Task 8) remain explicitly out of scope for everything shipped so far.
+**The user then said "Begin Phase 1D expanded scope"** (pasting the same 34-section brief again in
+full). This is the current, active, explicitly authorized work, built on branch
+`phase-1d-rbac-permissions-expanded` (created from `main` at the same commit PR #8 merged to) on
+top of the already-merged narrower `AuthzModule`, not rebuilding it:
+
+- Centralized `AuthorizationService` retires `PermissionService` outright (deleted, not kept
+  parallel) — `evaluate`/`can`/`canViewConfidential`/`canEditConfidential`/
+  `getEffectiveCapabilities` (proven N+1-safe)/`recordAccessDenied`.
+- 43-module registry (`module_registry`, migrations `00014`/`00015`) mapped to the existing
+  21-row permission-group matrix — the mapping is this implementer's own reasoned cross-reference
+  between two documents that don't cross-reference each other, explicitly flagged for the
+  required second-role review.
+- Project-scoped role assignment (`user_roles.project_id`, migration `00016`) — schema and
+  repository layer fully proven against a real database; no HTTP route exercises it yet.
+- Confidential-field actions (`view_confidential`/`edit_confidential`) real and checked, zero
+  grants seeded for any role (deny-by-default preserved, "Configurable" ≠ "Yes").
+- `authorization_actions` append-only table (migration `00017`) and
+  `SeparationOfDutiesService.assertNoPriorConflictingAction` — the reusable cross-request
+  separation-of-duties foundation; no business workflow calls it yet (none exists).
+- **Self-role-assignment is now blocked** — `RoleAssignmentService.assignRole`/`revokeRole` call
+  `SeparationOfDutiesService.assertDistinctActors` first, closing the exact gap the prior STRIDE
+  pass flagged for the second-role reviewer's decision — closed under this brief's own explicit
+  §21/§33 instruction, not a unilateral fix. Every denial now records a
+  `separation_of_duties_denied` auth event (previously declared in the shared event vocabulary but
+  never emitted).
+- Super Admin bootstrap CLI (`bootstrap-super-admin.ts`), verified by real end-to-end execution
+  against a disposable database (not just code review).
+- `GET /me/capabilities`, `GET /authz/modules`, `GET /authz/module-registry`.
+- Session/caching freshness strategy documented: no caching layer exists (every check resolves
+  server-side per request), plus the pre-existing session-revocation-on-role-change behavior —
+  both approved strategies from the brief's own §23/§24, not just one.
+- 9 required documents produced (`docs/implementation/phase-1d-{permission-catalog,rbac-architecture,
+role-permission-matrix,separation-of-duties,confidential-field-authorization,file-inventory,
+security-review}.md`, `docs/project-state/phase-1d-validation-report.md`'s addendum, and
+  `docs/project-state/phase-1d-approval-checklist.md`) plus a resolution note appended to the
+  original `docs/security/threat-model-authorization-rbac.md` (historical rows left unmodified).
+
+**144 unit tests + 41 real-database integration tests + 37 real-database e2e tests, all passing**
+(up from PR #8's 146 unit + 63 integration/e2e — some Phase 1D unit tests were retired alongside
+`PermissionService`'s deletion and replaced by `AuthorizationService`'s own suite; net new
+coverage added for module registry, project-scoping, `authorization_actions`, privilege-escalation,
+`/me/capabilities`, and the catalog endpoints). Two real bugs found and fixed during this work,
+both via actually running tests against the real database rather than code review alone: a
+migration `00015` row-count assertion (`!== 43`) caught an initial 44-row seed from an incorrectly
+split "Import and Export Center" entry; and an integration test's own semantic assertion was
+traced through and corrected (project-scoping the _assignment_ does not create a separate copy of
+a role's own global grants — the corrected test now asserts `true`, not the initially-written
+`false`). `eslint --max-warnings=0` and `tsc --noEmit` both clean; `pnpm format:write` applied to
+all 9 new/edited docs and the reformatted `00015` migration, re-verified with a full lint/typecheck/
+build/test pass afterward.
+
+**The work was then committed (`9973b70`), pushed, and opened as PR #9** — under explicit "push and
+open PR now" authorization. CI green on every real check (lint, typecheck, build, unit, integration,
+migration test, formatting, boundary check, secret scan); the "Dependency vulnerability audit"
+check shows the same pre-existing, `continue-on-error: true` finding as every prior PR. **No gate
+has been requested from the human approver yet, and the PR has not been merged** — merging always
+requires its own separate, explicit authorization.
+
+The 21 real business-module endpoints, the general ADR-0017 audit-log subsystem (Task 7), and
+user-management CRUD beyond role assignment (Task 8) remain explicitly out of scope for everything
+shipped so far — Phase 1D-expanded's own §32 exclusion list.
 
 ## Files committed this session
 
@@ -118,19 +170,22 @@ recording Phase 1C's G4-1C gate approval.
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `docs/project-state/phase-1c-approval-checklist.md` (new), `project.json` (gate/audit_log/version), `CLAUDE.md`, this file, `docs/phase-plans/phase-1-foundation-plan.md`, `docs/project-state/setup-input-register.md` — all recording the Phase 1C G4-1C gate approval via OVERRIDE | Written, staged locally | None — pending commit in this session, on `main` directly (no open feature branch for this gate-recording work) |
 
+All Phase 1D-expanded source, test, migration, and documentation files were committed (`9973b70`),
+pushed, and opened as [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9)
+this session — see `docs/implementation/phase-1d-file-inventory.md` for the complete file list.
+
 ## Next 3 tasks (queued)
 
-1. Commit the Phase 1C gate-approval documentation update directly (this work happened after PR #8
-   merged, on `main`'s tip — no feature branch was opened for it since it's a records-only change).
-2. Obtain the required second-role human review of both STRIDE threat-model passes —
+1. Obtain the required second-role human review of all three STRIDE-family documents:
    `docs/security/threat-model-authentication-session-handling.md` (Phase 1C, gate already
-   approved via OVERRIDE pending this) and `docs/security/threat-model-authorization-rbac.md`
-   (Phase 1D, gate not yet approved at all) — the latter also needs a decision on the flagged
-   self-assignment separation-of-duties gap before its own gate can be considered.
-3. Await explicit review/approval of Phase 1D's own gate, then resolve the remaining setup inputs
+   approved via OVERRIDE pending this), `docs/security/threat-model-authorization-rbac.md` (PR #8's
+   narrower Phase 1D), and `docs/implementation/phase-1d-security-review.md` (this expansion) —
+   neither Phase 1D gate can be considered until its review happens or the approver makes an
+   explicit override decision, as was done for Phase 1C.
+2. Await explicit review/approval of both Phase 1D gates, then resolve the remaining setup inputs
    that block a real deployment (Google Workspace OAuth client, the real emergency-administrator
    account list, `dashboard-web`'s real deployed origin) before the 21 real business modules (which
-   depend on both Phase 1C's auth and Phase 1D's RBAC) become the next candidate work.
+   depend on Phase 1C's auth and both Phase 1D scopes) become the next candidate work.
 
 ## Client blockers (waiting on)
 
@@ -140,10 +195,10 @@ recording Phase 1C's G4-1C gate approval.
 - `[2026-08-07]` — Second-role human review of `docs/security/threat-model-authorization-rbac.md`
   (Phase 1D, PR #8) — separate document, still outstanding once its own gate is reached. Blocked on
   a second, human role distinct from the implementing agent existing at all — `project.json`'s
-  `assigned_team` is entirely `TBD`. Owner: to be assigned. Note: this is a different document from
-  the one `docs/task-packages/phase-1d-rbac-permissions-expanded.md` was waiting on — that brief's
-  own precondition was specifically the Phase 1C review (now done, see the resolved item above),
-  not this Phase 1D one.
+  `assigned_team` is entirely `TBD`. Owner: to be assigned.
+- `[2026-08-07]` — Second-role human review of `docs/implementation/phase-1d-security-review.md`
+  (Phase 1D-expanded, this session's own new pass) — same blocker as above, same not-yet-assigned
+  owner.
 - `[2026-08-06]` — Timezone confirmation (currently defaulted to America/Toronto, not yet
   confirmed by the client). Owner: PM.
 - `[2026-08-07]` — The real Google Workspace OAuth client (client ID, secret, authorized redirect
@@ -207,6 +262,15 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review" and
   `project.json`'s `audit_log`. This satisfies that one precondition but is not itself
   authorization to begin the expanded Phase 1D brief.
+- `[2026-08-07]` Explicit authorization received ("Begin Phase 1D expanded scope") to build
+  `docs/task-packages/phase-1d-rbac-permissions-expanded.md` on top of the already-merged PR #8
+  `AuthzModule`. Built, validated, and documented in full this session — see "Where we left off"
+  for the complete summary. Not yet committed, pushed, or gated.
+- `[2026-08-07]` Self-role-assignment separation-of-duties gap (flagged, not fixed, in the original
+  `docs/security/threat-model-authorization-rbac.md`) closed under the expanded brief's own
+  explicit §21/§33 instruction — a resolution note was appended to that original document rather
+  than rewriting its historical STRIDE row, and the closure is separately documented in full in
+  `docs/implementation/phase-1d-security-review.md`.
 
 ## Token / context usage this session (optional)
 
@@ -219,12 +283,16 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - Do NOT design or scaffold `dashboard-worker` as a permanent process (resolved decision, profile
   `knowledge/04-serverless-queues-workflows-and-cron.md`, WDS-005).
 - Do NOT load `nodejs/integrations/{bigcommerce,shopify,erp}/*` — not this project's scope.
-- Do NOT begin the 21 real business-module endpoints, the confidential-field axis, the general
-  ADR-0017 audit-log subsystem (Task 7), or user-management CRUD beyond role assignment (Task 8)
-  without a separate, explicit authorization — Phase 1D's own eventual approval covers Phase 1D
-  only, per its task package's out-of-scope list.
-- Do NOT resolve the flagged self-assignment separation-of-duties gap (see "Where we left off")
-  unilaterally — it is an open decision for the second-role reviewer, not a bug to silently patch.
+- Do NOT begin the 21 real business-module endpoints, the general ADR-0017 audit-log subsystem
+  (Task 7), or user-management CRUD beyond role assignment (Task 8) without a separate, explicit
+  authorization — Phase 1D-expanded's own eventual approval covers this expansion only, per its
+  task package's §32 out-of-scope list.
+- Do NOT build a grant-editing endpoint for `view_confidential`/`edit_confidential`, a real
+  project-scoped HTTP route, or any real confidential business field without a separate, explicit
+  authorization — the underlying mechanisms are built and tested, but activating them over HTTP
+  was not requested by this expansion's own endpoint list.
+- Do NOT push to `origin` or open a PR for the Phase 1D-expanded branch without separate, explicit
+  authorization for each of those two actions specifically.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
   Workspace account — deliberately tested against mocked/offline configuration only.
 - Do NOT wire a real SMTP send for emergency-admin login alerts — logged only for now; Google
@@ -246,8 +314,11 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
 - Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation), [#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) (Phase 1B database foundation), [#7](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/7) (Phase 1C authentication/session management), [#8](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8) (Phase 1D RBAC/authorization)
-- Open PRs / issues: none currently open — the Phase 1C gate-approval doc update is uncommitted, working-tree-only, next step
+- Open PRs / issues: [#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (Phase 1D-expanded — RBAC/permissions/separation-of-duties), CI green on every real check, not merged, no gate requested yet. The Phase 1C gate-approval doc update is uncommitted, working-tree-only, still pending.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1D (PR #8) merged, gate not yet approved; Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed; a larger Phase 1D brief recorded as BLOCKED pending explicit authorization to begin)
+Last touched: 2026-08-07 · by Claude (Phase 1D-expanded — RBAC/permissions/separation-of-duties —
+built, validated, documented, committed, pushed, and opened as PR #9, CI green on every real
+check; not yet merged, no gate requested. PR #8's narrower Phase 1D remains merged, gate not yet
+approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)

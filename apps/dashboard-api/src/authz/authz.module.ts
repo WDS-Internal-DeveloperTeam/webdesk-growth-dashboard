@@ -3,13 +3,17 @@ import { AuthEventRepository, UserRepository } from "@webdesk/database";
 import { AuthModule } from "../auth/auth.module.js";
 import { AUTH_EVENT_REPOSITORY, USER_REPOSITORY } from "../auth/config/auth.constants.js";
 import { authzRepositoryProviders } from "./database.providers.js";
-import { PermissionService } from "./permission.service.js";
+import { AuthorizationService } from "./authorization.service.js";
 import { PermissionGuard } from "./permission.guard.js";
 import { RoleAssignmentService } from "./role-assignment.service.js";
 import { RoleAssignmentController } from "./role-assignment.controller.js";
+import { CapabilitiesController } from "./capabilities.controller.js";
+import { CatalogService } from "./catalog.service.js";
+import { CatalogController } from "./catalog.controller.js";
 
 /**
- * Phase 1D — RBAC (docs/task-packages/phase-1d-rbac-authorization.md).
+ * Phase 1D — RBAC (docs/task-packages/phase-1d-rbac-authorization.md,
+ * expanded by docs/task-packages/phase-1d-rbac-permissions-expanded.md).
  * Imports `AuthModule` (never the reverse, see its own doc comment) for
  * `SessionGuard`/`SessionService`. Re-declares its own providers for the
  * `USER_REPOSITORY`/`AUTH_EVENT_REPOSITORY` tokens rather than importing
@@ -19,15 +23,16 @@ import { RoleAssignmentController } from "./role-assignment.controller.js";
  */
 @Module({
   imports: [AuthModule],
-  controllers: [RoleAssignmentController],
+  controllers: [RoleAssignmentController, CapabilitiesController, CatalogController],
   providers: [
     ...authzRepositoryProviders,
     { provide: USER_REPOSITORY, useFactory: () => new UserRepository() },
     { provide: AUTH_EVENT_REPOSITORY, useFactory: () => new AuthEventRepository() },
-    PermissionService,
+    AuthorizationService,
     PermissionGuard,
     RoleAssignmentService,
+    CatalogService,
   ],
-  exports: [PermissionService, PermissionGuard],
+  exports: [AuthorizationService, PermissionGuard],
 })
 export class AuthzModule {}
