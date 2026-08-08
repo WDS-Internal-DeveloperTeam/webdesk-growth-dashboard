@@ -96,10 +96,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   framework — the other 20 business modules' endpoints don't exist as code yet) — 146 unit + 63
   real-database integration/e2e tests, all passing.
 - **Phase 1D-expanded** — the larger RBAC/permissions/separation-of-duties brief
-  (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`) — **built, validated, and
-  documented in full** on branch `phase-1d-rbac-permissions-expanded`, under explicit "Begin Phase
-  1D expanded scope" authorization, on top of PR #8's `AuthzModule`. **Not yet committed to git
-  history, not pushed, no PR opened, no gate requested.** Centralizes grant logic into a new
+  (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`) — **built, validated, documented,
+  committed (`9973b70`), pushed, and opened as
+  [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9)**, under
+  explicit authorization at each step, on top of PR #8's `AuthzModule`. CI green on every real
+  check; **not merged, no gate requested.** Centralizes grant logic into a new
   `AuthorizationService` (retires `PermissionService`), adds the 43-module registry, project-scoped
   role assignment (schema/repository only, no HTTP route yet), confidential-field actions (real,
   checked, zero seeded), the `authorization_actions` cross-request separation-of-duties foundation,
@@ -108,7 +109,8 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   real-database integration + 37 real-database e2e tests, all passing. See
   `docs/project-state/phase-1d-validation-report.md`'s addendum,
   `docs/implementation/phase-1d-security-review.md`, and
-  `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved). **Does not include**
+  `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved, PR open). **Does not
+  include**
   the 21 real business modules, the general audit-log subsystem (Task 7), or user-management CRUD
   (Task 8) — all separate, later authorizations. Phase 1A, 1B, and 1C remain approved, each scoped
   to itself only (Phase 1C via OVERRIDE, see above).
@@ -121,20 +123,18 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. Commit the Phase 1D-expanded work on branch `phase-1d-rbac-permissions-expanded`, push it, and
-   open a PR (no merge without a separate, explicit instruction) — implementation and validation
-   are already complete; only the git workflow step remains.
-2. Await explicit review/approval of both Phase 1D gates: the already-merged PR #8 (narrower
-   scope) and the newly-built expansion — each needs a decision on its own security review
+1. Await explicit review/approval of both Phase 1D gates: the already-merged PR #8 (narrower
+   scope) and PR #9, the newly-opened expansion — each needs a decision on its own security review
    (`docs/security/threat-model-authorization-rbac.md` for PR #8;
-   `docs/implementation/phase-1d-security-review.md` for the expansion) and the required
-   second-role review of both documents, neither of which has happened yet.
-3. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
+   `docs/implementation/phase-1d-security-review.md` for PR #9) and the required second-role
+   review of both documents, neither of which has happened yet. PR #9 is not merged and merging
+   always requires its own separate, explicit authorization.
+2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
-4. Provision the actual Supabase database once a later task actually needs a live connection —
+3. Provision the actual Supabase database once a later task actually needs a live connection —
    not before, and not automatically.
-5. Once both Phase 1D gates are approved: the 21 real business-module endpoints are the next
+4. Once both Phase 1D gates are approved: the 21 real business-module endpoints are the next
    candidate per `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
 
 ## Recent decisions
@@ -311,9 +311,8 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   project-scoped HTTP route, or any real confidential business field without a separate, explicit
   authorization — the underlying mechanisms are built and tested (Phase 1D-expanded), but
   activating them over HTTP was not requested by that brief's own endpoint list.
-- Do NOT push the `phase-1d-rbac-permissions-expanded` branch to `origin` or open a PR for it
-  without separate, explicit authorization for each of those two actions specifically — the work
-  is complete and validated locally but neither has happened yet.
+- Do NOT merge PR #9 (`phase-1d-rbac-permissions-expanded` → `main`) without a separate, explicit
+  "merge" instruction — it is open, CI-green, and awaiting gate approval, not auto-mergeable.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
   Workspace account — the OIDC implementation is tested against mocked/offline configuration for
   exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
@@ -333,4 +332,4 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1D-expanded built, validated, and documented in full on branch `phase-1d-rbac-permissions-expanded`, under explicit authorization; not yet committed, pushed, or gated. PR #8's narrower Phase 1D remains merged, gate not yet approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)
+Last touched: 2026-08-07 · by Claude (Phase 1D-expanded built, validated, documented, committed, pushed, and opened as PR #9, CI green on every real check; not merged, no gate requested. PR #8's narrower Phase 1D remains merged, gate not yet approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)

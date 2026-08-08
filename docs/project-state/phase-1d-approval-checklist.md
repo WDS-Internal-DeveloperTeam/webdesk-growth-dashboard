@@ -1,8 +1,8 @@
 # Phase 1D (Expanded) Approval Checklist — RBAC, Permissions & Separation of Duties
 
-**Status:** NOT approved. Implementation complete and validated by this document's author; no gate
-has been requested or recorded yet; the branch has not yet been pushed or opened as a PR at the
-time this checklist was written. This document exists so the completion state is honestly
+**Status:** NOT approved. Implementation complete and validated by this document's author;
+branch pushed and PR #9 opened under explicit authorization, CI green on every real check; no gate
+has been requested or recorded yet. This document exists so the completion state is honestly
 recorded as work finishes, not backfilled after approval — consistent with how every prior phase's
 checklist in this project was produced.
 
@@ -70,8 +70,8 @@ the expansion only — PR #8's own scope is covered by
       traceability, phase plan, and setup-input-register updates are tracked separately (task #138
       in this session's own tracking) — confirm they are complete before treating this item as done
       if reading this checklist out of order.
-- [ ] **16. Exact remote commit SHA is recorded.** Cannot be recorded yet — the branch has not been
-      pushed. See "Commit record" below.
+- [x] **16. Exact remote commit SHA is recorded.** `9973b70`, branch pushed, PR #9 open. See
+      "Commit record" below.
 
 ---
 
@@ -126,10 +126,20 @@ specific human has been assigned either review yet.
 
 ## Commit record
 
-Not yet available — the branch `phase-1d-rbac-permissions-expanded` has not been pushed to
-`origin` at the time this checklist was written. To be completed once the git workflow step
-(commit, push, open PR — no merge, per standing project discipline) happens under its own
-explicit authorization.
+| Commit                                                               | SHA       | Contents                                                        |
+| -------------------------------------------------------------------- | --------- | --------------------------------------------------------------- |
+| Phase 1D (expanded): centralized authorization, project scoping, ... | `9973b70` | The full expansion — see this checklist's own scope note above. |
+
+Branch: `phase-1d-rbac-permissions-expanded`, pushed to `origin` under explicit "push and open PR
+now" authorization.
+
+Pull request: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9),
+base `main` ← `phase-1d-rbac-permissions-expanded`. **Not merged** — merging always requires its
+own separate, explicit authorization per standing project discipline. CI green on every real check
+(lint, typecheck, build, unit tests, integration tests, database migration test, formatting,
+workspace-boundary check, secret-pattern scan); the "Dependency vulnerability audit" check shows
+its usual pre-existing, `continue-on-error: true` finding (19 findings, unchanged — this phase
+added zero new dependencies), not a regression.
 
 ---
 

@@ -2,11 +2,11 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Phase 1D-expanded — RBAC/permissions/separation-of-duties — built, validated, and documented on branch `phase-1d-rbac-permissions-expanded`, under explicit "Begin Phase 1D expanded scope" authorization; **not yet committed, pushed, or gated**. PR #8's narrower Phase 1D remains merged with its own gate not yet approved. Phase 1C's second-role security review completed 2026-08-07)
+- **Last active agent:** Backend role (Phase 1D-expanded — RBAC/permissions/separation-of-duties — built, validated, documented, committed, pushed, and opened as [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9), under explicit authorization at each step; **CI green on every real check, not merged, no gate requested yet**. PR #8's narrower Phase 1D remains merged with its own gate not yet approved. Phase 1C's second-role security review completed 2026-08-07)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation and validation complete; not yet committed to the branch, not yet pushed, no PR opened, no gate requested.** See `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved) and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D gate is also still not approved. Phase 1A, 1B, and 1C remain approved, each scoped to itself only.
-- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. No gate has been recorded for either Phase 1D (PR #8) or Phase 1D-expanded yet.
+- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, and documentation complete; committed (`9973b70`), pushed, and open as PR #9. Not merged, no gate requested.** See `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved) and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D gate is also still not approved. Phase 1A, 1B, and 1C remain approved, each scoped to itself only.
+- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. No gate has been recorded for either Phase 1D (PR #8) or Phase 1D-expanded (PR #9) yet.
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
@@ -14,10 +14,10 @@
 > centralized policy/authorization service, separation-of-duties across many more scenarios),
 > recorded verbatim in `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, was explicitly
 > authorized to begin this session ("Begin Phase 1D expanded scope") and has been built,
-> validated, and documented in full** — see "Where we left off" below for the complete summary.
-> **It has not been committed, pushed, or opened as a PR yet**, and no gate has been requested —
-> both remain the next concrete steps, each requiring its own separate explicit authorization per
-> this project's standing discipline.
+> validated, documented, committed, pushed, and opened as PR #9** — CI green on every real check.
+> See "Where we left off" below for the complete summary. **No gate has been requested and the PR
+> has not been merged** — each remains a next concrete step requiring its own separate explicit
+> authorization per this project's standing discipline.
 
 ## Where we left off
 
@@ -143,10 +143,12 @@ a role's own global grants — the corrected test now asserts `true`, not the in
 all 9 new/edited docs and the reformatted `00015` migration, re-verified with a full lint/typecheck/
 build/test pass afterward.
 
-**Not yet done:** the branch has not been committed, pushed, or opened as a PR; no gate has been
-requested from the human approver; `docs/traceability/phase-0-requirements-traceability.md` and
-`docs/phase-plans/phase-1-foundation-plan.md` updates for the expanded scope, and this file's own
-final state, are being written now as part of the same documentation pass.
+**The work was then committed (`9973b70`), pushed, and opened as PR #9** — under explicit "push and
+open PR now" authorization. CI green on every real check (lint, typecheck, build, unit, integration,
+migration test, formatting, boundary check, secret scan); the "Dependency vulnerability audit"
+check shows the same pre-existing, `continue-on-error: true` finding as every prior PR. **No gate
+has been requested from the human approver yet, and the PR has not been merged** — merging always
+requires its own separate, explicit authorization.
 
 The 21 real business-module endpoints, the general ADR-0017 audit-log subsystem (Task 7), and
 user-management CRUD beyond role assignment (Task 8) remain explicitly out of scope for everything
@@ -164,22 +166,23 @@ recording Phase 1C's G4-1C gate approval.
 
 ## Files pending commit (work in progress)
 
-| File                                                                                                                                                                                                                                                                                  | Status                                                                             | Blocker                                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `docs/project-state/phase-1c-approval-checklist.md` (new), `project.json` (gate/audit_log/version), `CLAUDE.md`, this file, `docs/phase-plans/phase-1-foundation-plan.md`, `docs/project-state/setup-input-register.md` — all recording the Phase 1C G4-1C gate approval via OVERRIDE | Written, staged locally                                                            | None — pending commit in this session, on `main` directly (no open feature branch for this gate-recording work)       |
-| All Phase 1D-expanded source, test, migration, and documentation files — see `docs/implementation/phase-1d-file-inventory.md` for the complete, git-status-derived list                                                                                                               | Written, all tests passing locally, on branch `phase-1d-rbac-permissions-expanded` | None — pending an explicit "commit and push" instruction, then a separate explicit "open a PR" instruction (no merge) |
+| File                                                                                                                                                                                                                                                                                  | Status                  | Blocker                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `docs/project-state/phase-1c-approval-checklist.md` (new), `project.json` (gate/audit_log/version), `CLAUDE.md`, this file, `docs/phase-plans/phase-1-foundation-plan.md`, `docs/project-state/setup-input-register.md` — all recording the Phase 1C G4-1C gate approval via OVERRIDE | Written, staged locally | None — pending commit in this session, on `main` directly (no open feature branch for this gate-recording work) |
+
+All Phase 1D-expanded source, test, migration, and documentation files were committed (`9973b70`),
+pushed, and opened as [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9)
+this session — see `docs/implementation/phase-1d-file-inventory.md` for the complete file list.
 
 ## Next 3 tasks (queued)
 
-1. Commit the Phase 1D-expanded work, push the branch, and open a PR (no merge without a separate
-   explicit instruction) — task #140 in this session's own tracking, not yet done.
-2. Obtain the required second-role human review of all three STRIDE-family documents:
+1. Obtain the required second-role human review of all three STRIDE-family documents:
    `docs/security/threat-model-authentication-session-handling.md` (Phase 1C, gate already
    approved via OVERRIDE pending this), `docs/security/threat-model-authorization-rbac.md` (PR #8's
    narrower Phase 1D), and `docs/implementation/phase-1d-security-review.md` (this expansion) —
    neither Phase 1D gate can be considered until its review happens or the approver makes an
    explicit override decision, as was done for Phase 1C.
-3. Await explicit review/approval of both Phase 1D gates, then resolve the remaining setup inputs
+2. Await explicit review/approval of both Phase 1D gates, then resolve the remaining setup inputs
    that block a real deployment (Google Workspace OAuth client, the real emergency-administrator
    account list, `dashboard-web`'s real deployed origin) before the 21 real business modules (which
    depend on Phase 1C's auth and both Phase 1D scopes) become the next candidate work.
@@ -311,12 +314,11 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
 - Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation), [#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) (Phase 1B database foundation), [#7](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/7) (Phase 1C authentication/session management), [#8](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8) (Phase 1D RBAC/authorization)
-- Open PRs / issues: none currently open — the Phase 1C gate-approval doc update is uncommitted, working-tree-only, next step
+- Open PRs / issues: [#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (Phase 1D-expanded — RBAC/permissions/separation-of-duties), CI green on every real check, not merged, no gate requested yet. The Phase 1C gate-approval doc update is uncommitted, working-tree-only, still pending.
 
 ---
 
 Last touched: 2026-08-07 · by Claude (Phase 1D-expanded — RBAC/permissions/separation-of-duties —
-built, validated, and documented on branch `phase-1d-rbac-permissions-expanded` under explicit
-authorization; not yet committed, pushed, or gated. PR #8's narrower Phase 1D remains merged, gate
-not yet approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since
-completed.)
+built, validated, documented, committed, pushed, and opened as PR #9, CI green on every real
+check; not yet merged, no gate requested. PR #8's narrower Phase 1D remains merged, gate not yet
+approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)
