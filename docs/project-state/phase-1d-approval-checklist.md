@@ -1,10 +1,12 @@
 # Phase 1D (Expanded) Approval Checklist — RBAC, Permissions & Separation of Duties
 
-**Status:** NOT approved. Implementation complete and validated by this document's author;
-branch pushed and PR #9 opened under explicit authorization, CI green on every real check; no gate
-has been requested or recorded yet. This document exists so the completion state is honestly
-recorded as work finishes, not backfilled after approval — consistent with how every prior phase's
-checklist in this project was produced.
+**Status:** NOT approved. Implementation complete and validated by this document's author; PR #9
+merged to `main` (merge commit `67a4955`, 2026-08-08) under explicit authorization at each step,
+including the merge itself; CI green on every real check both before and after a rebase onto PR
+#10's dependency-upgrade work. **No gate has been requested or recorded yet** — merging is a
+separate action from gate approval, same as PR #8. This document exists so the completion state is
+honestly recorded as work finishes, not backfilled after approval — consistent with how every
+prior phase's checklist in this project was produced.
 
 Scope: `docs/task-packages/phase-1d-rbac-permissions-expanded.md` (the expanded brief), built on
 top of the already-merged, already-approved-pending PR #8 narrower Phase 1D. This checklist covers
@@ -70,8 +72,8 @@ the expansion only — PR #8's own scope is covered by
       traceability, phase plan, and setup-input-register updates are tracked separately (task #138
       in this session's own tracking) — confirm they are complete before treating this item as done
       if reading this checklist out of order.
-- [x] **16. Exact remote commit SHA is recorded.** `9973b70`, branch pushed, PR #9 open. See
-      "Commit record" below.
+- [x] **16. Exact remote commit SHA is recorded.** `9973b70` (implementation), merge commit
+      `67a4955` — PR #9 merged to `main`. See "Commit record" below.
 
 ---
 
@@ -126,28 +128,35 @@ specific human has been assigned either review yet.
 
 ## Commit record
 
-| Commit                                                               | SHA       | Contents                                                        |
-| -------------------------------------------------------------------- | --------- | --------------------------------------------------------------- |
-| Phase 1D (expanded): centralized authorization, project scoping, ... | `9973b70` | The full expansion — see this checklist's own scope note above. |
+| Commit                                                                                   | SHA       | Contents                                                        |
+| ---------------------------------------------------------------------------------------- | --------- | --------------------------------------------------------------- |
+| Phase 1D (expanded): centralized authorization, project scoping, ...                     | `9973b70` | The full expansion — see this checklist's own scope note above. |
+| Fix stale HANDOFF.md header claiming Phase 1D-expanded work was unpushed                 | `77e932f` | Docs-accuracy fix.                                              |
+| Merge pull request #9 from WDS-Internal-DeveloperTeam/phase-1d-rbac-permissions-expanded | `67a4955` | Merge commit — PR #9 merged to `main`.                          |
 
 Branch: `phase-1d-rbac-permissions-expanded`, pushed to `origin` under explicit "push and open PR
-now" authorization.
+now" authorization; later rebased onto the post-PR-#10 `main` (no conflicts) and force-pushed
+under explicit "rebase PR #9 onto main and re-run CI" authorization.
 
 Pull request: [WDS-Internal-DeveloperTeam/webdesk-growth-dashboard#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9),
-base `main` ← `phase-1d-rbac-permissions-expanded`. **Not merged** — merging always requires its
-own separate, explicit authorization per standing project discipline. CI green on every real check
-(lint, typecheck, build, unit tests, integration tests, database migration test, formatting,
-workspace-boundary check, secret-pattern scan); the "Dependency vulnerability audit" check shows
-its usual pre-existing, `continue-on-error: true` finding (19 findings, unchanged — this phase
-added zero new dependencies), not a regression.
+base `main` ← `phase-1d-rbac-permissions-expanded`. **Merged** (merge commit `67a4955`,
+2026-08-08), under explicit "merge PR #9" authorization — the first merge attempt was blocked by
+the session's own permission classifier, so the user merged it directly on GitHub. CI green on
+every real check both before and after the rebase (lint, typecheck, build, unit tests, integration
+tests, database migration test, formatting, workspace-boundary check, secret-pattern scan,
+**and** "Dependency vulnerability audit" — PR #10's dependency upgrades, merged first, brought
+`pnpm audit` to 0 findings, so this check passed cleanly rather than showing the usual pre-existing
+finding).
 
 ---
 
 ## Sign-off
 
-**Not signed.** No gate has been requested from the human approver for this expanded scope yet.
-This section will be completed once: (1) the branch is pushed and a PR opened, (2) both required
-second-role security reviews are either completed or the approver makes an explicit override
-decision (as was done for Phase 1C's G4-1C gate), and (3) the approver is asked directly for a
-decision on this gate — consistent with how every prior gate in this project was recorded only
+**Not signed.** PR #9 is merged, but no gate has been requested from the human approver for this
+expanded scope yet — merging and gate approval are separate, independently-authorized actions in
+this project's standing discipline (see PR #8's own history for the same pattern). This section
+will be completed once: (1) both required second-role security reviews are either completed or the
+approver makes an explicit override decision (as was done for Phase 1C's G4-1C gate), and (2) the
+approver is asked directly for a decision on this gate — consistent with how every prior gate in
+this project was recorded only
 after an explicit approval instruction, never assumed from implementation completion alone.

@@ -97,23 +97,24 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   real-database integration/e2e tests, all passing.
 - **Phase 1D-expanded** — the larger RBAC/permissions/separation-of-duties brief
   (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`) — **built, validated, documented,
-  committed (`9973b70`), pushed, and opened as
-  [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9)**, under
-  explicit authorization at each step, on top of PR #8's `AuthzModule`. CI green on every real
-  check; **not merged, no gate requested.** Centralizes grant logic into a new
-  `AuthorizationService` (retires `PermissionService`), adds the 43-module registry, project-scoped
-  role assignment (schema/repository only, no HTTP route yet), confidential-field actions (real,
-  checked, zero seeded), the `authorization_actions` cross-request separation-of-duties foundation,
-  and — closing the exact gap the original threat model flagged — **now blocks self-role-
-  assignment outright**, per this brief's own explicit §21/§33 instruction. 144 unit + 41
-  real-database integration + 37 real-database e2e tests, all passing. See
+  and merged to `main`** via
+  [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (merge
+  commit `67a4955`, 2026-08-08), under explicit authorization at each step (including the merge
+  itself), on top of PR #8's `AuthzModule`. **Gate not yet approved.** Centralizes grant logic into
+  a new `AuthorizationService` (retires `PermissionService`), adds the 43-module registry,
+  project-scoped role assignment (schema/repository only, no HTTP route yet), confidential-field
+  actions (real, checked, zero seeded), the `authorization_actions` cross-request
+  separation-of-duties foundation, and — closing the exact gap the original threat model flagged —
+  **now blocks self-role-assignment outright**, per this brief's own explicit §21/§33 instruction.
+  144 unit + 41 real-database integration + 37 real-database e2e tests, all passing. Before
+  merging, the branch was rebased onto `main` (which by then included PR #10's dependency bumps)
+  and fully re-validated — no conflicts, `pnpm audit` clean throughout. See
   `docs/project-state/phase-1d-validation-report.md`'s addendum,
   `docs/implementation/phase-1d-security-review.md`, and
-  `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved, PR open). **Does not
-  include**
-  the 21 real business modules, the general audit-log subsystem (Task 7), or user-management CRUD
-  (Task 8) — all separate, later authorizations. Phase 1A, 1B, and 1C remain approved, each scoped
-  to itself only (Phase 1C via OVERRIDE, see above).
+  `docs/project-state/phase-1d-approval-checklist.md` (status: merged, gate NOT yet approved).
+  **Does not include** the 21 real business modules, the general audit-log subsystem (Task 7), or
+  user-management CRUD (Task 8) — all separate, later authorizations. Phase 1A, 1B, and 1C remain
+  approved, each scoped to itself only (Phase 1C via OVERRIDE, see above).
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
   ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
@@ -123,12 +124,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. Await explicit review/approval of both Phase 1D gates: the already-merged PR #8 (narrower
-   scope) and PR #9, the newly-opened expansion — each needs a decision on its own security review
-   (`docs/security/threat-model-authorization-rbac.md` for PR #8;
+1. Await explicit review/approval of both Phase 1D gates: PR #8 (narrower scope) and PR #9 (the
+   expansion) are both now merged to `main` — each still needs a decision on its own security
+   review (`docs/security/threat-model-authorization-rbac.md` for PR #8;
    `docs/implementation/phase-1d-security-review.md` for PR #9) and the required second-role
-   review of both documents, neither of which has happened yet. PR #9 is not merged and merging
-   always requires its own separate, explicit authorization.
+   review of both documents, neither of which has happened yet.
 2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
@@ -257,6 +257,14 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   brief, not a unilateral resolution of a gap the original document deliberately left open for the
   second-role reviewer. A resolution note was appended to that original document rather than
   rewriting its historical STRIDE row — see its own "Resolution note" section.
+- `[2026-08-08]` PR #10 (`security/major-dependency-upgrades`) merged to `main` under explicit
+  "merge" authorization — Next.js 16, NestJS 11, Vitest 3, `pnpm audit` 19 → 0. See
+  `docs/project-state/dependency-audit-2026-08-08.md`.
+- `[2026-08-08]` PR #9 (`phase-1d-rbac-permissions-expanded`) rebased onto the post-PR-#10 `main`
+  (no conflicts), fully re-validated (144 unit + 41 integration + 37 e2e, `pnpm audit` clean), and
+  merged to `main` under explicit "merge" authorization — merge commit `67a4955`. Both Phase 1D
+  scopes (PR #8, PR #9) are now on `main`; **neither has an approved gate** — both still need their
+  own second-role security review before a gate decision can be made.
 
 ## Open client blockers
 
@@ -311,8 +319,9 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   project-scoped HTTP route, or any real confidential business field without a separate, explicit
   authorization — the underlying mechanisms are built and tested (Phase 1D-expanded), but
   activating them over HTTP was not requested by that brief's own endpoint list.
-- Do NOT merge PR #9 (`phase-1d-rbac-permissions-expanded` → `main`) without a separate, explicit
-  "merge" instruction — it is open, CI-green, and awaiting gate approval, not auto-mergeable.
+- Do NOT treat PR #9's merge (2026-08-08, `phase-1d-rbac-permissions-expanded` → `main`) as gate
+  approval — it was an explicit, separate "merge" authorization only; the second-role security
+  review and gate decision are still outstanding, same as PR #8.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
   Workspace account — the OIDC implementation is tested against mocked/offline configuration for
   exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
@@ -332,4 +341,4 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1D-expanded built, validated, documented, committed, pushed, and opened as PR #9, CI green on every real check; not merged, no gate requested. PR #8's narrower Phase 1D remains merged, gate not yet approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)
+Last touched: 2026-08-08 · by Claude (PR #10 dependency upgrades and PR #9 Phase 1D-expanded both merged to `main`, each under explicit "merge" authorization. Both Phase 1D scopes — PR #8 and PR #9 — are on `main` with `pnpm audit` clean, but neither has an approved gate: the second-role security review of each phase's own threat-model document is still outstanding. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)

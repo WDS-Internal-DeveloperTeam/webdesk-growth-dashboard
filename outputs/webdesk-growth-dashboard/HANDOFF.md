@@ -2,11 +2,11 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Phase 1D-expanded — RBAC/permissions/separation-of-duties — built, validated, documented, committed, pushed, and opened as [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9), under explicit authorization at each step; **CI green on every real check, not merged, no gate requested yet**. PR #8's narrower Phase 1D remains merged with its own gate not yet approved. Phase 1C's second-role security review completed 2026-08-07)
+- **Last active agent:** Backend role (Phase 1D-expanded — RBAC/permissions/separation-of-duties — built, validated, documented, and **merged to `main`** via [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (merge commit `67a4955`, 2026-08-08), under explicit authorization at each step including the merge itself. Also merged this session: [PR #10](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/10), Next.js 16/NestJS 11/Vitest 3 dependency upgrades, `pnpm audit` 19 → 0. Both Phase 1D scopes (PR #8, PR #9) are now on `main`; **neither has an approved gate**. Phase 1C's second-role security review completed 2026-08-07)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, and documentation complete; committed (`9973b70`), pushed, and open as PR #9. Not merged, no gate requested.** See `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved) and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D gate is also still not approved. Phase 1A, 1B, and 1C remain approved, each scoped to itself only.
-- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. No gate has been recorded for either Phase 1D (PR #8) or Phase 1D-expanded (PR #9) yet.
+- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, and documentation complete; merged to `main` via PR #9 (merge commit `67a4955`).** See `docs/project-state/phase-1d-approval-checklist.md` (status: merged, gate NOT yet approved) and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D gate is also still not approved. Phase 1A, 1B, and 1C remain approved, each scoped to itself only. Also this session: PR #10 (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, `pnpm audit` 19 → 0) merged first; PR #9 was then rebased onto the resulting `main` (no conflicts) before its own merge.
+- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. **No gate has been recorded for either Phase 1D (PR #8) or Phase 1D-expanded (PR #9) yet — both are merged to `main` but their own gate approvals remain separate, not-yet-requested decisions.**
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
@@ -14,10 +14,11 @@
 > centralized policy/authorization service, separation-of-duties across many more scenarios),
 > recorded verbatim in `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, was explicitly
 > authorized to begin this session ("Begin Phase 1D expanded scope") and has been built,
-> validated, documented, committed, pushed, and opened as PR #9** — CI green on every real check.
-> See "Where we left off" below for the complete summary. **No gate has been requested and the PR
-> has not been merged** — each remains a next concrete step requiring its own separate explicit
-> authorization per this project's standing discipline.
+> validated, documented, and merged to `main` via PR #9** — CI green on every real check, including
+> after a rebase onto PR #10's dependency-upgrade work. See "Where we left off" below for the
+> complete summary. **No gate has been requested** — that remains the next concrete step, requiring
+> its own separate explicit decision per this project's standing discipline (the merge itself was
+> a separate, already-given explicit authorization, not a gate approval).
 
 ## Where we left off
 
@@ -146,9 +147,43 @@ build/test pass afterward.
 **The work was then committed (`9973b70`), pushed, and opened as PR #9** — under explicit "push and
 open PR now" authorization. CI green on every real check (lint, typecheck, build, unit, integration,
 migration test, formatting, boundary check, secret scan); the "Dependency vulnerability audit"
-check shows the same pre-existing, `continue-on-error: true` finding as every prior PR. **No gate
-has been requested from the human approver yet, and the PR has not been merged** — merging always
-requires its own separate, explicit authorization.
+check showed the same pre-existing, `continue-on-error: true` finding as every prior PR at the time.
+
+**The user then asked "why dependency vulnerabilities are not fix"** — explained the four groups
+(multer/file-type/`@nestjs/core` pinned by NestJS 10.x with no patch in that line; postcss/sharp
+pinned by Next.js 15.x with no patch in that line; `ajv` blocked by a prior failed override attempt;
+vitest/vite requiring a 2.x→3.x major bump) and why each was deferred as its own risk-bearing
+decision. **The user then asked to attempt all three major bumps.** On a fresh branch
+(`security/major-dependency-upgrades`, off `main`, deliberately not mixed into PR #9's own scope):
+Next.js 16.3.0 (fixes postcss/sharp — confirmed no patch existed anywhere in the 15.x line first),
+NestJS 11.1.28 including the bundled Express 4→5 jump (audited every route decorator for
+wildcard/deprecated-API usage beforehand, none found), and Vitest 3.2.7 (deliberately the minimal
+safe version, not the newest available 4.x, given the fragile `unplugin-swc` DI wiring — verified
+against the real NestJS DI container via the e2e suite, not just unit tests that bypass DI via
+`new`). Two more findings surfaced and fixed during this pass: a bounded `uuid` override
+(`sequelize`'s internal pin) and a bounded `vite` override (`vitest`'s own broad peer range kept an
+unpatched version resolved). `ajv` turned out to resolve itself as a side effect of the NestJS
+bump's newer `@angular-devkit` chain. `pnpm audit`: 19 → **0**. Committed, pushed, opened as PR #10
+under explicit authorization at each step — see `docs/project-state/dependency-audit-2026-08-08.md`.
+
+**The user then said "merge PR #10."** Verified CI green and `mergeStateStatus: CLEAN` first, then
+merged (merge commit `a431427`).
+
+**The user then asked to "rebase PR #9 onto main and re-run CI."** Rebased
+`phase-1d-rbac-permissions-expanded` onto the post-PR-#10 `main` — no conflicts (`apps/dashboard-api/package.json`,
+touched by both PRs, merged cleanly, carrying both the `bootstrap:super-admin` script and the
+NestJS 11/Express 5/Vitest 3 versions). Re-ran the full validation suite before pushing: build/
+lint/typecheck/boundaries/secrets/`pnpm audit` (clean) plus the real-database integration (41/41)
+and e2e (37/37, including all 22 authz tests) suites. Force-pushed (`--force-with-lease`); CI
+re-ran automatically and passed all 11 checks, including "Dependency vulnerability audit" for the
+first time.
+
+**The user then said "merge PR #9."** The first attempt was blocked by the session's own auto-mode
+permission classifier — reported this honestly rather than working around it, and asked the user to
+either merge it themselves or adjust the permission setting. **The user merged it directly on
+GitHub.** Verified via `gh pr view`/`git fetch` (merge commit `67a4955`, 2026-08-08) — an initial
+check right after the user's report showed the PR still open, which turned out to be GitHub API
+propagation lag, not a failed merge; a follow-up check a few seconds later confirmed it.
 
 The 21 real business-module endpoints, the general ADR-0017 audit-log subsystem (Task 7), and
 user-management CRUD beyond role assignment (Task 8) remain explicitly out of scope for everything
@@ -159,8 +194,9 @@ shipped so far — Phase 1D-expanded's own §32 exclusion list.
 See each PR's own commit history (`main`'s log) for exact file lists — not duplicated here to
 avoid drift between records. Merged PRs: #1 (Phase 1A foundation), #2 (Phase 1B task package), #3
 (dependency-audit fixes), #4 (Postgres provider confirmation), #5 (Phase 1B database foundation),
-#7 (Phase 1C authentication/session management), #8 (Phase 1D RBAC/authorization, including a
-follow-up formatting-fix commit CI caught). Plus a working-tree-only update (not yet committed —
+#7 (Phase 1C authentication/session management), #8 (Phase 1D RBAC/authorization), #9 (Phase
+1D-expanded — RBAC/permissions/separation-of-duties, merge commit `67a4955`), #10 (Next.js
+16/NestJS 11/Vitest 3 dependency upgrades, merge commit `a431427`). Plus a working-tree-only update (not yet committed —
 see below): `docs/project-state/phase-1c-approval-checklist.md` and the related doc updates
 recording Phase 1C's G4-1C gate approval.
 
@@ -170,18 +206,19 @@ recording Phase 1C's G4-1C gate approval.
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `docs/project-state/phase-1c-approval-checklist.md` (new), `project.json` (gate/audit_log/version), `CLAUDE.md`, this file, `docs/phase-plans/phase-1-foundation-plan.md`, `docs/project-state/setup-input-register.md` — all recording the Phase 1C G4-1C gate approval via OVERRIDE | Written, staged locally | None — pending commit in this session, on `main` directly (no open feature branch for this gate-recording work) |
 
-All Phase 1D-expanded source, test, migration, and documentation files were committed (`9973b70`),
-pushed, and opened as [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9)
-this session — see `docs/implementation/phase-1d-file-inventory.md` for the complete file list.
+All Phase 1D-expanded source, test, migration, and documentation files, and all dependency-upgrade
+files, are merged to `main` — see `docs/implementation/phase-1d-file-inventory.md` and
+`docs/project-state/dependency-audit-2026-08-08.md` for the complete file lists.
 
 ## Next 3 tasks (queued)
 
 1. Obtain the required second-role human review of all three STRIDE-family documents:
    `docs/security/threat-model-authentication-session-handling.md` (Phase 1C, gate already
    approved via OVERRIDE pending this), `docs/security/threat-model-authorization-rbac.md` (PR #8's
-   narrower Phase 1D), and `docs/implementation/phase-1d-security-review.md` (this expansion) —
+   narrower Phase 1D), and `docs/implementation/phase-1d-security-review.md` (PR #9's expansion) —
    neither Phase 1D gate can be considered until its review happens or the approver makes an
-   explicit override decision, as was done for Phase 1C.
+   explicit override decision, as was done for Phase 1C. Both PR #8 and PR #9 are now merged to
+   `main`, but merging is a separate action from gate approval — neither gate has been requested.
 2. Await explicit review/approval of both Phase 1D gates, then resolve the remaining setup inputs
    that block a real deployment (Google Workspace OAuth client, the real emergency-administrator
    account list, `dashboard-web`'s real deployed origin) before the 21 real business modules (which
@@ -291,8 +328,9 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   project-scoped HTTP route, or any real confidential business field without a separate, explicit
   authorization — the underlying mechanisms are built and tested, but activating them over HTTP
   was not requested by this expansion's own endpoint list.
-- Do NOT push to `origin` or open a PR for the Phase 1D-expanded branch without separate, explicit
-  authorization for each of those two actions specifically.
+- Do NOT treat PR #9's or PR #10's merge (both 2026-08-08) as a Phase 1D gate approval — each
+  merge was its own separate, already-given explicit authorization; the second-role security
+  review and gate decision for both Phase 1D scopes are still outstanding.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
   Workspace account — deliberately tested against mocked/offline configuration only.
 - Do NOT wire a real SMTP send for emergency-admin login alerts — logged only for now; Google
@@ -313,12 +351,14 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   not restated here as a fixed SHA, since it trails whatever this session's own commits add.
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
-- Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation), [#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) (Phase 1B database foundation), [#7](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/7) (Phase 1C authentication/session management), [#8](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8) (Phase 1D RBAC/authorization)
-- Open PRs / issues: [#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (Phase 1D-expanded — RBAC/permissions/separation-of-duties), CI green on every real check, not merged, no gate requested yet. The Phase 1C gate-approval doc update is uncommitted, working-tree-only, still pending.
+- Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation), [#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) (Phase 1B database foundation), [#7](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/7) (Phase 1C authentication/session management), [#8](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8) (Phase 1D RBAC/authorization), [#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (Phase 1D-expanded, merge commit `67a4955`), [#10](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/10) (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, merge commit `a431427`)
+- Open PRs / issues: none currently open. The Phase 1C gate-approval doc update is uncommitted, working-tree-only, still pending. Neither Phase 1D gate (PR #8 nor PR #9) has been approved — both are merged but awaiting their own second-role security review.
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1D-expanded — RBAC/permissions/separation-of-duties —
-built, validated, documented, committed, pushed, and opened as PR #9, CI green on every real
-check; not yet merged, no gate requested. PR #8's narrower Phase 1D remains merged, gate not yet
-approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)
+Last touched: 2026-08-08 · by Claude (Phase 1D-expanded — RBAC/permissions/separation-of-duties —
+merged to `main` via PR #9 (`67a4955`), and PR #10's Next.js 16/NestJS 11/Vitest 3 dependency
+upgrades merged via `a431427` (`pnpm audit` 19 → 0). Both Phase 1D scopes (PR #8, PR #9) are now
+on `main`; neither has an approved gate — the second-role security review of each phase's own
+threat-model document is still outstanding. Phase 1C's G4-1C gate approved via OVERRIDE,
+second-role review has since completed.)
