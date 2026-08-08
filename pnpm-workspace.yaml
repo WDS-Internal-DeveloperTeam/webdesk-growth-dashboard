@@ -18,20 +18,38 @@ allowBuilds:
 # suite after installing, not by reading the override alone. Each bump stays
 # within (or, for qs/body-parser, one patch version beyond express@4.22.2's
 # own pin, since no newer express@4.x exists yet) what its parent package
-# already tolerates. Deliberately NOT overridden: multer, file-type (both
-# exact-pinned internally by @nestjs/* 10.x, no fix exists anywhere in the
-# 10.x line -- forcing them out-of-range risks breaking NestJS internals we
-# don't control), postcss, sharp (both pinned/ranged by next@15.5.22, no
-# newer stable 15.x exists), vite/vitest (a vitest 2.x->3.x major bump,
-# deferred pending review), @nestjs/core's own CVE (fixed only in 11.x, a
-# NestJS major-version decision, deferred pending review), and ajv (a blanket
-# override broke ESLint's own bundled ajv -- `TypeError: Cannot set
-# properties of undefined (setting 'defaultMeta')` -- and pnpm's multi-hop
-# scoped-selector syntax (`@angular-devkit/core>ajv-formats>ajv`) isn't
-# supported, so this one is left unpatched: dev/build-tool-only, moderate
-# severity, exploitable only if the vulnerable `$data` schema option is fed
-# attacker-controlled input, which no code path in this repo does).
-# See docs/project-state/dependency-audit-2026-08-07.md for the full record.
+# already tolerates.
+#
+# multer, file-type, and @nestjs/core's own CVE (all exact-pinned by
+# @nestjs/* 10.x, no fix anywhere in the 10.x line) and postcss/sharp
+# (pinned/ranged by next@15.5.22, no newer stable 15.x line) are NOT
+# overridden here -- overriding an exact-pinned internal framework dependency
+# risks breaking internals we don't control. Both groups were instead
+# resolved by direct major-version bumps (NestJS 10.x -> 11.x, Next.js
+# 15.x -> 16.x) -- see docs/project-state/dependency-audit-2026-08-08.md.
+#
+# uuid: the version sequelize@6.37.8 pins internally (8.3.2) has no patch
+# anywhere in the 8.x line either (patched only >=11.1.1) -- same situation
+# as the above, but here an override IS safe: sequelize's own code only
+# calls `uuid.v1`/`uuid.v4`, both stable, unchanged functions across 8.x-11.x,
+# confirmed by reading sequelize's own source before overriding, not assumed.
+#
+# vite: vitest@3.2.7's own dependency range (`^5.0.0 || ^6.0.0 || ^7.0.0-0`)
+# is broad enough that pnpm kept the already-present unpatched 5.4.21
+# instead of picking a patched 6.x release -- vitest itself explicitly
+# supports the 6.x line, so forcing it here is safe, not a version vitest
+# doesn't expect.
+#
+# ajv: no override needed or present. A blanket override was tried once and
+# reverted (broke ESLint's own bundled ajv), but the moderate finding this
+# was working around is now gone as a side effect of the NestJS 10.x -> 11.x
+# bump: @nestjs/cli@11 pulls a newer @angular-devkit chain
+# (@angular-devkit/core@19.2.x) whose own ajv-formats->ajv path no longer
+# resolves to the vulnerable version -- confirmed via `pnpm why ajv`.
+#
+# See docs/project-state/dependency-audit-2026-08-07.md (original triage) and
+# docs/project-state/dependency-audit-2026-08-08.md (this session's bumps)
+# for the full record.
 overrides:
   glob: '>=10.5.0 <11.0.0'
   picomatch: '>=4.0.4 <5.0.0'
@@ -42,3 +60,5 @@ overrides:
   lodash: '>=4.17.24 <5.0.0'
   qs: '>=6.15.2 <7.0.0'
   body-parser: '>=1.20.6 <2.0.0'
+  uuid: '>=11.1.1 <12.0.0'
+  vite: '>=6.4.3 <7.0.0'
