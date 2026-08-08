@@ -68,21 +68,27 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** development **Current gate:** G-Schema (Phase 1B, passed 2026-08-07) remains the last
-  _approved_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative.
-  Phase 1C is built, validated, and **merged to `main`** (PR #7) but has no recorded gate yet.
+- **Stage:** development **Current gate:** G4-1C (Phase 1C, passed 2026-08-07 **via OVERRIDE, not a
+  clean CONFIRM** — see below) is the last recorded gate — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative.
   Phase 1D (below) is built and validated but **not yet approved** — no new gate has been recorded.
-- **Merged:** Phase 1C — Authentication and session management (Tasks 4/5, combined) — merged to
-  `main` via PR #7 at commit `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`. See
+- **Approved (with an open condition):** Phase 1C — Authentication and session management (Tasks 4/5,
+  combined) — merged to `main` via PR #7 at commit `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`, and
+  the G4-1C gate approved 2026-08-07 — see `docs/project-state/phase-1c-approval-checklist.md`.
+  **The approval was an explicit OVERRIDE, not a clean pass**: the required second-role human
+  review of `docs/security/threat-model-authentication-session-handling.md` (ADR-0010
+  separation-of-duties) has **not** happened — the human approver was asked directly and chose to
+  approve the gate now anyway, with that review recorded as a still-outstanding open item (see
+  "Open client blockers" below), not silently marked complete. See
   `docs/task-packages/phase-1c-authentication-sessions.md` and
-  `docs/project-state/phase-1c-validation-report.md`. Google Workspace OIDC, restricted
-  emergency-administrator TOTP, session issuance/validation/revocation, DB-backed account lockout,
-  CSRF defenses, an operator-run emergency-admin provisioning CLI, and 6 `dashboard-web` auth
-  pages — 115 unit + 15 real-database integration/e2e tests, all passing. First-login provisioning
-  model resolved: **pre-provisioned only**, no JIT account creation.
-- **Active phase:** Phase 1D — RBAC and authorization (Task 6), **built and validated
-  2026-08-07, not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md` and
-  `docs/project-state/phase-1d-validation-report.md`. Deny-by-default `PermissionService`/
+  `docs/project-state/phase-1c-validation-report.md` for the underlying work. Google Workspace
+  OIDC, restricted emergency-administrator TOTP, session issuance/validation/revocation, DB-backed
+  account lockout, CSRF defenses, an operator-run emergency-admin provisioning CLI, and 6
+  `dashboard-web` auth pages — 115 unit + 15 real-database integration/e2e tests, all passing.
+  First-login provisioning model resolved: **pre-provisioned only**, no JIT account creation.
+- **Active phase:** Phase 1D — RBAC and authorization (Task 6), **built, validated, and merged to
+  `main`** via PR #8, **gate not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md`
+  and `docs/project-state/phase-1d-validation-report.md`. Deny-by-default `PermissionService`/
   `PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
   `06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface (proving the
   framework — the other 20 business modules' endpoints don't exist as code yet) — 146 unit + 63
@@ -90,8 +96,8 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   design gap: no separation-of-duties check on role self-assignment — see
   `docs/security/threat-model-authorization-rbac.md`. **Does not include** the 21 real business
   modules, the confidential-field axis, the general audit-log subsystem (Task 7), or
-  user-management CRUD (Task 8) — all separate, later authorizations. Phase 1A and 1B remain
-  approved, each scoped to itself only.
+  user-management CRUD (Task 8) — all separate, later authorizations. Phase 1A, 1B, and 1C remain
+  approved, each scoped to itself only (Phase 1C via OVERRIDE, see above).
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
   ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
@@ -101,10 +107,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. Commit, push, and open a PR for Phase 1D (branch `phase-1d-rbac-authorization`) — pending in
-   this same session; do not merge without a separate, explicit "merge" instruction.
+1. Obtain the required second-role human review of
+   `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) — outstanding since
+   before the G4-1C gate was approved via explicit OVERRIDE; see
+   `docs/project-state/phase-1c-approval-checklist.md`'s "Open condition".
 2. Await explicit review/approval of Phase 1D, including a decision on the flagged
-   self-assignment separation-of-duties gap (`docs/security/threat-model-authorization-rbac.md`).
+   self-assignment separation-of-duties gap (`docs/security/threat-model-authorization-rbac.md`)
+   and, separately, the required second-role review of that same document.
 3. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
@@ -175,9 +184,23 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   surfaced explicitly for the required second-role reviewer's decision, not silently resolved
   either way. 146 unit + 63 real-database integration/e2e tests, all passing. Not yet
   approved/merged.
+- `[2026-08-07]` Phase 1C's G4-1C gate approved by explicit **OVERRIDE** (not a clean CONFIRM) —
+  see `docs/project-state/phase-1c-approval-checklist.md` and `project.json`'s `gates[]`/
+  `audit_log`. Asked directly whether the second-role threat-model review had happened, was
+  waited for, or should be skipped informally — the approver chose "approve the gate now, with
+  the review recorded as a still-outstanding open item," the option that neither pretends the
+  review happened nor leaves the gate itself unrecorded. This approval was recorded retroactively:
+  PR #7 (Phase 1C) and PR #8 (Phase 1D, a separate, independently-authorized phase) had both
+  already merged before this gate was formalized.
 
 ## Open client blockers
 
+- Second-role human review of `docs/security/threat-model-authentication-session-handling.md`
+  (Phase 1C) — the G4-1C gate was approved via explicit OVERRIDE 2026-08-07 with this review
+  recorded as a still-outstanding open item, not completed. See
+  `docs/project-state/phase-1c-approval-checklist.md`. Owner: a second, human role distinct from
+  the implementing agent (ADR-0010 separation-of-duties) — not yet assigned; `project.json`'s
+  `assigned_team` is entirely `TBD`.
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
 - The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a
@@ -237,4 +260,4 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1C merged; Phase 1D built and validated, not yet approved)
+Last touched: 2026-08-07 · by Claude (Phase 1C's G4-1C gate approved via OVERRIDE, second-role review still outstanding; Phase 1D built, validated, and merged, not yet approved)

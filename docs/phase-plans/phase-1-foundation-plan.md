@@ -84,11 +84,14 @@ original Task 4 plan, not rewritten after the fact.
 
 ### Task 5 — Sessions
 
-**Status: Complete, as "Phase 1C" (combined with Task 4) — awaiting approval.** Executed
-2026-08-07 alongside Task 4 — opaque, server-hashed session tokens (never a self-contained JWT),
-httpOnly/Secure/SameSite cookies, the two-step emergency-admin pending→elevated session model, and
-explicit server-side revocation with a recorded reason — see
-`docs/project-state/phase-1c-validation-report.md`. The description below is preserved as the
+**Status: Complete, as "Phase 1C" (combined with Task 4) — G4-1C gate approved 2026-08-07 via
+explicit OVERRIDE, not a clean CONFIRM.** Executed 2026-08-07 alongside Task 4 — opaque,
+server-hashed session tokens (never a self-contained JWT), httpOnly/Secure/SameSite cookies, the
+two-step emergency-admin pending→elevated session model, and explicit server-side revocation with
+a recorded reason — see `docs/project-state/phase-1c-validation-report.md`. The gate was approved
+with the required second-role review of `docs/security/threat-model-authentication-session-handling.md`
+recorded as a still-outstanding open item, not completed — see
+`docs/project-state/phase-1c-approval-checklist.md`. The description below is preserved as the
 original Task 5 plan, not rewritten after the fact.
 
 - **Purpose:** Session issuance/expiry/invalidation following successful authentication.

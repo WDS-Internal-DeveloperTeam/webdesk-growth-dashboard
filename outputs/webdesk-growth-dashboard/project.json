@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G-Schema",
+    "current_gate": "G4-1C",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-07T12:00:00Z",
-    "version": 3
+    "updated_at": "2026-08-07T13:00:00Z",
+    "version": 4
   },
 
   "tech_stack": {
@@ -110,6 +110,17 @@
       "decided_at": "2026-08-07T00:00:00Z",
       "decision": "CONFIRM",
       "notes": "Phase 1B database foundation approved, scope 'Phase 1B only' — see docs/project-state/phase-1b-approval-checklist.md. Real Sequelize connection, migration framework, transaction/repository/health foundations, validated against a real disposable database (19 unit + 8 integration tests). No business entity created. Approved commit 80bd118b252ba2292af40d2ac8cecd217257ebc4 on branch phase-1b-database-foundation, merged as df8cb6f3b84e1a5415cd895b7f7a60b94cfe2e77 via PR #5. Phase 1C (authentication/session) requires its own separate authorization."
+    },
+    {
+      "id": "G4-1C",
+      "type": "qa-security-gate",
+      "scope": "phase-1c-authentication-sessions",
+      "status": "overridden",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-07T00:00:00Z",
+      "decision": "OVERRIDE",
+      "notes": "Phase 1C (Google Workspace SSO, restricted emergency-local TOTP, session management) approved, scope 'Phase 1C only' — see docs/project-state/phase-1c-approval-checklist.md. 115 unit + 15 real-database integration/e2e tests, all passing. Approved merge commit 102397d2f1aaf9fc5d374dd4bd58c764cb031ef9 (PR #7). status=overridden/decision=OVERRIDE (not a clean CONFIRM) because docs/security/threat-model-authentication-session-handling.md's required second-role human review (ADR-0010 separation-of-duties, docs/security/threat-model-plan.md's own procedure) had NOT happened at approval time — the human approver was asked explicitly and chose to approve the gate now with that review recorded as a still-outstanding open item, not to wait or to have it silently marked complete. Tracked in docs/project-state/setup-input-register.md and CLAUDE.md's 'Open client blockers' until resolved."
     }
   ],
 
@@ -211,6 +222,22 @@
       },
       "project_version_before": 2,
       "project_version_after": 3
+    },
+    {
+      "timestamp": "2026-08-07T13:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved Phase 1C (G4-1C gate) via OVERRIDE, scope Phase 1C only, with the required second-role security review of the STRIDE threat model recorded as a still-outstanding open item",
+      "details": {
+        "commit_sha": "102397d2f1aaf9fc5d374dd4bd58c764cb031ef9",
+        "merge_commit_sha": "102397d2f1aaf9fc5d374dd4bd58c764cb031ef9",
+        "branch": "phase-1c-authentication-sessions",
+        "pull_request": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/7",
+        "approval_record": "docs/project-state/phase-1c-approval-checklist.md",
+        "open_item": "Second-role human review of docs/security/threat-model-authentication-session-handling.md has not happened — approver was asked explicitly and chose to approve the gate now rather than wait or have it silently marked complete."
+      },
+      "project_version_before": 3,
+      "project_version_after": 4
     }
   ]
 }
