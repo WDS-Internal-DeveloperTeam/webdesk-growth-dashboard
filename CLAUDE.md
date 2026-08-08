@@ -150,6 +150,19 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   overrides (PR #3, merged) — `pnpm audit` 35 → 18 findings. Two version-line decisions (NestJS
   10.x→11.x, Vitest 2.x→3.x) deferred pending review — see
   `docs/project-state/dependency-audit-2026-08-07.md`.
+- `[2026-08-08]` The two deferred version-line decisions above (plus Next.js 15.x→16.x, needed for
+  the same reason) executed under explicit user authorization, on branch
+  `security/major-dependency-upgrades`: Next.js 16.3.0 (fixes postcss/sharp), NestJS 11.1.28 —
+  including the bundled Express 4→5 jump, audited for wildcard-route/deprecated-API usage
+  beforehand, none found (fixes multer/file-type/core CVE), Vitest 3.2.7 (fixes the critical
+  Vitest-UI finding). Two more findings surfaced and fixed during this pass, not part of the
+  original plan: a bounded `uuid` override (`sequelize`'s internal pin, verified only stable
+  `v1`/`v4` calls before overriding) and a bounded `vite` override (`vitest@3.2.7`'s own broad
+  peer range kept an unpatched `vite@5.4.21` otherwise). Every change re-verified against the real
+  NestJS DI container (`@nestjs/testing`'s real e2e suite, not just unit tests that bypass DI via
+  `new`) and real-database integration suites, not just a clean install — see
+  `docs/project-state/dependency-audit-2026-08-08.md`. `pnpm audit`: 19 → **0**. Not yet committed,
+  pushed, or PR'd at the time this entry was written.
 - `[2026-08-07]` Postgres Marketplace provider confirmed: Supabase, `us-east-1` (N. Virginia) —
   satisfies ADR-0007 (North America East Coast + not Neon, WDS-002). Chosen over the other
   verified qualifying candidate, Amazon Aurora PostgreSQL, by explicit project-owner decision.
