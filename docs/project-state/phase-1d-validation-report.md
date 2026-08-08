@@ -223,3 +223,71 @@ separation-of-duties gap (§8) has been resolved — it hasn't, and is an open d
 oversight; or that the STRIDE threat-model pass
 (`docs/security/threat-model-authorization-rbac.md`) has received its required second-role human
 review — it has not, and that document says so explicitly.
+
+---
+
+## Addendum: Phase 1D expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`)
+
+**Added, not a rewrite** — everything above this line documents PR #8's narrower scope exactly as
+it shipped and was validated at the time. This addendum records the separate, later, expanded
+implementation authorized on top of it (per the user's "supersedes/expands" decision), built on the
+already-merged `AuthzModule` rather than rebuilding it.
+
+### A.1 What changed
+
+- Centralized `AuthorizationService` (retires `PermissionService` — deleted, not kept parallel).
+- 43-module registry mapped to the existing 21-row permission-group matrix (migrations `00014`/`00015`).
+- Project-scoped role assignment (`user_roles.project_id`, migration `00016`) — schema and
+  repository layer proven against a real database; no HTTP route exercises it yet.
+- `authorization_actions` append-only table (migration `00017`) and
+  `SeparationOfDutiesService.assertNoPriorConflictingAction`/`recordAction` — the reusable
+  cross-request separation-of-duties foundation.
+- **Self-role-assignment is now blocked** — `RoleAssignmentService.assignRole`/`revokeRole` call
+  `SeparationOfDutiesService.assertDistinctActors` first, closing the gap the original threat
+  model flagged for the second-role reviewer (see
+  `docs/security/threat-model-authorization-rbac.md`'s "Resolution note").
+- Confidential-field actions (`view_confidential`/`edit_confidential`) — real, checked, zero rows
+  seeded for any role.
+- Super Admin bootstrap CLI (`bootstrap-super-admin.ts`), verified via real end-to-end execution
+  against a disposable database (test user created, CLI run, role assignment and
+  `super_admin_bootstrap` event confirmed via direct `psql` query, all three refusal paths tested).
+- `GET /me/capabilities`, `GET /authz/modules`, `GET /authz/module-registry`.
+- 7 new `AuthEventType` values added to the shared vocabulary; `separation_of_duties_denied` is
+  now actually emitted (§22) alongside the previously-emitted `role_assigned`/`role_revoked`/
+  `privileged_access_denied`/`super_admin_bootstrap`.
+
+See `docs/implementation/phase-1d-file-inventory.md` for the complete, git-status-derived file list.
+
+### A.2 Test results (real disposable database, run at the point this addendum was written)
+
+- `packages/database` integration suite: **41/41 passed** (3 test files), including new module
+  registry, project-scoping, and `authorization_actions` coverage.
+- `apps/dashboard-api` unit suite: **144/144 passed** (20 test files).
+- `apps/dashboard-api` e2e suite (real database): **37/37 passed** (3 test files —
+  `auth.e2e-spec.ts`, `authz.e2e-spec.ts`, `health.e2e-spec.ts`), including new privilege-escalation,
+  `/me/capabilities`, and catalog-endpoint coverage in `authz.e2e-spec.ts`.
+- `eslint` (`src test --max-warnings=0`) and `tsc --noEmit`: clean.
+- Migration up/down round-trips verified for all 4 new migrations (`00014`–`00017`), including a
+  real bug caught and fixed during this work: migration `00015`'s own row-count assertion
+  (`!== 43`) caught an initial 44-row seed (a since-corrected "Import and Export Center" split into
+  two rows); a project-scoping integration test's own semantic assertion was traced through and
+  corrected (expected `hasGrant` to return `false` for a project-scoped assignment's role, corrected
+  to `true` after tracing the actual query logic — project-scoping the _assignment_ does not create
+  a separate copy of a role's own global grants).
+- Every migration-down cycle was re-verified to leave the disposable database in a clean state
+  (`\dt` showing only `SequelizeMeta`) after each full suite run — including recovering from one
+  self-inflicted dirty-database state mid-session (a test that left a duplicate `(user_id, role_id)`
+  row broke a later migration-down's unique-index recreation; fixed by having that test clean up
+  its own rows, not by weakening the migration).
+
+### A.3 What this addendum does NOT claim
+
+Same boundaries as the original report, plus: project-scoped authorization is not reachable over
+HTTP yet (schema/repository-only); confidential-field grants cannot be edited over HTTP yet (no
+grant-editing endpoint exists); the module-registry-to-permission-group mapping (migration `00015`)
+is this implementer's own reasoned cross-reference between two documents that don't cross-reference
+each other, not verbatim from one approved source — flagged for the required second-role review;
+neither this expansion's own security review
+(`docs/implementation/phase-1d-security-review.md`) nor the original
+`docs/security/threat-model-authorization-rbac.md` has received its required second-role human
+review.

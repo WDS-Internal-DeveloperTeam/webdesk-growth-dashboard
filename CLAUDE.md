@@ -94,12 +94,24 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   `PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
   `06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface (proving the
   framework — the other 20 business modules' endpoints don't exist as code yet) — 146 unit + 63
-  real-database integration/e2e tests, all passing. STRIDE pass flags one genuinely **unresolved**
-  design gap: no separation-of-duties check on role self-assignment — see
-  `docs/security/threat-model-authorization-rbac.md`. **Does not include** the 21 real business
-  modules, the confidential-field axis, the general audit-log subsystem (Task 7), or
-  user-management CRUD (Task 8) — all separate, later authorizations. Phase 1A, 1B, and 1C remain
-  approved, each scoped to itself only (Phase 1C via OVERRIDE, see above).
+  real-database integration/e2e tests, all passing.
+- **Phase 1D-expanded** — the larger RBAC/permissions/separation-of-duties brief
+  (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`) — **built, validated, and
+  documented in full** on branch `phase-1d-rbac-permissions-expanded`, under explicit "Begin Phase
+  1D expanded scope" authorization, on top of PR #8's `AuthzModule`. **Not yet committed to git
+  history, not pushed, no PR opened, no gate requested.** Centralizes grant logic into a new
+  `AuthorizationService` (retires `PermissionService`), adds the 43-module registry, project-scoped
+  role assignment (schema/repository only, no HTTP route yet), confidential-field actions (real,
+  checked, zero seeded), the `authorization_actions` cross-request separation-of-duties foundation,
+  and — closing the exact gap the original threat model flagged — **now blocks self-role-
+  assignment outright**, per this brief's own explicit §21/§33 instruction. 144 unit + 41
+  real-database integration + 37 real-database e2e tests, all passing. See
+  `docs/project-state/phase-1d-validation-report.md`'s addendum,
+  `docs/implementation/phase-1d-security-review.md`, and
+  `docs/project-state/phase-1d-approval-checklist.md` (status: NOT approved). **Does not include**
+  the 21 real business modules, the general audit-log subsystem (Task 7), or user-management CRUD
+  (Task 8) — all separate, later authorizations. Phase 1A, 1B, and 1C remain approved, each scoped
+  to itself only (Phase 1C via OVERRIDE, see above).
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
   ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
@@ -109,28 +121,21 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. ~~Obtain the required second-role human review of
-   `docs/security/threat-model-authentication-session-handling.md` (Phase 1C)~~ — **done
-   2026-08-07**, reviewed and approved by WebDesk Solution; see
-   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review". This
-   satisfies precondition (1) that `docs/task-packages/phase-1d-rbac-permissions-expanded.md`
-   itself set before starting that brief — **explicit authorization to actually begin it has still
-   not been given** (a precondition being met is not itself a "begin" instruction; see that
-   document's own "Do not begin implementing this brief until" list, item 2).
-2. Await explicit review/approval of the already-merged Phase 1D (PR #8), including a decision on
-   the flagged self-assignment separation-of-duties gap
-   (`docs/security/threat-model-authorization-rbac.md`) and, separately, the required second-role
-   review of that same document — still outstanding, unaffected by Phase 1C's review completing.
+1. Commit the Phase 1D-expanded work on branch `phase-1d-rbac-permissions-expanded`, push it, and
+   open a PR (no merge without a separate, explicit instruction) — implementation and validation
+   are already complete; only the git workflow step remains.
+2. Await explicit review/approval of both Phase 1D gates: the already-merged PR #8 (narrower
+   scope) and the newly-built expansion — each needs a decision on its own security review
+   (`docs/security/threat-model-authorization-rbac.md` for PR #8;
+   `docs/implementation/phase-1d-security-review.md` for the expansion) and the required
+   second-role review of both documents, neither of which has happened yet.
 3. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
 4. Provision the actual Supabase database once a later task actually needs a live connection —
    not before, and not automatically.
-5. Once explicitly authorized: begin `docs/task-packages/phase-1d-rbac-permissions-expanded.md`,
-   building on the already-merged `AuthzModule` from PR #8 rather than rebuilding it (per the
-   user's explicit "supersedes/expands" decision) — not started automatically just because its own
-   precondition is now met. The 21 real business-module endpoints remain a separate, later
-   candidate per `docs/phase-plans/phase-1-foundation-plan.md`.
+5. Once both Phase 1D gates are approved: the 21 real business-module endpoints are the next
+   candidate per `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
 
 ## Recent decisions
 
@@ -231,6 +236,27 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   accurately reflects the state at approval time); this is recorded as a separate, later event.
   This satisfies one precondition of `docs/task-packages/phase-1d-rbac-permissions-expanded.md`
   but does not itself authorize starting that work.
+- `[2026-08-07]` Explicit authorization received ("Begin Phase 1D expanded scope") to build
+  `docs/task-packages/phase-1d-rbac-permissions-expanded.md` on top of PR #8's `AuthzModule`.
+  **Built, validated, and documented in full this session**: centralized `AuthorizationService`
+  (retires `PermissionService`), 43-module registry (migrations `00014`/`00015`), project-scoped
+  role assignment (`user_roles.project_id`, migration `00016`, schema/repository-only), zero-seeded
+  confidential-field actions, the `authorization_actions` cross-request separation-of-duties
+  foundation (migration `00017`), Super Admin bootstrap CLI (verified via real end-to-end
+  execution), `GET /me/capabilities`/`GET /authz/modules`/`GET /authz/module-registry`. 144 unit +
+  41 real-database integration + 37 real-database e2e tests, all passing; lint/typecheck clean. 9
+  required documents produced. Not yet committed, pushed, or gated — see
+  `docs/project-state/phase-1d-approval-checklist.md`.
+- `[2026-08-07]` Self-role-assignment separation-of-duties gap — flagged, not fixed, in the
+  original `docs/security/threat-model-authorization-rbac.md`'s Elevation of Privilege table — is
+  now **closed**: `RoleAssignmentService.assignRole`/`revokeRole` call
+  `SeparationOfDutiesService.assertDistinctActors` before any other check, recording a
+  `separation_of_duties_denied` auth event on denial. Closed under
+  `docs/task-packages/phase-1d-rbac-permissions-expanded.md` §21/§33's own explicit instruction
+  ("Do not allow self-assignment of privileged roles"), i.e. per the user's own direction on this
+  brief, not a unilateral resolution of a gap the original document deliberately left open for the
+  second-role reviewer. A resolution note was appended to that original document rather than
+  rewriting its historical STRIDE row — see its own "Resolution note" section.
 
 ## Open client blockers
 
@@ -241,6 +267,9 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   — separate document, still outstanding. Owner: a second, human role distinct from the
   implementing agent (ADR-0010 separation-of-duties) — not yet assigned; `project.json`'s
   `assigned_team` is entirely `TBD`.
+- Second-role human review of `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded)
+  — same blocker as above, same not-yet-assigned owner. Neither this nor the PR #8 review is
+  satisfied by the other; each document needs its own.
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
 - The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a
@@ -274,16 +303,17 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - Do NOT provision the actual Supabase database (create the real project/instance) — confirming
   the provider (`project.json`) is not provisioning it; every test so far used a local/CI
   disposable database.
-- Do NOT begin the 21 real business-module endpoints, the confidential-field axis
-  (`view_confidential`/`edit_confidential`), the general ADR-0017 audit-log subsystem (Task 7), or
-  user-management CRUD beyond role assignment (Task 8) without a separate, explicit go-ahead —
-  Phase 1D's own approval (once granted) covers Phase 1D only, per its task package's out-of-scope
-  list.
-- Do NOT unilaterally resolve the flagged self-assignment separation-of-duties gap in
-  `RoleAssignmentService` (a Super Admin can currently re-role themselves with no second
-  approver) — it is an open design decision for the second-role reviewer, documented in
-  `docs/security/threat-model-authorization-rbac.md`'s Elevation of Privilege table, not a bug to
-  silently patch or silently leave without flagging.
+- Do NOT begin the 21 real business-module endpoints, the general ADR-0017 audit-log subsystem
+  (Task 7), or user-management CRUD beyond role assignment (Task 8) without a separate, explicit
+  go-ahead — Phase 1D-expanded's own approval (once granted) covers this expansion only, per its
+  task package's §32 out-of-scope list.
+- Do NOT build a grant-editing endpoint for `view_confidential`/`edit_confidential`, a real
+  project-scoped HTTP route, or any real confidential business field without a separate, explicit
+  authorization — the underlying mechanisms are built and tested (Phase 1D-expanded), but
+  activating them over HTTP was not requested by that brief's own endpoint list.
+- Do NOT push the `phase-1d-rbac-permissions-expanded` branch to `origin` or open a PR for it
+  without separate, explicit authorization for each of those two actions specifically — the work
+  is complete and validated locally but neither has happened yet.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
   Workspace account — the OIDC implementation is tested against mocked/offline configuration for
   exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
@@ -291,9 +321,10 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   integration (`knowledge/09-google-workspace-smtp.md`) doesn't exist yet; the notifier interface
   (`apps/dashboard-api/src/auth/emergency/emergency-admin-login-notifier.ts`) exists specifically
   so a real implementation can be swapped in later without touching the login flow itself.
-- Do NOT treat `docs/security/threat-model-authorization-rbac.md` (Phase 1D) as a completed,
-  approved security review — it is still a self-review only, pending the required second-role
-  human review per ADR-0010's separation-of-duties principle.
+- Do NOT treat `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8) or
+  `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded) as a completed, approved
+  security review — both are self-reviews only, pending their own required second-role human
+  review per ADR-0010's separation-of-duties principle.
   `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) is different: its
   second-role review completed 2026-08-07 (see "Recent decisions") — it may now be treated as
   reviewed.
@@ -302,4 +333,4 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ---
 
-Last touched: 2026-08-07 · by Claude (Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed; Phase 1D (PR #8) merged, gate not yet approved; a larger Phase 1D brief recorded as BLOCKED pending explicit authorization to begin)
+Last touched: 2026-08-07 · by Claude (Phase 1D-expanded built, validated, and documented in full on branch `phase-1d-rbac-permissions-expanded`, under explicit authorization; not yet committed, pushed, or gated. PR #8's narrower Phase 1D remains merged, gate not yet approved. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)

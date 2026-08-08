@@ -108,15 +108,25 @@ original Task 5 plan, not rewritten after the fact.
 
 ### Task 6 — RBAC and authorization
 
-**Status: Complete, as "Phase 1D" — awaiting approval.** Executed 2026-08-07 — deny-by-default
-`PermissionService`/`PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
+**Status: Complete, as "Phase 1D" (PR #8) and further expanded as "Phase 1D-expanded" — both
+awaiting approval.** PR #8 executed 2026-08-07 — deny-by-default `PermissionService`/
+`PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
 `06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface (proving the
 framework; the other 20 business modules' endpoints don't exist as code yet, so `PermissionGuard`
 is not yet applied to them) — see `docs/project-state/phase-1d-validation-report.md` and
-`docs/security/threat-model-authorization-rbac.md` (self-review only, one flagged, unresolved
-separation-of-duties design decision on role self-assignment — see that document's Elevation of
-Privilege table). The description below is preserved as the original Task 6 plan, not rewritten
-after the fact.
+`docs/security/threat-model-authorization-rbac.md` (self-review only, one flagged separation-of-
+duties design decision on role self-assignment, subsequently closed — see next paragraph).
+
+**Phase 1D-expanded**, executed 2026-08-07 on top of PR #8's `AuthzModule` under
+`docs/task-packages/phase-1d-rbac-permissions-expanded.md`'s explicit authorization: centralizes
+grant logic into `AuthorizationService` (retires `PermissionService`), adds the 43-module registry,
+project-scoped role assignment, confidential-field actions (`view_confidential`/
+`edit_confidential`, zero seeded), the `authorization_actions` cross-request separation-of-duties
+foundation, and — closing the gap the original threat model flagged — blocks self-role-assignment
+outright. See `docs/project-state/phase-1d-validation-report.md`'s addendum,
+`docs/implementation/phase-1d-security-review.md`, and
+`docs/project-state/phase-1d-approval-checklist.md` (status: not yet approved, not yet pushed).
+The description below is preserved as the original Task 6 plan, not rewritten after the fact.
 
 - **Purpose:** Role/permission model per `06_Roles_and_Permissions.md` and ADR-0010, enforced server-side in `dashboard-api`.
 - **Dependencies:** Task 3, Task 5.

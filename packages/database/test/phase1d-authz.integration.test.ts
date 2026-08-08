@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  AuthorizationActionRepository,
+  ModuleRegistryRepository,
   ModuleRepository,
   RolePermissionRepository,
   RoleRepository,
@@ -21,6 +24,8 @@ describe("Phase 1D RBAC (real disposable database)", () => {
   const rolePermissions = new RolePermissionRepository();
   const userRoles = new UserRoleRepository();
   const users = new UserRepository();
+  const moduleRegistry = new ModuleRegistryRepository();
+  const authorizationActions = new AuthorizationActionRepository();
 
   beforeAll(async () => {
     const migrator = buildMigrator();
@@ -164,6 +169,139 @@ describe("Phase 1D RBAC (real disposable database)", () => {
       const developer = await roles.findByKey("developer");
       await userRoles.assign(user.id, developer!.id);
       await expect(userRoles.assign(user.id, developer!.id)).rejects.toThrow();
+    });
+  });
+
+  describe("module registry (Phase 1D expanded — the 43 real modules)", () => {
+    it("seeds exactly 43 modules, each resolving to one of the 21 real permission groups", async () => {
+      const entries = await moduleRegistry.listAll();
+      expect(entries).toHaveLength(43);
+
+      const permissionGroupIds = new Set((await modules.listAll()).map((m) => m.id));
+      for (const entry of entries) {
+        expect(permissionGroupIds.has(entry.permissionGroupId)).toBe(true);
+      }
+    });
+
+    it("finds a known entry by key with the expected permission-group mapping", async () => {
+      const entry = await moduleRegistry.findByKey("users_roles_permissions");
+      const usersRolesGroup = await modules.findByKey("users_roles");
+      expect(entry).not.toBeNull();
+      expect(entry!.permissionGroupId).toBe(usersRolesGroup!.id);
+    });
+  });
+
+  describe("project-scoped authorization (Phase 1D expanded — migration 00016)", () => {
+    it("a project-scoped role ASSIGNMENT is only visible within that project, but the role's own (global, seeded) permissions still apply once held", async () => {
+      const user = await users.create({
+        email: `project-scope-${randomUUID()}@webdesksolution.com`,
+        displayName: "Project Scope Test",
+      });
+      const readOnly = await roles.findByKey("read_only");
+      const businessKnowledge = await modules.findByKey("business_knowledge");
+      const projectA = randomUUID();
+      const projectB = randomUUID();
+
+      await userRoles.assign(user.id, readOnly!.id, projectA);
+
+      // The assignment itself is scoped: invisible with no project context, invisible in a
+      // different project, visible only when checked against the exact project it was assigned to.
+      const roleIdsGlobalOnly = await userRoles.findRoleIdsForUser(user.id);
+      expect(roleIdsGlobalOnly).toEqual([]);
+
+      const roleIdsForProjectA = await userRoles.findRoleIdsForUser(user.id, projectA);
+      expect(roleIdsForProjectA).toContain(readOnly!.id);
+
+      const roleIdsForProjectB = await userRoles.findRoleIdsForUser(user.id, projectB);
+      expect(roleIdsForProjectB).toEqual([]);
+
+      // Once a role is resolved as held (roleIdsForProjectA above), checking its grants uses the
+      // role's own permission rows — all seeded globally (project_id IS NULL) in migration 00013,
+      // since no project-specific grant has been created for any role. read_only's real "view"
+      // grant on business_knowledge is therefore still found: project-scoping the *assignment*
+      // controls WHERE a user is considered to hold a role, not a separate copy of what that role
+      // can do. A genuinely project-specific *grant* (a role_permissions row with a real project_id)
+      // would layer on top of this — no write API creates one yet (no admin UI for grant editing
+      // exists in this phase), so that half of the axis is schema-ready but unexercised here.
+      const grantedViaProjectScopedAssignment = await rolePermissions.hasGrant(
+        roleIdsForProjectA,
+        businessKnowledge!.id,
+        "view",
+      );
+      expect(grantedViaProjectScopedAssignment).toBe(true);
+    });
+
+    it("hasRole/revoke correctly distinguish global vs. project-scoped assignment of the same role", async () => {
+      const user = await users.create({
+        email: `project-scope-hasrole-${randomUUID()}@webdesksolution.com`,
+        displayName: "Project Scope HasRole Test",
+      });
+      const developer = await roles.findByKey("developer");
+      const projectA = randomUUID();
+
+      await userRoles.assign(user.id, developer!.id, projectA);
+
+      expect(await userRoles.hasRole(user.id, developer!.id, null)).toBe(false);
+      expect(await userRoles.hasRole(user.id, developer!.id, projectA)).toBe(true);
+
+      // Revoking the global assignment (which doesn't exist) is a no-op; the project-scoped one remains.
+      expect(await userRoles.revoke(user.id, developer!.id, null)).toBe(false);
+      expect(await userRoles.hasRole(user.id, developer!.id, projectA)).toBe(true);
+
+      expect(await userRoles.revoke(user.id, developer!.id, projectA)).toBe(true);
+      expect(await userRoles.hasRole(user.id, developer!.id, projectA)).toBe(false);
+    });
+
+    it("allows the same user to hold the same role globally AND independently in a specific project", async () => {
+      const user = await users.create({
+        email: `project-scope-both-${randomUUID()}@webdesksolution.com`,
+        displayName: "Project Scope Both Test",
+      });
+      const developer = await roles.findByKey("developer");
+      const projectA = randomUUID();
+
+      await userRoles.assign(user.id, developer!.id, null);
+      await userRoles.assign(user.id, developer!.id, projectA);
+
+      expect(await userRoles.hasRole(user.id, developer!.id, null)).toBe(true);
+      expect(await userRoles.hasRole(user.id, developer!.id, projectA)).toBe(true);
+
+      // Clean up both rows: leaving a duplicate (user_id, role_id) pair (differing only by
+      // project_id) breaks this file's own afterAll migration rollback, which recreates
+      // migration 00016's predecessor single-column unique(user_id, role_id) index.
+      await userRoles.revoke(user.id, developer!.id, null);
+      await userRoles.revoke(user.id, developer!.id, projectA);
+    });
+  });
+
+  describe("authorization_actions (Phase 1D expanded — future separation-of-duties foundation)", () => {
+    it("records an action and finds the actor for that specific resource/action-type", async () => {
+      const user = await users.create({
+        email: `authz-action-${randomUUID()}@webdesksolution.com`,
+        displayName: "Authz Action Test",
+      });
+
+      await authorizationActions.record({
+        actorId: user.id,
+        actionType: "implemented",
+        resourceType: "code_change",
+        resourceId: "pr-123",
+      });
+
+      const actors = await authorizationActions.findActorsForResource(
+        "code_change",
+        "pr-123",
+        "implemented",
+      );
+      expect(actors).toEqual([user.id]);
+
+      // A different action type on the same resource finds no one — the query is action-type-specific.
+      const reviewers = await authorizationActions.findActorsForResource(
+        "code_change",
+        "pr-123",
+        "reviewed",
+      );
+      expect(reviewers).toEqual([]);
     });
   });
 });

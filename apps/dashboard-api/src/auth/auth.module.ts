@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AuthorizationActionRepository } from "@webdesk/database";
 import { AuthConfigModule } from "./config/auth-config.module.js";
 import { authRepositoryProviders } from "./database.providers.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
@@ -13,6 +14,7 @@ import { EmergencyAdminService } from "./emergency/emergency-admin.service.js";
 import { EmergencyAuthController } from "./emergency/emergency-auth.controller.js";
 import { LoggingEmergencyAdminLoginNotifier } from "./emergency/emergency-admin-login-notifier.js";
 import { EMERGENCY_ADMIN_LOGIN_NOTIFIER } from "./config/auth.constants.js";
+import { AUTHORIZATION_ACTION_REPOSITORY } from "../authz/authz.constants.js";
 import { RecoveryService } from "./recovery/recovery.service.js";
 
 /**
@@ -30,6 +32,11 @@ import { RecoveryService } from "./recovery/recovery.service.js";
  * role-assignment feature needs session revocation and the session guard;
  * `RecoveryService` here needs the separation-of-duties primitive, which
  * lives in `auth/common` rather than `authz/` for exactly this reason).
+ * `SeparationOfDutiesService` itself now needs `AUTHORIZATION_ACTION_REPOSITORY`
+ * (a Phase 1D-expanded token) — re-declared here directly from
+ * `authz.constants.js` (a plain Symbol export, no circularity) rather than
+ * importing `AuthzModule`, same "re-declare, don't cross-import" pattern
+ * `AuthzModule` itself already uses for `USER_REPOSITORY`.
  */
 @Module({
   imports: [AuthConfigModule],
@@ -38,6 +45,10 @@ import { RecoveryService } from "./recovery/recovery.service.js";
     ...authRepositoryProviders,
     RateLimitService,
     OriginCheckGuard,
+    {
+      provide: AUTHORIZATION_ACTION_REPOSITORY,
+      useFactory: () => new AuthorizationActionRepository(),
+    },
     SeparationOfDutiesService,
     SessionService,
     SessionGuard,

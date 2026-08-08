@@ -105,7 +105,14 @@ export type AuthEventType =
   | "recovery_request_denied"
   | "session_revoked"
   | "role_assigned"
-  | "role_revoked";
+  | "role_revoked"
+  | "permission_granted"
+  | "permission_revoked"
+  | "privileged_access_denied"
+  | "confidential_field_accessed"
+  | "separation_of_duties_denied"
+  | "super_admin_bootstrap"
+  | "authorization_configuration_changed";
 
 /** Reasons a session can end, per knowledge/05's "Logout / session revocation" requirement. */
 export type SessionRevocationReason =
@@ -120,4 +127,24 @@ export interface RoleSummary {
   readonly id: string;
   readonly key: string;
   readonly name: string;
+}
+
+/**
+ * Phase 1D (expanded) — the 21-row permission-granting module ("permission
+ * group") from `06_Roles_and_Permissions.md §3` — see
+ * docs/implementation/phase-1d-permission-catalog.md §3 for why this is a
+ * separate concept from `ModuleRegistrySummary` below.
+ */
+export interface ModuleSummary {
+  readonly id: string;
+  readonly key: string;
+  readonly name: string;
+}
+
+/** The 43 real dashboard feature modules from `02_Version_1_Module_Inclusion_Matrix.md`, each mapped to the permission group that gates it. */
+export interface ModuleRegistrySummary {
+  readonly id: string;
+  readonly key: string;
+  readonly name: string;
+  readonly permissionGroupKey: string;
 }

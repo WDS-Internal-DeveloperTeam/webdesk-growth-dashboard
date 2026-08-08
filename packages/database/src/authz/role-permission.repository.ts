@@ -25,8 +25,17 @@ function toEntity(instance: Model): RolePermissionEntity {
 export class RolePermissionRepository {
   private readonly model = getAuthzModels().RolePermission;
 
-  /** True if ANY of `roleIds` has a global-scope (`project_id IS NULL`) grant for `moduleId`+`action`. */
-  async hasGrant(roleIds: readonly string[], moduleId: string, action: string): Promise<boolean> {
+  /**
+   * True if ANY of `roleIds` has a global-scope (`project_id IS NULL`) grant for `moduleId`+`action`,
+   * OR — when `projectId` is given — a grant scoped to that specific project. A grant scoped to a
+   * *different* project never matches (migration 00016's project-scoping axis).
+   */
+  async hasGrant(
+    roleIds: readonly string[],
+    moduleId: string,
+    action: string,
+    projectId?: string,
+  ): Promise<boolean> {
     if (roleIds.length === 0) {
       return false;
     }
@@ -35,7 +44,7 @@ export class RolePermissionRepository {
         roleId: { [Op.in]: [...roleIds] },
         moduleId,
         action,
-        projectId: null,
+        projectId: projectId ? { [Op.in]: [null, projectId] } : null,
       },
     });
     return instance !== null;
@@ -43,6 +52,27 @@ export class RolePermissionRepository {
 
   async listForRole(roleId: string): Promise<readonly RolePermissionEntity[]> {
     const rows = await this.model.findAll({ where: { roleId } });
+    return rows.map(toEntity);
+  }
+
+  /**
+   * Every grant (global-scope, plus project-scoped when `projectId` is given) held by ANY of
+   * `roleIds` — one query, not one per module/action, per task package §28's own "avoid N+1
+   * permission queries" instruction. The primary input to `/me/capabilities` (task package §20).
+   */
+  async listGrantsForRoles(
+    roleIds: readonly string[],
+    projectId?: string,
+  ): Promise<readonly RolePermissionEntity[]> {
+    if (roleIds.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({
+      where: {
+        roleId: { [Op.in]: [...roleIds] },
+        projectId: projectId ? { [Op.in]: [null, projectId] } : null,
+      },
+    });
     return rows.map(toEntity);
   }
 }
