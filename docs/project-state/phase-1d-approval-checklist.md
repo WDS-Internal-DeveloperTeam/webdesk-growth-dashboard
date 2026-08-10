@@ -100,13 +100,15 @@ the expansion only — PR #8's own scope is covered by
 
 ## Required second-role human reviews (both still outstanding)
 
-| Document                                                                  | Author (self-review) | Second-role reviewer | Status          |
-| ------------------------------------------------------------------------- | -------------------- | -------------------- | --------------- |
-| `docs/security/threat-model-authorization-rbac.md` (PR #8's own pass)     | Implementing agent   | Not yet assigned     | **Outstanding** |
-| `docs/implementation/phase-1d-security-review.md` (this expansion's pass) | Implementing agent   | Not yet assigned     | **Outstanding** |
+| Document                                                                  | Author (self-review) | Second-role reviewer                                         | Status          |
+| ------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------ | --------------- |
+| `docs/security/threat-model-authorization-rbac.md` (PR #8's own pass)     | Implementing agent   | WebDesk Solution — Jitesh D, Brijesh D (assigned 2026-08-08) | **Outstanding** |
+| `docs/implementation/phase-1d-security-review.md` (this expansion's pass) | Implementing agent   | WebDesk Solution — Jitesh D, Brijesh D (assigned 2026-08-08) | **Outstanding** |
 
-Per `CLAUDE.md`'s "Open client blockers", `project.json`'s `assigned_team` is entirely `TBD` — no
-specific human has been assigned either review yet.
+A reviewer is now assigned to both documents (2026-08-08) — see `CLAUDE.md`'s "Recent decisions"
+and "Open client blockers". This resolves the prior `assigned_team: TBD` blocker but is not itself
+a completed review; both rows above remain **Outstanding** until Jitesh D/Brijesh D actually
+perform and record their review.
 
 ## Reviewer's own checklist (for whoever eventually performs the still-outstanding reviews)
 

@@ -230,12 +230,12 @@ files, are merged to `main` — see `docs/implementation/phase-1d-file-inventory
   **resolved 2026-08-07**, reviewed and approved by WebDesk Solution. See
   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review".
 - `[2026-08-07]` — Second-role human review of `docs/security/threat-model-authorization-rbac.md`
-  (Phase 1D, PR #8) — separate document, still outstanding once its own gate is reached. Blocked on
-  a second, human role distinct from the implementing agent existing at all — `project.json`'s
-  `assigned_team` is entirely `TBD`. Owner: to be assigned.
+  (Phase 1D, PR #8) — separate document, still outstanding once its own gate is reached.
+  **Owner assigned 2026-08-08: WebDesk Solution — Jitesh D and Brijesh D.** Assigning an owner is
+  not itself a completed review — still outstanding.
 - `[2026-08-07]` — Second-role human review of `docs/implementation/phase-1d-security-review.md`
-  (Phase 1D-expanded, this session's own new pass) — same blocker as above, same not-yet-assigned
-  owner.
+  (Phase 1D-expanded, PR #9) — same blocker as above, same owner (WebDesk Solution — Jitesh D and
+  Brijesh D, assigned 2026-08-08). Still outstanding.
 - `[2026-08-06]` — Timezone confirmation (currently defaulted to America/Toronto, not yet
   confirmed by the client). Owner: PM.
 - `[2026-08-07]` — The real Google Workspace OAuth client (client ID, secret, authorized redirect
@@ -308,6 +308,21 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   explicit §21/§33 instruction — a resolution note was appended to that original document rather
   than rewriting its historical STRIDE row, and the closure is separately documented in full in
   `docs/implementation/phase-1d-security-review.md`.
+- `[2026-08-08]` PR #10 (`security/major-dependency-upgrades`) merged to `main` under explicit
+  "merge" authorization — Next.js 16, NestJS 11, Vitest 3, `pnpm audit` 19 → 0.
+- `[2026-08-08]` PR #9 rebased onto the post-PR-#10 `main` (no conflicts), re-validated, and merged
+  to `main` under explicit "merge" authorization — merge commit `67a4955`. The first merge attempt
+  was blocked by the session's own permission classifier; the user merged it directly on GitHub.
+- `[2026-08-08]` Second-role security reviewer assigned for both outstanding Phase 1D reviews
+  (`docs/security/threat-model-authorization-rbac.md` for PR #8,
+  `docs/implementation/phase-1d-security-review.md` for PR #9): WebDesk Solution — Jitesh D and
+  Brijesh D. Resolves the `assigned_team: TBD` blocker; the actual reviews themselves are still
+  outstanding — assigning an owner is not a completed review.
+- `[2026-08-08]` Mid-session, the project directory became completely inaccessible (`EPERM` on
+  every file read, `git status`, even `ls` on `~/Documents`/`~/Desktop`/`~/Downloads`) — diagnosed
+  as a macOS Files-and-Folders privacy permission (TCC) revocation for the host app, not a project
+  or git issue. Reported the diagnosis and exact remediation steps rather than attempting to work
+  around it; the user restored access via macOS System Settings and confirmed via `git status`.
 
 ## Token / context usage this session (optional)
 
@@ -359,6 +374,7 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 Last touched: 2026-08-08 · by Claude (Phase 1D-expanded — RBAC/permissions/separation-of-duties —
 merged to `main` via PR #9 (`67a4955`), and PR #10's Next.js 16/NestJS 11/Vitest 3 dependency
 upgrades merged via `a431427` (`pnpm audit` 19 → 0). Both Phase 1D scopes (PR #8, PR #9) are now
-on `main`; neither has an approved gate — the second-role security review of each phase's own
-threat-model document is still outstanding. Phase 1C's G4-1C gate approved via OVERRIDE,
-second-role review has since completed.)
+on `main`; neither has an approved gate. Second-role security reviewer assigned (WebDesk Solution
+— Jitesh D and Brijesh D) for both outstanding threat-model documents — the actual reviews are
+still outstanding. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since
+completed.)

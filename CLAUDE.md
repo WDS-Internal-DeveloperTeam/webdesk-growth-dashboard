@@ -128,7 +128,8 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
    expansion) are both now merged to `main` — each still needs a decision on its own security
    review (`docs/security/threat-model-authorization-rbac.md` for PR #8;
    `docs/implementation/phase-1d-security-review.md` for PR #9) and the required second-role
-   review of both documents, neither of which has happened yet.
+   review of both documents. Owner assigned 2026-08-08: WebDesk Solution — Jitesh D and Brijesh
+   D — but neither review has actually happened yet.
 2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
@@ -265,6 +266,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   merged to `main` under explicit "merge" authorization — merge commit `67a4955`. Both Phase 1D
   scopes (PR #8, PR #9) are now on `main`; **neither has an approved gate** — both still need their
   own second-role security review before a gate decision can be made.
+- `[2026-08-08]` Second-role security reviewer assigned for both outstanding Phase 1D reviews
+  (`docs/security/threat-model-authorization-rbac.md` for PR #8,
+  `docs/implementation/phase-1d-security-review.md` for PR #9): WebDesk Solution — Jitesh D and
+  Brijesh D. This resolves the "not yet assigned"/`assigned_team: TBD` blocker but is not itself a
+  completed review — both documents still await their actual second-role sign-off.
 
 ## Open client blockers
 
@@ -272,12 +278,12 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   (Phase 1C)~~ — resolved 2026-08-07, reviewed and approved by WebDesk Solution. See
   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review".
 - Second-role human review of `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8)
-  — separate document, still outstanding. Owner: a second, human role distinct from the
-  implementing agent (ADR-0010 separation-of-duties) — not yet assigned; `project.json`'s
-  `assigned_team` is entirely `TBD`.
-- Second-role human review of `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded)
-  — same blocker as above, same not-yet-assigned owner. Neither this nor the PR #8 review is
-  satisfied by the other; each document needs its own.
+  — separate document, still outstanding. Owner: WebDesk Solution — Jitesh D and Brijesh D
+  (assigned 2026-08-08). Neither this nor the PR #9 review is satisfied by the other; each
+  document needs its own.
+- Second-role human review of `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded,
+  PR #9) — same blocker as above, same owner (WebDesk Solution — Jitesh D and Brijesh D, assigned
+  2026-08-08). Still outstanding — assigning an owner is not itself a completed review.
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
 - The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a

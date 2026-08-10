@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-07T14:00:00Z",
-    "version": 5
+    "updated_at": "2026-08-08T17:00:00Z",
+    "version": 6
   },
 
   "tech_stack": {
@@ -252,6 +252,22 @@
       },
       "project_version_before": 4,
       "project_version_after": 5
+    },
+    {
+      "timestamp": "2026-08-08T17:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "assigned the second-role human security reviewer for both outstanding Phase 1D threat-model documents",
+      "details": {
+        "documents_reviewed": [
+          "docs/security/threat-model-authorization-rbac.md",
+          "docs/implementation/phase-1d-security-review.md"
+        ],
+        "reviewer": "WebDesk Solution — Jitesh D and Brijesh D",
+        "note": "Resolves the assigned_team:TBD blocker recorded against ADR-0010's separation-of-duties requirement for these two documents specifically. This is an owner assignment only, not a completed review — both documents remain outstanding until the review is actually performed and recorded."
+      },
+      "project_version_before": 5,
+      "project_version_after": 6
     }
   ]
 }
