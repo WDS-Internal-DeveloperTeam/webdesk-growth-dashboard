@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-08T17:00:00Z",
-    "version": 6
+    "updated_at": "2026-08-10T09:00:00Z",
+    "version": 7
   },
 
   "tech_stack": {
@@ -268,6 +268,24 @@
       },
       "project_version_before": 5,
       "project_version_after": 6
+    },
+    {
+      "timestamp": "2026-08-10T09:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "completed the required second-role human security review of both outstanding Phase 1D threat-model documents",
+      "details": {
+        "documents_reviewed": [
+          "docs/security/threat-model-authorization-rbac.md",
+          "docs/implementation/phase-1d-security-review.md"
+        ],
+        "reviewer": "WebDesk Solution — Jitesh D and Brijesh D",
+        "decision": "Approved, no issues raised on either document",
+        "approval_record": "docs/project-state/phase-1d-approval-checklist.md#required-second-role-human-reviews",
+        "note": "Satisfies ADR-0010's separation-of-duties requirement for both Phase 1D scopes (PR #8 and PR #9). This is not itself gate approval for either PR — that remains a separate, not-yet-requested decision, consistent with how PR #8's own gate and PR #9's own gate are each recorded independently in this file's gates[] array."
+      },
+      "project_version_before": 6,
+      "project_version_after": 7
     }
   ]
 }

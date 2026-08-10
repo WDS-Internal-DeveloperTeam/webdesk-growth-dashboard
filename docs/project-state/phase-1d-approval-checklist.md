@@ -3,10 +3,12 @@
 **Status:** NOT approved. Implementation complete and validated by this document's author; PR #9
 merged to `main` (merge commit `67a4955`, 2026-08-08) under explicit authorization at each step,
 including the merge itself; CI green on every real check both before and after a rebase onto PR
-#10's dependency-upgrade work. **No gate has been requested or recorded yet** — merging is a
-separate action from gate approval, same as PR #8. This document exists so the completion state is
-honestly recorded as work finishes, not backfilled after approval — consistent with how every
-prior phase's checklist in this project was produced.
+#10's dependency-upgrade work. **The required second-role security review (item 14) is now
+complete** — WebDesk Solution (Jitesh D and Brijesh D) reviewed and confirmed both Phase 1D
+threat-model documents 2026-08-10. **No gate has been requested or recorded yet** — completing the
+review, like merging, is a separate action from gate approval, same as PR #8. This document exists
+so the completion state is honestly recorded as work finishes, not backfilled after approval —
+consistent with how every prior phase's checklist in this project was produced.
 
 Scope: `docs/task-packages/phase-1d-rbac-permissions-expanded.md` (the expanded brief), built on
 top of the already-merged, already-approved-pending PR #8 narrower Phase 1D. This checklist covers
@@ -63,10 +65,11 @@ the expansion only — PR #8's own scope is covered by
       untouched).
 - [x] **13. Tests pass.** 144 unit + 41 real-database integration + 37 real-database e2e, all
       green — see the validation report addendum for the exact run.
-- [ ] **14. Security review passes.** `docs/implementation/phase-1d-security-review.md` is a
-      complete self-review; the required second-role human review (ADR-0010) has **not** happened.
-      Neither has the still-outstanding second-role review of the original
-      `docs/security/threat-model-authorization-rbac.md` (PR #8's own pass).
+- [x] **14. Security review passes.** Both `docs/implementation/phase-1d-security-review.md` and
+      the original `docs/security/threat-model-authorization-rbac.md` (PR #8's own pass) have now
+      received their required second-role human review (ADR-0010) — WebDesk Solution (Jitesh D and
+      Brijesh D), 2026-08-10, both confirmed with no issues raised. See "Required second-role human
+      reviews" below.
 - [x] **15. Documentation is updated.** All 9 documents from task package §29 exist (this one plus
       the 8 listed in `docs/implementation/phase-1d-file-inventory.md §9`); `HANDOFF.md`,
       traceability, phase plan, and setup-input-register updates are tracked separately (task #138
@@ -98,34 +101,36 @@ the expansion only — PR #8's own scope is covered by
 
 ---
 
-## Required second-role human reviews (both still outstanding)
+## Required second-role human reviews (both complete)
 
-| Document                                                                  | Author (self-review) | Second-role reviewer                                         | Status          |
-| ------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------ | --------------- |
-| `docs/security/threat-model-authorization-rbac.md` (PR #8's own pass)     | Implementing agent   | WebDesk Solution — Jitesh D, Brijesh D (assigned 2026-08-08) | **Outstanding** |
-| `docs/implementation/phase-1d-security-review.md` (this expansion's pass) | Implementing agent   | WebDesk Solution — Jitesh D, Brijesh D (assigned 2026-08-08) | **Outstanding** |
+| Document                                                                  | Author (self-review) | Second-role reviewer                   | Status                              |
+| ------------------------------------------------------------------------- | -------------------- | -------------------------------------- | ----------------------------------- |
+| `docs/security/threat-model-authorization-rbac.md` (PR #8's own pass)     | Implementing agent   | WebDesk Solution — Jitesh D, Brijesh D | **Reviewed — confirmed 2026-08-10** |
+| `docs/implementation/phase-1d-security-review.md` (this expansion's pass) | Implementing agent   | WebDesk Solution — Jitesh D, Brijesh D | **Reviewed — confirmed 2026-08-10** |
 
-A reviewer is now assigned to both documents (2026-08-08) — see `CLAUDE.md`'s "Recent decisions"
-and "Open client blockers". This resolves the prior `assigned_team: TBD` blocker but is not itself
-a completed review; both rows above remain **Outstanding** until Jitesh D/Brijesh D actually
-perform and record their review.
+Both documents reviewed and confirmed by WebDesk Solution (Jitesh D and Brijesh D) 2026-08-10, with
+no issues raised on either — see each document's own "Review status"/"Next steps" section for the
+recorded confirmation. This satisfies ADR-0010's separation-of-duties requirement for both Phase 1D
+scopes (PR #8 and PR #9). **Completing this review is a separate action from gate approval** —
+neither the PR #8 gate nor the PR #9 gate is approved by this alone; that remains its own explicit
+decision.
 
-## Reviewer's own checklist (for whoever eventually performs the still-outstanding reviews)
+## Reviewer's own checklist (completed 2026-08-10 by Jitesh D and Brijesh D)
 
-- [ ] **Re-run the validation commands** yourself: `pnpm --filter @webdesk/dashboard-api test`,
+- [x] **Re-run the validation commands** yourself: `pnpm --filter @webdesk/dashboard-api test`,
       `pnpm --filter @webdesk/database test:integration` and
       `pnpm --filter @webdesk/dashboard-api test:integration` (both against your own disposable
       database — see `packages/database/README.md`), `pnpm lint`, `pnpm typecheck`.
-- [ ] **Review both threat-model documents** for the STRIDE coverage itself, not just re-confirm
+- [x] **Review both threat-model documents** for the STRIDE coverage itself, not just re-confirm
       tests pass — focus especially on each document's own "Summary of accepted gaps"/"accepted
       residual items" and decide whether each is still acceptable.
-- [ ] **Specifically verify the module-registry-to-permission-group mapping** (migration `00015`),
+- [x] **Specifically verify the module-registry-to-permission-group mapping** (migration `00015`),
       flagged in that migration's own doc comment and
       `docs/implementation/phase-1d-permission-catalog.md §3` as this implementer's own reasoned
       cross-reference, not verbatim from a single approved source.
-- [ ] **Confirm no real Google OAuth client, real Supabase provisioning, or real credential was
+- [x] **Confirm no real Google OAuth client, real Supabase provisioning, or real credential was
       used anywhere in the diff.**
-- [ ] **Update this checklist's items 14/16 and "Sign-off"** once your review and the git workflow
+- [x] **Update this checklist's items 14/16 and "Sign-off"** once your review and the git workflow
       (push/PR) are both complete.
 
 ## Commit record
@@ -154,11 +159,11 @@ finding).
 
 ## Sign-off
 
-**Not signed.** PR #9 is merged, but no gate has been requested from the human approver for this
-expanded scope yet — merging and gate approval are separate, independently-authorized actions in
-this project's standing discipline (see PR #8's own history for the same pattern). This section
-will be completed once: (1) both required second-role security reviews are either completed or the
-approver makes an explicit override decision (as was done for Phase 1C's G4-1C gate), and (2) the
-approver is asked directly for a decision on this gate — consistent with how every prior gate in
-this project was recorded only
-after an explicit approval instruction, never assumed from implementation completion alone.
+**Not signed.** PR #9 is merged and both required second-role security reviews are now complete
+(2026-08-10, WebDesk Solution — Jitesh D and Brijesh D, no issues raised), but no gate has been
+requested from the human approver yet — completing the review, like merging, is a separate,
+independently-authorized action in this project's standing discipline (see PR #8's own history for
+the same pattern). This section will be completed once the approver is asked directly for a
+decision on this gate — consistent with how every prior gate in this project was recorded only
+after an explicit approval instruction, never assumed from review or implementation completion
+alone.

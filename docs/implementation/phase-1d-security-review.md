@@ -8,9 +8,12 @@ unmodified; see its own "Resolution note" section for how the two connect.
 
 **Review status:** authored by the same agent that implemented this phase. Per
 `docs/security/threat-model-plan.md`'s procedure and ADR-0010's separation-of-duties principle,
-this pass requires review by a second, human role before Phase 1D-expanded is considered ready for
-its approval gate — that second review has **not** happened yet. This document is a rigorous
-self-review, not a substitute for it.
+this pass required review by a second, human role before Phase 1D-expanded is considered ready for
+its approval gate. **That review is now complete** — WebDesk Solution (Jitesh D and Brijesh D)
+reviewed this document 2026-08-10 and confirmed it, including the STRIDE analysis and every
+"Summary of accepted/residual items" entry, with no issues raised. See
+`docs/project-state/phase-1d-approval-checklist.md`'s "Required second-role human reviews" table
+for the recorded decision.
 
 ## Scope
 
@@ -79,9 +82,11 @@ queries, then testing all three refusal paths) — not asserted from reading the
 
 ## Next steps
 
-- A second, human role reviews this document (and the original `threat-model-authorization-rbac.md`,
+- ~~A second, human role reviews this document (and the original `threat-model-authorization-rbac.md`,
   whose own required review is also still outstanding) against the actual diff before Phase
-  1D-expanded is considered ready for approval.
+  1D-expanded is considered ready for approval.~~ — **done 2026-08-10**, WebDesk Solution (Jitesh D
+  and Brijesh D) reviewed and confirmed both this document and the original
+  `threat-model-authorization-rbac.md`.
 - Re-review both passes once the 21 real business modules, a project-scoped HTTP route, or a
   confidential-field grant-editing endpoint land, since each activates a currently-inert surface
   this document treats as schema-ready-but-unexercised.

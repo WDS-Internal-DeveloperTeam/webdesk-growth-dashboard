@@ -111,10 +111,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   and fully re-validated — no conflicts, `pnpm audit` clean throughout. See
   `docs/project-state/phase-1d-validation-report.md`'s addendum,
   `docs/implementation/phase-1d-security-review.md`, and
-  `docs/project-state/phase-1d-approval-checklist.md` (status: merged, gate NOT yet approved).
-  **Does not include** the 21 real business modules, the general audit-log subsystem (Task 7), or
-  user-management CRUD (Task 8) — all separate, later authorizations. Phase 1A, 1B, and 1C remain
-  approved, each scoped to itself only (Phase 1C via OVERRIDE, see above).
+  `docs/project-state/phase-1d-approval-checklist.md` (status: merged, security review complete,
+  gate NOT yet approved — see below). **Does not include** the 21 real business modules, the
+  general audit-log subsystem (Task 7), or user-management CRUD (Task 8) — all separate, later
+  authorizations. Phase 1A, 1B, and 1C remain approved, each scoped to itself only (Phase 1C via
+  OVERRIDE, see above).
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
   ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
@@ -124,12 +125,12 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. Await explicit review/approval of both Phase 1D gates: PR #8 (narrower scope) and PR #9 (the
-   expansion) are both now merged to `main` — each still needs a decision on its own security
-   review (`docs/security/threat-model-authorization-rbac.md` for PR #8;
-   `docs/implementation/phase-1d-security-review.md` for PR #9) and the required second-role
-   review of both documents. Owner assigned 2026-08-08: WebDesk Solution — Jitesh D and Brijesh
-   D — but neither review has actually happened yet.
+1. Await explicit gate-approval decisions for both Phase 1D scopes: PR #8 (narrower scope) and
+   PR #9 (the expansion) are both merged to `main`, and both required second-role security reviews
+   are now complete (2026-08-10, WebDesk Solution — Jitesh D and Brijesh D, no issues raised on
+   either `docs/security/threat-model-authorization-rbac.md` or
+   `docs/implementation/phase-1d-security-review.md`). Completing the review is not itself gate
+   approval — the approver still needs to be asked directly for a decision on each gate.
 2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
@@ -271,19 +272,26 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   `docs/implementation/phase-1d-security-review.md` for PR #9): WebDesk Solution — Jitesh D and
   Brijesh D. This resolves the "not yet assigned"/`assigned_team: TBD` blocker but is not itself a
   completed review — both documents still await their actual second-role sign-off.
+- `[2026-08-10]` Both required second-role security reviews completed: WebDesk Solution (Jitesh D
+  and Brijesh D) reviewed `docs/security/threat-model-authorization-rbac.md` (PR #8) and
+  `docs/implementation/phase-1d-security-review.md` (PR #9), confirming both with no issues
+  raised. Recorded in `docs/project-state/phase-1d-approval-checklist.md`'s "Required second-role
+  human reviews" table and each document's own "Review status"/"Next steps" section. This
+  satisfies ADR-0010's separation-of-duties requirement for both Phase 1D scopes but is not itself
+  gate approval — that remains a separate, not-yet-requested decision for both PR #8 and PR #9.
 
 ## Open client blockers
 
 - ~~Second-role human review of `docs/security/threat-model-authentication-session-handling.md`
   (Phase 1C)~~ — resolved 2026-08-07, reviewed and approved by WebDesk Solution. See
   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review".
-- Second-role human review of `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8)
-  — separate document, still outstanding. Owner: WebDesk Solution — Jitesh D and Brijesh D
-  (assigned 2026-08-08). Neither this nor the PR #9 review is satisfied by the other; each
-  document needs its own.
-- Second-role human review of `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded,
-  PR #9) — same blocker as above, same owner (WebDesk Solution — Jitesh D and Brijesh D, assigned
-  2026-08-08). Still outstanding — assigning an owner is not itself a completed review.
+- ~~Second-role human review of `docs/security/threat-model-authorization-rbac.md` (Phase 1D,
+  PR #8)~~ — resolved 2026-08-10, reviewed and confirmed by WebDesk Solution (Jitesh D and
+  Brijesh D), no issues raised. See `docs/project-state/phase-1d-approval-checklist.md`'s
+  "Required second-role human reviews".
+- ~~Second-role human review of `docs/implementation/phase-1d-security-review.md` (Phase
+  1D-expanded, PR #9)~~ — resolved 2026-08-10, same reviewers, no issues raised. Neither Phase 1D
+  gate is itself approved by this — that remains a separate, not-yet-requested decision.
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
 - The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a
@@ -325,9 +333,10 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   project-scoped HTTP route, or any real confidential business field without a separate, explicit
   authorization — the underlying mechanisms are built and tested (Phase 1D-expanded), but
   activating them over HTTP was not requested by that brief's own endpoint list.
-- Do NOT treat PR #9's merge (2026-08-08, `phase-1d-rbac-permissions-expanded` → `main`) as gate
-  approval — it was an explicit, separate "merge" authorization only; the second-role security
-  review and gate decision are still outstanding, same as PR #8.
+- Do NOT treat PR #9's merge (2026-08-08) or the second-role security review's completion
+  (2026-08-10, both Phase 1D threat-model documents, no issues raised) as gate approval — each was
+  its own explicit, separate authorization; the gate decision itself is still outstanding for both
+  PR #8 and PR #9.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
   Workspace account — the OIDC implementation is tested against mocked/offline configuration for
   exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
@@ -335,10 +344,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   integration (`knowledge/09-google-workspace-smtp.md`) doesn't exist yet; the notifier interface
   (`apps/dashboard-api/src/auth/emergency/emergency-admin-login-notifier.ts`) exists specifically
   so a real implementation can be swapped in later without touching the login flow itself.
-- Do NOT treat `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8) or
-  `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded) as a completed, approved
-  security review — both are self-reviews only, pending their own required second-role human
-  review per ADR-0010's separation-of-duties principle.
+- Do NOT treat `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8)'s or
+  `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded)'s completed second-role
+  review (2026-08-10, WebDesk Solution — Jitesh D and Brijesh D) as gate approval — the review
+  satisfies ADR-0010's separation-of-duties requirement, but the gate decision itself is a
+  separate, still-outstanding, explicit authorization for both PR #8 and PR #9.
   `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) is different: its
   second-role review completed 2026-08-07 (see "Recent decisions") — it may now be treated as
   reviewed.
@@ -347,4 +357,10 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ---
 
-Last touched: 2026-08-08 · by Claude (PR #10 dependency upgrades and PR #9 Phase 1D-expanded both merged to `main`, each under explicit "merge" authorization. Both Phase 1D scopes — PR #8 and PR #9 — are on `main` with `pnpm audit` clean, but neither has an approved gate: the second-role security review of each phase's own threat-model document is still outstanding. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since completed.)
+Last touched: 2026-08-10 · by Claude (Both required second-role security reviews for Phase 1D
+completed — WebDesk Solution (Jitesh D and Brijesh D) confirmed
+`docs/security/threat-model-authorization-rbac.md` (PR #8) and
+`docs/implementation/phase-1d-security-review.md` (PR #9), no issues raised. Both Phase 1D scopes
+are merged to `main` with `pnpm audit` clean and their required review complete, but **neither
+gate has been approved yet** — that remains a separate, not-yet-requested decision. Phase 1C's
+G4-1C gate approved via OVERRIDE, second-role review has since completed.)

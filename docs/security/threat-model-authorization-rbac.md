@@ -10,9 +10,12 @@ STRIDE passes or extensions of this one.
 
 **Review status:** authored by the same agent that implemented this phase. Per
 `docs/security/threat-model-plan.md`'s procedure and ADR-0010's separation-of-duties principle,
-this pass requires review by a second, human role before the implementation is considered ready
-for its QA gate (G4) — that second review has **not** happened yet. This document is a rigorous
-self-review, not a substitute for it; do not treat it as satisfying the gate on its own.
+this pass required review by a second, human role before the implementation is considered ready
+for its QA gate (G4). **That review is now complete** — WebDesk Solution (Jitesh D and Brijesh D)
+reviewed this document 2026-08-10 and confirmed it, including the STRIDE coverage and every
+"Summary of accepted gaps" item, with no issues raised. See
+`docs/project-state/phase-1d-approval-checklist.md`'s "Required second-role human reviews" table
+for the recorded decision (this document is tracked there alongside PR #9's own pass).
 
 ---
 
@@ -92,9 +95,11 @@ the full run record.
 
 ## Next steps
 
-- A second, human role reviews this document against the actual diff before Phase 1D is considered
-  ready for its QA gate (G4) — in particular, a decision on the self-assignment separation-of-duties
-  gap (accepted-gap #1) is needed before that gate can be considered satisfied.
+- ~~A second, human role reviews this document against the actual diff before Phase 1D is
+  considered ready for its QA gate (G4)~~ — **done 2026-08-10**, WebDesk Solution (Jitesh D and
+  Brijesh D) reviewed and confirmed this document. Accepted-gap #1 (self-assignment
+  separation-of-duties) was independently closed under Phase 1D-expanded's own explicit
+  instruction before this review happened — see the "Resolution note" below.
 - Re-review this pass once the 21 real business modules, the confidential-field axis, or Task 7's
   general audit subsystem land, since each extends the surface this document currently treats as
   out of scope.

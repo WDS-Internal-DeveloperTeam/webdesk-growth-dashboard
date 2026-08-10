@@ -229,13 +229,14 @@ files, are merged to `main` — see `docs/implementation/phase-1d-file-inventory
 - ~~`[2026-08-07]` Second-role human review of `docs/security/threat-model-authentication-session-handling.md` (Phase 1C)~~ —
   **resolved 2026-08-07**, reviewed and approved by WebDesk Solution. See
   `docs/project-state/phase-1c-approval-checklist.md`'s "Second-role security review".
-- `[2026-08-07]` — Second-role human review of `docs/security/threat-model-authorization-rbac.md`
-  (Phase 1D, PR #8) — separate document, still outstanding once its own gate is reached.
-  **Owner assigned 2026-08-08: WebDesk Solution — Jitesh D and Brijesh D.** Assigning an owner is
-  not itself a completed review — still outstanding.
-- `[2026-08-07]` — Second-role human review of `docs/implementation/phase-1d-security-review.md`
-  (Phase 1D-expanded, PR #9) — same blocker as above, same owner (WebDesk Solution — Jitesh D and
-  Brijesh D, assigned 2026-08-08). Still outstanding.
+- ~~`[2026-08-07]` Second-role human review of `docs/security/threat-model-authorization-rbac.md`
+  (Phase 1D, PR #8)~~ — **resolved 2026-08-10**, reviewed and confirmed by WebDesk Solution
+  (Jitesh D and Brijesh D), no issues raised. See
+  `docs/project-state/phase-1d-approval-checklist.md`'s "Required second-role human reviews".
+- ~~`[2026-08-07]` Second-role human review of `docs/implementation/phase-1d-security-review.md`
+  (Phase 1D-expanded, PR #9)~~ — **resolved 2026-08-10**, same reviewers, no issues raised.
+  Neither Phase 1D gate is approved by this alone — that remains a separate, not-yet-requested
+  decision.
 - `[2026-08-06]` — Timezone confirmation (currently defaulted to America/Toronto, not yet
   confirmed by the client). Owner: PM.
 - `[2026-08-07]` — The real Google Workspace OAuth client (client ID, secret, authorized redirect
@@ -323,6 +324,13 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   as a macOS Files-and-Folders privacy permission (TCC) revocation for the host app, not a project
   or git issue. Reported the diagnosis and exact remediation steps rather than attempting to work
   around it; the user restored access via macOS System Settings and confirmed via `git status`.
+- `[2026-08-10]` Both required second-role security reviews completed: WebDesk Solution (Jitesh D
+  and Brijesh D) reviewed and confirmed `docs/security/threat-model-authorization-rbac.md` (PR #8)
+  and `docs/implementation/phase-1d-security-review.md` (PR #9), no issues raised on either.
+  Recorded in `docs/project-state/phase-1d-approval-checklist.md`'s reviewer table and each
+  document's own "Review status" section. Satisfies ADR-0010's separation-of-duties requirement
+  for both Phase 1D scopes; does not itself constitute gate approval for either PR #8 or PR #9 —
+  that remains a separate, not-yet-requested decision.
 
 ## Token / context usage this session (optional)
 
@@ -367,14 +375,14 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 - Staging URL: not yet provisioned
 - Mockup preview URL (if active): none
 - Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation), [#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) (Phase 1B database foundation), [#7](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/7) (Phase 1C authentication/session management), [#8](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8) (Phase 1D RBAC/authorization), [#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (Phase 1D-expanded, merge commit `67a4955`), [#10](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/10) (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, merge commit `a431427`)
-- Open PRs / issues: none currently open. The Phase 1C gate-approval doc update is uncommitted, working-tree-only, still pending. Neither Phase 1D gate (PR #8 nor PR #9) has been approved — both are merged but awaiting their own second-role security review.
+- Open PRs / issues: none currently open. The Phase 1C gate-approval doc update is uncommitted, working-tree-only, still pending. Neither Phase 1D gate (PR #8 nor PR #9) has been approved — both are merged and their required second-role security review is now complete (2026-08-10), but the gate decision itself is a separate, not-yet-requested action.
 
 ---
 
-Last touched: 2026-08-08 · by Claude (Phase 1D-expanded — RBAC/permissions/separation-of-duties —
-merged to `main` via PR #9 (`67a4955`), and PR #10's Next.js 16/NestJS 11/Vitest 3 dependency
-upgrades merged via `a431427` (`pnpm audit` 19 → 0). Both Phase 1D scopes (PR #8, PR #9) are now
-on `main`; neither has an approved gate. Second-role security reviewer assigned (WebDesk Solution
-— Jitesh D and Brijesh D) for both outstanding threat-model documents — the actual reviews are
-still outstanding. Phase 1C's G4-1C gate approved via OVERRIDE, second-role review has since
-completed.)
+Last touched: 2026-08-10 · by Claude (Both required second-role security reviews for Phase 1D
+completed — WebDesk Solution (Jitesh D and Brijesh D) confirmed
+`docs/security/threat-model-authorization-rbac.md` (PR #8) and
+`docs/implementation/phase-1d-security-review.md` (PR #9), no issues raised. Both Phase 1D scopes
+are merged to `main` with `pnpm audit` clean and their required review complete, but **neither
+gate has been approved yet** — that remains a separate, not-yet-requested decision. Phase 1C's
+G4-1C gate approved via OVERRIDE, second-role review has since completed.)
