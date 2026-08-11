@@ -1,3 +1,4 @@
+import pg from "pg";
 import { Sequelize } from "sequelize";
 import { loadDatabaseEnv, type DatabaseEnv } from "./env.js";
 
@@ -30,6 +31,13 @@ export function getConnection(env: DatabaseEnv = loadDatabaseEnv()): Sequelize {
 
   cachedConnection = new Sequelize(env.DATABASE_URL, {
     dialect: "postgres",
+    // Explicit dialectModule (rather than letting Sequelize require("pg")
+    // internally based on the dialect string) so bundlers that trace static
+    // imports to decide what to include - like Vercel's Function bundler -
+    // actually include pg in the deployment. Sequelize's dynamic internal
+    // require() was getting missed, crashing with "Please install pg
+    // package manually" despite pg being a real, listed dependency.
+    dialectModule: pg,
     logging: false,
     dialectOptions: env.DATABASE_SSL ? { ssl: { require: true, rejectUnauthorized: true } } : {},
     pool: {
