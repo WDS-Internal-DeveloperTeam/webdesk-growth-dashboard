@@ -61,3 +61,30 @@ This resolves _which provider_, not provisioning — no database instance exists
 provisioning remains gated on Phase 1B Task 3's own separate execution authorization
 (`docs/task-packages/phase-1b-database-foundation.md` §24), consistent with the "PM/infrastructure-owner
 sign-off before G2" requirement above.
+
+## Resolution note — 2026-08-11: provider changed to Neon, overriding WDS-002
+
+**The Neon exclusion in WDS-002 has been explicitly overridden by the project owner (WebDesk
+Solution).** The confirmed provider is now **Neon, `us-east-1`** (N. Virginia), replacing the
+2026-08-07 choice of Supabase above. This section is an appended, later decision — the original
+"Decision"/"Context" text above, and WDS-002's own rule text in the Master Specification, are left
+unmodified as an accurate historical record of what was decided and why at the time, not rewritten
+to look as if Neon was always the plan.
+
+- **What changed:** only the Neon-exclusion half of WDS-002. The North America East Coast region
+  requirement (the other half of this ADR's own decision) still applies and was independently
+  re-verified against Neon's own documented region list: Neon offers both `us-east-1` (N. Virginia)
+  and `us-east-2` (Ohio), the same two AWS regions Supabase and Amazon Aurora PostgreSQL were
+  verified against on 2026-08-07. `us-east-1` was chosen for continuity with the prior region
+  choice.
+- **Why:** not recorded — the project owner authorized this change directly without stating a
+  reason, and none is assumed here.
+- **What this does NOT do:** does not provision an actual Neon database instance (no database has
+  been provisioned under either provider — see the paragraph above, still true); does not amend
+  WDS-002's own text in the Master Specification, which remains a client-authored document outside
+  this repository's control; does not reopen or relitigate the original 2026-08-07 Supabase
+  decision's own reasoning, which was sound given the constraints as they stood at that time.
+- **Recorded in:** `project.json.vercel_execution.{postgres_marketplace_provider,postgres_marketplace_region}`
+  (now `neon`/`us-east-1`) and `project.json`'s `audit_log`; see
+  `docs/project-state/setup-input-register.md` for the setup-input-register's own record of this
+  change.

@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-11T00:00:00Z",
-    "version": 9
+    "version": 10
   },
 
   "tech_stack": {
@@ -64,9 +64,9 @@
     "job_execution_model": "serverless-functions-no-permanent-worker",
     "primary_job_provider": "vercel-queues-workflows-cron",
     "fallback_job_provider": "upstash-qstash-vercel-cron",
-    "postgres_marketplace_provider": "supabase",
+    "postgres_marketplace_provider": "neon",
     "postgres_marketplace_region": "us-east-1",
-    "_note": "postgres_marketplace_provider confirmed 2026-08-07 — Supabase, satisfying both ADR-0007 constraints: North America East Coast (us-east-1 / N. Virginia — Supabase also offers us-east-2 / Ohio, but us-east-1 has fuller feature parity per Supabase's own region docs, e.g. read-replica support) and not Neon (WDS-002). Chosen over the other verified qualifying option, Amazon Aurora PostgreSQL (also us-east-1/us-east-2 via Vercel's native AWS integration), by explicit project-owner decision — see docs/project-state/setup-input-register.md for the full record. No database has actually been provisioned yet; this only records the confirmed provider/region, not a live resource."
+    "_note": "postgres_marketplace_provider changed 2026-08-11 from Supabase to Neon, by explicit project-owner (WebDesk Solution) decision, overriding WDS-002 (\"Do NOT select Neon directly as the Postgres provider\") — see docs/architecture/decisions/0007-database-provider-independence-east-coast.md's resolution note for the full record; the original WDS-002 rule text and ADR-0007's original decision are left unmodified as an accurate historical record, this is an appended, later override, not a rewrite. Region us-east-1 (N. Virginia) verified to still satisfy ADR-0007's North America East Coast requirement independently of the provider change (Neon also offers us-east-2/Ohio). No database has actually been provisioned yet under either provider; this only records the confirmed provider/region, not a live resource."
   },
 
   "lock": {
@@ -336,6 +336,20 @@
       },
       "project_version_before": 8,
       "project_version_after": 9
+    },
+    {
+      "timestamp": "2026-08-11T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "overrode WDS-002 (Neon exclusion) and changed the Postgres Marketplace provider from Supabase to Neon",
+      "details": {
+        "prior_provider": "supabase",
+        "new_provider": "neon",
+        "region": "us-east-1",
+        "note": "Explicit project-owner decision. Region re-verified to independently satisfy ADR-0007's North America East Coast requirement (Neon offers us-east-1/N. Virginia and us-east-2/Ohio) - only the Neon-exclusion half of WDS-002 is overridden, not the region rule. Recorded as an appended resolution note on docs/architecture/decisions/0007-database-provider-independence-east-coast.md, not a rewrite of WDS-002's or ADR-0007's original text. No database has been provisioned under either provider - this changes the confirmed provider/region choice only."
+      },
+      "project_version_before": 9,
+      "project_version_after": 10
     }
   ]
 }

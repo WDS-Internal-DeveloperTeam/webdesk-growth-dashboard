@@ -18,7 +18,9 @@
 - **Timezone:** America/Toronto (default — not yet confirmed by the client; see `docs/project-state/setup-input-register.md`) **Tenant:** per-client (single organization, no master/cross-client scope — see profile knowledge/05)
 - **Host target:** vercel
 - **Tech stack:** Node 24 + TypeScript + NestJS (Vercel Functions) + Next.js App Router;
-  PostgreSQL (Vercel-provisioned, Neon excluded) + Sequelize; Vercel Queues/Workflows/Cron
+  PostgreSQL (Vercel-provisioned; Neon, `us-east-1` — WDS-002's Neon exclusion explicitly
+  overridden by project-owner decision 2026-08-11, see ADR-0007's resolution note) + Sequelize;
+  Vercel Queues/Workflows/Cron
   (no permanent worker); Vercel Blob; Google Workspace SSO + SMTP; GitHub App; Turborepo + pnpm
 - **State file:** `outputs/webdesk-growth-dashboard/project.json`
 
@@ -133,14 +135,15 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   `emitDecoratorMetadata`, which Nest's DI relies on — bundling would have silently broken it).
   **`dashboard-api`'s Function still isn't functional** — it now fails only on `DATABASE_URL:
 Required` at Nest bootstrap (`packages/configuration`'s env validation), confirming the deployment
-  plumbing itself is solid and the remaining blocker is exactly the still-unprovisioned Supabase
+  plumbing itself is solid and the remaining blocker is exactly the still-unprovisioned Neon
   database plus the other unset secrets below. See `apps/dashboard-api/vercel.json`,
   `apps/dashboard-api/api/index.ts`, and the git history on `main` for the exact commits. **This is
   real merged code, not Task 13** — no staging environment exists, no PM sign-off was sought, no
   smoke test has run; Task 13 in `docs/phase-plans/phase-1-foundation-plan.md` remains its own
   separate, not-yet-authorized execution.
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
-  Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
+  Postgres Marketplace provider is resolved (Neon, `us-east-1`, changed from Supabase 2026-08-11 —
+  see ADR-0007's resolution note) but **not provisioned** — every test
   ran against a local/CI disposable database, and `dashboard-api`'s deployed Vercel Function now
   concretely fails at bootstrap on the missing `DATABASE_URL` this would provide (see above — no longer
   a hypothetical future need). Google Workspace OAuth client (also required as a real
@@ -161,7 +164,7 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, setting `dashboard-web`'s now-live origin as
    `dashboard-api`'s `WEB_APP_ORIGIN` env var on Vercel).
-3. Provision the actual Supabase database once a later task actually needs a live connection —
+3. Provision the actual Neon database once a later task actually needs a live connection —
    not before, and not automatically. **That need now concretely exists** — `dashboard-api`'s
    deployed Vercel Function fails at bootstrap on missing `DATABASE_URL` (see "Current state" —
    deployment infrastructure) — but provisioning still requires its own separate, explicit
@@ -336,8 +339,18 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
   lint/typecheck/build/test passes (144/144 `dashboard-api` tests) before each push, plus live
   Vercel deployment logs confirmed each fix's actual effect. `dashboard-api`'s Function now deploys
   and bootstraps successfully, failing only on missing `DATABASE_URL` — the deployment plumbing
-  itself is done; a working live API still needs the Supabase database provisioned and the other
+  itself is done; a working live API still needs the Neon database provisioned and the other
   env vars set (all separate, not-yet-granted authorizations). See "Current state" above.
+- `[2026-08-11]` Postgres Marketplace provider **changed from Supabase to Neon**, `us-east-1` —
+  explicit project-owner (WebDesk Solution) decision overriding WDS-002's Neon-exclusion rule
+  specifically (the region requirement, the other half of WDS-002, still applies and was
+  re-verified against Neon's own region list: `us-east-1`/`us-east-2` both offered). Recorded as
+  an appended "Resolution note" on `docs/architecture/decisions/0007-database-provider-independence-east-coast.md`,
+  not a rewrite — the original 2026-08-07 Supabase decision and WDS-002's own rule text are left
+  unmodified as historical record. `project.json`'s `postgres_marketplace_provider` updated to
+  `"neon"`, version 9 → 10. No database has been provisioned under either provider — this changes
+  the confirmed provider/region choice only, not the standing "do not provision without separate
+  authorization" rule (see Cautions).
 
 ## Open client blockers
 
@@ -365,9 +378,9 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
   set as `dashboard-api`'s `WEB_APP_ORIGIN` env var yet, and whether the current Vercel-assigned
   domain is the final one (vs. a custom domain later) is still an infrastructure-owner decision.
   Owner: infrastructure owner.
-- The real `DATABASE_URL` (Supabase connection string) as a `dashboard-api` Vercel env var —
+- The real `DATABASE_URL` (Neon connection string) as a `dashboard-api` Vercel env var —
   concretely blocking now, not hypothetical: the deployed Function fails at Nest bootstrap on this
-  exact missing value (2026-08-11). Requires the Supabase database to actually be provisioned
+  exact missing value (2026-08-11). Requires the Neon database to actually be provisioned
   first, which remains its own separate, not-yet-granted authorization (see Cautions). Owner:
   infrastructure owner.
 - ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
@@ -376,21 +389,27 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
   whether branch protection is configured on `main` (`docs/repository-plan/branch-and-release-plan.md`).
 - ~~Postgres provider vs. Neon exclusion~~ — resolved 2026-08-07, Supabase/`us-east-1` — see
   profile `knowledge/01-approved-architecture.md` "Database" stop-condition for the rule this
-  satisfies. Not yet provisioned.
+  satisfies. **Superseded 2026-08-11**: provider changed to Neon, `us-east-1`, by explicit
+  project-owner decision overriding WDS-002's Neon-exclusion specifically — see ADR-0007's
+  "Resolution note" and "Recent decisions" above. Not yet provisioned under either provider.
 
 ## Cautions
 
 - Do NOT design `dashboard-worker` as a persistent process — resolved decision,
   see profile `knowledge/04-serverless-queues-workflows-and-cron.md`.
 - Do NOT use ACF anywhere in the WordPress repository — absolute rule, WDS-001.
-- Do NOT select Neon directly as the Postgres provider — WDS-002.
+- ~~Do NOT select Neon directly as the Postgres provider — WDS-002.~~ **Overridden 2026-08-11** by
+  explicit project-owner (WebDesk Solution) decision — the confirmed provider is now Neon,
+  `us-east-1`. See ADR-0007's "Resolution note" for the full record. WDS-002's own rule text (in
+  the Master Specification, outside this repo's control) is unchanged; this records that the
+  project owner has explicitly chosen to override it for this specific decision.
 - Do NOT wire Resend or any transactional-email API — WDS-004, use Google Workspace SMTP only.
 - Do NOT conflate the software-delivery agent roster with the dashboard's 15 business
   agents — see profile `SKILL.md §6`.
 - Do NOT create `projects`, `users`, or any other business entity in `packages/database` without
   a separate, explicit authorization beyond Phase 1B's own approval — the task package's own
   §9/§24 two-tier gate. `_framework_probe` (test-only) is the only table that exists.
-- Do NOT provision the actual Supabase database (create the real project/instance) — confirming
+- Do NOT provision the actual Neon database (create the real project/instance) — confirming
   the provider (`project.json`) is not provisioning it; every test so far used a local/CI
   disposable database.
 - Do NOT begin the 21 real business-module endpoints, the general ADR-0017 audit-log subsystem
@@ -432,7 +451,9 @@ historically, its second-role review has since completed. Separately, ad-hoc rea
 troubleshooting (not a formal Task 13 execution) got `dashboard-web` live and fixed three real bugs
 blocking `dashboard-api`'s Vercel Function (missing entrypoint, ESM/CJS interop for 4 workspace
 packages, ESM-only `openid-client`) — the Function now deploys and bootstraps, failing only on the
-still-unprovisioned Supabase database's `DATABASE_URL`. Next candidate work: the 21 real
+still-unprovisioned database's `DATABASE_URL`. Separately, the Postgres Marketplace provider
+changed from Supabase to Neon (`us-east-1`) by explicit project-owner decision overriding WDS-002's
+Neon-exclusion rule — see ADR-0007's "Resolution note". Next candidate work: the 21 real
 business-module endpoints, not started automatically; separately, resolving the remaining
-deployment secrets (Supabase provisioning, Google OAuth client, `WEB_APP_ORIGIN`) whenever that's
+deployment secrets (Neon provisioning, Google OAuth client, `WEB_APP_ORIGIN`) whenever that's
 authorized.)
