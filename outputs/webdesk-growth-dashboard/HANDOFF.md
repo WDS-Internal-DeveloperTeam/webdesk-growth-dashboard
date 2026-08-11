@@ -2,23 +2,22 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Phase 1D-expanded — RBAC/permissions/separation-of-duties — built, validated, documented, and **merged to `main`** via [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (merge commit `67a4955`, 2026-08-08), under explicit authorization at each step including the merge itself. Also merged this session: [PR #10](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/10), Next.js 16/NestJS 11/Vitest 3 dependency upgrades, `pnpm audit` 19 → 0. Both Phase 1D scopes (PR #8, PR #9) are now on `main`; **neither has an approved gate**. Phase 1C's second-role security review completed 2026-08-07)
+- **Last active agent:** Backend role (Both Phase 1D gates approved 2026-08-11 — G4-1D for PR #8 and G4-1D-EXP for PR #9, each a clean CONFIRM since the required second-role security review was already complete (2026-08-10) before either gate was requested. PR #10's Next.js 16/NestJS 11/Vitest 3 dependency upgrades also merged this session, `pnpm audit` 19 → 0. Phase 1A, 1B, 1C, and both Phase 1D scopes are all now approved)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, and documentation complete; merged to `main` via PR #9 (merge commit `67a4955`).** See `docs/project-state/phase-1d-approval-checklist.md` (status: merged, gate NOT yet approved) and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D gate is also still not approved. Phase 1A, 1B, and 1C remain approved, each scoped to itself only. Also this session: PR #10 (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, `pnpm audit` 19 → 0) merged first; PR #9 was then rebased onto the resulting `main` (no conflicts) before its own merge.
-- **Current gate:** G4-1C (Phase 1C) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). Recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time; the subsequent review completion is a separate, later `audit_log` entry, not a rewrite of the gate. **No gate has been recorded for either Phase 1D (PR #8) or Phase 1D-expanded (PR #9) yet — both are merged to `main` but their own gate approvals remain separate, not-yet-requested decisions.**
+- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, documentation, merge, and gate approval all complete.** Merged to `main` via PR #9 (merge commit `67a4955`); G4-1D-EXP gate approved 2026-08-11 (clean CONFIRM). See `docs/project-state/phase-1d-approval-checklist.md`'s "Sign-off" and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D (G4-1D gate) is also approved — see `docs/project-state/phase-1d-validation-report.md`'s "Sign-off — G4-1D gate" section. Phase 1A, 1B, and 1C remain approved, each scoped to itself only. Also this session: PR #10 (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, `pnpm audit` 19 → 0) merged first; PR #9 was then rebased onto the resulting `main` (no conflicts) before its own merge.
+- **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean CONFIRM) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). G4-1D (Phase 1D, PR #8) was also approved the same day, likewise a clean CONFIRM. G4-1C (Phase 1C) remains recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time.
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
-> **The expanded "Phase 1D" brief (RBAC, fine-grained permissions, confidential-field access, a
-> centralized policy/authorization service, separation-of-duties across many more scenarios),
-> recorded verbatim in `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, was explicitly
-> authorized to begin this session ("Begin Phase 1D expanded scope") and has been built,
-> validated, documented, and merged to `main` via PR #9** — CI green on every real check, including
-> after a rebase onto PR #10's dependency-upgrade work. See "Where we left off" below for the
-> complete summary. **No gate has been requested** — that remains the next concrete step, requiring
-> its own separate explicit decision per this project's standing discipline (the merge itself was
-> a separate, already-given explicit authorization, not a gate approval).
+> **Both Phase 1D gates are now approved (2026-08-11).** The expanded "Phase 1D" brief (RBAC,
+> fine-grained permissions, confidential-field access, a centralized policy/authorization service,
+> separation-of-duties across many more scenarios), recorded verbatim in
+> `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, was explicitly authorized to begin
+> this session ("Begin Phase 1D expanded scope"), built, validated, documented, merged to `main`
+> via PR #9, and its G4-1D-EXP gate approved by explicit "Approve both Phase 1D gates now"
+> instruction. PR #8's own narrower G4-1D gate was approved in the same instruction. See "Where we
+> left off" below for the complete summary.
 
 ## Where we left off
 

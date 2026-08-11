@@ -1,14 +1,15 @@
 # Phase 1D (Expanded) Approval Checklist — RBAC, Permissions & Separation of Duties
 
-**Status:** NOT approved. Implementation complete and validated by this document's author; PR #9
-merged to `main` (merge commit `67a4955`, 2026-08-08) under explicit authorization at each step,
-including the merge itself; CI green on every real check both before and after a rebase onto PR
-#10's dependency-upgrade work. **The required second-role security review (item 14) is now
-complete** — WebDesk Solution (Jitesh D and Brijesh D) reviewed and confirmed both Phase 1D
-threat-model documents 2026-08-10. **No gate has been requested or recorded yet** — completing the
-review, like merging, is a separate action from gate approval, same as PR #8. This document exists
-so the completion state is honestly recorded as work finishes, not backfilled after approval —
-consistent with how every prior phase's checklist in this project was produced.
+**Status: Approved 2026-08-11 (G4-1D-EXP gate, clean CONFIRM).** Implementation complete and
+validated by this document's author; PR #9 merged to `main` (merge commit `67a4955`, 2026-08-08)
+under explicit authorization at each step, including the merge itself; CI green on every real
+check both before and after a rebase onto PR #10's dependency-upgrade work. The required
+second-role security review (item 14) completed 2026-08-10 — WebDesk Solution (Jitesh D and
+Brijesh D) reviewed and confirmed both Phase 1D threat-model documents, no issues raised. The gate
+itself was then approved 2026-08-11 — see "Sign-off" below. This document was written before the
+gate was approved and is left otherwise unmodified as an accurate record of the completion state
+at each point in time — consistent with how every prior phase's checklist in this project was
+produced.
 
 Scope: `docs/task-packages/phase-1d-rbac-permissions-expanded.md` (the expanded brief), built on
 top of the already-merged, already-approved-pending PR #8 narrower Phase 1D. This checklist covers
@@ -159,11 +160,19 @@ finding).
 
 ## Sign-off
 
-**Not signed.** PR #9 is merged and both required second-role security reviews are now complete
-(2026-08-10, WebDesk Solution — Jitesh D and Brijesh D, no issues raised), but no gate has been
-requested from the human approver yet — completing the review, like merging, is a separate,
-independently-authorized action in this project's standing discipline (see PR #8's own history for
-the same pattern). This section will be completed once the approver is asked directly for a
-decision on this gate — consistent with how every prior gate in this project was recorded only
-after an explicit approval instruction, never assumed from review or implementation completion
-alone.
+**Approved 2026-08-11 (G4-1D-EXP gate).**
+
+| Field                       | Value                                                                                                                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Approved by                 | WebDesk Solution                                                                                                                                                                            |
+| Approval date               | 2026-08-11                                                                                                                                                                                  |
+| Exact approved commit SHA   | `67a4955` (merge commit, PR #9)                                                                                                                                                             |
+| Authorization scope         | Phase 1D-expanded only — the 21 real business-module endpoints, the general audit-log subsystem (Task 7), and user-management CRUD (Task 8) remain separate, not-yet-granted authorizations |
+| Required second-role review | **Complete** — `docs/implementation/phase-1d-security-review.md` reviewed and confirmed by WebDesk Solution (Jitesh D and Brijesh D), 2026-08-10, no issues raised on any accepted-item     |
+| Decision                    | CONFIRM — a clean pass, not an override, since the required review was already complete before this gate was requested                                                                      |
+| Recorded in                 | `project.json`'s `gates[]` (`G4-1D-EXP`) and `audit_log`                                                                                                                                    |
+
+| Role                                   | Name                                   | Decision                     | Date       |
+| -------------------------------------- | -------------------------------------- | ---------------------------- | ---------- |
+| Reviewer (second-role security review) | WebDesk Solution — Jitesh D, Brijesh D | ☑ Reviewed, no issues raised | 2026-08-10 |
+| Approver (gate decision)               | WebDesk Solution                       | ☑ Approved                   | 2026-08-11 |

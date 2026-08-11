@@ -68,10 +68,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** development **Current gate:** G4-1C (Phase 1C, passed 2026-08-07 **via OVERRIDE, not a
-  clean CONFIRM** — see below) is the last recorded gate — see
-  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`, authoritative.
-  Phase 1D (below) is built and validated but **not yet approved** — no new gate has been recorded.
+- **Stage:** development **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean
+  CONFIRM) is the last recorded gate — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]`, authoritative. Both Phase 1D gates (G4-1D for PR #8, G4-1D-EXP for PR #9) are now
+  approved, each a clean CONFIRM since the required second-role security review was already
+  complete before either gate was requested.
 - **Approved:** Phase 1C — Authentication and session management (Tasks 4/5, combined) — merged to
   `main` via PR #7 at commit `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`, and the G4-1C gate
   approved 2026-08-07 — see `docs/project-state/phase-1c-approval-checklist.md`. **The gate
@@ -88,34 +89,35 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   account lockout, CSRF defenses, an operator-run emergency-admin provisioning CLI, and 6
   `dashboard-web` auth pages — 115 unit + 15 real-database integration/e2e tests, all passing.
   First-login provisioning model resolved: **pre-provisioned only**, no JIT account creation.
-- **Active phase:** Phase 1D — RBAC and authorization (Task 6), **built, validated, and merged to
-  `main`** via PR #8, **gate not yet approved** — see `docs/task-packages/phase-1d-rbac-authorization.md`
-  and `docs/project-state/phase-1d-validation-report.md`. Deny-by-default `PermissionService`/
-  `PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
-  `06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface (proving the
-  framework — the other 20 business modules' endpoints don't exist as code yet) — 146 unit + 63
-  real-database integration/e2e tests, all passing.
-- **Phase 1D-expanded** — the larger RBAC/permissions/separation-of-duties brief
+- **Approved:** Phase 1D — RBAC and authorization (Task 6), **built, validated, merged to `main`**
+  via PR #8, **G4-1D gate approved 2026-08-11 (clean CONFIRM)** — see
+  `docs/task-packages/phase-1d-rbac-authorization.md` and
+  `docs/project-state/phase-1d-validation-report.md`'s "Sign-off — G4-1D gate" section.
+  Deny-by-default `PermissionService`/`PermissionGuard`, the real seeded 7-role/21-module/458-grant
+  matrix from `06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface
+  (proving the framework — the other 20 business modules' endpoints don't exist as code yet) — 146
+  unit + 63 real-database integration/e2e tests, all passing.
+- **Approved:** Phase 1D-expanded — the larger RBAC/permissions/separation-of-duties brief
   (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`) — **built, validated, documented,
-  and merged to `main`** via
+  merged to `main`** via
   [PR #9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (merge
-  commit `67a4955`, 2026-08-08), under explicit authorization at each step (including the merge
-  itself), on top of PR #8's `AuthzModule`. **Gate not yet approved.** Centralizes grant logic into
-  a new `AuthorizationService` (retires `PermissionService`), adds the 43-module registry,
-  project-scoped role assignment (schema/repository only, no HTTP route yet), confidential-field
-  actions (real, checked, zero seeded), the `authorization_actions` cross-request
-  separation-of-duties foundation, and — closing the exact gap the original threat model flagged —
-  **now blocks self-role-assignment outright**, per this brief's own explicit §21/§33 instruction.
-  144 unit + 41 real-database integration + 37 real-database e2e tests, all passing. Before
-  merging, the branch was rebased onto `main` (which by then included PR #10's dependency bumps)
-  and fully re-validated — no conflicts, `pnpm audit` clean throughout. See
-  `docs/project-state/phase-1d-validation-report.md`'s addendum,
-  `docs/implementation/phase-1d-security-review.md`, and
-  `docs/project-state/phase-1d-approval-checklist.md` (status: merged, security review complete,
-  gate NOT yet approved — see below). **Does not include** the 21 real business modules, the
-  general audit-log subsystem (Task 7), or user-management CRUD (Task 8) — all separate, later
-  authorizations. Phase 1A, 1B, and 1C remain approved, each scoped to itself only (Phase 1C via
-  OVERRIDE, see above).
+  commit `67a4955`, 2026-08-08), **G4-1D-EXP gate approved 2026-08-11 (clean CONFIRM)**, under
+  explicit authorization at each step (including the merge and the gate approval itself), on top
+  of PR #8's `AuthzModule`. Centralizes grant logic into a new `AuthorizationService` (retires
+  `PermissionService`), adds the 43-module registry, project-scoped role assignment
+  (schema/repository only, no HTTP route yet), confidential-field actions (real, checked, zero
+  seeded), the `authorization_actions` cross-request separation-of-duties foundation, and —
+  closing the exact gap the original threat model flagged — **now blocks self-role-assignment
+  outright**, per this brief's own explicit §21/§33 instruction. 144 unit + 41 real-database
+  integration + 37 real-database e2e tests, all passing. Before merging, the branch was rebased
+  onto `main` (which by then included PR #10's dependency bumps) and fully re-validated — no
+  conflicts, `pnpm audit` clean throughout. See `docs/project-state/phase-1d-validation-report.md`'s
+  addendum, `docs/implementation/phase-1d-security-review.md`, and
+  `docs/project-state/phase-1d-approval-checklist.md`'s "Sign-off" section. **Does not include** the
+  21 real business modules, the general audit-log subsystem (Task 7), or user-management CRUD
+  (Task 8) — all separate, later authorizations. Phase 1A, 1B, 1C, and both Phase 1D scopes remain
+  approved, each scoped to itself only (Phase 1C via OVERRIDE, both Phase 1D gates via clean
+  CONFIRM, see above).
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
   ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
@@ -125,19 +127,18 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Active tasks (this sprint)
 
-1. Await explicit gate-approval decisions for both Phase 1D scopes: PR #8 (narrower scope) and
-   PR #9 (the expansion) are both merged to `main`, and both required second-role security reviews
-   are now complete (2026-08-10, WebDesk Solution — Jitesh D and Brijesh D, no issues raised on
-   either `docs/security/threat-model-authorization-rbac.md` or
-   `docs/implementation/phase-1d-security-review.md`). Completing the review is not itself gate
-   approval — the approver still needs to be asked directly for a decision on each gate.
+1. ~~Await explicit gate-approval decisions for both Phase 1D scopes~~ — **done 2026-08-11.** Both
+   PR #8 (G4-1D) and PR #9 (G4-1D-EXP) gates approved via clean CONFIRM — see
+   `docs/project-state/phase-1d-validation-report.md`'s "Sign-off — G4-1D gate" and
+   `docs/project-state/phase-1d-approval-checklist.md`'s "Sign-off".
 2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
    WordPress Application Password account, `dashboard-web`'s real deployed origin).
 3. Provision the actual Supabase database once a later task actually needs a live connection —
    not before, and not automatically.
-4. Once both Phase 1D gates are approved: the 21 real business-module endpoints are the next
-   candidate per `docs/phase-plans/phase-1-foundation-plan.md` — not started automatically.
+4. The 21 real business-module endpoints are now the next candidate per
+   `docs/phase-plans/phase-1-foundation-plan.md`, now that both Phase 1D gates are approved — not
+   started automatically; still requires its own explicit authorization to begin.
 
 ## Recent decisions
 
@@ -279,6 +280,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   human reviews" table and each document's own "Review status"/"Next steps" section. This
   satisfies ADR-0010's separation-of-duties requirement for both Phase 1D scopes but is not itself
   gate approval — that remains a separate, not-yet-requested decision for both PR #8 and PR #9.
+- `[2026-08-11]` Both Phase 1D gates approved by explicit "Approve both Phase 1D gates now"
+  instruction — G4-1D (PR #8, `docs/project-state/phase-1d-validation-report.md`'s "Sign-off —
+  G4-1D gate" section) and G4-1D-EXP (PR #9, `docs/project-state/phase-1d-approval-checklist.md`'s
+  "Sign-off" section). Both recorded as clean **CONFIRM** decisions, not overrides, since the
+  required second-role security review for each was already complete (2026-08-10) before either
+  gate was requested — unlike Phase 1C's G4-1C gate, which needed an OVERRIDE because its review
+  was still outstanding at approval time. `project.json`'s `current_gate` updated to `G4-1D-EXP`.
 
 ## Open client blockers
 
@@ -290,8 +298,8 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   Brijesh D), no issues raised. See `docs/project-state/phase-1d-approval-checklist.md`'s
   "Required second-role human reviews".
 - ~~Second-role human review of `docs/implementation/phase-1d-security-review.md` (Phase
-  1D-expanded, PR #9)~~ — resolved 2026-08-10, same reviewers, no issues raised. Neither Phase 1D
-  gate is itself approved by this — that remains a separate, not-yet-requested decision.
+  1D-expanded, PR #9)~~ — resolved 2026-08-10, same reviewers, no issues raised. Both Phase 1D
+  gates have since been approved (2026-08-11) — see "Current state" above.
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
 - The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a
@@ -333,10 +341,10 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   project-scoped HTTP route, or any real confidential business field without a separate, explicit
   authorization — the underlying mechanisms are built and tested (Phase 1D-expanded), but
   activating them over HTTP was not requested by that brief's own endpoint list.
-- Do NOT treat PR #9's merge (2026-08-08) or the second-role security review's completion
-  (2026-08-10, both Phase 1D threat-model documents, no issues raised) as gate approval — each was
-  its own explicit, separate authorization; the gate decision itself is still outstanding for both
-  PR #8 and PR #9.
+- Both Phase 1D gates (G4-1D for PR #8, G4-1D-EXP for PR #9) are now approved (2026-08-11, clean
+  CONFIRM — see "Current state"). Merging, completing the required review, and gate approval were
+  each their own explicit, separate authorization throughout — a useful pattern to keep following
+  for any future gate, not just a historical note.
 - Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
   Workspace account — the OIDC implementation is tested against mocked/offline configuration for
   exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
@@ -344,23 +352,21 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   integration (`knowledge/09-google-workspace-smtp.md`) doesn't exist yet; the notifier interface
   (`apps/dashboard-api/src/auth/emergency/emergency-admin-login-notifier.ts`) exists specifically
   so a real implementation can be swapped in later without touching the login flow itself.
-- Do NOT treat `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8)'s or
-  `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded)'s completed second-role
-  review (2026-08-10, WebDesk Solution — Jitesh D and Brijesh D) as gate approval — the review
-  satisfies ADR-0010's separation-of-duties requirement, but the gate decision itself is a
-  separate, still-outstanding, explicit authorization for both PR #8 and PR #9.
-  `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) is different: its
-  second-role review completed 2026-08-07 (see "Recent decisions") — it may now be treated as
-  reviewed.
+- `docs/security/threat-model-authorization-rbac.md` (Phase 1D, PR #8),
+  `docs/implementation/phase-1d-security-review.md` (Phase 1D-expanded, PR #9), and
+  `docs/security/threat-model-authentication-session-handling.md` (Phase 1C) have all now received
+  their required second-role human review and may be treated as reviewed — see each phase's own
+  approval-checklist/validation-report "Sign-off"/"Second-role security review" section for the
+  recorded decision.
 - Do NOT treat `canonical-inputs/WebDesk_Service_SEO_Library_Templates_v4.xlsm` as approved
   business content — advisory sample data only, per WDS-014.
 
 ---
 
-Last touched: 2026-08-10 · by Claude (Both required second-role security reviews for Phase 1D
-completed — WebDesk Solution (Jitesh D and Brijesh D) confirmed
-`docs/security/threat-model-authorization-rbac.md` (PR #8) and
-`docs/implementation/phase-1d-security-review.md` (PR #9), no issues raised. Both Phase 1D scopes
-are merged to `main` with `pnpm audit` clean and their required review complete, but **neither
-gate has been approved yet** — that remains a separate, not-yet-requested decision. Phase 1C's
-G4-1C gate approved via OVERRIDE, second-role review has since completed.)
+Last touched: 2026-08-11 · by Claude (Both Phase 1D gates approved — G4-1D for PR #8 and
+G4-1D-EXP for PR #9, each a clean CONFIRM since the required second-role security review
+(WebDesk Solution — Jitesh D and Brijesh D, 2026-08-10) was already complete before either gate
+was requested. `project.json`'s `current_gate` is now `G4-1D-EXP`. Phase 1A, 1B, 1C, and both
+Phase 1D scopes are all approved. Phase 1C's own G4-1C gate remains recorded as an OVERRIDE
+historically, its second-role review has since completed. Next candidate work: the 21 real
+business-module endpoints, not started automatically.)

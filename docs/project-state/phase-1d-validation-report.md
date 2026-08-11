@@ -286,8 +286,30 @@ Same boundaries as the original report, plus: project-scoped authorization is no
 HTTP yet (schema/repository-only); confidential-field grants cannot be edited over HTTP yet (no
 grant-editing endpoint exists); the module-registry-to-permission-group mapping (migration `00015`)
 is this implementer's own reasoned cross-reference between two documents that don't cross-reference
-each other, not verbatim from one approved source — flagged for the required second-role review;
-neither this expansion's own security review
-(`docs/implementation/phase-1d-security-review.md`) nor the original
-`docs/security/threat-model-authorization-rbac.md` has received its required second-role human
-review.
+each other, not verbatim from one approved source — flagged for the required second-role review
+(**that review has since completed, 2026-08-10** — see `docs/project-state/phase-1d-approval-checklist.md`'s
+"Required second-role human reviews"; this paragraph is left otherwise unmodified as the accurate
+historical record of what was and wasn't known at the time this addendum was written).
+
+---
+
+## Sign-off — G4-1D gate (Phase 1D, PR #8 narrower scope)
+
+**Approved 2026-08-11.** This section covers PR #8's own scope only (the original, narrower
+"Phase 1D — RBAC and authorization" task package) — Phase 1D-expanded (PR #9) has its own separate
+gate and sign-off, recorded in `docs/project-state/phase-1d-approval-checklist.md`.
+
+| Field                       | Value                                                                                                                                                                                                                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Approved by                 | WebDesk Solution                                                                                                                                                                                                                                                                              |
+| Approval date               | 2026-08-11                                                                                                                                                                                                                                                                                    |
+| Scope                       | Phase 1D (PR #8) only — deny-by-default `PermissionService`/`PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix, the "Users/roles" module's own HTTP surface. Does not cover Phase 1D-expanded (PR #9), which has its own separate gate.                                     |
+| Merged commit               | PR #8, merged 2026-08-07                                                                                                                                                                                                                                                                      |
+| Required second-role review | **Complete** — `docs/security/threat-model-authorization-rbac.md` reviewed and confirmed by WebDesk Solution (Jitesh D and Brijesh D), 2026-08-10, no issues raised. This gate is a clean **CONFIRM**, not an OVERRIDE, since the review was already done before this decision was requested. |
+| Decision                    | CONFIRM                                                                                                                                                                                                                                                                                       |
+| Recorded in                 | `project.json`'s `gates[]` (`G4-1D`) and `audit_log`                                                                                                                                                                                                                                          |
+
+The self-assignment separation-of-duties gap this phase's own STRIDE pass originally flagged as
+unresolved (see that document's Elevation of Privilege table) was subsequently closed by
+Phase 1D-expanded (PR #9), under that brief's own explicit §21/§33 instruction — not as a
+precondition of this gate, which was independently reviewed and approved on its own merits.

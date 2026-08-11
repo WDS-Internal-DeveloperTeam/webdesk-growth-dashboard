@@ -109,7 +109,8 @@ original Task 5 plan, not rewritten after the fact.
 ### Task 6 — RBAC and authorization
 
 **Status: Complete, as "Phase 1D" (PR #8) and further expanded as "Phase 1D-expanded" — both
-awaiting approval.** PR #8 executed 2026-08-07 — deny-by-default `PermissionService`/
+merged to `main` and both gates approved 2026-08-11 (G4-1D and G4-1D-EXP, each a clean CONFIRM).**
+PR #8 executed 2026-08-07 — deny-by-default `PermissionService`/
 `PermissionGuard`, the real seeded 7-role/21-module/458-grant matrix from
 `06_Roles_and_Permissions.md §3`, and the "Users/roles" module's own HTTP surface (proving the
 framework; the other 20 business modules' endpoints don't exist as code yet, so `PermissionGuard`
@@ -125,7 +126,8 @@ project-scoped role assignment, confidential-field actions (`view_confidential`/
 foundation, and — closing the gap the original threat model flagged — blocks self-role-assignment
 outright. See `docs/project-state/phase-1d-validation-report.md`'s addendum,
 `docs/implementation/phase-1d-security-review.md`, and
-`docs/project-state/phase-1d-approval-checklist.md` (status: not yet approved, not yet pushed).
+`docs/project-state/phase-1d-approval-checklist.md` (status: approved 2026-08-11, G4-1D-EXP gate,
+clean CONFIRM).
 The description below is preserved as the original Task 6 plan, not rewritten after the fact.
 
 - **Purpose:** Role/permission model per `06_Roles_and_Permissions.md` and ADR-0010, enforced server-side in `dashboard-api`.

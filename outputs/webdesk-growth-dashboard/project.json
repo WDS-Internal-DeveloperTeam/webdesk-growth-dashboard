@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-1C",
+    "current_gate": "G4-1D-EXP",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-10T09:00:00Z",
-    "version": 7
+    "updated_at": "2026-08-11T00:00:00Z",
+    "version": 9
   },
 
   "tech_stack": {
@@ -121,6 +121,28 @@
       "decided_at": "2026-08-07T00:00:00Z",
       "decision": "OVERRIDE",
       "notes": "Phase 1C (Google Workspace SSO, restricted emergency-local TOTP, session management) approved, scope 'Phase 1C only' — see docs/project-state/phase-1c-approval-checklist.md. 115 unit + 15 real-database integration/e2e tests, all passing. Approved merge commit 102397d2f1aaf9fc5d374dd4bd58c764cb031ef9 (PR #7). status=overridden/decision=OVERRIDE (not a clean CONFIRM) because docs/security/threat-model-authentication-session-handling.md's required second-role human review (ADR-0010 separation-of-duties, docs/security/threat-model-plan.md's own procedure) had NOT happened at approval time — the human approver was asked explicitly and chose to approve the gate now with that review recorded as a still-outstanding open item, not to wait or to have it silently marked complete. Tracked in docs/project-state/setup-input-register.md and CLAUDE.md's 'Open client blockers' until resolved."
+    },
+    {
+      "id": "G4-1D",
+      "type": "qa-security-gate",
+      "scope": "phase-1d-rbac-authorization",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-11T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Phase 1D — RBAC and authorization (Task 6), narrower scope — approved, scope 'Phase 1D (PR #8) only' — see docs/project-state/phase-1d-validation-report.md and its 'Sign-off' section. Deny-by-default PermissionService/PermissionGuard, the real seeded 7-role/21-module/458-grant matrix, the Users/roles module's own HTTP surface — 146 unit + 63 real-database integration/e2e tests, all passing. Approved merge commit (PR #8, merged 2026-08-07). status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review of docs/security/threat-model-authorization-rbac.md (ADR-0010 separation-of-duties) was already complete (WebDesk Solution — Jitesh D and Brijesh D, 2026-08-10, no issues raised) before this gate was requested."
+    },
+    {
+      "id": "G4-1D-EXP",
+      "type": "qa-security-gate",
+      "scope": "phase-1d-rbac-permissions-expanded",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-11T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Phase 1D-expanded — centralized authorization, project scoping, confidential fields, separation-of-duties expansion — approved, scope 'Phase 1D-expanded (PR #9) only' — see docs/project-state/phase-1d-approval-checklist.md. Built on top of PR #8's AuthzModule; 144 unit + 41 real-database integration + 37 real-database e2e tests, all passing. Approved merge commit 67a4955 (PR #9, merged 2026-08-08, rebased onto PR #10's dependency-upgrade work with no conflicts before merging). status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review of docs/implementation/phase-1d-security-review.md (ADR-0010 separation-of-duties) was already complete (WebDesk Solution — Jitesh D and Brijesh D, 2026-08-10, no issues raised) before this gate was requested."
     }
   ],
 
@@ -286,6 +308,34 @@
       },
       "project_version_before": 6,
       "project_version_after": 7
+    },
+    {
+      "timestamp": "2026-08-11T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved Phase 1D (G4-1D gate), scope Phase 1D (PR #8) only",
+      "details": {
+        "merge_commit_sha": "unspecified — see PR #8 on GitHub",
+        "pull_request": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8",
+        "approval_record": "docs/project-state/phase-1d-validation-report.md#sign-off",
+        "note": "Clean CONFIRM, not an override — the required second-role security review of docs/security/threat-model-authorization-rbac.md was already complete (2026-08-10) before this gate was requested."
+      },
+      "project_version_before": 7,
+      "project_version_after": 8
+    },
+    {
+      "timestamp": "2026-08-11T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved Phase 1D-expanded (G4-1D-EXP gate), scope Phase 1D-expanded (PR #9) only",
+      "details": {
+        "merge_commit_sha": "67a4955",
+        "pull_request": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9",
+        "approval_record": "docs/project-state/phase-1d-approval-checklist.md#sign-off",
+        "note": "Clean CONFIRM, not an override — the required second-role security review of docs/implementation/phase-1d-security-review.md was already complete (2026-08-10) before this gate was requested."
+      },
+      "project_version_before": 8,
+      "project_version_after": 9
     }
   ]
 }
