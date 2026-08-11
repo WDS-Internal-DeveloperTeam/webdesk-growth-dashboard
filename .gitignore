@@ -25,6 +25,7 @@ node_modules/
 .env.*.local
 .turbo/
 dist/
+dist-cjs/
 build/
 .next/
 coverage/
