@@ -228,6 +228,20 @@ The description below is preserved as the original Task 6 plan, not rewritten af
 
 ### Task 13 — Staging deployment foundation
 
+**Status: Not started as a formal task — no PM sign-off, no staging environment, no smoke test.**
+However, on 2026-08-11 the user manually created two real Vercel projects and began deploying
+`main` directly, ad hoc, outside this task's own authorization — this surfaced and fixed real
+deployment-plumbing gaps that this task will eventually need anyway: `dashboard-web` now deploys
+and serves correctly on Vercel; `dashboard-api` gained its previously-missing Vercel Function
+entrypoint (`apps/dashboard-api/api/index.ts`/`vercel.json`, per ADR-0003), dual ESM/CommonJS
+builds for the 4 ESM-only shared packages, and a dynamic-import fix for ESM-only `openid-client` —
+all merged to `main`. `dashboard-api`'s Function now deploys and bootstraps successfully, failing
+only on the still-unprovisioned Supabase database's `DATABASE_URL`. **This is real progress toward
+this task's own "Expected files: deployment configuration for staging" line, but does not itself
+satisfy this task's acceptance criteria** (no staging environment, no PM sign-off, no smoke test,
+required secrets not configured) — see `CLAUDE.md`'s "Current state" and
+`outputs/webdesk-growth-dashboard/HANDOFF.md` for the full record.
+
 - **Purpose:** First real deployment of the foundation to the staging environment.
 - **Dependencies:** Tasks 1–12, staging environment provisioned (setup input).
 - **Authorized role:** DevOps, PM sign-off.

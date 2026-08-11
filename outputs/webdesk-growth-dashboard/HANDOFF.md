@@ -2,7 +2,7 @@
 
 - **Session ended:** 2026-08-07 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Both Phase 1D gates approved 2026-08-11 — G4-1D for PR #8 and G4-1D-EXP for PR #9, each a clean CONFIRM since the required second-role security review was already complete (2026-08-10) before either gate was requested. PR #10's Next.js 16/NestJS 11/Vitest 3 dependency upgrades also merged this session, `pnpm audit` 19 → 0. Phase 1A, 1B, 1C, and both Phase 1D scopes are all now approved)
+- **Last active agent:** Backend role (Both Phase 1D gates approved 2026-08-11 — G4-1D for PR #8 and G4-1D-EXP for PR #9, each a clean CONFIRM since the required second-role security review was already complete (2026-08-10) before either gate was requested. PR #10's Next.js 16/NestJS 11/Vitest 3 dependency upgrades also merged this session, `pnpm audit` 19 → 0. Phase 1A, 1B, 1C, and both Phase 1D scopes are all now approved. Separately, ad-hoc real-Vercel-deployment troubleshooting — not a formal Task 13 execution — got `dashboard-web` live and fixed 3 real bugs blocking `dashboard-api`'s Vercel Function; it now deploys and bootstraps, failing only on the still-unprovisioned Supabase database's `DATABASE_URL`)
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
 - **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, documentation, merge, and gate approval all complete.** Merged to `main` via PR #9 (merge commit `67a4955`); G4-1D-EXP gate approved 2026-08-11 (clean CONFIRM). See `docs/project-state/phase-1d-approval-checklist.md`'s "Sign-off" and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D (G4-1D gate) is also approved — see `docs/project-state/phase-1d-validation-report.md`'s "Sign-off — G4-1D gate" section. Phase 1A, 1B, and 1C remain approved, each scoped to itself only. Also this session: PR #10 (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, `pnpm audit` 19 → 0) merged first; PR #9 was then rebased onto the resulting `main` (no conflicts) before its own merge.
@@ -188,6 +188,69 @@ The 21 real business-module endpoints, the general ADR-0017 audit-log subsystem 
 user-management CRUD beyond role assignment (Task 8) remain explicitly out of scope for everything
 shipped so far — Phase 1D-expanded's own §32 exclusion list.
 
+**Separately, after both Phase 1D gates were approved, the user manually created two real Vercel
+projects and began deploying `main` directly** (`webdesk-growth-dashboard` for `dashboard-web`,
+`webdesk-growth-dashboard-7v1u` for `dashboard-api`) — not a formal Task 13 authorization, but real
+deployment attempts that surfaced and needed real fixes, worked through live in the Vercel
+dashboard (via Claude in Chrome, connected to the Mac mini's browser) alongside code changes:
+
+- `dashboard-web` deploys and serves correctly once its Vercel project was pointed at
+  `apps/dashboard-web` with Framework Preset `Next.js` (the initial attempt used Root Directory
+  `./` with Framework Preset `Node`, which has no entrypoint at repo root — a Turborepo monorepo
+  quirk, not a code bug).
+- `dashboard-api` hit three real, previously-undetected bugs in sequence, each root-caused and
+  fixed, committed, and re-verified via live deployment logs before moving to the next:
+  1. **No Vercel Function entrypoint existed at all.** ADR-0003 anticipated `dashboard-api` running
+     inside a Vercel Function handler, but nobody had built it — `main.ts` was only ever the
+     local-dev/CI entry point (`nest start`/`app.listen()`). Added
+     `apps/dashboard-api/api/index.ts` (a cached-across-invocations Nest bootstrap using
+     `ExpressAdapter`, per `knowledge/03-nestjs-on-vercel.md`'s cold-start guidance — never calls
+     `app.listen()`, Vercel owns the HTTP server) and `apps/dashboard-api/vercel.json`. Getting
+     Vercel to actually recognize the Function took several iterations (zero-config `/api`
+     detection didn't reliably trigger for this Root-Directory-scoped Turborepo monorepo
+     combination — a real platform quirk, not something the docs fully explain); the working fix
+     was an explicit `vercel.json#functions` declaration plus an empty placeholder `public/`
+     directory (satisfies Vercel's literal "does a directory named `public` exist" check for the
+     `Other` framework preset, with nothing sensitive inside it — `vercel.json`'s `rewrites` still
+     routes all real traffic to the Function).
+  2. **`@webdesk/configuration`/`database`/`shared-types`/`validation` are ESM-only** (`"type":
+"module"`), and Vercel's Function bundler treats workspace packages as external `node_modules`
+     dependencies rather than inlining them — the deployed Function crashed with `ERR_REQUIRE_ESM`
+     at runtime (never surfaced locally or in CI, since Node 24's native `require(esm)` support
+     apparently isn't available in Vercel's exact execution environment). Fixed by giving each of
+     the 4 packages a second, CommonJS build (`dist-cjs/`, alongside the existing `dist/`),
+     selected automatically per consumer via `package.json`'s conditional `exports` (`require` →
+     `dist-cjs`, `import` → `dist`) — `dashboard-web` and every other ESM consumer are unaffected.
+     Deliberately did **not** esbuild-bundle the NestJS app itself to solve this — verified against
+     esbuild's own documentation first that it does not support TypeScript's
+     `emitDecoratorMetadata`, which Nest's dependency injection relies on; bundling the app would
+     have silently broken DI in production. `packages/database`'s CJS build specifically omits
+     `buildMigrator`/`migrate.ts` (dead code for any CJS consumer — `dashboard-api` never calls it,
+     only the ESM migration CLI does, and `migrate.ts`'s `import.meta.url`-based self-location
+     can't be emitted for a CommonJS target) — verified the ESM migration CLI
+     (`node dist/migrate.js`) and a real dynamic `import()` of `buildMigrator` both still work
+     unchanged.
+  3. **`openid-client@6.x` (Google OIDC) is also ESM-only** — same crash class, but a third-party
+     dependency this session couldn't dual-build directly. Fixed by switching its two
+     `dashboard-api` import sites (`auth-config.module.ts`'s `OIDC_CONFIGURATION` factory,
+     `google-auth.service.ts`'s two methods) from a static `import * as client` to
+     `await import("openid-client")`; type-only usages stayed a static `import type`, erased at
+     compile time. Verified the full `dashboard-api` test suite (144/144, including
+     `google-auth.service.spec.ts`'s `vi.mock("openid-client", ...)` mocking, which still
+     intercepts correctly regardless of static/dynamic import) and a standalone `require()` of the
+     compiled output both pass.
+
+Each fix was verified with a full local `lint`/`typecheck`/`build`/`test` pass before pushing, and
+then confirmed against the real, live Vercel deployment logs (not just "the build succeeded") —
+including opening the actual deployed URL and reading `ERR_REQUIRE_ESM` stack traces down to the
+exact file and line. **`dashboard-api`'s Function now deploys and bootstraps successfully into
+NestJS**, reaching real business logic (instantiating `UserRepository`) before failing — on
+`DATABASE_URL: Required`, i.e. the still-unprovisioned Supabase database, confirming the deployment
+plumbing itself is solid and the only remaining blocker is the standing setup-input gap this
+project has tracked all along. **This is real merged code on `main`, not a Task 13 execution** — no
+staging environment, no PM sign-off, no smoke test; `docs/phase-plans/phase-1-foundation-plan.md`'s
+Task 13 remains its own separate, not-yet-authorized item.
+
 ## Files committed this session
 
 See each PR's own commit history (`main`'s log) for exact file lists — not duplicated here to
@@ -211,17 +274,17 @@ files, are merged to `main` — see `docs/implementation/phase-1d-file-inventory
 
 ## Next 3 tasks (queued)
 
-1. Obtain the required second-role human review of all three STRIDE-family documents:
-   `docs/security/threat-model-authentication-session-handling.md` (Phase 1C, gate already
-   approved via OVERRIDE pending this), `docs/security/threat-model-authorization-rbac.md` (PR #8's
-   narrower Phase 1D), and `docs/implementation/phase-1d-security-review.md` (PR #9's expansion) —
-   neither Phase 1D gate can be considered until its review happens or the approver makes an
-   explicit override decision, as was done for Phase 1C. Both PR #8 and PR #9 are now merged to
-   `main`, but merging is a separate action from gate approval — neither gate has been requested.
-2. Await explicit review/approval of both Phase 1D gates, then resolve the remaining setup inputs
-   that block a real deployment (Google Workspace OAuth client, the real emergency-administrator
-   account list, `dashboard-web`'s real deployed origin) before the 21 real business modules (which
-   depend on Phase 1C's auth and both Phase 1D scopes) become the next candidate work.
+1. ~~Obtain the required second-role human review of all three STRIDE-family documents~~ — **done**,
+   all three completed 2026-08-07/2026-08-10, both Phase 1D gates approved 2026-08-11 (clean
+   CONFIRM). See "Where we left off" above.
+2. Resolve the remaining setup inputs that block a real working deployment: provision the actual
+   Supabase database (now concretely needed — `dashboard-api`'s deployed Function fails on missing
+   `DATABASE_URL`, but provisioning still needs its own separate authorization), the real Google
+   Workspace OAuth client, the real emergency-administrator account list, and setting
+   `dashboard-web`'s now-live origin as `dashboard-api`'s `WEB_APP_ORIGIN` env var on Vercel.
+3. The 21 real business-module endpoints (depend on Phase 1C's auth and both Phase 1D scopes) are
+   the next candidate work per `docs/phase-plans/phase-1-foundation-plan.md` — not started
+   automatically, still requires its own explicit authorization.
 
 ## Client blockers (waiting on)
 
@@ -244,11 +307,15 @@ files, are merged to `main` — see `docs/implementation/phase-1d-file-inventory
 - `[2026-08-07]` — The real emergency-administrator account list — the provisioning mechanism is
   built and verified end-to-end; no real accounts exist yet. Owner: PM/security owner.
 - `[2026-08-07]` — `dashboard-web`'s real deployed origin (needed for `WEB_APP_ORIGIN`'s CORS/CSRF
-  allowlist). Owner: infrastructure owner.
+  allowlist). **Partially resolved 2026-08-11** — `dashboard-web` is now actually live on Vercel
+  with a real origin, but that value hasn't been set as `dashboard-api`'s `WEB_APP_ORIGIN` yet.
+  Owner: infrastructure owner.
 - ~~`[2026-08-07]` First-login provisioning model (JIT vs. pre-provisioned)~~ — **resolved**,
   pre-provisioned only, confirmed directly by the project owner.
-- ~~`[2026-08-06]` Postgres Marketplace provider confirmation~~ — **resolved 2026-08-07**:
-  Supabase, `us-east-1`. Not yet provisioned.
+- `[2026-08-06]` Postgres Marketplace provider confirmation — **resolved 2026-08-07**: Supabase,
+  `us-east-1`. **Still not provisioned, now concretely blocking as of 2026-08-11** —
+  `dashboard-api`'s deployed Vercel Function fails at bootstrap on the missing `DATABASE_URL` this
+  would provide. Provisioning remains its own separate, not-yet-granted authorization.
 - ~~`[2026-08-06]` Actual GitHub repository creation~~ — **resolved**, repository real and
   reachable, all prior PRs merged to `main` including Phase 1C (#7).
 
@@ -330,6 +397,26 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   document's own "Review status" section. Satisfies ADR-0010's separation-of-duties requirement
   for both Phase 1D scopes; does not itself constitute gate approval for either PR #8 or PR #9 —
   that remains a separate, not-yet-requested decision.
+- `[2026-08-11]` Both Phase 1D gates approved via explicit "Approve both Phase 1D gates now"
+  instruction — clean CONFIRM for both. See `CLAUDE.md`'s "Recent decisions" for the full record.
+- `[2026-08-11]` User manually created two real Vercel projects and began deploying `main` directly
+  — not a Task 13 authorization, but real deployment troubleshooting worked through live (via
+  Claude in Chrome, connected browser) alongside code fixes, each pushed directly to `main` under
+  the user's own explicit "commit and push" instructions per fix (not through a PR — a deliberate
+  deviation from the feature-branch/PR workflow used for Phase 1B–1D, appropriate here since these
+  were small, independently-verified deployment-plumbing fixes, not new business logic).
+  `dashboard-web` now deploys and serves correctly. `dashboard-api` needed three real fixes before
+  it would even build/run: a missing Vercel Function entrypoint (`api/index.ts` + `vercel.json`,
+  plus a `public/` placeholder to satisfy a Vercel platform quirk around Output Directory detection
+  for this Root-Directory-scoped Turborepo monorepo); dual ESM+CommonJS builds for
+  `@webdesk/configuration`/`database`/`shared-types`/`validation` (all ESM-only, causing
+  `ERR_REQUIRE_ESM` when Vercel's Function bundler externalizes them as `require()`d node_modules
+  deps); and switching `openid-client`'s two `dashboard-api` import sites to dynamic `import()`
+  (same ESM-only class of bug, third-party dependency). Deliberately avoided esbuild-bundling the
+  NestJS app itself for any of this — verified against esbuild's own docs that it doesn't support
+  `emitDecoratorMetadata`, which would have silently broken Nest's DI. `dashboard-api`'s Function
+  now deploys and bootstraps successfully, failing only on the still-unprovisioned Supabase
+  database's `DATABASE_URL` — see "Where we left off" above for the full technical detail.
 
 ## Token / context usage this session (optional)
 
@@ -359,7 +446,13 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
   Workspace SMTP integration doesn't exist yet.
 - Do NOT provision the actual Supabase database — the provider/region are confirmed
   (`project.json`), but confirming is not provisioning; every test so far ran against a local/CI
-  disposable instance.
+  disposable instance. This need is now concrete (`dashboard-api`'s deployed Vercel Function fails
+  on missing `DATABASE_URL`), not just hypothetical, but the Function failing is still not itself
+  an authorization to provision.
+- Do NOT treat the 2026-08-11 Vercel deployment fixes (Function entrypoint, dual ESM/CJS builds,
+  `openid-client` dynamic import) as a Task 13 ("Staging deployment foundation") execution or
+  sign-off — real code, merged to `main`, but no staging environment, PM approval, or smoke test
+  exists. Task 13 remains its own separate, not-yet-authorized item.
 - Do NOT treat either STRIDE threat-model pass (authentication/session or authorization) as a
   completed, approved security review — both are self-reviews only, pending the required
   second-role human review.
@@ -371,17 +464,27 @@ Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also appended to `CLA
 
 - `main`'s tip is always the live answer (`git rev-parse HEAD` / `git ls-remote origin main`) —
   not restated here as a fixed SHA, since it trails whatever this session's own commits add.
-- Staging URL: not yet provisioned
+- Staging URL: not formally provisioned (Task 13 not started), but `dashboard-web` is live and
+  serving on Vercel (project `webdesk-growth-dashboard`) and `dashboard-api`'s Vercel Function
+  (project `webdesk-growth-dashboard-7v1u`) deploys and bootstraps, currently failing only on
+  missing `DATABASE_URL` — see "Where we left off" above. Exact URLs not recorded here since
+  Vercel-assigned domains may change; check the Vercel dashboard directly.
 - Mockup preview URL (if active): none
 - Merged PRs: [#1](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/1) (Phase 1A foundation), [#2](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/2) (Phase 1B task package), [#3](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/3) (dependency-audit fixes), [#4](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/4) (Postgres provider confirmation), [#5](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/5) (Phase 1B database foundation), [#7](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/7) (Phase 1C authentication/session management), [#8](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/8) (Phase 1D RBAC/authorization), [#9](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/9) (Phase 1D-expanded, merge commit `67a4955`), [#10](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/10) (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, merge commit `a431427`)
-- Open PRs / issues: none currently open. The Phase 1C gate-approval doc update is uncommitted, working-tree-only, still pending. Neither Phase 1D gate (PR #8 nor PR #9) has been approved — both are merged and their required second-role security review is now complete (2026-08-10), but the gate decision itself is a separate, not-yet-requested action.
+- Direct-to-`main` commits (2026-08-11, deployment troubleshooting, no PR — see "Decisions made
+  this session"): README additions, the Vercel Function entrypoint (`api/index.ts`/`vercel.json`),
+  the dual ESM/CommonJS package builds, and the `openid-client` dynamic-import fix. Each pushed
+  under the user's own explicit "commit and push" instruction per fix.
+- Open PRs / issues: none currently open. Both Phase 1D gates (PR #8, PR #9) are approved (clean
+  CONFIRM, 2026-08-11) — see `CLAUDE.md`'s "Current state".
 
 ---
 
-Last touched: 2026-08-10 · by Claude (Both required second-role security reviews for Phase 1D
-completed — WebDesk Solution (Jitesh D and Brijesh D) confirmed
-`docs/security/threat-model-authorization-rbac.md` (PR #8) and
-`docs/implementation/phase-1d-security-review.md` (PR #9), no issues raised. Both Phase 1D scopes
-are merged to `main` with `pnpm audit` clean and their required review complete, but **neither
-gate has been approved yet** — that remains a separate, not-yet-requested decision. Phase 1C's
-G4-1C gate approved via OVERRIDE, second-role review has since completed.)
+Last touched: 2026-08-11 · by Claude (Both Phase 1D gates approved (clean CONFIRM). Separately, ad-hoc
+real-Vercel-deployment troubleshooting — not a formal Task 13 execution, no PR, pushed directly to
+`main` under explicit per-fix authorization — got `dashboard-web` live and fixed 3 real bugs
+blocking `dashboard-api`'s Vercel Function (missing entrypoint, ESM/CJS interop for 4 workspace
+packages, ESM-only `openid-client`, all verified via live deployment logs, none via esbuild-bundling
+the NestJS app itself since that would break `emitDecoratorMetadata`/DI). `dashboard-api`'s Function
+now deploys and bootstraps, failing only on the still-unprovisioned Supabase database's
+`DATABASE_URL` — the concrete remaining blocker. See "Where we left off" for full technical detail.)

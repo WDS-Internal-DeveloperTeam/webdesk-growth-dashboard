@@ -118,12 +118,38 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   (Task 8) — all separate, later authorizations. Phase 1A, 1B, 1C, and both Phase 1D scopes remain
   approved, each scoped to itself only (Phase 1C via OVERRIDE, both Phase 1D gates via clean
   CONFIRM, see above).
+- **Deployment infrastructure (2026-08-11, ad-hoc, NOT a formal Task 13 execution):** `dashboard-web`
+  is now live on Vercel (project `webdesk-growth-dashboard`, Framework Preset Next.js, Root Directory
+  `apps/dashboard-web`) — real requests serve correctly. `dashboard-api` (project
+  `webdesk-growth-dashboard-7v1u`, Root Directory `apps/dashboard-api`) now **builds and deploys
+  successfully as a Vercel Function** (`apps/dashboard-api/api/index.ts` + `vercel.json`, per
+  ADR-0003) after fixing two real bugs surfaced only by the deployed environment, not by any local/CI
+  test: (1) `@webdesk/configuration`/`database`/`shared-types`/`validation` are ESM-only packages
+  that Vercel's Function bundler `require()`s as external deps rather than inlining — fixed by giving
+  each package a dual ESM+CommonJS build (`dist/` + `dist-cjs/`, selected automatically per consumer
+  via `package.json`'s conditional `exports`); (2) `openid-client@6.x` (Google OIDC) is also ESM-only
+  — fixed by switching its two `dashboard-api` import sites to dynamic `import()`. Both fixes
+  deliberately avoided esbuild-bundling the NestJS app itself (esbuild does not support
+  `emitDecoratorMetadata`, which Nest's DI relies on — bundling would have silently broken it).
+  **`dashboard-api`'s Function still isn't functional** — it now fails only on `DATABASE_URL:
+Required` at Nest bootstrap (`packages/configuration`'s env validation), confirming the deployment
+  plumbing itself is solid and the remaining blocker is exactly the still-unprovisioned Supabase
+  database plus the other unset secrets below. See `apps/dashboard-api/vercel.json`,
+  `apps/dashboard-api/api/index.ts`, and the git history on `main` for the exact commits. **This is
+  real merged code, not Task 13** — no staging environment exists, no PM sign-off was sought, no
+  smoke test has run; Task 13 in `docs/phase-plans/phase-1-foundation-plan.md` remains its own
+  separate, not-yet-authorized execution.
 - **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
   Postgres Marketplace provider is resolved (Supabase, `us-east-1`) but **not provisioned** — every test
-  ran against a local/CI disposable database. Google Workspace OAuth client (blocks a real deployment,
-  not any phase's own code completion), the real emergency-administrator account list, WordPress
-  Application Password account, `dashboard-web`'s real deployed origin, and real timezone confirmation
-  still block later tasks/a real deployment.
+  ran against a local/CI disposable database, and `dashboard-api`'s deployed Vercel Function now
+  concretely fails at bootstrap on the missing `DATABASE_URL` this would provide (see above — no longer
+  a hypothetical future need). Google Workspace OAuth client (also required as a real
+  `dashboard-api` env var — `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`/`_ISSUER_URL`/`_REDIRECT_URI` — before
+  Google SSO can work at all), the real emergency-administrator account list, WordPress Application
+  Password account, `dashboard-web`'s real deployed origin (needed as `dashboard-api`'s
+  `WEB_APP_ORIGIN` env var for CORS/CSRF — `dashboard-web` itself is now live, see above, but this
+  value hasn't been set on `dashboard-api`'s Vercel project yet), and real timezone confirmation still
+  block a real working deployment.
 
 ## Active tasks (this sprint)
 
@@ -133,9 +159,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
    `docs/project-state/phase-1d-approval-checklist.md`'s "Sign-off".
 2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
    creation, Google Workspace OAuth client, the real emergency-administrator account list,
-   WordPress Application Password account, `dashboard-web`'s real deployed origin).
+   WordPress Application Password account, setting `dashboard-web`'s now-live origin as
+   `dashboard-api`'s `WEB_APP_ORIGIN` env var on Vercel).
 3. Provision the actual Supabase database once a later task actually needs a live connection —
-   not before, and not automatically.
+   not before, and not automatically. **That need now concretely exists** — `dashboard-api`'s
+   deployed Vercel Function fails at bootstrap on missing `DATABASE_URL` (see "Current state" —
+   deployment infrastructure) — but provisioning still requires its own separate, explicit
+   authorization; the Function failing is not itself that authorization.
 4. The 21 real business-module endpoints are now the next candidate per
    `docs/phase-plans/phase-1-foundation-plan.md`, now that both Phase 1D gates are approved — not
    started automatically; still requires its own explicit authorization to begin.
@@ -287,6 +317,27 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   required second-role security review for each was already complete (2026-08-10) before either
   gate was requested — unlike Phase 1C's G4-1C gate, which needed an OVERRIDE because its review
   was still outstanding at approval time. `project.json`'s `current_gate` updated to `G4-1D-EXP`.
+- `[2026-08-11]` User manually created two Vercel projects and began deploying `main` directly
+  (`webdesk-growth-dashboard` for `dashboard-web`, `webdesk-growth-dashboard-7v1u` for
+  `dashboard-api`) — not a formal Task 13 authorization, but real deployment attempts needing real
+  fixes. `dashboard-web` now deploys and serves correctly. `dashboard-api` hit three real,
+  previously-undetected bugs in sequence, each fixed and pushed to `main`: (1) no Vercel Function
+  entrypoint existed at all for a NestJS app (ADR-0003 anticipated this but nobody had built it) —
+  added `apps/dashboard-api/api/index.ts` (cached-across-invocations Nest bootstrap, per
+  `knowledge/03-nestjs-on-vercel.md`) and `vercel.json`; (2) `@webdesk/configuration`/`database`/
+  `shared-types`/`validation` are ESM-only, and Vercel's Function bundler `require()`s workspace
+  deps as external rather than inlining them — crashed with `ERR_REQUIRE_ESM` at runtime, fixed by
+  giving each package a dual ESM+CommonJS build selected via conditional `exports` (NOT by
+  esbuild-bundling the whole app, which would have silently broken NestJS's DI —
+  `emitDecoratorMetadata` isn't esbuild-supported, verified against esbuild's own docs before
+  choosing this approach); (3) `openid-client@6.x` (Google OIDC) is also ESM-only, same crash class
+  — fixed via dynamic `import()` at its two `dashboard-api` call sites instead of downgrading the
+  package or converting the whole app to ESM. All three fixes verified with full
+  lint/typecheck/build/test passes (144/144 `dashboard-api` tests) before each push, plus live
+  Vercel deployment logs confirmed each fix's actual effect. `dashboard-api`'s Function now deploys
+  and bootstraps successfully, failing only on missing `DATABASE_URL` — the deployment plumbing
+  itself is done; a working live API still needs the Supabase database provisioned and the other
+  env vars set (all separate, not-yet-granted authorizations). See "Current state" above.
 
 ## Open client blockers
 
@@ -309,7 +360,16 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   (`apps/dashboard-api/src/auth/scripts/provision-emergency-admin.ts`), but no real accounts exist
   yet. Owner: PM/security owner.
 - `dashboard-web`'s real deployed origin (`WEB_APP_ORIGIN` on the `dashboard-api` side, CORS/CSRF
-  allowlist) — every test uses a fixture origin. Owner: infrastructure owner.
+  allowlist) — every test still uses a fixture origin. **Partially resolved 2026-08-11**:
+  `dashboard-web` is now actually deployed on Vercel with a real origin, but that value hasn't been
+  set as `dashboard-api`'s `WEB_APP_ORIGIN` env var yet, and whether the current Vercel-assigned
+  domain is the final one (vs. a custom domain later) is still an infrastructure-owner decision.
+  Owner: infrastructure owner.
+- The real `DATABASE_URL` (Supabase connection string) as a `dashboard-api` Vercel env var —
+  concretely blocking now, not hypothetical: the deployed Function fails at Nest bootstrap on this
+  exact missing value (2026-08-11). Requires the Supabase database to actually be provisioned
+  first, which remains its own separate, not-yet-granted authorization (see Cautions). Owner:
+  infrastructure owner.
 - ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
   the local `origin` remote; confirmed real and reachable (Phase 0 pushed to `origin/main`,
   Phase 1A branch pushed and PR #1 opened 2026-08-06, merged 2026-08-07). Still unconfirmed:
@@ -368,5 +428,11 @@ G4-1D-EXP for PR #9, each a clean CONFIRM since the required second-role securit
 (WebDesk Solution — Jitesh D and Brijesh D, 2026-08-10) was already complete before either gate
 was requested. `project.json`'s `current_gate` is now `G4-1D-EXP`. Phase 1A, 1B, 1C, and both
 Phase 1D scopes are all approved. Phase 1C's own G4-1C gate remains recorded as an OVERRIDE
-historically, its second-role review has since completed. Next candidate work: the 21 real
-business-module endpoints, not started automatically.)
+historically, its second-role review has since completed. Separately, ad-hoc real-Vercel-deployment
+troubleshooting (not a formal Task 13 execution) got `dashboard-web` live and fixed three real bugs
+blocking `dashboard-api`'s Vercel Function (missing entrypoint, ESM/CJS interop for 4 workspace
+packages, ESM-only `openid-client`) — the Function now deploys and bootstraps, failing only on the
+still-unprovisioned Supabase database's `DATABASE_URL`. Next candidate work: the 21 real
+business-module endpoints, not started automatically; separately, resolving the remaining
+deployment secrets (Supabase provisioning, Google OAuth client, `WEB_APP_ORIGIN`) whenever that's
+authorized.)
