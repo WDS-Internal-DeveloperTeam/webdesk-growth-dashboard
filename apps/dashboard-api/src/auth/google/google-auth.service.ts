@@ -6,7 +6,7 @@ import type {
   UserEntity,
   UserRepository,
 } from "@webdesk/database";
-import * as client from "openid-client";
+import type * as Client from "openid-client";
 import {
   AUTH_ENV,
   AUTH_EVENT_REPOSITORY,
@@ -50,7 +50,7 @@ export type GoogleCallbackResult =
 @Injectable()
 export class GoogleAuthService {
   constructor(
-    @Inject(OIDC_CONFIGURATION) private readonly oidcConfig: client.Configuration,
+    @Inject(OIDC_CONFIGURATION) private readonly oidcConfig: Client.Configuration,
     @Inject(AUTH_ENV) private readonly env: AuthEnv,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(EXTERNAL_AUTH_IDENTITY_REPOSITORY)
@@ -60,6 +60,9 @@ export class GoogleAuthService {
   ) {}
 
   async buildAuthorizationRequest(): Promise<GoogleAuthorizationRequest> {
+    // Dynamic import: see auth-config.module.ts's comment on why
+    // openid-client can't be a static import here.
+    const client = await import("openid-client");
     const codeVerifier = client.randomPKCECodeVerifier();
     const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
     const state = client.randomState();
@@ -82,9 +85,10 @@ export class GoogleAuthService {
     transaction: OidcTransaction,
     context: { ipHash: string | null; userAgent: string | null; now?: Date },
   ): Promise<GoogleCallbackResult> {
+    const client = await import("openid-client");
     const now = context.now ?? new Date();
 
-    let claims: client.IDToken | undefined;
+    let claims: Client.IDToken | undefined;
     try {
       const tokens = await client.authorizationCodeGrant(this.oidcConfig, currentUrl, {
         expectedState: transaction.state,
