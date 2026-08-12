@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type {
   AuthEventRepository,
   ExternalAuthIdentityRepository,
@@ -49,16 +49,23 @@ export type GoogleCallbackResult =
  * generic HTTP response regardless of `reason`.
  *
  * The `token_exchange_failed` catch below additionally logs the underlying
- * `openid-client` error server-side only (Vercel runtime logs via
- * `Logger`/pino, never the HTTP response or the `reason` field/`auth_events`
- * row) — that catch previously swallowed the real cause entirely, making a
- * systemic misconfiguration (e.g. a `redirect_uri` mismatch against the
- * registered OAuth client) indistinguishable from a one-off failure.
+ * `openid-client` error server-side only (Vercel runtime logs, never the
+ * HTTP response or the `reason` field/`auth_events` row) — that catch
+ * previously swallowed the real cause entirely, making a systemic
+ * misconfiguration (e.g. a `redirect_uri` mismatch against the registered
+ * OAuth client) indistinguishable from a one-off failure. Uses `console.error`
+ * directly rather than `@nestjs/common`'s `Logger` — a first attempt at this
+ * (2026-08-12) used `new Logger(GoogleAuthService.name)` and never appeared
+ * in Vercel's logs for real production failures, despite working in every
+ * local/unit-test check; the exact cause wasn't tracked down (candidates:
+ * `app.useLogger()`'s override not reaching plain `new Logger()` instances
+ * in this Vercel Function's specific bundling, or a pino/nestjs-pino
+ * integration gap), but `console.error` is confirmed captured by Vercel
+ * (the same channel that surfaced this app's own NestJS bootstrap-crash
+ * logs), so it's used here directly instead of chasing that mystery further.
  */
 @Injectable()
 export class GoogleAuthService {
-  private readonly logger = new Logger(GoogleAuthService.name);
-
   constructor(
     @Inject(OIDC_CONFIGURATION) private readonly oidcConfig: Client.Configuration,
     @Inject(AUTH_ENV) private readonly env: AuthEnv,
@@ -107,9 +114,9 @@ export class GoogleAuthService {
       claims = tokens.claims();
     } catch (error) {
       // Server-side-only diagnostic: never sent to the browser, never written to auth_events.reason.
-      this.logger.error(
-        `Google OIDC token exchange failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`,
-        error instanceof Error ? error.stack : undefined,
+      console.error(
+        `[GoogleAuthService] Google OIDC token exchange failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`,
+        error instanceof Error ? error.stack : error,
       );
       return this.reject("token_exchange_failed", now);
     }

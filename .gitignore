@@ -42,3 +42,6 @@ blob-report/
 credentials.json
 prod-db.env
 *.env
+oauth-google-workspace.json
+client_secret*.json
+oauth*.json

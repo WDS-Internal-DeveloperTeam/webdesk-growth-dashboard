@@ -3,7 +3,6 @@ import type {
   ExternalAuthIdentityRepository,
   UserRepository,
 } from "@webdesk/database";
-import { Logger } from "@nestjs/common";
 import * as client from "openid-client";
 import type * as OpenIdClientModule from "openid-client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -188,7 +187,7 @@ describe("GoogleAuthService", () => {
   });
 
   it("logs the real underlying error server-side only when the token exchange fails — never in the generic reason", async () => {
-    const loggerSpy = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const loggerSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.mocked(client.authorizationCodeGrant).mockRejectedValue(
       new Error("invalid_grant: redirect_uri mismatch"),
     );
