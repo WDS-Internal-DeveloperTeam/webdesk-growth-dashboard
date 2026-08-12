@@ -3,6 +3,7 @@ import type {
   ExternalAuthIdentityRepository,
   UserRepository,
 } from "@webdesk/database";
+import { Logger } from "@nestjs/common";
 import * as client from "openid-client";
 import type * as OpenIdClientModule from "openid-client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -184,6 +185,27 @@ describe("GoogleAuthService", () => {
     if (!result.ok) {
       expect(result.reason).toBe("token_exchange_failed");
     }
+  });
+
+  it("logs the real underlying error server-side only when the token exchange fails — never in the generic reason", async () => {
+    const loggerSpy = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    vi.mocked(client.authorizationCodeGrant).mockRejectedValue(
+      new Error("invalid_grant: redirect_uri mismatch"),
+    );
+
+    const result = await service.handleCallback(callbackUrl, transaction, context);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("token_exchange_failed");
+      expect(result.reason).not.toContain("redirect_uri");
+    }
+    expect(loggerSpy).toHaveBeenCalledWith(
+      expect.stringContaining("invalid_grant: redirect_uri mismatch"),
+      expect.any(String),
+    );
+
+    loggerSpy.mockRestore();
   });
 
   it("builds an authorization URL with PKCE S256, a fresh state, and a fresh nonce", async () => {

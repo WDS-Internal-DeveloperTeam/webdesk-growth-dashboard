@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type {
   AuthEventRepository,
   ExternalAuthIdentityRepository,
@@ -47,9 +47,18 @@ export type GoogleCallbackResult =
  * verbatim (knowledge/05: "without leaking to the rejected user *which*
  * check failed"). The controller maps every `ok: false` to one identical
  * generic HTTP response regardless of `reason`.
+ *
+ * The `token_exchange_failed` catch below additionally logs the underlying
+ * `openid-client` error server-side only (Vercel runtime logs via
+ * `Logger`/pino, never the HTTP response or the `reason` field/`auth_events`
+ * row) — that catch previously swallowed the real cause entirely, making a
+ * systemic misconfiguration (e.g. a `redirect_uri` mismatch against the
+ * registered OAuth client) indistinguishable from a one-off failure.
  */
 @Injectable()
 export class GoogleAuthService {
+  private readonly logger = new Logger(GoogleAuthService.name);
+
   constructor(
     @Inject(OIDC_CONFIGURATION) private readonly oidcConfig: Client.Configuration,
     @Inject(AUTH_ENV) private readonly env: AuthEnv,
@@ -96,7 +105,12 @@ export class GoogleAuthService {
         pkceCodeVerifier: transaction.codeVerifier,
       });
       claims = tokens.claims();
-    } catch {
+    } catch (error) {
+      // Server-side-only diagnostic: never sent to the browser, never written to auth_events.reason.
+      this.logger.error(
+        `Google OIDC token exchange failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
       return this.reject("token_exchange_failed", now);
     }
 
