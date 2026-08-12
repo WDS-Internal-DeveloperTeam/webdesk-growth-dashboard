@@ -474,6 +474,26 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row) for exactly
   this, but diagnosis was explicitly deferred by the user ("we will check at that time") rather
   than run immediately — pick up here next time this is revisited.
+- `[2026-08-12]` User submitted a formal Phase 1E authorization brief (Immutable Audit Logging,
+  Operational Job Records, Notification Records, Retention Controls, Operational Contacts, Core
+  System Operations Foundation — explicitly not Phase 1F/business modules), gated on Phase 1D
+  having "completed code review" as a distinct item from the security review. Verified against
+  `project.json`'s `gates[]` (the authoritative source) that `G4-1D`/`G4-1D-EXP` are both
+  `passed`/`CONFIRM`, filled in the brief's blank "approved remote SHA" field as `67a4955` (the
+  PR #9 merge commit, confirmed via git log), and confirmed no currently-open blocker touches
+  Phase 1E's scope — but found no actual record of an independent code review, distinct from the
+  security review, anywhere in the Phase 1D docs, despite the original task package listing it as
+  its own separate item (§9: "developer who performed implementation ≠ required independent code
+  reviewer"). Reported this gap rather than assuming it was satisfied. User asked Claude to perform
+  the independent code review itself; ran the project's own `code-review` skill at high effort
+  (8 finder angles, 1-vote verification per surviving candidate) against the full Phase 1D diff —
+  6 findings survived (5 CONFIRMED, 1 PLAUSIBLE), most severe a dormant `Op.in: [null, projectId]`
+  bug in the RBAC repositories that would silently deny all globally-scoped grants the moment a
+  real project-scoped route exists (none does yet). User reviewed the code and findings themselves
+  and confirmed it acceptable, closing the "code review" gate item — see
+  `docs/project-state/phase-1d-approval-checklist.md`'s new "Independent code review" section for
+  the full record. Findings themselves are tracked as follow-up technical debt, not applied as
+  fixes in this pass (not requested).
 
 ## Open client blockers
 

@@ -176,3 +176,45 @@ finding).
 | -------------------------------------- | -------------------------------------- | ---------------------------- | ---------- |
 | Reviewer (second-role security review) | WebDesk Solution — Jitesh D, Brijesh D | ☑ Reviewed, no issues raised | 2026-08-10 |
 | Approver (gate decision)               | WebDesk Solution                       | ☑ Approved                   | 2026-08-11 |
+
+---
+
+## Independent code review (completed 2026-08-12 — retroactively closes an open item)
+
+The original task package (`docs/task-packages/phase-1d-rbac-permissions-expanded.md` §30/§33)
+lists "Code review is complete" as its own item, distinct from "Security review is complete" — the
+same document's §9 explicitly requires "developer who performed implementation ≠ required
+independent code reviewer." At the time this checklist's "Sign-off" above was recorded
+(2026-08-11), no dedicated code-review record existed separate from the security review — this was
+identified as a genuine open gap when Phase 1E was subsequently requested (the Phase 1E
+authorization brief itself required confirming Phase 1D had "completed code review" before work
+could begin), not silently assumed satisfied.
+
+**Closed as follows:** Claude performed an independent review of the full Phase 1D diff (commit
+range `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`..`67a4955`, covering both PR #8 and PR #9) using
+the project's `code-review` skill at high effort — 8 independent finder passes (line-by-line
+correctness scan, removed-behavior audit, cross-file call-site tracer, plus reuse/simplification/
+efficiency/altitude/CLAUDE.md-conventions cleanup angles) followed by one independent verification
+pass per surviving candidate. 6 findings survived verification (5 CONFIRMED, 1 PLAUSIBLE); none
+were rated as requiring an immediate blocking fix (the most severe — an `Op.in: [null, projectId]`
+pattern in the RBAC repositories that would silently deny globally-scoped grants once real
+project-scoped routes exist — is currently dormant, since no route passes a real `projectId` yet).
+Highlights: a dormant project-scoping query bug, a missing audit-event on `RecoveryService`'s
+self-approval denial (asymmetric with `RoleAssignmentService`'s equivalent case), an unvalidated
+route-param ID (mitigated by the app's global exception filter), duplicated session-validation
+logic across three call sites, duplicated repository entity-mapping boilerplate (a pre-existing
+pattern, not unique to this diff), and one honestly-self-documented piece of unused
+separation-of-duties scaffolding.
+
+WebDesk Solution then reviewed the code independently and confirmed it acceptable ("I have reviewed
+the latest code and it's good") — accepting the findings as tracked follow-up items rather than
+blockers, since none represent a currently-exploitable defect.
+
+| Role                                     | Name             | Decision                               | Date       |
+| ----------------------------------------- | ---------------- | --------------------------------------- | ---------- |
+| Independent reviewer (code review)        | Claude           | Reviewed — 6 findings, none blocking    | 2026-08-12 |
+| Approver (accepts findings as follow-up)  | WebDesk Solution  | Reviewed and confirmed acceptable       | 2026-08-12 |
+
+This closes the "Code review is complete" item from the original task package's definition of
+done. It does not reopen or amend the `G4-1D-EXP` gate decision above, which remains an accurate
+historical record of the state at 2026-08-11.
