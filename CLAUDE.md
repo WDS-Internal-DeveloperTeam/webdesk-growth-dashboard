@@ -617,6 +617,15 @@ events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row
 @webdesk/database run migrate` themselves" pattern as every prior production migration this
   project) before the `audit_events` table actually exists there — the code being on `main` and
   `dashboard-api` auto-deploying does not itself apply the migration.
+- `[2026-08-12]` Migration `00018` (the ADR-0017 `audit_events` table, its DB-level immutability
+  trigger/function, and the `git_commit_sha` check constraint) run against the real production
+  Neon database — user ran it themselves in their own terminal (`pnpm --filter @webdesk/database
+run migrate`, sourcing `prod-db.env`), same discipline as every prior production DB operation
+  this session. Applied cleanly: `Applied 1 migration(s): 00018-create-audit-events`
+  (`durationSeconds: 3.649`). The Phase 1E audit-foundation slice is now genuinely live in
+  production — `audit_events` exists and `AuditService` calls from `RoleAssignmentService`/
+  `RecoveryService` will now actually persist once `dashboard-api`'s deploy of PR #11's code is
+  live (already triggered by the merge, per the prior entry).
 
 ## Open client blockers
 
