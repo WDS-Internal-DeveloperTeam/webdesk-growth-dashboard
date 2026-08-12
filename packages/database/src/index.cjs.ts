@@ -14,3 +14,4 @@ export { withTransaction } from "./transaction.js";
 export { checkDatabaseHealth } from "./health.js";
 export * from "./auth/index.js";
 export * from "./authz/index.js";
+export * from "./audit/index.js";
