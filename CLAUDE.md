@@ -532,6 +532,21 @@ events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row
   not merged, not deployed. **Still open**: the actual root cause among the candidates above remains
   unconfirmed until this fix is merged, deployed, and a real login is attempted again with the new
   logging live.
+- `[2026-08-12]` CI's "Formatting validation" job failed on PR #12 — `pnpm format` (prettier
+  `--check`) flagged `CLAUDE.md` (touched by that PR) plus 4 pre-existing files on `main`
+  (`docs/project-state/phase-1d-approval-checklist.md`,
+  `docs/project-state/phase-1e-pre-implementation-verification.md`,
+  `docs/project-state/setup-input-register.md`, `outputs/webdesk-growth-dashboard/HANDOFF.md`)
+  already out of sync with prettier's markdown style. Fixed with `pnpm format:write`; diffs
+  verified whitespace/emphasis-marker only (balanced insertions/deletions, spot-checked) — no
+  content changed in any of the 5 files. All 14 checks passed after the fix.
+- `[2026-08-12]` PR #12 merged to `main` under explicit "Merge PR #12" authorization — merge commit
+  `11987fd`. `GoogleAuthService`'s token-exchange error logging fix is now on `main`; since
+  `dashboard-api`'s Vercel project auto-deploys on push to `main` (the production branch), this
+  triggers a real production deployment. **The actual root cause of the login failures is still
+  unconfirmed** — that requires the deployment to complete and a real login attempt to run against
+  it, so the new `Logger.error` call actually fires and its output can be read from Vercel's
+  runtime logs.
 
 ## Open client blockers
 
