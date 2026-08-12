@@ -593,6 +593,30 @@ events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row
   unconfirmed** — that requires the deployment to complete and a real login attempt to run against
   it, so the new `Logger.error` call actually fires and its output can be read from Vercel's
   runtime logs.
+- `[2026-08-12]` PR #11 (`phase-1e-audit-foundation`) had a merge conflict against `main` after
+  PR #12 merged — both touched `CLAUDE.md` only (no code-file overlap). Resolved under explicit
+  "please resolve those and merge" authorization: `git merge origin/main` into the PR branch,
+  both conflict hunks were pure additive divergence (each branch had appended different-but-
+  compatible content after the same point), resolved by keeping both "Recent decisions" entries in
+  chronological order and taking `origin/main`'s footer as the base (the footer is an explicitly
+  rewritten "current state" summary, not append-only, and `origin/main`'s was the more recent one).
+  The merge also surfaced 4 files (`apps/dashboard-api/src/audit/audit.service.ts`,
+  `docs/project-state/phase-1e-audit-foundation-validation-report.md`,
+  `docs/task-packages/phase-1e-audit-foundation.md`,
+  `packages/database/test/phase1e-audit.integration.test.ts`) that were never checked against
+  prettier before — fixed with `pnpm format:write`, verified cosmetic-only. Re-ran the **full**
+  validation suite fresh after the merge (not just the diff): typecheck/lint clean on both
+  packages, 149/149 `dashboard-api` unit tests, migration up/down round-trip clean, 48/48
+  `packages/database` integration tests, 37/37 `dashboard-api` e2e tests, `pnpm audit` 0
+  vulnerabilities, secret scan clean (361 files) — all on a fresh local disposable database. Pushed
+  the resolved branch, confirmed CI green (14/14 checks), then merged PR #11 to `main` under
+  explicit "Merge PR #11" authorization — merge commit `c62cbc1`. The Phase 1E audit-foundation
+  slice (real ADR-0017 `audit_events` table with DB-level immutability, `AuditService`, the
+  `RecoveryService` SoD-audit-gap fix) is now on `main`. **Not yet live in production**: migration
+  `00018` still needs to be run against the real Neon database (same "user runs `pnpm --filter
+@webdesk/database run migrate` themselves" pattern as every prior production migration this
+  project) before the `audit_events` table actually exists there — the code being on `main` and
+  `dashboard-api` auto-deploying does not itself apply the migration.
 
 ## Open client blockers
 
