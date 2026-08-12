@@ -364,10 +364,10 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   option with a real static `import pg from "pg"` (commit `5c954ce`). User then walked through
   creating a Google OAuth client and setting `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`/`_ISSUER_URL`/
   `_REDIRECT_URI`, `WEB_APP_ORIGIN` (dashboard-web's real deployed origin), and a freshly-generated
-  `TOTP_ENCRYPTION_KEY` as `dashboard-api` Vercel env vars. Once those were set, the *same*
+  `TOTP_ENCRYPTION_KEY` as `dashboard-api` Vercel env vars. Once those were set, the _same_
   `openid-client` `ERR_REQUIRE_ESM` class of error the 2026-08-11 dynamic-`import()` fix (`ddc951e`)
   was believed to have already fixed **resurfaced** — proving that fix was never actually exercised
-  before (the `AUTH_ENV` provider throws on missing env vars *before* reaching the `dynamicImport`
+  before (the `AUTH_ENV` provider throws on missing env vars _before_ reaching the `dynamicImport`
   call, so the code path was untested until real Google OAuth env vars existed). Root cause this
   time, confirmed only by reading actual deployed runtime logs (local/compiled-output checks are
   insufficient — Vercel's Function bundler re-transpiles `apps/dashboard-api/src/` itself rather
@@ -395,7 +395,7 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   runtime log timeline shows zero `500`s since this deployment — `dashboard-api` is genuinely live
   in production for the first time. Note: `/ready`'s `checks: {}` is still a Phase-1A-era stub (see
   `apps/dashboard-api/src/health/health.controller.ts`) that has never been wired to an actual
-  database query, so a live Neon *query* succeeding is not independently proven by this — only that
+  database query, so a live Neon _query_ succeeding is not independently proven by this — only that
   Sequelize's `dialectModule` fix works and nothing crashes at construction time.
 - `[2026-08-12]` Live-verified the real Google SSO login flow end-to-end as far as safely possible
   without Claude entering credentials (per both this project's own standing caution and Claude's
@@ -430,7 +430,7 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   page's Server Component render; `dashboard-web`'s Vercel project had only ever had `WORDPRESS_APP`
   configured, never this var. Fixed, with the user's explicit go-ahead to act directly in the
   already-authenticated Vercel session: added `NEXT_PUBLIC_API_BASE_URL=https://webdesk-growth-
-  dashboard-7v1u-beta.vercel.app` (Production and Preview, not marked Sensitive since it's a public
+dashboard-7v1u-beta.vercel.app` (Production and Preview, not marked Sensitive since it's a public
   URL that Next.js inlines into the client bundle regardless) and triggered a redeploy — required
   specifically for `NEXT_PUBLIC_*` vars, which Next.js bakes in at build time, not read at runtime.
   Verified against the live page afterward: renders correctly, and the "Sign in with Google
@@ -459,7 +459,7 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 - `[2026-08-12]` First real `users` row and Super Admin role provisioned in production, under
   explicit authorization, confirming the same Workspace org will be used at go-live (just a
   different primary domain later — a same-org domain switch is a simple `GOOGLE_WORKSPACE_ALLOWED_
-  DOMAINS` env var change, not an OAuth client rebuild). Neither existing operator script fit:
+DOMAINS` env var change, not an OAuth client rebuild). Neither existing operator script fit:
   `provision-emergency-admin.ts` bundles a local password+TOTP credential (wrong for a normal SSO
   user), and `bootstrap-super-admin.ts` requires the user to already exist. Added
   `provision:user` (`apps/dashboard-api/src/auth/scripts/provision-user.ts`), smoke-tested against
@@ -471,7 +471,7 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   claim mismatch) is unconfirmed. `GoogleAuthService` deliberately never surfaces the specific
   reason to the browser or console logs (knowledge/05, avoids user enumeration) — only
   `auth_events.reason` has it. Added `list-auth-events` (`packages/database/src/list-auth-
-  events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row) for exactly
+events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row) for exactly
   this, but diagnosis was explicitly deferred by the user ("we will check at that time") rather
   than run immediately — pick up here next time this is revisited.
 - `[2026-08-12]` User submitted a formal Phase 1E authorization brief (Immutable Audit Logging,
@@ -509,6 +509,29 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   (worth revisiting before Phase 1F, not blocking for Phase 1E). Full record:
   `docs/project-state/phase-1e-pre-implementation-verification.md`. Result: no blocking gap found,
   Phase 1E authorized to proceed.
+- `[2026-08-12]` Ran `pnpm --filter @webdesk/database run list-auth-events` against production
+  (user ran it themselves in their own terminal, sourcing `prod-db.env` — Claude never saw the real
+  `DATABASE_URL`, same discipline as every prior production DB operation this session) to resume
+  the diagnosis explicitly deferred earlier. **Real reason found**: every recent login attempt
+  failed with `reason: "token_exchange_failed"`, not a domain/user-matching rejection — ruling out
+  the candidates recorded earlier (`GOOGLE_WORKSPACE_ALLOWED_DOMAINS` misconfiguration, email/domain
+  claim mismatch). The `auth_events` rows themselves prove the OIDC transaction cookie (state/nonce/
+  PKCE verifier) round-tripped successfully across the redirect — a missing/expired cookie redirects
+  before `handleCallback` is ever called, so no row would exist for that path, but rows do exist.
+  The failure is inside or around `client.authorizationCodeGrant` itself
+  (`apps/dashboard-api/src/auth/google/google-auth.service.ts`), most likely a `redirect_uri`
+  mismatch against the OAuth client's registered URIs or a wrong/rotated client secret, but the
+  `catch` block there swallowed the real `openid-client` error completely — never logged anywhere,
+  even server-side. With explicit authorization ("Add the logging fix"), added a single
+  `Logger.error` call logging the real error server-side only (Vercel runtime logs via the existing
+  pino integration) — never sent to the browser, never written to `auth_events.reason` or the
+  redirect URL, both of which stay exactly as generic as before per knowledge/05's no-user-
+  enumeration rule. No behavior change; 145/145 `dashboard-api` unit tests passing (1 new). Branch
+  `fix-google-oidc-token-exchange-logging` pushed,
+  [PR #12](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/12) opened —
+  not merged, not deployed. **Still open**: the actual root cause among the candidates above remains
+  unconfirmed until this fix is merged, deployed, and a real login is attempted again with the new
+  logging live.
 
 ## Open client blockers
 
@@ -528,7 +551,7 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   resolved 2026-08-12, user created the client and set `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`/
   `_ISSUER_URL`/`_REDIRECT_URI` as `dashboard-api` Vercel env vars; the deployed Function's real
   `client.discovery()` call against Google's OIDC issuer now succeeds at bootstrap (see 2026-08-12
-  decision entry). Whether the SSO *login flow itself* works end-to-end for a real Workspace user
+  decision entry). Whether the SSO _login flow itself_ works end-to-end for a real Workspace user
   is still unverified (see Cautions — testing that remains off-limits).
 - The real emergency-administrator account list — the provisioning _mechanism_ is built
   (`apps/dashboard-api/src/auth/scripts/provision-emergency-admin.ts`), but no real accounts exist
@@ -539,7 +562,7 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   an infrastructure-owner decision, but the value itself is set and live.
 - ~~The real `DATABASE_URL` (Neon connection string) as a `dashboard-api` Vercel env var~~ —
   resolved 2026-08-12: user provisioned Neon via Vercel Marketplace and set `DATABASE_URL`; the
-  deployed Function no longer fails at bootstrap on this. A live database *query* succeeding is
+  deployed Function no longer fails at bootstrap on this. A live database _query_ succeeding is
   still not independently proven (see 2026-08-12 decision entry's closing note) — only that
   Sequelize constructs without crashing.
 - ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
@@ -622,7 +645,7 @@ and `openid-client`'s own transitive deps (`jose`, `oauth4webapi`) being invisib
 decisions" entry for the full chain. **Result: `dashboard-api`'s Vercel Function is genuinely live
 in production for the first time** — `/health` and `/ready` return `200`, unknown routes return a
 proper NestJS `404`, zero `500`s since this deployment. `checks: {}` on `/ready` is still an
-unwired Phase-1A-era stub, so a live Neon *query* succeeding is not independently proven — only
+unwired Phase-1A-era stub, so a live Neon _query_ succeeding is not independently proven — only
 that nothing crashes at bootstrap or Sequelize construction. All previously-listed env-var
 blockers (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`, `TOTP_ENCRYPTION_KEY`) are now
 resolved; remaining open blockers are the real emergency-administrator account list, the WordPress
@@ -658,6 +681,26 @@ existing operator script fit; user ran it plus `bootstrap:super-admin` against p
 succeeded. **Login still failed with the same generic `access_denied`** — the app deliberately
 never surfaces which specific check rejected it. Built `list-auth-events` (also smoke-tested
 locally) to read the real reason from the `auth_events` table without guessing, but actually
-running it was explicitly deferred by the user for a later session. Next candidate work when
-resumed: run `list-auth-events`, diagnose the real rejection reason, fix it. Otherwise: the 21 real
-business-module endpoints — not started automatically, requires its own explicit authorization.)
+running it was explicitly deferred by the user for a later session.
+
+**This entry's own work (separate later session)**: resumed the deferred diagnosis — user ran
+`list-auth-events` themselves against production (same never-see-the-real-`DATABASE_URL`
+discipline as every prior production DB operation) and found every recent login attempt failing
+with `reason: "token_exchange_failed"`, not a domain/user rejection — ruling out the previously-
+recorded candidate causes. The `auth_events` rows themselves prove the OIDC transaction cookie
+round-tripped correctly across the redirect (a broken round-trip would redirect before
+`handleCallback` ever runs, leaving no row at all), so the failure is inside or around the actual
+token exchange — most likely a `redirect_uri` mismatch or a wrong/rotated client secret, but
+`GoogleAuthService.handleCallback`'s `catch` block swallowed the real `openid-client` error
+completely, never logging it anywhere, even server-side. With explicit authorization, added a
+single `Logger.error` call (server-side only, via the existing pino integration — never sent to the
+browser, never written to `auth_events.reason` or the redirect URL, both unchanged and still
+generic). Branch `fix-google-oidc-token-exchange-logging` pushed,
+[PR #12](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/12) opened —
+not merged, not deployed. **Root cause still not confirmed** — that requires merging, deploying,
+and attempting a real login again with the new logging live; this is the concrete next step for the
+still-open login issue. Note: this branch was created off `main` at the same commit as
+`phase-1e-audit-foundation` (PR #11, also open, unrelated scope) — the two PRs are independent and
+will each be reviewed/merged on their own, same as prior parallel-PR situations in this project.
+Otherwise: the 21 real business-module endpoints — not started automatically, requires its own
+explicit authorization.)

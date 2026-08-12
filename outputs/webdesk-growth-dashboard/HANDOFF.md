@@ -315,7 +315,7 @@ files, are merged to `main` — see `docs/implementation/phase-1d-file-inventory
 - ~~`[2026-08-06]` Postgres Marketplace provider confirmation~~ — **resolved 2026-08-07**: Neon
   (changed from Supabase 2026-08-11), `us-east-1`. **Provisioned 2026-08-12** — user did this
   themselves via Vercel's Storage → Marketplace flow; `DATABASE_URL` is set and the deployed
-  Function no longer fails at bootstrap on it. A live database *query* succeeding is still not
+  Function no longer fails at bootstrap on it. A live database _query_ succeeding is still not
   independently proven (`/ready`'s health check is an unwired stub) — only that Sequelize
   constructs without crashing.
 - ~~`[2026-08-06]` Actual GitHub repository creation~~ — **resolved**, repository real and
@@ -495,7 +495,7 @@ the deployed Function itself showed the expected behavior; this discipline is wh
 crash — and the runtime log timeline shows zero `500`s since deployment `b40a06b`/`F3h5YS1RE` went
 live. Caveat carried forward honestly: `/ready`'s `checks: {}` is still an unwired Phase-1A-era stub
 (`apps/dashboard-api/src/health/health.controller.ts`) that has never checked an actual database
-query — so a live Neon *query* succeeding is not independently proven by any of this, only that
+query — so a live Neon _query_ succeeding is not independently proven by any of this, only that
 Sequelize constructs without crashing at bootstrap.
 
 ## Token / context usage this session (optional)
@@ -573,7 +573,7 @@ Vercel's tracer, and `openid-client`'s own transitive deps needing the same trea
 and verified only via live deployment logs, never local checks alone. **Result: `dashboard-api`'s
 Vercel Function is genuinely live in production for the first time** — `/health`/`/ready` return
 `200`, zero `500`s since deployment `b40a06b`. `/ready`'s `checks: {}` remains an unwired stub, so a
-live Neon *query* succeeding is not independently proven — only that Sequelize constructs without
+live Neon _query_ succeeding is not independently proven — only that Sequelize constructs without
 crashing. All previously-listed env-var blockers are now resolved; remaining open items are the
 real emergency-administrator account list, the WordPress Application Password account, and real
 timezone confirmation, none of which block `dashboard-api`'s own liveness. See "Where we left off"
