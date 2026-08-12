@@ -11,6 +11,8 @@ import { AUTH_EVENT_REPOSITORY, USER_REPOSITORY } from "../auth/config/auth.cons
 import { SessionService } from "../auth/session/session.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as SessionService above.
 import { SeparationOfDutiesService } from "../auth/common/separation-of-duties.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as SessionService above.
+import { AuditService } from "../audit/audit.service.js";
 import { ROLE_REPOSITORY, USER_ROLE_REPOSITORY } from "./authz.constants.js";
 
 /**
@@ -33,6 +35,13 @@ import { ROLE_REPOSITORY, USER_ROLE_REPOSITORY } from "./authz.constants.js";
  * not a unilateral decision made by the implementing agent. Every denial
  * records a `separation_of_duties_denied` auth event (§22's required
  * event vocabulary) before rethrowing.
+ *
+ * Phase 1E addition: every successful assign/revoke and every SoD denial
+ * is now ALSO recorded to the general ADR-0017 `audit_events` subsystem
+ * via `AuditService` (`permission_change` / `security_exception`
+ * respectively) — additive alongside the existing `auth_events` writes
+ * below, which are unchanged. See
+ * docs/task-packages/phase-1e-audit-foundation.md.
  */
 @Injectable()
 export class RoleAssignmentService {
@@ -43,6 +52,7 @@ export class RoleAssignmentService {
     @Inject(AUTH_EVENT_REPOSITORY) private readonly events: AuthEventRepository,
     private readonly sessionService: SessionService,
     private readonly separationOfDuties: SeparationOfDutiesService,
+    private readonly auditService: AuditService,
   ) {}
 
   async listRoles(): Promise<readonly RoleEntity[]> {
@@ -77,6 +87,16 @@ export class RoleAssignmentService {
       success: true,
       reason: `role:${role.key} assigned_by:${actorId}`,
     });
+    await this.auditService.record({
+      eventType: "permission_change",
+      actorUserId: actorId,
+      actorType: "human",
+      entityType: "user",
+      entityId: targetUserId,
+      action: "role_assigned",
+      reason: `role:${role.key}`,
+      retentionCategory: "approval-audit-7y",
+    });
     await this.sessionService.revokeAllForUser(targetUserId, "role-change", now);
   }
 
@@ -100,10 +120,20 @@ export class RoleAssignmentService {
       success: true,
       reason: `role:${role.key} revoked_by:${actorId}`,
     });
+    await this.auditService.record({
+      eventType: "permission_change",
+      actorUserId: actorId,
+      actorType: "human",
+      entityType: "user",
+      entityId: targetUserId,
+      action: "role_revoked",
+      reason: `role:${role.key}`,
+      retentionCategory: "approval-audit-7y",
+    });
     await this.sessionService.revokeAllForUser(targetUserId, "role-change", now);
   }
 
-  /** Wraps `SeparationOfDutiesService.assertDistinctActors`: on denial, records a `separation_of_duties_denied` event (§22) before rethrowing, so the block itself is auditable. */
+  /** Wraps `SeparationOfDutiesService.assertDistinctActors`: on denial, records a `separation_of_duties_denied` auth event (§22) and a general `security_exception` audit event (Phase 1E) before rethrowing, so the block itself is auditable in both trails. */
   private async assertNotSelfTargeting(
     actorId: string,
     targetUserId: string,
@@ -117,6 +147,16 @@ export class RoleAssignmentService {
         userId: actorId,
         success: false,
         reason: `context:${context} target:${targetUserId}`,
+      });
+      await this.auditService.record({
+        eventType: "security_exception",
+        actorUserId: actorId,
+        actorType: "human",
+        entityType: "user",
+        entityId: targetUserId,
+        action: "separation_of_duties_denied",
+        reason: `context:${context}`,
+        retentionCategory: "security-log-1y",
       });
       throw error;
     }

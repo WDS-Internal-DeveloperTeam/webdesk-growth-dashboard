@@ -155,6 +155,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   account, and real timezone confirmation. None of these block `dashboard-api`'s own liveness; they
   block specific features (emergency-admin login, WordPress integration, schedule-sensitive
   reporting) from being usable end-to-end.
+- **Phase 1E, audit-foundation slice — built, validated, not merged (2026-08-12).** Real ADR-0017
+  `audit_events` table with database-layer-enforced immutability (migration `00018`), the shared
+  `AuditService` emission point, and additive wiring into `RoleAssignmentService`/`RecoveryService`
+  — closes the `RecoveryService` SoD-denial audit gap. See "Recent decisions" and
+  `docs/project-state/phase-1e-audit-foundation-validation-report.md`. Branch
+  `phase-1e-audit-foundation` pushed, PR opened — merge and gate decision are separate,
+  not-yet-requested authorizations, same pattern as every prior phase.
 
 ## Active tasks (this sprint)
 
@@ -174,6 +181,12 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 4. The 21 real business-module endpoints are now the next candidate per
    `docs/phase-plans/phase-1-foundation-plan.md`, now that both Phase 1D gates are approved — not
    started automatically; still requires its own explicit authorization to begin.
+5. Phase 1E audit-foundation slice (§5–8) — **built and validated, not merged.** Branch
+   `phase-1e-audit-foundation` pushed, PR opened. Awaiting the same pattern as every prior phase:
+   review, second-role security review if the user requests one, then a separate merge
+   authorization and gate decision. See `docs/project-state/phase-1e-audit-foundation-validation-report.md`.
+   Remaining Phase 1E components (jobs, notifications, full retention system, operational
+   contacts, system health) are separate, not-yet-authorized slices.
 
 ## Recent decisions
 
@@ -509,6 +522,39 @@ events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row
   (worth revisiting before Phase 1F, not blocking for Phase 1E). Full record:
   `docs/project-state/phase-1e-pre-implementation-verification.md`. Result: no blocking gap found,
   Phase 1E authorized to proceed.
+- `[2026-08-12]` Explicit authorization received ("Start Phase 1E with the audit foundation first")
+  to build the audit-foundation slice of Phase 1E only (§5–8: audit-event architecture,
+  immutability, retention classification, approval/SoD event linkage) — not jobs, notifications,
+  the full retention system, operational contacts, or system health, all separate later
+  authorizations per the user's own framing. Built on branch `phase-1e-audit-foundation`, off
+  `main` at `95b8c25` — see `docs/task-packages/phase-1e-audit-foundation.md`. Added migration
+  `00018` creating the real ADR-0017 `audit_events` table (distinct from Phase 1C's narrower,
+  login-scoped `auth_events`), with immutability enforced at the **database layer** via a Postgres
+  trigger — not just repository convention like the earlier tables: `UPDATE` is unconditionally
+  rejected; `DELETE` is rejected unless a transaction sets
+  `audit.retention_delete_authorized = 'on'` (the hook a later, separately-authorized
+  retention-deletion job will use — not built here), and even then is refused for any
+  `legal_hold = true` row. Added `packages/database/src/audit/` (`AuditEventRepository`) and
+  `apps/dashboard-api/src/audit/` (`AuditModule`/`AuditService`, the shared emission point).
+  Wired additively (no existing behavior or `auth_events` write removed) into
+  `RoleAssignmentService` (now also records `permission_change`/`security_exception`) and
+  `RecoveryService` (now also records `account_recovery_request`/`account_recovery_decision`) —
+  the latter **closes the specific `RecoveryService` SoD-denial audit gap** flagged by both the
+  Phase 1D independent code review and the Phase 1E pre-implementation verification's item 7: a
+  self-approval attempt is now recorded, not just blocked. Validated fresh this session against a
+  real local disposable PostgreSQL 17 database: migration up/down round-trip clean; 48/48
+  `packages/database` integration tests passing (7 new, including direct proof the DB trigger
+  rejects a raw `UPDATE`/unauthorized `DELETE` and still refuses a legal-hold row even with
+  retention authorization set); 148/148 `dashboard-api` unit tests passing (4 new); 37/37
+  `dashboard-api` e2e tests passing (confirms the NestJS module graph resolves with `AuditModule`
+  newly imported into both `AuthModule` and `AuthzModule`); typecheck/lint clean on both packages;
+  `pnpm audit` 0 vulnerabilities; secret scan clean. Full record:
+  `docs/project-state/phase-1e-audit-foundation-validation-report.md`. **Not merged, not
+  deployed** — branch pushed and a PR opened for review, per this project's standing pattern.
+  Also this session: found `prod-db.env` (the file holding the real production `DATABASE_URL`,
+  created during earlier troubleshooting) was untracked but **not** actually covered by
+  `.gitignore`'s existing patterns — added it explicitly (plus a general `*.env` pattern) before
+  it could be accidentally staged.
 - `[2026-08-12]` Ran `pnpm --filter @webdesk/database run list-auth-events` against production
   (user ran it themselves in their own terminal, sourcing `prod-db.env` — Claude never saw the real
   `DATABASE_URL`, same discipline as every prior production DB operation this session) to resume
@@ -612,10 +658,12 @@ events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row
   Claude not doing it unprompted — it still stands for that; every automated test still uses a
   local/CI disposable database, and Claude has not run migrations or written data against the real
   Neon instance.
-- Do NOT begin the 21 real business-module endpoints, the general ADR-0017 audit-log subsystem
-  (Task 7), or user-management CRUD beyond role assignment (Task 8) without a separate, explicit
-  go-ahead — Phase 1D-expanded's own approval (once granted) covers this expansion only, per its
-  task package's §32 out-of-scope list.
+- Do NOT begin the 21 real business-module endpoints or user-management CRUD beyond role
+  assignment (Task 8) without a separate, explicit go-ahead. **The general ADR-0017 audit-log
+  subsystem (Task 7) — audit-foundation slice only** — is now built and validated (not merged) per
+  "Start Phase 1E with the audit foundation first"; the remaining Task 7 scope (migrating existing
+  `auth_events` writes into it, a query HTTP surface, the retention-deletion job itself) is still
+  unauthorized. See `docs/task-packages/phase-1e-audit-foundation.md`.
 - Do NOT build a grant-editing endpoint for `view_confidential`/`edit_confidential`, a real
   project-scoped HTTP route, or any real confidential business field without a separate, explicit
   authorization — the underlying mechanisms are built and tested (Phase 1D-expanded), but

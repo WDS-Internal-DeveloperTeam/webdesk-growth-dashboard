@@ -7,3 +7,4 @@ export { checkDatabaseHealth } from "./health.js";
 export { buildMigrator } from "./migrate.js";
 export * from "./auth/index.js";
 export * from "./authz/index.js";
+export * from "./audit/index.js";

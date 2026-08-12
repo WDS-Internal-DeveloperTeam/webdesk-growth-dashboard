@@ -1,6 +1,7 @@
 import type { AuthEventRepository, RecoveryRequestRepository } from "@webdesk/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SeparationOfDutiesService } from "../common/separation-of-duties.service.js";
+import type { AuditService } from "../../audit/audit.service.js";
 import { RecoveryService } from "./recovery.service.js";
 
 describe("RecoveryService", () => {
@@ -10,15 +11,18 @@ describe("RecoveryService", () => {
     decide: ReturnType<typeof vi.fn>;
   };
   let events: { record: ReturnType<typeof vi.fn> };
+  let auditService: { record: ReturnType<typeof vi.fn> };
   let service: RecoveryService;
 
   beforeEach(() => {
     requests = { create: vi.fn(), findById: vi.fn(), decide: vi.fn() };
     events = { record: vi.fn() };
+    auditService = { record: vi.fn() };
     service = new RecoveryService(
       requests as unknown as RecoveryRequestRepository,
       events as unknown as AuthEventRepository,
       new SeparationOfDutiesService({ findActorsForResource: vi.fn(), record: vi.fn() } as never),
+      auditService as unknown as AuditService,
     );
   });
 
@@ -34,9 +38,17 @@ describe("RecoveryService", () => {
     expect(events.record).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "recovery_request_created", userId: "u1" }),
     );
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "account_recovery_request",
+        entityType: "recovery_request",
+        entityId: "r1",
+        actorType: "system",
+      }),
+    );
   });
 
-  it("rejects a self-approval attempt — separation of duties", async () => {
+  it("rejects a self-approval attempt — separation of duties — and records a security_exception audit event", async () => {
     requests.findById.mockResolvedValue({ id: "r1", status: "pending", targetUserId: "u1" });
 
     await expect(
@@ -44,6 +56,14 @@ describe("RecoveryService", () => {
     ).rejects.toThrow(/Separation of duties/);
 
     expect(requests.decide).not.toHaveBeenCalled();
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "security_exception",
+        actorUserId: "u1",
+        entityId: "r1",
+        action: "separation_of_duties_denied",
+      }),
+    );
   });
 
   it("approves when decided by a second, distinct administrator", async () => {
@@ -60,6 +80,15 @@ describe("RecoveryService", () => {
     expect(events.record).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "recovery_request_approved" }),
     );
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "account_recovery_decision",
+        actorUserId: "u2",
+        entityId: "r1",
+        action: "approve",
+        retentionCategory: "approval-audit-7y",
+      }),
+    );
   });
 
   it("records a distinct event type for a rejection", async () => {
@@ -70,6 +99,12 @@ describe("RecoveryService", () => {
 
     expect(events.record).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "recovery_request_denied" }),
+    );
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "account_recovery_decision",
+        action: "reject",
+      }),
     );
   });
 

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuthorizationActionRepository } from "@webdesk/database";
+import { AuditModule } from "../audit/audit.module.js";
 import { AuthConfigModule } from "./config/auth-config.module.js";
 import { authRepositoryProviders } from "./database.providers.js";
 import { RateLimitService } from "./common/rate-limit.service.js";
@@ -21,10 +22,12 @@ import { RecoveryService } from "./recovery/recovery.service.js";
  * Phase 1C — Google Workspace SSO, restricted emergency-local
  * authentication, and session management
  * (docs/task-packages/phase-1c-authentication-sessions.md). Deliberately
- * does not include: the general audit-log subsystem (Task 7),
- * user-management CRUD (Task 8), or an HTTP surface for `RecoveryService`
- * — no real approval workflow exists yet to wire it into
- * (docs/task-packages/phase-1d-rbac-authorization.md §5).
+ * does not include: user-management CRUD (Task 8), or an HTTP surface for
+ * `RecoveryService` — no real approval workflow exists yet to wire it into
+ * (docs/task-packages/phase-1d-rbac-authorization.md §5). Imports
+ * `AuditModule` (Phase 1E) so `RecoveryService` can record general
+ * ADR-0017 audit events alongside its existing narrow `auth_events` writes
+ * — see docs/task-packages/phase-1e-audit-foundation.md.
  *
  * Exports `SessionService`/`SessionGuard`/`SeparationOfDutiesService` for
  * `AuthzModule` (Phase 1D) to consume — `AuthzModule` imports this module,
@@ -39,7 +42,7 @@ import { RecoveryService } from "./recovery/recovery.service.js";
  * `AuthzModule` itself already uses for `USER_REPOSITORY`.
  */
 @Module({
-  imports: [AuthConfigModule],
+  imports: [AuthConfigModule, AuditModule],
   controllers: [GoogleAuthController, EmergencyAuthController, SessionController],
   providers: [
     ...authRepositoryProviders,
