@@ -7,6 +7,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionService } from "../auth/session/session.service.js";
 import { SeparationOfDutiesService } from "../auth/common/separation-of-duties.service.js";
+import type { AuditService } from "../audit/audit.service.js";
 import { RoleAssignmentService } from "./role-assignment.service.js";
 
 const ROLE = { id: "role-1", key: "owner", name: "Owner" };
@@ -23,6 +24,7 @@ describe("RoleAssignmentService", () => {
   let users: { findById: ReturnType<typeof vi.fn> };
   let events: { record: ReturnType<typeof vi.fn> };
   let sessionService: { revokeAllForUser: ReturnType<typeof vi.fn> };
+  let auditService: { record: ReturnType<typeof vi.fn> };
   let service: RoleAssignmentService;
 
   beforeEach(() => {
@@ -36,6 +38,7 @@ describe("RoleAssignmentService", () => {
     users = { findById: vi.fn() };
     events = { record: vi.fn() };
     sessionService = { revokeAllForUser: vi.fn() };
+    auditService = { record: vi.fn() };
     service = new RoleAssignmentService(
       roles as unknown as RoleRepository,
       userRoles as unknown as UserRoleRepository,
@@ -43,6 +46,7 @@ describe("RoleAssignmentService", () => {
       events as unknown as AuthEventRepository,
       sessionService as unknown as SessionService,
       new SeparationOfDutiesService({ findActorsForResource: vi.fn(), record: vi.fn() } as never),
+      auditService as unknown as AuditService,
     );
   });
 
@@ -87,6 +91,13 @@ describe("RoleAssignmentService", () => {
           eventType: "separation_of_duties_denied",
           userId: "actor-1",
           success: false,
+        }),
+      );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "security_exception",
+          actorUserId: "actor-1",
+          action: "separation_of_duties_denied",
         }),
       );
     });
@@ -134,6 +145,15 @@ describe("RoleAssignmentService", () => {
           reason: expect.stringContaining("owner"),
         }),
       );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "permission_change",
+          actorUserId: "actor-1",
+          entityId: "user-1",
+          action: "role_assigned",
+          retentionCategory: "approval-audit-7y",
+        }),
+      );
       expect(sessionService.revokeAllForUser).toHaveBeenCalledWith("user-1", "role-change", NOW);
     });
   });
@@ -154,6 +174,13 @@ describe("RoleAssignmentService", () => {
           eventType: "separation_of_duties_denied",
           userId: "actor-1",
           success: false,
+        }),
+      );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "security_exception",
+          actorUserId: "actor-1",
+          action: "separation_of_duties_denied",
         }),
       );
     });
@@ -193,6 +220,15 @@ describe("RoleAssignmentService", () => {
 
       expect(events.record).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: "role_revoked", userId: "user-1", success: true }),
+      );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "permission_change",
+          actorUserId: "actor-1",
+          entityId: "user-1",
+          action: "role_revoked",
+          retentionCategory: "approval-audit-7y",
+        }),
       );
       expect(sessionService.revokeAllForUser).toHaveBeenCalledWith("user-1", "role-change", NOW);
     });

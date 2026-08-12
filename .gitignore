@@ -40,3 +40,5 @@ blob-report/
 *.pem
 *.key
 credentials.json
+prod-db.env
+*.env

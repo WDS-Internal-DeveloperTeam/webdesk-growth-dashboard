@@ -155,6 +155,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   account, and real timezone confirmation. None of these block `dashboard-api`'s own liveness; they
   block specific features (emergency-admin login, WordPress integration, schedule-sensitive
   reporting) from being usable end-to-end.
+- **Phase 1E, audit-foundation slice — built, validated, not merged (2026-08-12).** Real ADR-0017
+  `audit_events` table with database-layer-enforced immutability (migration `00018`), the shared
+  `AuditService` emission point, and additive wiring into `RoleAssignmentService`/`RecoveryService`
+  — closes the `RecoveryService` SoD-denial audit gap. See "Recent decisions" and
+  `docs/project-state/phase-1e-audit-foundation-validation-report.md`. Branch
+  `phase-1e-audit-foundation` pushed, PR opened — merge and gate decision are separate,
+  not-yet-requested authorizations, same pattern as every prior phase.
 
 ## Active tasks (this sprint)
 
@@ -174,6 +181,12 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 4. The 21 real business-module endpoints are now the next candidate per
    `docs/phase-plans/phase-1-foundation-plan.md`, now that both Phase 1D gates are approved — not
    started automatically; still requires its own explicit authorization to begin.
+5. Phase 1E audit-foundation slice (§5–8) — **built and validated, not merged.** Branch
+   `phase-1e-audit-foundation` pushed, PR opened. Awaiting the same pattern as every prior phase:
+   review, second-role security review if the user requests one, then a separate merge
+   authorization and gate decision. See `docs/project-state/phase-1e-audit-foundation-validation-report.md`.
+   Remaining Phase 1E components (jobs, notifications, full retention system, operational
+   contacts, system health) are separate, not-yet-authorized slices.
 
 ## Recent decisions
 
@@ -509,6 +522,39 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   (worth revisiting before Phase 1F, not blocking for Phase 1E). Full record:
   `docs/project-state/phase-1e-pre-implementation-verification.md`. Result: no blocking gap found,
   Phase 1E authorized to proceed.
+- `[2026-08-12]` Explicit authorization received ("Start Phase 1E with the audit foundation first")
+  to build the audit-foundation slice of Phase 1E only (§5–8: audit-event architecture,
+  immutability, retention classification, approval/SoD event linkage) — not jobs, notifications,
+  the full retention system, operational contacts, or system health, all separate later
+  authorizations per the user's own framing. Built on branch `phase-1e-audit-foundation`, off
+  `main` at `95b8c25` — see `docs/task-packages/phase-1e-audit-foundation.md`. Added migration
+  `00018` creating the real ADR-0017 `audit_events` table (distinct from Phase 1C's narrower,
+  login-scoped `auth_events`), with immutability enforced at the **database layer** via a Postgres
+  trigger — not just repository convention like the earlier tables: `UPDATE` is unconditionally
+  rejected; `DELETE` is rejected unless a transaction sets
+  `audit.retention_delete_authorized = 'on'` (the hook a later, separately-authorized
+  retention-deletion job will use — not built here), and even then is refused for any
+  `legal_hold = true` row. Added `packages/database/src/audit/` (`AuditEventRepository`) and
+  `apps/dashboard-api/src/audit/` (`AuditModule`/`AuditService`, the shared emission point).
+  Wired additively (no existing behavior or `auth_events` write removed) into
+  `RoleAssignmentService` (now also records `permission_change`/`security_exception`) and
+  `RecoveryService` (now also records `account_recovery_request`/`account_recovery_decision`) —
+  the latter **closes the specific `RecoveryService` SoD-denial audit gap** flagged by both the
+  Phase 1D independent code review and the Phase 1E pre-implementation verification's item 7: a
+  self-approval attempt is now recorded, not just blocked. Validated fresh this session against a
+  real local disposable PostgreSQL 17 database: migration up/down round-trip clean; 48/48
+  `packages/database` integration tests passing (7 new, including direct proof the DB trigger
+  rejects a raw `UPDATE`/unauthorized `DELETE` and still refuses a legal-hold row even with
+  retention authorization set); 148/148 `dashboard-api` unit tests passing (4 new); 37/37
+  `dashboard-api` e2e tests passing (confirms the NestJS module graph resolves with `AuditModule`
+  newly imported into both `AuthModule` and `AuthzModule`); typecheck/lint clean on both packages;
+  `pnpm audit` 0 vulnerabilities; secret scan clean. Full record:
+  `docs/project-state/phase-1e-audit-foundation-validation-report.md`. **Not merged, not
+  deployed** — branch pushed and a PR opened for review, per this project's standing pattern.
+  Also this session: found `prod-db.env` (the file holding the real production `DATABASE_URL`,
+  created during earlier troubleshooting) was untracked but **not** actually covered by
+  `.gitignore`'s existing patterns — added it explicitly (plus a general `*.env` pattern) before
+  it could be accidentally staged.
 
 ## Open client blockers
 
@@ -574,10 +620,12 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   Claude not doing it unprompted — it still stands for that; every automated test still uses a
   local/CI disposable database, and Claude has not run migrations or written data against the real
   Neon instance.
-- Do NOT begin the 21 real business-module endpoints, the general ADR-0017 audit-log subsystem
-  (Task 7), or user-management CRUD beyond role assignment (Task 8) without a separate, explicit
-  go-ahead — Phase 1D-expanded's own approval (once granted) covers this expansion only, per its
-  task package's §32 out-of-scope list.
+- Do NOT begin the 21 real business-module endpoints or user-management CRUD beyond role
+  assignment (Task 8) without a separate, explicit go-ahead. **The general ADR-0017 audit-log
+  subsystem (Task 7) — audit-foundation slice only** — is now built and validated (not merged) per
+  "Start Phase 1E with the audit foundation first"; the remaining Task 7 scope (migrating existing
+  `auth_events` writes into it, a query HTTP surface, the retention-deletion job itself) is still
+  unauthorized. See `docs/task-packages/phase-1e-audit-foundation.md`.
 - Do NOT build a grant-editing endpoint for `view_confidential`/`edit_confidential`, a real
   project-scoped HTTP route, or any real confidential business field without a separate, explicit
   authorization — the underlying mechanisms are built and tested (Phase 1D-expanded), but
@@ -608,56 +656,31 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ---
 
-Last touched: 2026-08-12 · by Claude (Continuing the 2026-08-11 ad-hoc Vercel deployment
-troubleshooting: the user provisioned the real Neon database via Vercel Marketplace and set the
-remaining `dashboard-api` env vars (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`,
-`TOTP_ENCRYPTION_KEY`) themselves. That surfaced and required fixing four more real bugs in
-sequence, each found only via live deployment logs and fixed/verified against the real deployment
-(not local checks alone): Sequelize's internal `pg` require missed by Vercel's bundler (`pg`
-dialectModule fix), `openid-client`'s dynamic `import()` getting rewritten to a broken `require()`
-by Vercel's own bundler a second time in a different code path (indirect Function-constructor
-import), that fix hiding the dependency from Vercel's tracer entirely (`vercel.json` `includeFiles`),
-and `openid-client`'s own transitive deps (`jose`, `oauth4webapi`) being invisible to that same
-`includeFiles` glob (promoted to direct `dashboard-api` dependencies). See the 2026-08-12 "Recent
-decisions" entry for the full chain. **Result: `dashboard-api`'s Vercel Function is genuinely live
-in production for the first time** — `/health` and `/ready` return `200`, unknown routes return a
-proper NestJS `404`, zero `500`s since this deployment. `checks: {}` on `/ready` is still an
-unwired Phase-1A-era stub, so a live Neon *query* succeeding is not independently proven — only
-that nothing crashes at bootstrap or Sequelize construction. All previously-listed env-var
-blockers (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`, `TOTP_ENCRYPTION_KEY`) are now
-resolved; remaining open blockers are the real emergency-administrator account list, the WordPress
-Application Password account, and real timezone confirmation — none of which block
-`dashboard-api`'s own liveness. Separately this same session: the real Google SSO login flow was
-verified as far as Claude can safely go without entering credentials — `/auth/google/start`
-correctly redirects to Google's real consent screen with correct OIDC params — then the user
-completed sign-in themselves and hit a `500` at `/auth/google/callback`, diagnosed as the freshly-
-provisioned Neon database never having had migrations applied. **Confirmed and fixed**: after
-several turns of zsh quoting/paste troubleshooting to get a working `DATABASE_URL` into the user's
-own terminal, built two new read-only diagnostic tools (`pnpm --filter @webdesk/database run
-migrate:status` and `list-tables`) specifically to verify database state without Claude ever
-touching the real connection string — `list-tables` (genuinely zero-DDL) confirmed the database
-was empty apart from Umzug's own bookkeeping table. User then ran the real `migrate` command
-themselves; all 17 migrations applied cleanly, all 15 expected tables now confirmed present.
-`dashboard-api`'s live-query claim is no longer just "nothing crashes" — a real schema now exists
-in production for the first time. Also this session: the GitHub App (App ID `153184504`) was
-created and, after diagnosing a Private-visibility-vs-installer-account mismatch (not an org-
-permissions or SSO issue), successfully installed on `WDS-Internal-DeveloperTeam` by transferring
-the App's ownership there first. Also fixed, with the user's explicit go-ahead: `dashboard-web`'s
-own `/auth/sign-in` page was crashing with a `500` (React error #441) on its first real load — a
-previously-undiscovered gap distinct from the `dashboard-api` chain above — root-caused to a
-missing `NEXT_PUBLIC_API_BASE_URL` Vercel env var (`dashboard-web`'s project had only ever had
-`WORDPRESS_APP` set). Added it directly and triggered the required redeploy (`NEXT_PUBLIC_*` vars
-are baked in at build time); verified live afterward — the page renders and its "Sign in with
-Google Workspace" link's real `href` resolves correctly to `dashboard-api`'s `/auth/google/start`.
-With both the schema and this page fixed, retried the login — still `access_denied`. Root-caused
-one layer further: no `users` row existed at all (database was freshly migrated, empty). Confirmed
-the intended production Workspace org matches the current test domain (`webdeskinc.com`, same org,
-different primary domain later — a same-org domain switch will just be a `GOOGLE_WORKSPACE_
-ALLOWED_DOMAINS` env var change). Built `provision:user` (smoke-tested locally first) since neither
-existing operator script fit; user ran it plus `bootstrap:super-admin` against production —both
-succeeded. **Login still failed with the same generic `access_denied`** — the app deliberately
-never surfaces which specific check rejected it. Built `list-auth-events` (also smoke-tested
-locally) to read the real reason from the `auth_events` table without guessing, but actually
-running it was explicitly deferred by the user for a later session. Next candidate work when
-resumed: run `list-auth-events`, diagnose the real rejection reason, fix it. Otherwise: the 21 real
-business-module endpoints — not started automatically, requires its own explicit authorization.)
+Last touched: 2026-08-12 · by Claude (Same session as the 2026-08-11/12 ad-hoc Vercel deployment
+troubleshooting chain (Neon provisioning, env vars, four deployment bugs fixed — `dashboard-api`
+genuinely live in production, `/health`/`/ready` return `200`), the real Google SSO login flow
+diagnosis (migrations applied, a `users` row + Super Admin role provisioned, login still failing
+with a generic `access_denied` whose specific cause is explicitly deferred to a later session —
+`list-auth-events` is built and ready for that), and the Phase 1E authorization brief's gate-check
+plus pre-implementation verification (both closed clean, see their own "Recent decisions" entries).
+**This entry's own work**: given "Start Phase 1E with the audit foundation first," built and
+validated the audit-foundation slice (§5–8) on a dedicated branch, `phase-1e-audit-foundation`, off
+`main` at `95b8c25` — the real ADR-0017 `audit_events` table (migration `00018`, genuinely
+database-layer-immutable via a Postgres trigger, not just repository convention), the shared
+`AuditService` emission point, and additive wiring into `RoleAssignmentService`/`RecoveryService`
+that closes the specific `RecoveryService` self-approval audit gap the Phase 1D code review and the
+Phase 1E pre-implementation verification both flagged. Full fresh validation this session against a
+real local disposable PostgreSQL 17 database: migration round-trip clean; 48/48 database
+integration tests (7 new, including direct proof of the trigger's UPDATE/DELETE/legal-hold
+behavior); 148/148 `dashboard-api` unit tests; 37/37 e2e tests (proving the NestJS module graph
+resolves with the new module wired into both `AuthModule` and `AuthzModule`); typecheck/lint clean;
+`pnpm audit` 0 vulnerabilities; secret scan clean. See
+`docs/task-packages/phase-1e-audit-foundation.md` and
+`docs/project-state/phase-1e-audit-foundation-validation-report.md`. **Not merged, not deployed** —
+branch pushed, PR opened for review, same pattern as every prior phase. Also fixed in passing: a
+genuine `.gitignore` gap — `prod-db.env` (holding the real production `DATABASE_URL` from earlier
+troubleshooting) was untracked but not actually matched by any existing ignore pattern; added it
+explicitly. Next candidate work: review/merge/gate decision for this slice (separate, not-yet-
+requested authorizations); the remaining Phase 1E components (jobs, notifications, full retention,
+operational contacts, system health), each needing its own authorization; the still-deferred
+`list-auth-events` login diagnosis; the 21 real business-module endpoints.)
