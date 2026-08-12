@@ -210,10 +210,10 @@ WebDesk Solution then reviewed the code independently and confirmed it acceptabl
 the latest code and it's good") — accepting the findings as tracked follow-up items rather than
 blockers, since none represent a currently-exploitable defect.
 
-| Role                                     | Name             | Decision                               | Date       |
-| ----------------------------------------- | ---------------- | --------------------------------------- | ---------- |
-| Independent reviewer (code review)        | Claude           | Reviewed — 6 findings, none blocking    | 2026-08-12 |
-| Approver (accepts findings as follow-up)  | WebDesk Solution  | Reviewed and confirmed acceptable       | 2026-08-12 |
+| Role                                     | Name             | Decision                             | Date       |
+| ---------------------------------------- | ---------------- | ------------------------------------ | ---------- |
+| Independent reviewer (code review)       | Claude           | Reviewed — 6 findings, none blocking | 2026-08-12 |
+| Approver (accepts findings as follow-up) | WebDesk Solution | Reviewed and confirmed acceptable    | 2026-08-12 |
 
 This closes the "Code review is complete" item from the original task package's definition of
 done. It does not reopen or amend the `G4-1D-EXP` gate decision above, which remains an accurate

@@ -54,7 +54,7 @@ Current `HEAD`: `ebbe35f32773bab90c396f9f2dc4d2c41d8f7333`.
 - Emergency-admin (local password+TOTP) login has never been live-tested — no real
   emergency-admin account has been provisioned yet.
 
-**Conclusion:** authentication's *code* is fully tested and passes; the *live, real-user* login
+**Conclusion:** authentication's _code_ is fully tested and passes; the _live, real-user_ login
 flow is not currently provably working end-to-end. This does not block Phase 1E — Phase 1E's own
 scope is backend operational infrastructure (audit/jobs/notifications/retention/contacts), none of
 which requires a working live login to build or test (all Phase 1D/1E work is tested against real
@@ -89,8 +89,8 @@ review, see item 11).** `separation-of-duties.service.spec.ts` (9 tests) passes 
 `assertDistinctActors` correctly blocks self-role-assignment (`RoleAssignmentService`) and
 self-approval of one's own recovery request (`RecoveryService`) — both denials work correctly.
 **Gap:** `RecoveryService`'s denial isn't recorded to `auth_events` the way
-`RoleAssignmentService`'s equivalent denial is, so the SoD *enforcement* works but the SoD *audit
-trail* is incomplete for one of its two real call sites. Tracked as follow-up technical debt (see
+`RoleAssignmentService`'s equivalent denial is, so the SoD _enforcement_ works but the SoD _audit
+trail_ is incomplete for one of its two real call sites. Tracked as follow-up technical debt (see
 `docs/project-state/phase-1d-approval-checklist.md`'s "Independent code review" section), not a
 blocker — this is exactly the kind of gap Phase 1E's own audit-foundation work is positioned to
 make structurally harder to reintroduce (a shared audit-emission point instead of a per-caller
@@ -120,27 +120,27 @@ Clean up, clean single-step-down round trip, no errors.
 
 **Verified — fresh run, this session, all against real disposable databases where applicable:**
 
-| Suite | Result |
-| --- | --- |
-| `dashboard-api` unit (`pnpm test`) | **144/144 passed** |
-| `packages/database` integration (`pnpm test:integration`) | **41/41 passed** |
+| Suite                                                       | Result                                         |
+| ----------------------------------------------------------- | ---------------------------------------------- |
+| `dashboard-api` unit (`pnpm test`)                          | **144/144 passed**                             |
+| `packages/database` integration (`pnpm test:integration`)   | **41/41 passed**                               |
 | `dashboard-api` integration + e2e (`pnpm test:integration`) | **37/37 passed** (22 authz e2e + health specs) |
-| `dashboard-api` typecheck | Clean |
-| `dashboard-api` lint | Clean |
-| `packages/database` typecheck | Clean |
-| `packages/database` lint | Clean |
+| `dashboard-api` typecheck                                   | Clean                                          |
+| `dashboard-api` lint                                        | Clean                                          |
+| `packages/database` typecheck                               | Clean                                          |
+| `packages/database` lint                                    | Clean                                          |
 
 ## 11. No Critical or High security finding blocks Phase 1E
 
 **Verified**, with two honest caveats recorded rather than glossed over:
 
 - All three existing threat-model documents (`threat-model-authentication-session-handling.md`,
-  `threat-model-authorization-rbac.md`, `phase-1d-security-review.md`) explicitly state: *"None of
-  these are believed to constitute a critical, immediately-exploitable vulnerability."* None of
+  `threat-model-authorization-rbac.md`, `phase-1d-security-review.md`) explicitly state: _"None of
+  these are believed to constitute a critical, immediately-exploitable vulnerability."_ None of
   the three use a formal Critical/High/Medium/Low severity scale (they use narrative
   risk-acceptance framing), so this is their own stated conclusion, not a re-derived rating.
-- **Caveat:** each of those three documents' risk-acceptance reasoning explicitly leaned on *"no
-  production deployment, no real users"* at the time they were written. That assumption is now
+- **Caveat:** each of those three documents' risk-acceptance reasoning explicitly leaned on _"no
+  production deployment, no real users"_ at the time they were written. That assumption is now
   partially stale — `dashboard-api`/`dashboard-web` are genuinely live in production, though still
   with only one real provisioned user (Super Admin, login not yet fully working end-to-end) and no
   real business data. Worth a fresh look before Phase 1F, not treated as blocking Phase 1E's
@@ -148,7 +148,7 @@ Clean up, clean single-step-down round trip, no errors.
 - Today's independent code review (`docs/project-state/phase-1d-approval-checklist.md`'s new
   section) found 6 issues, 5 CONFIRMED + 1 PLAUSIBLE. None constitute a Critical/High
   authorization-bypass: the most severe (`Op.in: [null, projectId]`) fails **closed** — it would
-  cause project-scoped requests to be incorrectly *denied*, not incorrectly *allowed* — and is
+  cause project-scoped requests to be incorrectly _denied_, not incorrectly _allowed_ — and is
   currently dormant (no route passes a real `projectId` yet). The `RecoveryService` audit-gap
   (item 7 above) is a completeness/observability issue, not an authorization bypass. Both are
   tracked as follow-up debt, reviewed and accepted by WebDesk Solution.
