@@ -494,6 +494,21 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   `docs/project-state/phase-1d-approval-checklist.md`'s new "Independent code review" section for
   the full record. Findings themselves are tracked as follow-up technical debt, not applied as
   fixes in this pass (not requested).
+- `[2026-08-12]` Ran the Phase 1E authorization brief's own required pre-implementation
+  verification (12 items: Phase 1D approval, exact approved SHA lineage, auth/sessions/RBAC/
+  confidential-fields/SoD, Postgres+Sequelize foundations, migrations, tests, no Critical/High
+  security finding, no production secret) — every check run fresh against live evidence this
+  session, not recalled: `67a4955` confirmed an ancestor of current `HEAD` with zero Phase 1D files
+  touched by the 30 commits since; 144 unit + 41 database-integration + 37 dashboard-api-integration/
+  e2e tests all passed fresh; a full migration up/down round-trip passed on a brand-new disposable
+  database; `pnpm audit` showed 0 vulnerabilities; the CI secret scanner found 0 matches across 347
+  tracked files. Two honest caveats recorded rather than glossed over: the live Google SSO login
+  flow still isn't fully working end-to-end (unrelated to Phase 1E's own backend-infrastructure
+  scope), and the three existing threat-model docs' "no critical vulnerability" conclusions were
+  originally written under a "no production deployment" assumption that's now partially stale
+  (worth revisiting before Phase 1F, not blocking for Phase 1E). Full record:
+  `docs/project-state/phase-1e-pre-implementation-verification.md`. Result: no blocking gap found,
+  Phase 1E authorized to proceed.
 
 ## Open client blockers
 
