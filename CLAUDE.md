@@ -144,6 +144,10 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   formal smoke-test pass has run (though `/health` and `/ready` were verified live, see below);
   Task 13 in `docs/phase-plans/phase-1-foundation-plan.md` remains its own separate, not-yet-
   authorized execution.
+- **The production database schema is now confirmed migrated (2026-08-12)** — all 17 migrations
+  applied, all 15 expected tables verified present via a genuinely read-only check (see the
+  "Recent decisions" entry for the full diagnostic chain). This was the last unverified piece of
+  `dashboard-api`'s liveness claim; it's now closed.
 - **Blocked on (as of 2026-08-12):** see `docs/project-state/setup-input-register.md` for standing
   setup-time inputs. All of `DATABASE_URL`, the Postgres provisioning itself, `GOOGLE_OAUTH_*`,
   `WEB_APP_ORIGIN`, and `TOTP_ENCRYPTION_KEY` are now resolved (see 2026-08-12 decision entry) —
@@ -405,7 +409,20 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   almost certainly doesn't exist yet). User was walked through running
   `pnpm --filter @webdesk/database run migrate` themselves, locally, with `DATABASE_URL` set only
   in their own terminal — Claude never saw the real connection string, consistent with credential-
-  handling discipline. Outcome of that migration run not yet confirmed as of this entry.
+  handling discipline. **Confirmed complete, verified via two new read-only tools built for exactly
+  this**: `pnpm --filter @webdesk/database run migrate:status` (Umzug's own `executed()`/`pending()`,
+  pure reads) hit a real `pg_type` catalog duplicate-key error on its internal
+  `CREATE TABLE IF NOT EXISTS "SequelizeMeta"` sync step — a known Postgres/Sequelize race quirk,
+  most likely triggered by a stale connection from an earlier interrupted attempt during the
+  `DATABASE_URL`-wrangling session (zsh smart-quote and multi-line-paste issues delayed getting a
+  working connection string by many turns). Built a second, genuinely zero-DDL tool
+  (`pnpm --filter @webdesk/database run list-tables`, a single `SELECT` against `pg_tables`) to
+  sidestep that failure mode entirely — it showed only the empty `SequelizeMeta` bookkeeping table,
+  confirming the database really had never been migrated. User then ran the real
+  `pnpm --filter @webdesk/database run migrate`, which applied all 17 pending migrations cleanly;
+  `list-tables` re-run afterward confirmed all 15 expected tables now exist (14 table-creating
+  migrations + `SequelizeMeta` — the other 3 of the 17 are seed-only/`ALTER TABLE` migrations with
+  no new table). Production database schema is now genuinely live for the first time.
 - `[2026-08-12]` GitHub App creation completed and installed — App ID `153184504`, created under
   `@webdesksolution`, installed on `WDS-Internal-DeveloperTeam` (the repo's actual owner org).
   Installation initially failed silently (the org never appeared in the Install App picker) despite
@@ -549,9 +566,17 @@ Application Password account, and real timezone confirmation — none of which b
 verified as far as Claude can safely go without entering credentials — `/auth/google/start`
 correctly redirects to Google's real consent screen with correct OIDC params — then the user
 completed sign-in themselves and hit a `500` at `/auth/google/callback`, diagnosed as the freshly-
-provisioned Neon database never having had migrations applied; the user was walked through running
-them locally, outcome not yet confirmed. Also this session: the GitHub App (App ID `153184504`) was
+provisioned Neon database never having had migrations applied. **Confirmed and fixed**: after
+several turns of zsh quoting/paste troubleshooting to get a working `DATABASE_URL` into the user's
+own terminal, built two new read-only diagnostic tools (`pnpm --filter @webdesk/database run
+migrate:status` and `list-tables`) specifically to verify database state without Claude ever
+touching the real connection string — `list-tables` (genuinely zero-DDL) confirmed the database
+was empty apart from Umzug's own bookkeeping table. User then ran the real `migrate` command
+themselves; all 17 migrations applied cleanly, all 15 expected tables now confirmed present.
+`dashboard-api`'s live-query claim is no longer just "nothing crashes" — a real schema now exists
+in production for the first time. Also this session: the GitHub App (App ID `153184504`) was
 created and, after diagnosing a Private-visibility-vs-installer-account mismatch (not an org-
 permissions or SSO issue), successfully installed on `WDS-Internal-DeveloperTeam` by transferring
-the App's ownership there first. Next candidate work: the 21 real business-module endpoints, not
-started automatically — still requires its own explicit authorization.)
+the App's ownership there first. Next candidate work: retry the Google login flow end-to-end now
+that the schema exists, or the 21 real business-module endpoints — neither started automatically,
+both still require their own explicit authorization/next step.)
