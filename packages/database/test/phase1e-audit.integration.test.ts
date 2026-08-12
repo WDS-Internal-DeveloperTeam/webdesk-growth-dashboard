@@ -86,9 +86,12 @@ describe("Phase 1E audit foundation (real disposable database)", () => {
       const sequelize = getConnection();
 
       await sequelize.transaction(async (transaction) => {
-        await sequelize.query(`SELECT set_config('audit.retention_delete_authorized', 'on', true);`, {
-          transaction,
-        });
+        await sequelize.query(
+          `SELECT set_config('audit.retention_delete_authorized', 'on', true);`,
+          {
+            transaction,
+          },
+        );
         await sequelize.query(`DELETE FROM audit_events WHERE id = :id;`, {
           replacements: { id: event.id },
           transaction,

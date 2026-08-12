@@ -62,7 +62,7 @@ scope.
      `account_recovery_decision`. **Closes the specific gap** the Phase 1D independent code review
      and the Phase 1E pre-implementation verification (item 7) both flagged: `RecoveryService.decide`
      did not wrap its `assertDistinctActors` call the way `RoleAssignmentService` did, so a
-     self-approval attempt on a recovery request was correctly *blocked* but never *recorded*
+     self-approval attempt on a recovery request was correctly _blocked_ but never _recorded_
      anywhere. Fixed by the same try/catch-then-record pattern already proven in
      `RoleAssignmentService`.
 

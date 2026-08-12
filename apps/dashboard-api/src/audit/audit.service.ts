@@ -81,9 +81,7 @@ export interface RecordAuditEventInput {
  */
 @Injectable()
 export class AuditService {
-  constructor(
-    @Inject(AUDIT_EVENT_REPOSITORY) private readonly events: AuditEventRepository,
-  ) {}
+  constructor(@Inject(AUDIT_EVENT_REPOSITORY) private readonly events: AuditEventRepository) {}
 
   async record(input: RecordAuditEventInput): Promise<AuditEventEntity> {
     if (!AUDIT_EVENT_TYPES.includes(input.eventType)) {
