@@ -133,26 +133,24 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   — fixed by switching its two `dashboard-api` import sites to dynamic `import()`. Both fixes
   deliberately avoided esbuild-bundling the NestJS app itself (esbuild does not support
   `emitDecoratorMetadata`, which Nest's DI relies on — bundling would have silently broken it).
-  **`dashboard-api`'s Function still isn't functional** — it now fails only on `DATABASE_URL:
-Required` at Nest bootstrap (`packages/configuration`'s env validation), confirming the deployment
-  plumbing itself is solid and the remaining blocker is exactly the still-unprovisioned Neon
-  database plus the other unset secrets below. See `apps/dashboard-api/vercel.json`,
+  **(2026-08-12 update — see below): `dashboard-api`'s Function is now fully live** — the
+  `DATABASE_URL`/pg-driver/env-var blockers described below were all cleared by the user's own
+  ad-hoc setup actions (Neon provisioned via Vercel Marketplace, `DATABASE_URL`/`GOOGLE_OAUTH_*`/
+  `WEB_APP_ORIGIN`/`TOTP_ENCRYPTION_KEY` set as `dashboard-api` env vars) plus two more real bugs
+  found and fixed the same way as the three above — see the 2026-08-12 "Recent decisions" entry
+  for the full account. See `apps/dashboard-api/vercel.json`,
   `apps/dashboard-api/api/index.ts`, and the git history on `main` for the exact commits. **This is
   real merged code, not Task 13** — no staging environment exists, no PM sign-off was sought, no
-  smoke test has run; Task 13 in `docs/phase-plans/phase-1-foundation-plan.md` remains its own
-  separate, not-yet-authorized execution.
-- **Blocked on:** see `docs/project-state/setup-input-register.md` for standing setup-time inputs. The
-  Postgres Marketplace provider is resolved (Neon, `us-east-1`, changed from Supabase 2026-08-11 —
-  see ADR-0007's resolution note) but **not provisioned** — every test
-  ran against a local/CI disposable database, and `dashboard-api`'s deployed Vercel Function now
-  concretely fails at bootstrap on the missing `DATABASE_URL` this would provide (see above — no longer
-  a hypothetical future need). Google Workspace OAuth client (also required as a real
-  `dashboard-api` env var — `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`/`_ISSUER_URL`/`_REDIRECT_URI` — before
-  Google SSO can work at all), the real emergency-administrator account list, WordPress Application
-  Password account, `dashboard-web`'s real deployed origin (needed as `dashboard-api`'s
-  `WEB_APP_ORIGIN` env var for CORS/CSRF — `dashboard-web` itself is now live, see above, but this
-  value hasn't been set on `dashboard-api`'s Vercel project yet), and real timezone confirmation still
-  block a real working deployment.
+  formal smoke-test pass has run (though `/health` and `/ready` were verified live, see below);
+  Task 13 in `docs/phase-plans/phase-1-foundation-plan.md` remains its own separate, not-yet-
+  authorized execution.
+- **Blocked on (as of 2026-08-12):** see `docs/project-state/setup-input-register.md` for standing
+  setup-time inputs. All of `DATABASE_URL`, the Postgres provisioning itself, `GOOGLE_OAUTH_*`,
+  `WEB_APP_ORIGIN`, and `TOTP_ENCRYPTION_KEY` are now resolved (see 2026-08-12 decision entry) —
+  what's left is the real emergency-administrator account list, the WordPress Application Password
+  account, and real timezone confirmation. None of these block `dashboard-api`'s own liveness; they
+  block specific features (emergency-admin login, WordPress integration, schedule-sensitive
+  reporting) from being usable end-to-end.
 
 ## Active tasks (this sprint)
 
@@ -351,6 +349,50 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
   `"neon"`, version 9 → 10. No database has been provisioned under either provider — this changes
   the confirmed provider/region choice only, not the standing "do not provision without separate
   authorization" rule (see Cautions).
+- `[2026-08-12]` User provisioned the actual Neon database via Vercel's Storage → Marketplace flow
+  themselves ("neon added and redeployed successfully") — their own ad-hoc action, same pattern as
+  manually creating the two Vercel projects on 2026-08-11; the standing "do NOT provision" caution
+  is about unprompted action on Claude's part, not a bar on the user doing their own infrastructure
+  setup. This surfaced a new real bug, fixed and pushed same as the three 2026-08-11 fixes: Sequelize
+  was internally `require("pg")`-ing based on the `dialect: "postgres"` string, which Vercel's
+  static-import-tracing Function bundler missed even though `pg` is a real listed dependency
+  ("Please install pg package manually" at runtime) — fixed via Sequelize's own `dialectModule`
+  option with a real static `import pg from "pg"` (commit `5c954ce`). User then walked through
+  creating a Google OAuth client and setting `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`/`_ISSUER_URL`/
+  `_REDIRECT_URI`, `WEB_APP_ORIGIN` (dashboard-web's real deployed origin), and a freshly-generated
+  `TOTP_ENCRYPTION_KEY` as `dashboard-api` Vercel env vars. Once those were set, the *same*
+  `openid-client` `ERR_REQUIRE_ESM` class of error the 2026-08-11 dynamic-`import()` fix (`ddc951e`)
+  was believed to have already fixed **resurfaced** — proving that fix was never actually exercised
+  before (the `AUTH_ENV` provider throws on missing env vars *before* reaching the `dynamicImport`
+  call, so the code path was untested until real Google OAuth env vars existed). Root cause this
+  time, confirmed only by reading actual deployed runtime logs (local/compiled-output checks are
+  insufficient — Vercel's Function bundler re-transpiles `apps/dashboard-api/src/` itself rather
+  than consuming our compiled `dist/`): a plain `await import(specifier)` gets rewritten back into a
+  broken `require()` by Vercel's own bundler, same failure mode as TypeScript's own CommonJS
+  downlevel emit, just a second, independent instance of it. Fixed via an indirect,
+  Function-constructor-based dynamic import (`apps/dashboard-api/src/common/dynamic-import.ts`) that
+  is opaque to static AST rewriting (commit `5b4e6ed`) — which then broke Vitest's `vi.mock()`
+  (needs a literal `import()` to instrument), fixed by branching on the `VITEST` env var Vitest sets
+  automatically. That fix then surfaced a **second-order** problem: hiding the import from static
+  analysis to dodge the harmful rewrite also hid it from Vercel's dependency tracer, so
+  `openid-client` was silently dropped from the deployed bundle entirely
+  (`ERR_MODULE_NOT_FOUND`) — fixed via `vercel.json`'s `includeFiles` (commit `3f38d30`), the
+  documented Vercel mechanism for dependencies invisible to static tracing. That in turn surfaced a
+  **third-order** version of the same problem one level deeper: `openid-client`'s own runtime
+  dependencies (`jose`, `oauth4webapi`) live only as symlinks nested inside pnpm's virtual store,
+  with no top-level symlink in `dashboard-api`'s own `node_modules` for `includeFiles` to target —
+  fixed by declaring `jose`/`oauth4webapi` as direct `dashboard-api` dependencies (same version
+  ranges `openid-client` itself already pins), which makes pnpm create real top-level symlinks in
+  the same shape already proven to work for `openid-client` (commit `b40a06b`). **Verified against
+  the live deployment, not just local checks, at every step** — each fix was pushed, the redeploy
+  watched via real Vercel build/runtime logs, and only declared working once the deployed Function
+  itself showed the expected behavior. Final state: `/health` and `/ready` return `200`, a
+  known-nonexistent route (`/auth/google`) returns a proper NestJS JSON `404` (not a crash), and the
+  runtime log timeline shows zero `500`s since this deployment — `dashboard-api` is genuinely live
+  in production for the first time. Note: `/ready`'s `checks: {}` is still a Phase-1A-era stub (see
+  `apps/dashboard-api/src/health/health.controller.ts`) that has never been wired to an actual
+  database query, so a live Neon *query* succeeding is not independently proven by this — only that
+  Sequelize's `dialectModule` fix works and nothing crashes at construction time.
 
 ## Open client blockers
 
@@ -366,23 +408,24 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
   gates have since been approved (2026-08-11) — see "Current state" above.
 - ~~First-login provisioning model (JIT vs. pre-provisioned)~~ — resolved 2026-08-07,
   pre-provisioned only. See profile `knowledge/05-google-workspace-sso-and-local-admin.md`.
-- The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs) — blocks a
-  real deployment, not any phase's own code completion (built and tested against mocked/offline
-  configuration). Owner: infrastructure owner.
+- ~~The real Google Workspace OAuth client (client ID, secret, authorized redirect URIs)~~ —
+  resolved 2026-08-12, user created the client and set `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`/
+  `_ISSUER_URL`/`_REDIRECT_URI` as `dashboard-api` Vercel env vars; the deployed Function's real
+  `client.discovery()` call against Google's OIDC issuer now succeeds at bootstrap (see 2026-08-12
+  decision entry). Whether the SSO *login flow itself* works end-to-end for a real Workspace user
+  is still unverified (see Cautions — testing that remains off-limits).
 - The real emergency-administrator account list — the provisioning _mechanism_ is built
   (`apps/dashboard-api/src/auth/scripts/provision-emergency-admin.ts`), but no real accounts exist
   yet. Owner: PM/security owner.
-- `dashboard-web`'s real deployed origin (`WEB_APP_ORIGIN` on the `dashboard-api` side, CORS/CSRF
-  allowlist) — every test still uses a fixture origin. **Partially resolved 2026-08-11**:
-  `dashboard-web` is now actually deployed on Vercel with a real origin, but that value hasn't been
-  set as `dashboard-api`'s `WEB_APP_ORIGIN` env var yet, and whether the current Vercel-assigned
-  domain is the final one (vs. a custom domain later) is still an infrastructure-owner decision.
-  Owner: infrastructure owner.
-- The real `DATABASE_URL` (Neon connection string) as a `dashboard-api` Vercel env var —
-  concretely blocking now, not hypothetical: the deployed Function fails at Nest bootstrap on this
-  exact missing value (2026-08-11). Requires the Neon database to actually be provisioned
-  first, which remains its own separate, not-yet-granted authorization (see Cautions). Owner:
-  infrastructure owner.
+- ~~`dashboard-web`'s real deployed origin (`WEB_APP_ORIGIN` on the `dashboard-api` side,
+  CORS/CSRF allowlist)~~ — resolved 2026-08-12, user set it as a `dashboard-api` Vercel env var.
+  Whether the current Vercel-assigned domain is the final one (vs. a custom domain later) is still
+  an infrastructure-owner decision, but the value itself is set and live.
+- ~~The real `DATABASE_URL` (Neon connection string) as a `dashboard-api` Vercel env var~~ —
+  resolved 2026-08-12: user provisioned Neon via Vercel Marketplace and set `DATABASE_URL`; the
+  deployed Function no longer fails at bootstrap on this. A live database *query* succeeding is
+  still not independently proven (see 2026-08-12 decision entry's closing note) — only that
+  Sequelize constructs without crashing.
 - ~~Actual GitHub repository URL~~ — resolved 2026-08-06, registered in `project.json` and as
   the local `origin` remote; confirmed real and reachable (Phase 0 pushed to `origin/main`,
   Phase 1A branch pushed and PR #1 opened 2026-08-06, merged 2026-08-07). Still unconfirmed:
@@ -409,9 +452,12 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
 - Do NOT create `projects`, `users`, or any other business entity in `packages/database` without
   a separate, explicit authorization beyond Phase 1B's own approval — the task package's own
   §9/§24 two-tier gate. `_framework_probe` (test-only) is the only table that exists.
-- Do NOT provision the actual Neon database (create the real project/instance) — confirming
-  the provider (`project.json`) is not provisioning it; every test so far used a local/CI
-  disposable database.
+- ~~Do NOT provision the actual Neon database (create the real project/instance)~~ — the user did
+  this themselves 2026-08-12 via Vercel's own Storage → Marketplace flow (their own ad-hoc action,
+  same pattern as manually creating the two Vercel projects on 2026-08-11). This caution is about
+  Claude not doing it unprompted — it still stands for that; every automated test still uses a
+  local/CI disposable database, and Claude has not run migrations or written data against the real
+  Neon instance.
 - Do NOT begin the 21 real business-module endpoints, the general ADR-0017 audit-log subsystem
   (Task 7), or user-management CRUD beyond role assignment (Task 8) without a separate, explicit
   go-ahead — Phase 1D-expanded's own approval (once granted) covers this expansion only, per its
@@ -442,18 +488,24 @@ Required` at Nest bootstrap (`packages/configuration`'s env validation), confirm
 
 ---
 
-Last touched: 2026-08-11 · by Claude (Both Phase 1D gates approved — G4-1D for PR #8 and
-G4-1D-EXP for PR #9, each a clean CONFIRM since the required second-role security review
-(WebDesk Solution — Jitesh D and Brijesh D, 2026-08-10) was already complete before either gate
-was requested. `project.json`'s `current_gate` is now `G4-1D-EXP`. Phase 1A, 1B, 1C, and both
-Phase 1D scopes are all approved. Phase 1C's own G4-1C gate remains recorded as an OVERRIDE
-historically, its second-role review has since completed. Separately, ad-hoc real-Vercel-deployment
-troubleshooting (not a formal Task 13 execution) got `dashboard-web` live and fixed three real bugs
-blocking `dashboard-api`'s Vercel Function (missing entrypoint, ESM/CJS interop for 4 workspace
-packages, ESM-only `openid-client`) — the Function now deploys and bootstraps, failing only on the
-still-unprovisioned database's `DATABASE_URL`. Separately, the Postgres Marketplace provider
-changed from Supabase to Neon (`us-east-1`) by explicit project-owner decision overriding WDS-002's
-Neon-exclusion rule — see ADR-0007's "Resolution note". Next candidate work: the 21 real
-business-module endpoints, not started automatically; separately, resolving the remaining
-deployment secrets (Neon provisioning, Google OAuth client, `WEB_APP_ORIGIN`) whenever that's
-authorized.)
+Last touched: 2026-08-12 · by Claude (Continuing the 2026-08-11 ad-hoc Vercel deployment
+troubleshooting: the user provisioned the real Neon database via Vercel Marketplace and set the
+remaining `dashboard-api` env vars (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`,
+`TOTP_ENCRYPTION_KEY`) themselves. That surfaced and required fixing four more real bugs in
+sequence, each found only via live deployment logs and fixed/verified against the real deployment
+(not local checks alone): Sequelize's internal `pg` require missed by Vercel's bundler (`pg`
+dialectModule fix), `openid-client`'s dynamic `import()` getting rewritten to a broken `require()`
+by Vercel's own bundler a second time in a different code path (indirect Function-constructor
+import), that fix hiding the dependency from Vercel's tracer entirely (`vercel.json` `includeFiles`),
+and `openid-client`'s own transitive deps (`jose`, `oauth4webapi`) being invisible to that same
+`includeFiles` glob (promoted to direct `dashboard-api` dependencies). See the 2026-08-12 "Recent
+decisions" entry for the full chain. **Result: `dashboard-api`'s Vercel Function is genuinely live
+in production for the first time** — `/health` and `/ready` return `200`, unknown routes return a
+proper NestJS `404`, zero `500`s since this deployment. `checks: {}` on `/ready` is still an
+unwired Phase-1A-era stub, so a live Neon *query* succeeding is not independently proven — only
+that nothing crashes at bootstrap or Sequelize construction. All previously-listed env-var
+blockers (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`, `TOTP_ENCRYPTION_KEY`) are now
+resolved; remaining open blockers are the real emergency-administrator account list, the WordPress
+Application Password account, and real timezone confirmation — none of which block
+`dashboard-api`'s own liveness. Next candidate work: the 21 real business-module endpoints, not
+started automatically — still requires its own explicit authorization.)
