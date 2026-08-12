@@ -3,7 +3,7 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
-      "includeFiles": "node_modules/openid-client/**"
+      "includeFiles": "{node_modules/openid-client/**,node_modules/jose/**,node_modules/oauth4webapi/**}"
     }
   },
   "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
