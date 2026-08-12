@@ -158,10 +158,10 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
    PR #8 (G4-1D) and PR #9 (G4-1D-EXP) gates approved via clean CONFIRM — see
    `docs/project-state/phase-1d-validation-report.md`'s "Sign-off — G4-1D gate" and
    `docs/project-state/phase-1d-approval-checklist.md`'s "Sign-off".
-2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` (GitHub App
-   creation, Google Workspace OAuth client, the real emergency-administrator account list,
-   WordPress Application Password account, setting `dashboard-web`'s now-live origin as
-   `dashboard-api`'s `WEB_APP_ORIGIN` env var on Vercel).
+2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` — GitHub App
+   creation and Google Workspace OAuth client are both **done** (2026-08-12, see "Recent
+   decisions"); still open: the real emergency-administrator account list and the WordPress
+   Application Password account. (`WEB_APP_ORIGIN` also resolved 2026-08-12.)
 3. Provision the actual Neon database once a later task actually needs a live connection —
    not before, and not automatically. **That need now concretely exists** — `dashboard-api`'s
    deployed Vercel Function fails at bootstrap on missing `DATABASE_URL` (see "Current state" —
@@ -393,6 +393,32 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   `apps/dashboard-api/src/health/health.controller.ts`) that has never been wired to an actual
   database query, so a live Neon *query* succeeding is not independently proven by this — only that
   Sequelize's `dialectModule` fix works and nothing crashes at construction time.
+- `[2026-08-12]` Live-verified the real Google SSO login flow end-to-end as far as safely possible
+  without Claude entering credentials (per both this project's own standing caution and Claude's
+  own never-enter-passwords rule): `GET /auth/google/start` correctly redirects to Google's real
+  OAuth consent screen with correct `client_id`/`redirect_uri`/`scope`/PKCE `code_challenge`/
+  `state`/`nonce`, and the consent screen correctly shows "webdesk-growth-dashboard" as the
+  requesting app. User completed the actual sign-in themselves and hit a `500` at
+  `/auth/google/callback` — diagnosed via live runtime logs as the first real database query ever
+  executed against the freshly-provisioned Neon instance, which has never had migrations applied
+  (every table `handleCallback()` touches — `users`, `external_auth_identities`, `sessions`, etc. —
+  almost certainly doesn't exist yet). User was walked through running
+  `pnpm --filter @webdesk/database run migrate` themselves, locally, with `DATABASE_URL` set only
+  in their own terminal — Claude never saw the real connection string, consistent with credential-
+  handling discipline. Outcome of that migration run not yet confirmed as of this entry.
+- `[2026-08-12]` GitHub App creation completed and installed — App ID `153184504`, created under
+  `@webdesksolution`, installed on `WDS-Internal-DeveloperTeam` (the repo's actual owner org).
+  Installation initially failed silently (the org never appeared in the Install App picker) despite
+  the user holding a confirmed Owner role there — diagnosed as the App's **Private** visibility
+  setting, which restricts installation to the owning account only regardless of the installer's
+  role on any other account (a GitHub Apps platform behavior, unrelated to org permissions). SAML
+  SSO was also ruled out as a candidate cause along the way — this org isn't on GitHub Enterprise,
+  and SSO enforcement doesn't exist below that plan tier. Fixed by transferring the App's ownership
+  from `@webdesksolution` to `WDS-Internal-DeveloperTeam` directly (General settings → Danger Zone
+  → Transfer ownership), which collapses the owner/installer mismatch entirely. Private key,
+  installation ID, and target repository list not yet recorded — kept out of chat/docs as
+  credentials; still need setting as `dashboard-api`'s GitHub integration env vars before any
+  GitHub-dependent feature can use them.
 
 ## Open client blockers
 
@@ -470,9 +496,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   CONFIRM — see "Current state"). Merging, completing the required review, and gate approval were
   each their own explicit, separate authorization throughout — a useful pattern to keep following
   for any future gate, not just a historical note.
-- Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
-  Workspace account — the OIDC implementation is tested against mocked/offline configuration for
-  exactly this reason (`docs/contracts/google-workspace-auth-contract.md`).
+- ~~Do NOT create a real Google OAuth client, and do NOT test the SSO flow against a real Google
+  Workspace account~~ — the client was created 2026-08-12 (see "Recent decisions"), and the login
+  flow was tested as far as Claude can safely go on its own (verified the real redirect to Google's
+  consent screen; never entered credentials, per both this caution's original intent and Claude's
+  own standing rule against entering passwords). The user then completed the actual sign-in
+  themselves. The OIDC implementation's own automated test suite still tests against mocked/offline
+  configuration only, unchanged (`docs/contracts/google-workspace-auth-contract.md`).
 - Do NOT wire a real SMTP send for emergency-admin login alerts — Google Workspace SMTP
   integration (`knowledge/09-google-workspace-smtp.md`) doesn't exist yet; the notifier interface
   (`apps/dashboard-api/src/auth/emergency/emergency-admin-login-notifier.ts`) exists specifically
@@ -507,5 +537,13 @@ that nothing crashes at bootstrap or Sequelize construction. All previously-list
 blockers (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`, `TOTP_ENCRYPTION_KEY`) are now
 resolved; remaining open blockers are the real emergency-administrator account list, the WordPress
 Application Password account, and real timezone confirmation — none of which block
-`dashboard-api`'s own liveness. Next candidate work: the 21 real business-module endpoints, not
+`dashboard-api`'s own liveness. Separately this same session: the real Google SSO login flow was
+verified as far as Claude can safely go without entering credentials — `/auth/google/start`
+correctly redirects to Google's real consent screen with correct OIDC params — then the user
+completed sign-in themselves and hit a `500` at `/auth/google/callback`, diagnosed as the freshly-
+provisioned Neon database never having had migrations applied; the user was walked through running
+them locally, outcome not yet confirmed. Also this session: the GitHub App (App ID `153184504`) was
+created and, after diagnosing a Private-visibility-vs-installer-account mismatch (not an org-
+permissions or SSO issue), successfully installed on `WDS-Internal-DeveloperTeam` by transferring
+the App's ownership there first. Next candidate work: the 21 real business-module endpoints, not
 started automatically — still requires its own explicit authorization.)
