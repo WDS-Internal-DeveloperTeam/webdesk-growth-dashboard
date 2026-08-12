@@ -419,6 +419,14 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   installation ID, and target repository list not yet recorded — kept out of chat/docs as
   credentials; still need setting as `dashboard-api`'s GitHub integration env vars before any
   GitHub-dependent feature can use them.
+- `[2026-08-12]` A staging-environment WordPress Application Password credential set as
+  `WORDPRESS_APP` on Vercel — user confirmed this is staging-only, not production. Per-environment
+  separation is a hard requirement (`docs/contracts/wordpress-integration-contract.md`), so
+  production/development credentials remain outstanding. Regardless, this can't be exercised or
+  verified yet — no WordPress adapter code exists in `packages/integrations`, and the env var name
+  was never formalized in docs/code before now; whoever eventually builds the adapter should
+  confirm the name and that it carries both a username and the Application Password (WordPress
+  Basic Auth needs both).
 
 ## Open client blockers
 
