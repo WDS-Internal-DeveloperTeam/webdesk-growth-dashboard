@@ -509,6 +509,29 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   (worth revisiting before Phase 1F, not blocking for Phase 1E). Full record:
   `docs/project-state/phase-1e-pre-implementation-verification.md`. Result: no blocking gap found,
   Phase 1E authorized to proceed.
+- `[2026-08-12]` Ran `pnpm --filter @webdesk/database run list-auth-events` against production
+  (user ran it themselves in their own terminal, sourcing `prod-db.env` — Claude never saw the real
+  `DATABASE_URL`, same discipline as every prior production DB operation this session) to resume
+  the diagnosis explicitly deferred earlier. **Real reason found**: every recent login attempt
+  failed with `reason: "token_exchange_failed"`, not a domain/user-matching rejection — ruling out
+  the candidates recorded earlier (`GOOGLE_WORKSPACE_ALLOWED_DOMAINS` misconfiguration, email/domain
+  claim mismatch). The `auth_events` rows themselves prove the OIDC transaction cookie (state/nonce/
+  PKCE verifier) round-tripped successfully across the redirect — a missing/expired cookie redirects
+  before `handleCallback` is ever called, so no row would exist for that path, but rows do exist.
+  The failure is inside or around `client.authorizationCodeGrant` itself
+  (`apps/dashboard-api/src/auth/google/google-auth.service.ts`), most likely a `redirect_uri`
+  mismatch against the OAuth client's registered URIs or a wrong/rotated client secret, but the
+  `catch` block there swallowed the real `openid-client` error completely — never logged anywhere,
+  even server-side. With explicit authorization ("Add the logging fix"), added a single
+  `Logger.error` call logging the real error server-side only (Vercel runtime logs via the existing
+  pino integration) — never sent to the browser, never written to `auth_events.reason` or the
+  redirect URL, both of which stay exactly as generic as before per knowledge/05's no-user-
+  enumeration rule. No behavior change; 145/145 `dashboard-api` unit tests passing (1 new). Branch
+  `fix-google-oidc-token-exchange-logging` pushed,
+  [PR #12](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/12) opened —
+  not merged, not deployed. **Still open**: the actual root cause among the candidates above remains
+  unconfirmed until this fix is merged, deployed, and a real login is attempted again with the new
+  logging live.
 
 ## Open client blockers
 
@@ -658,6 +681,26 @@ existing operator script fit; user ran it plus `bootstrap:super-admin` against p
 succeeded. **Login still failed with the same generic `access_denied`** — the app deliberately
 never surfaces which specific check rejected it. Built `list-auth-events` (also smoke-tested
 locally) to read the real reason from the `auth_events` table without guessing, but actually
-running it was explicitly deferred by the user for a later session. Next candidate work when
-resumed: run `list-auth-events`, diagnose the real rejection reason, fix it. Otherwise: the 21 real
-business-module endpoints — not started automatically, requires its own explicit authorization.)
+running it was explicitly deferred by the user for a later session.
+
+**This entry's own work (separate later session)**: resumed the deferred diagnosis — user ran
+`list-auth-events` themselves against production (same never-see-the-real-`DATABASE_URL`
+discipline as every prior production DB operation) and found every recent login attempt failing
+with `reason: "token_exchange_failed"`, not a domain/user rejection — ruling out the previously-
+recorded candidate causes. The `auth_events` rows themselves prove the OIDC transaction cookie
+round-tripped correctly across the redirect (a broken round-trip would redirect before
+`handleCallback` ever runs, leaving no row at all), so the failure is inside or around the actual
+token exchange — most likely a `redirect_uri` mismatch or a wrong/rotated client secret, but
+`GoogleAuthService.handleCallback`'s `catch` block swallowed the real `openid-client` error
+completely, never logging it anywhere, even server-side. With explicit authorization, added a
+single `Logger.error` call (server-side only, via the existing pino integration — never sent to the
+browser, never written to `auth_events.reason` or the redirect URL, both unchanged and still
+generic). Branch `fix-google-oidc-token-exchange-logging` pushed,
+[PR #12](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/12) opened —
+not merged, not deployed. **Root cause still not confirmed** — that requires merging, deploying,
+and attempting a real login again with the new logging live; this is the concrete next step for the
+still-open login issue. Note: this branch was created off `main` at the same commit as
+`phase-1e-audit-foundation` (PR #11, also open, unrelated scope) — the two PRs are independent and
+will each be reviewed/merged on their own, same as prior parallel-PR situations in this project.
+Otherwise: the 21 real business-module endpoints — not started automatically, requires its own
+explicit authorization.)
