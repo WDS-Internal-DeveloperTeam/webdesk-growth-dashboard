@@ -22,6 +22,7 @@
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "migrate": "pnpm build && node dist/migrate.js up",
     "migrate:down": "pnpm build && node dist/migrate.js down",
+    "migrate:status": "pnpm build && node dist/migrate-status.js",
     "migrate:test": "pnpm build && node dist/migrate.js up && node dist/migrate.js down"
   },
   "dependencies": {

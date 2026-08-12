@@ -61,6 +61,7 @@ string.**
 pnpm build                # migrations run against compiled output, same as every other app's entrypoint
 pnpm migrate               # applies all pending migrations
 pnpm migrate:down          # reverts the single most-recently-applied migration
+pnpm migrate:status        # read-only: lists executed vs. pending migrations, no schema changes
 pnpm migrate:test          # up, then down — round-trip test (what CI runs)
 ```
 
