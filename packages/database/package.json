@@ -23,6 +23,7 @@
     "migrate": "pnpm build && node dist/migrate.js up",
     "migrate:down": "pnpm build && node dist/migrate.js down",
     "migrate:status": "pnpm build && node dist/migrate-status.js",
+    "list-tables": "pnpm build && node dist/list-tables.js",
     "migrate:test": "pnpm build && node dist/migrate.js up && node dist/migrate.js down"
   },
   "dependencies": {
