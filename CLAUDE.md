@@ -423,6 +423,18 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   `list-tables` re-run afterward confirmed all 15 expected tables now exist (14 table-creating
   migrations + `SequelizeMeta` — the other 3 of the 17 are seed-only/`ALTER TABLE` migrations with
   no new table). Production database schema is now genuinely live for the first time.
+- `[2026-08-12]` `dashboard-web`'s own `/auth/sign-in` page crashed with a `500` (React error #441
+  in the browser console) the first time it was actually loaded — a previously-undiscovered gap
+  distinct from every `dashboard-api` fix above. Root cause: `apps/dashboard-web/lib/auth.ts`'s
+  `getApiBaseUrl()` throws a plain `Error` if `NEXT_PUBLIC_API_BASE_URL` isn't set, crashing the
+  page's Server Component render; `dashboard-web`'s Vercel project had only ever had `WORDPRESS_APP`
+  configured, never this var. Fixed, with the user's explicit go-ahead to act directly in the
+  already-authenticated Vercel session: added `NEXT_PUBLIC_API_BASE_URL=https://webdesk-growth-
+  dashboard-7v1u-beta.vercel.app` (Production and Preview, not marked Sensitive since it's a public
+  URL that Next.js inlines into the client bundle regardless) and triggered a redeploy — required
+  specifically for `NEXT_PUBLIC_*` vars, which Next.js bakes in at build time, not read at runtime.
+  Verified against the live page afterward: renders correctly, and the "Sign in with Google
+  Workspace" link's actual `href` resolves to `dashboard-api`'s real `/auth/google/start` endpoint.
 - `[2026-08-12]` GitHub App creation completed and installed — App ID `153184504`, created under
   `@webdesksolution`, installed on `WDS-Internal-DeveloperTeam` (the repo's actual owner org).
   Installation initially failed silently (the org never appeared in the Install App picker) despite
@@ -577,6 +589,13 @@ themselves; all 17 migrations applied cleanly, all 15 expected tables now confir
 in production for the first time. Also this session: the GitHub App (App ID `153184504`) was
 created and, after diagnosing a Private-visibility-vs-installer-account mismatch (not an org-
 permissions or SSO issue), successfully installed on `WDS-Internal-DeveloperTeam` by transferring
-the App's ownership there first. Next candidate work: retry the Google login flow end-to-end now
-that the schema exists, or the 21 real business-module endpoints — neither started automatically,
-both still require their own explicit authorization/next step.)
+the App's ownership there first. Also fixed, with the user's explicit go-ahead: `dashboard-web`'s
+own `/auth/sign-in` page was crashing with a `500` (React error #441) on its first real load — a
+previously-undiscovered gap distinct from the `dashboard-api` chain above — root-caused to a
+missing `NEXT_PUBLIC_API_BASE_URL` Vercel env var (`dashboard-web`'s project had only ever had
+`WORDPRESS_APP` set). Added it directly and triggered the required redeploy (`NEXT_PUBLIC_*` vars
+are baked in at build time); verified live afterward — the page renders and its "Sign in with
+Google Workspace" link's real `href` resolves correctly to `dashboard-api`'s `/auth/google/start`.
+Next candidate work: retry the Google login flow end-to-end now that both the schema and this page
+exist, or the 21 real business-module endpoints — neither started automatically, both still
+require their own explicit authorization/next step.)
