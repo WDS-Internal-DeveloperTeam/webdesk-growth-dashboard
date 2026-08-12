@@ -7,6 +7,7 @@ import type {
   UserRepository,
 } from "@webdesk/database";
 import type * as Client from "openid-client";
+import { dynamicImport } from "../../common/dynamic-import.js";
 import {
   AUTH_ENV,
   AUTH_EVENT_REPOSITORY,
@@ -60,9 +61,8 @@ export class GoogleAuthService {
   ) {}
 
   async buildAuthorizationRequest(): Promise<GoogleAuthorizationRequest> {
-    // Dynamic import: see auth-config.module.ts's comment on why
-    // openid-client can't be a static import here.
-    const client = await import("openid-client");
+    // Bundler-defeating dynamic import: see dynamic-import.ts's comment.
+    const client = await dynamicImport<typeof Client>("openid-client");
     const codeVerifier = client.randomPKCECodeVerifier();
     const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
     const state = client.randomState();
@@ -85,7 +85,7 @@ export class GoogleAuthService {
     transaction: OidcTransaction,
     context: { ipHash: string | null; userAgent: string | null; now?: Date },
   ): Promise<GoogleCallbackResult> {
-    const client = await import("openid-client");
+    const client = await dynamicImport<typeof Client>("openid-client");
     const now = context.now ?? new Date();
 
     let claims: Client.IDToken | undefined;

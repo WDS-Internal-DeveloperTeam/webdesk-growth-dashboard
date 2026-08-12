@@ -1,4 +1,6 @@
 import { Global, Module } from "@nestjs/common";
+import type * as Client from "openid-client";
+import { dynamicImport } from "../../common/dynamic-import.js";
 import { AUTH_ENV, OIDC_CONFIGURATION } from "./auth.constants.js";
 import { loadAuthEnv } from "./auth-env.js";
 
@@ -23,11 +25,13 @@ import { loadAuthEnv } from "./auth-env.js";
     {
       provide: OIDC_CONFIGURATION,
       useFactory: async (env: ReturnType<typeof loadAuthEnv>) => {
-        // Dynamic import: openid-client is ESM-only, and dashboard-api is
-        // CommonJS - a static import compiles to a require() that fails
-        // under Node's CJS/ESM interop in some execution environments
-        // (observed on Vercel Functions). See auth-config.module's history.
-        const client = await import("openid-client");
+        // Bundler-defeating dynamic import: see dynamic-import.ts's comment.
+        // A plain `await import("openid-client")` was observed getting
+        // rewritten back into a require() by both tsc's own CommonJS
+        // downlevel emit and, separately, Vercel's Function bundler
+        // (which re-transpiles this file itself rather than consuming our
+        // compiled dist/ output) - both throwing ERR_REQUIRE_ESM.
+        const client = await dynamicImport<typeof Client>("openid-client");
         return client.discovery(
           new URL(env.GOOGLE_OAUTH_ISSUER_URL),
           env.GOOGLE_OAUTH_CLIENT_ID,
