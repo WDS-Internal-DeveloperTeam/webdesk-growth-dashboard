@@ -20,6 +20,16 @@ import { AllExceptionsFilter } from "../src/common/all-exceptions.filter.js";
  * Vercel owns the HTTP server.
  */
 const expressApp = express();
+// Vercel terminates TLS and forwards to the Function over plain HTTP,
+// setting X-Forwarded-Proto — without this, Express's default req.protocol
+// reports "http" even for a real HTTPS request. openid-client's
+// authorizationCodeGrant() derives the redirect_uri it sends to the token
+// endpoint directly from the callback URL's own protocol+host (see
+// GoogleAuthController.callback's currentUrl construction), so a wrong
+// protocol here silently corrupts that redirect_uri into a value that
+// never matches the one registered with Google — a real, verified root
+// cause of the "token_exchange_failed" login failures (2026-08-12).
+expressApp.set("trust proxy", true);
 let bootstrapped: Promise<void> | undefined;
 
 async function bootstrap(): Promise<void> {

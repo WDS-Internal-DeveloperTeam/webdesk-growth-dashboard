@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { baseEnvSchema, loadEnv } from "@webdesk/configuration";
 import cookieParser from "cookie-parser";
@@ -16,8 +17,12 @@ import { AllExceptionsFilter } from "./common/all-exceptions.filter.js";
  */
 async function bootstrap(): Promise<void> {
   const env = loadEnv(baseEnvSchema);
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
 
+  // See api/index.ts's matching call for why this matters — harmless here
+  // (no proxy in local dev) but keeps both entrypoints consistent in case
+  // this ever runs behind a reverse proxy outside Vercel.
+  app.set("trust proxy", true);
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new AllExceptionsFilter());
   // Required for every Phase 1C auth route: session/OIDC-transaction
