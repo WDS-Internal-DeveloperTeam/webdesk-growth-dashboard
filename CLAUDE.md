@@ -456,6 +456,24 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   was never formalized in docs/code before now; whoever eventually builds the adapter should
   confirm the name and that it carries both a username and the Application Password (WordPress
   Basic Auth needs both).
+- `[2026-08-12]` First real `users` row and Super Admin role provisioned in production, under
+  explicit authorization, confirming the same Workspace org will be used at go-live (just a
+  different primary domain later — a same-org domain switch is a simple `GOOGLE_WORKSPACE_ALLOWED_
+  DOMAINS` env var change, not an OAuth client rebuild). Neither existing operator script fit:
+  `provision-emergency-admin.ts` bundles a local password+TOTP credential (wrong for a normal SSO
+  user), and `bootstrap-super-admin.ts` requires the user to already exist. Added
+  `provision:user` (`apps/dashboard-api/src/auth/scripts/provision-user.ts`), smoke-tested against
+  a fresh local disposable database before use. User ran it for `jitesh@webdeskinc.com`, then
+  `bootstrap:super-admin` — both succeeded against the real production database. **Google SSO
+  login still failed afterward** with the same generic `access_denied` redirect as before — proving
+  the rejection isn't the missing-user case anymore, but the specific remaining cause (candidates:
+  `GOOGLE_WORKSPACE_ALLOWED_DOMAINS` not actually including `webdeskinc.com`, or an email/domain
+  claim mismatch) is unconfirmed. `GoogleAuthService` deliberately never surfaces the specific
+  reason to the browser or console logs (knowledge/05, avoids user enumeration) — only
+  `auth_events.reason` has it. Added `list-auth-events` (`packages/database/src/list-auth-
+  events.ts`, single read-only `SELECT`, smoke-tested with a manually inserted row) for exactly
+  this, but diagnosis was explicitly deferred by the user ("we will check at that time") rather
+  than run immediately — pick up here next time this is revisited.
 
 ## Open client blockers
 
@@ -596,6 +614,15 @@ missing `NEXT_PUBLIC_API_BASE_URL` Vercel env var (`dashboard-web`'s project had
 `WORDPRESS_APP` set). Added it directly and triggered the required redeploy (`NEXT_PUBLIC_*` vars
 are baked in at build time); verified live afterward — the page renders and its "Sign in with
 Google Workspace" link's real `href` resolves correctly to `dashboard-api`'s `/auth/google/start`.
-Next candidate work: retry the Google login flow end-to-end now that both the schema and this page
-exist, or the 21 real business-module endpoints — neither started automatically, both still
-require their own explicit authorization/next step.)
+With both the schema and this page fixed, retried the login — still `access_denied`. Root-caused
+one layer further: no `users` row existed at all (database was freshly migrated, empty). Confirmed
+the intended production Workspace org matches the current test domain (`webdeskinc.com`, same org,
+different primary domain later — a same-org domain switch will just be a `GOOGLE_WORKSPACE_
+ALLOWED_DOMAINS` env var change). Built `provision:user` (smoke-tested locally first) since neither
+existing operator script fit; user ran it plus `bootstrap:super-admin` against production —both
+succeeded. **Login still failed with the same generic `access_denied`** — the app deliberately
+never surfaces which specific check rejected it. Built `list-auth-events` (also smoke-tested
+locally) to read the real reason from the `auth_events` table without guessing, but actually
+running it was explicitly deferred by the user for a later session. Next candidate work when
+resumed: run `list-auth-events`, diagnose the real rejection reason, fix it. Otherwise: the 21 real
+business-module endpoints — not started automatically, requires its own explicit authorization.)
