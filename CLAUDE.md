@@ -626,6 +626,35 @@ run migrate`, sourcing `prod-db.env`), same discipline as every prior production
   production — `audit_events` exists and `AuditService` calls from `RoleAssignmentService`/
   `RecoveryService` will now actually persist once `dashboard-api`'s deploy of PR #11's code is
   live (already triggered by the merge, per the prior entry).
+- `[2026-08-12]` **Production incident**: user asked to retry the login; found `dashboard-api`
+  fully down instead — `/health` and every other route returned `500 FUNCTION_INVOCATION_FAILED`,
+  a NestJS bootstrap crash cached across warm invocations (the Vercel entrypoint's
+  `bootstrapped ??= bootstrap()` pattern means one failed bootstrap fails every subsequent request
+  until a cold start). Diagnosed via real Vercel runtime logs (accessed through the user's own
+  authenticated Chrome session — the sandboxed Browser pane has no Vercel login — after explicit
+  browser-selection confirmation). Real error: `TypeError: database_1.AuditEventRepository is not
+a constructor` at `apps/dashboard-api/src/audit/database.providers.js:8:79`. **Root cause**:
+  `packages/database/src/index.cjs.ts` is a separate, manually-maintained CommonJS entrypoint
+  (distinct from `index.ts`, the ESM one) that Vercel's Function bundler actually `require()`s in
+  production — PR #11 added the new `audit` barrel export to `index.ts` but never knew
+  `index.cjs.ts` existed as a second file needing the same line, so `AuditEventRepository` was
+  never compiled into the deployed CJS build. This is exactly the class of Vercel-bundler-only
+  failure this project has hit repeatedly (openid-client, `pg` dialectModule, etc.) — every local
+  and CI check (typecheck, lint, real e2e suite constructing the identical NestJS module graph)
+  passed cleanly both before and after PR #11 merged, because none of them exercise the CJS build
+  path Vercel's bundler actually uses. Fixed with one line
+  (`export * from "./audit/index.js";` in `index.cjs.ts`), confirmed directly by rebuilding
+  `dist-cjs` and checking `typeof require('@webdesk/database').AuditEventRepository ===
+'function'` (was `'undefined'` before). Re-ran full validation (typecheck/lint on both packages,
+  149/149 `dashboard-api` unit tests, 37/37 e2e tests against a real disposable database) before
+  pushing. Given the outage and that this project has no real user traffic yet, pushed the
+  one-line fix directly to `main` (commit `2e03a57`) rather than a full PR cycle, matching this
+  project's established pattern for urgent live-deployment fixes (the openid-client/`pg` fix chain
+  earlier this project). **Verified resolved against the live deployment**: `/health` returns
+  `{"status":"ok",...}` again, and `/auth/google/start` correctly redirects to Google's real
+  sign-in page again. The underlying `token_exchange_failed` diagnosis (PR #12, already live) is
+  now unblocked for a real retry — this incident was a separate, newly-introduced regression, not
+  related to that fix.
 
 ## Open client blockers
 
@@ -671,6 +700,17 @@ run migrate`, sourcing `prod-db.env`), same discipline as every prior production
 
 ## Cautions
 
+- When adding a new export to `packages/database/src/index.ts` (the ESM barrel), you MUST also add
+  it to `packages/database/src/index.cjs.ts` — a **separate, manually-maintained** CommonJS
+  entrypoint that Vercel's Function bundler actually `require()`s in production. Missing this
+  caused a full `dashboard-api` production outage on 2026-08-12 (`AuditEventRepository is not a
+constructor` — the export simply didn't exist in the deployed CJS build) that no local or CI
+  check caught, including a real e2e suite constructing the identical NestJS module graph — none
+  of them exercise the CJS build path Vercel's bundler uses. `index.cjs.ts` deliberately omits a
+  few ESM-only exports (see its own doc comment); everything else should mirror `index.ts`. Same
+  applies to any other package with a dual ESM/CommonJS build (`@webdesk/configuration`,
+  `@webdesk/shared-types`, `@webdesk/validation`) if they grow a similar split entrypoint — check
+  before assuming a single barrel file covers both.
 - Do NOT design `dashboard-worker` as a persistent process — resolved decision,
   see profile `knowledge/04-serverless-queues-workflows-and-cron.md`.
 - Do NOT use ACF anywhere in the WordPress repository — absolute rule, WDS-001.
