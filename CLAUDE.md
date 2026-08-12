@@ -655,6 +655,42 @@ a constructor` at `apps/dashboard-api/src/audit/database.providers.js:8:79`. **R
   sign-in page again. The underlying `token_exchange_failed` diagnosis (PR #12, already live) is
   now unblocked for a real retry — this incident was a separate, newly-introduced regression, not
   related to that fix.
+- `[2026-08-12]` **The real Google SSO login now works end-to-end in production**, closing the
+  diagnosis thread that ran through most of this session. Path to resolution: (1) the
+  `Logger.error()` call added in PR #12 never actually appeared in Vercel's logs for real
+  failures — switched to `console.error` directly instead (confirmed reliably captured by Vercel;
+  root cause of the `Logger` gap itself not tracked down, noted as a loose end). (2) User then
+  updated `GOOGLE_OAUTH_CLIENT_SECRET`/`_CLIENT_ID` in Vercel to the originally-downloaded values
+  and redeployed — confirmed via Vercel's own Environment Variables page (both genuinely
+  "Production and Preview" scoped, "Updated" minutes prior) and the Deployments list (a real
+  manual redeploy, `Ready`, marked current `Production`) — but the next real login attempt still
+  failed identically, ruling out a stale-secret theory. (3) Asked directly to self-audit rather
+  than keep guessing at external config — re-examined the actual code path instead: confirmed
+  directly in `openid-client@6.8.4`'s own source
+  (`authorizationCodeGrant` → `redirectUri = stripParams(currentUrl)`) that the library derives
+  the `redirect_uri` it sends to Google's token endpoint **from the callback URL's own
+  protocol+host**, not from any config value. `GoogleAuthController` builds that URL from
+  `req.protocol`, which Express reports as `"http"` behind Vercel's TLS-terminating proxy unless
+  the app explicitly trusts it — `trust proxy` was never set anywhere in this codebase. Every real
+  login was silently sending `redirect_uri=http://...` to Google's token endpoint instead of the
+  registered `https://...` one, a mismatch Google correctly rejects — surfaced to us only as the
+  opaque `token_exchange_failed`, and invisible to every earlier check because the _registered_
+  URI and the _actually-transmitted_ one were never the same thing. This is why steps (1)-(2)
+  above, and everything checked in the original diagnosis, were all real, correct checks that
+  simply couldn't have found this. Fixed with `app.set("trust proxy", true)` in both entrypoints
+  (`api/index.ts` for production, `main.ts` for consistency). Added a real regression test
+  (`apps/dashboard-api/test/google-auth.controller.e2e-spec.ts`) that reproduces the bug
+  (`currentUrl.protocol` misread as `"http:"` without the fix, against a real `X-Forwarded-Proto:
+https` request) and proves the fix — `GoogleAuthController` had **zero** test coverage before
+  this, which is exactly how the bug shipped and stayed invisible through every prior local/CI
+  check all session (`google-auth.service.spec.ts` only ever tested `handleCallback` in isolation
+  against a hardcoded `https://` fixture URL, never exercising the controller's real
+  `req.protocol`-based URL construction). Full validation suite re-run clean (typecheck/lint,
+  149/149 unit tests, 39/39 e2e tests including the 2 new ones) before pushing directly to `main`
+  (commit `2bc6c91`), matching the established urgent-live-fix pattern. **Verified live**: real
+  Google sign-in completed successfully. Also found and gitignored, in passing: an untracked
+  `oauth-google-workspace.json` (the downloaded Google OAuth client credentials) sitting at the
+  repo root, uncovered by any existing `.gitignore` pattern — never read its contents.
 
 ## Open client blockers
 
@@ -674,8 +710,14 @@ a constructor` at `apps/dashboard-api/src/audit/database.providers.js:8:79`. **R
   resolved 2026-08-12, user created the client and set `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET`/
   `_ISSUER_URL`/`_REDIRECT_URI` as `dashboard-api` Vercel env vars; the deployed Function's real
   `client.discovery()` call against Google's OIDC issuer now succeeds at bootstrap (see 2026-08-12
-  decision entry). Whether the SSO _login flow itself_ works end-to-end for a real Workspace user
-  is still unverified (see Cautions — testing that remains off-limits).
+  decision entry).
+- ~~Whether the SSO login flow itself works end-to-end for a real Workspace user~~ — **resolved
+  2026-08-12**. Real root cause was Express's `req.protocol` misreading "http" behind Vercel's
+  proxy (no `trust proxy` set), silently corrupting the `redirect_uri` sent to Google's token
+  endpoint — not any of the external-config candidates checked earlier (domain allowlist, client
+  secret, redirect URI registration all turned out to be correct the whole time). See the
+  dedicated "Recent decisions" entry for the full diagnosis chain. Real Google sign-in now
+  completes successfully in production.
 - The real emergency-administrator account list — the provisioning _mechanism_ is built
   (`apps/dashboard-api/src/auth/scripts/provision-emergency-admin.ts`), but no real accounts exist
   yet. Owner: PM/security owner.
@@ -767,76 +809,37 @@ constructor` — the export simply didn't exist in the deployed CJS build) that 
 
 ---
 
-Last touched: 2026-08-12 · by Claude (Continuing the 2026-08-11 ad-hoc Vercel deployment
-troubleshooting: the user provisioned the real Neon database via Vercel Marketplace and set the
-remaining `dashboard-api` env vars (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`,
-`TOTP_ENCRYPTION_KEY`) themselves. That surfaced and required fixing four more real bugs in
-sequence, each found only via live deployment logs and fixed/verified against the real deployment
-(not local checks alone): Sequelize's internal `pg` require missed by Vercel's bundler (`pg`
-dialectModule fix), `openid-client`'s dynamic `import()` getting rewritten to a broken `require()`
-by Vercel's own bundler a second time in a different code path (indirect Function-constructor
-import), that fix hiding the dependency from Vercel's tracer entirely (`vercel.json` `includeFiles`),
-and `openid-client`'s own transitive deps (`jose`, `oauth4webapi`) being invisible to that same
-`includeFiles` glob (promoted to direct `dashboard-api` dependencies). See the 2026-08-12 "Recent
-decisions" entry for the full chain. **Result: `dashboard-api`'s Vercel Function is genuinely live
-in production for the first time** — `/health` and `/ready` return `200`, unknown routes return a
-proper NestJS `404`, zero `500`s since this deployment. `checks: {}` on `/ready` is still an
-unwired Phase-1A-era stub, so a live Neon _query_ succeeding is not independently proven — only
-that nothing crashes at bootstrap or Sequelize construction. All previously-listed env-var
-blockers (`DATABASE_URL`, `GOOGLE_OAUTH_*`, `WEB_APP_ORIGIN`, `TOTP_ENCRYPTION_KEY`) are now
-resolved; remaining open blockers are the real emergency-administrator account list, the WordPress
-Application Password account, and real timezone confirmation — none of which block
-`dashboard-api`'s own liveness. Separately this same session: the real Google SSO login flow was
-verified as far as Claude can safely go without entering credentials — `/auth/google/start`
-correctly redirects to Google's real consent screen with correct OIDC params — then the user
-completed sign-in themselves and hit a `500` at `/auth/google/callback`, diagnosed as the freshly-
-provisioned Neon database never having had migrations applied. **Confirmed and fixed**: after
-several turns of zsh quoting/paste troubleshooting to get a working `DATABASE_URL` into the user's
-own terminal, built two new read-only diagnostic tools (`pnpm --filter @webdesk/database run
-migrate:status` and `list-tables`) specifically to verify database state without Claude ever
-touching the real connection string — `list-tables` (genuinely zero-DDL) confirmed the database
-was empty apart from Umzug's own bookkeeping table. User then ran the real `migrate` command
-themselves; all 17 migrations applied cleanly, all 15 expected tables now confirmed present.
-`dashboard-api`'s live-query claim is no longer just "nothing crashes" — a real schema now exists
-in production for the first time. Also this session: the GitHub App (App ID `153184504`) was
-created and, after diagnosing a Private-visibility-vs-installer-account mismatch (not an org-
-permissions or SSO issue), successfully installed on `WDS-Internal-DeveloperTeam` by transferring
-the App's ownership there first. Also fixed, with the user's explicit go-ahead: `dashboard-web`'s
-own `/auth/sign-in` page was crashing with a `500` (React error #441) on its first real load — a
-previously-undiscovered gap distinct from the `dashboard-api` chain above — root-caused to a
-missing `NEXT_PUBLIC_API_BASE_URL` Vercel env var (`dashboard-web`'s project had only ever had
-`WORDPRESS_APP` set). Added it directly and triggered the required redeploy (`NEXT_PUBLIC_*` vars
-are baked in at build time); verified live afterward — the page renders and its "Sign in with
-Google Workspace" link's real `href` resolves correctly to `dashboard-api`'s `/auth/google/start`.
-With both the schema and this page fixed, retried the login — still `access_denied`. Root-caused
-one layer further: no `users` row existed at all (database was freshly migrated, empty). Confirmed
-the intended production Workspace org matches the current test domain (`webdeskinc.com`, same org,
-different primary domain later — a same-org domain switch will just be a `GOOGLE_WORKSPACE_
-ALLOWED_DOMAINS` env var change). Built `provision:user` (smoke-tested locally first) since neither
-existing operator script fit; user ran it plus `bootstrap:super-admin` against production —both
-succeeded. **Login still failed with the same generic `access_denied`** — the app deliberately
-never surfaces which specific check rejected it. Built `list-auth-events` (also smoke-tested
-locally) to read the real reason from the `auth_events` table without guessing, but actually
-running it was explicitly deferred by the user for a later session.
+Last touched: 2026-08-12 · by Claude (This entry closes out the long production-hardening arc that
+ran through most of this session: `dashboard-web` and `dashboard-api` are both genuinely live on
+Vercel, the Neon database is fully migrated, Phase 1E's audit-foundation slice (PR #11) and a
+Google OIDC diagnostic fix (PR #12) are both merged to `main`, and — the last open item —
+**real Google Workspace SSO login now works end-to-end in production**, verified live.
 
-**This entry's own work (separate later session)**: resumed the deferred diagnosis — user ran
-`list-auth-events` themselves against production (same never-see-the-real-`DATABASE_URL`
-discipline as every prior production DB operation) and found every recent login attempt failing
-with `reason: "token_exchange_failed"`, not a domain/user rejection — ruling out the previously-
-recorded candidate causes. The `auth_events` rows themselves prove the OIDC transaction cookie
-round-tripped correctly across the redirect (a broken round-trip would redirect before
-`handleCallback` ever runs, leaving no row at all), so the failure is inside or around the actual
-token exchange — most likely a `redirect_uri` mismatch or a wrong/rotated client secret, but
-`GoogleAuthService.handleCallback`'s `catch` block swallowed the real `openid-client` error
-completely, never logging it anywhere, even server-side. With explicit authorization, added a
-single `Logger.error` call (server-side only, via the existing pino integration — never sent to the
-browser, never written to `auth_events.reason` or the redirect URL, both unchanged and still
-generic). Branch `fix-google-oidc-token-exchange-logging` pushed,
-[PR #12](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/12) opened —
-not merged, not deployed. **Root cause still not confirmed** — that requires merging, deploying,
-and attempting a real login again with the new logging live; this is the concrete next step for the
-still-open login issue. Note: this branch was created off `main` at the same commit as
-`phase-1e-audit-foundation` (PR #11, also open, unrelated scope) — the two PRs are independent and
-will each be reviewed/merged on their own, same as prior parallel-PR situations in this project.
-Otherwise: the 21 real business-module endpoints — not started automatically, requires its own
-explicit authorization.)
+The login fix is worth summarizing on its own since it took several real, correct-at-the-time
+diagnostic steps to reach: `list-auth-events` (built earlier) showed every failure as
+`token_exchange_failed`; a `Logger.error` fix to capture the underlying `openid-client` error
+turned out not to actually reach Vercel's logs (switched to `console.error`, which does); checking
+the registered `redirect_uri` and resetting the client secret in Vercel both came back clean and
+neither fixed it. Asked to self-audit rather than keep guessing at external config, re-examined
+the actual code path and found the real bug in this repo's own code: `openid-client` derives the
+`redirect_uri` it sends to Google's token endpoint directly from the callback request's own
+protocol+host, and Express was reporting `req.protocol` as `"http"` behind Vercel's proxy because
+`trust proxy` was never set — silently sending the wrong `redirect_uri` on every real attempt, a
+mismatch Google correctly rejects. Fixed with `app.set("trust proxy", true)`, backed by a new
+regression test (`google-auth.controller.e2e-spec.ts` — this controller had zero coverage before,
+which is how the bug shipped invisibly). Full validation suite re-run clean before each push;
+pushed directly to `main` given the live-incident nature of both this and the immediately prior
+CJS-export outage (`AuditEventRepository` missing from `packages/database`'s separately-maintained
+CommonJS entrypoint, `index.cjs.ts` — also fixed and documented this session). Also found and
+gitignored, in passing, two untracked files holding real secrets that had never been covered by
+any `.gitignore` pattern: `prod-db.env` and `oauth-google-workspace.json`.
+
+**Current state**: `dashboard-web` (https://webdesk-growth-dashboard-theta.vercel.app) and
+`dashboard-api` (https://webdesk-growth-dashboard-7v1u-beta.vercel.app) are both live and healthy;
+the production database has all migrations applied including Phase 1E's `audit_events` table; a
+real Super Admin (`jitesh@webdeskinc.com`) can sign in via Google Workspace SSO successfully.
+Remaining open items: the real emergency-administrator account list, the WordPress Application
+Password account (production/development, only staging exists), real timezone confirmation, and —
+the next substantive body of work — the 21 real business-module endpoints or the remaining Phase 1E
+components (jobs, notifications, full retention, operational contacts, system health), each still
+requiring its own explicit authorization to begin.)
