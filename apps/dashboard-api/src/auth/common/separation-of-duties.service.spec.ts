@@ -1,5 +1,6 @@
 import type { AuthorizationActionRepository } from "@webdesk/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AuditService } from "../../audit/audit.service.js";
 import { SeparationOfDutiesService } from "./separation-of-duties.service.js";
 
 describe("SeparationOfDutiesService", () => {
@@ -7,30 +8,81 @@ describe("SeparationOfDutiesService", () => {
     findActorsForResource: ReturnType<typeof vi.fn>;
     record: ReturnType<typeof vi.fn>;
   };
+  let auditService: { record: ReturnType<typeof vi.fn> };
   let service: SeparationOfDutiesService;
 
   beforeEach(() => {
     authorizationActions = { findActorsForResource: vi.fn(), record: vi.fn() };
+    auditService = { record: vi.fn() };
     service = new SeparationOfDutiesService(
       authorizationActions as unknown as AuthorizationActionRepository,
+      auditService as unknown as AuditService,
     );
   });
 
   describe("assertDistinctActors", () => {
-    it("throws when the approver and actor are the same", () => {
-      expect(() => service.assertDistinctActors("user-1", "user-1", "submitter")).toThrow(
-        /Separation of duties/,
+    it("throws when the approver and actor are the same", async () => {
+      await expect(
+        service.assertDistinctActors("user-1", "user-1", "submitter", {
+          entityType: "user",
+          entityId: "user-1",
+        }),
+      ).rejects.toThrow(/Separation of duties/);
+    });
+
+    it("includes the caller-supplied context in the error message", async () => {
+      await expect(
+        service.assertDistinctActors("user-1", "user-1", "release implementer", {
+          entityType: "user",
+          entityId: "user-1",
+        }),
+      ).rejects.toThrow(/release implementer/);
+    });
+
+    it("does not throw when the approver and actor are distinct", async () => {
+      await expect(
+        service.assertDistinctActors("user-1", "user-2", "submitter", {
+          entityType: "user",
+          entityId: "user-2",
+        }),
+      ).resolves.not.toThrow();
+      expect(auditService.record).not.toHaveBeenCalled();
+    });
+
+    it("records a security_exception audit event on denial, using the given entity context", async () => {
+      await expect(
+        service.assertDistinctActors("user-1", "user-1", "submitter", {
+          entityType: "recovery_request",
+          entityId: "request-1",
+        }),
+      ).rejects.toThrow();
+
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "security_exception",
+          actorUserId: "user-1",
+          entityType: "recovery_request",
+          entityId: "request-1",
+          action: "separation_of_duties_denied",
+          retentionCategory: "security-log-1y",
+        }),
       );
     });
 
-    it("includes the caller-supplied context in the error message", () => {
-      expect(() => service.assertDistinctActors("user-1", "user-1", "release implementer")).toThrow(
-        /release implementer/,
-      );
-    });
+    it("runs onDenied before throwing, for a caller's additional domain-specific audit trail", async () => {
+      const onDenied = vi.fn().mockResolvedValue(undefined);
 
-    it("does not throw when the approver and actor are distinct", () => {
-      expect(() => service.assertDistinctActors("user-1", "user-2", "submitter")).not.toThrow();
+      await expect(
+        service.assertDistinctActors(
+          "user-1",
+          "user-1",
+          "submitter",
+          { entityType: "user", entityId: "user-1" },
+          onDenied,
+        ),
+      ).rejects.toThrow();
+
+      expect(onDenied).toHaveBeenCalledOnce();
     });
   });
 

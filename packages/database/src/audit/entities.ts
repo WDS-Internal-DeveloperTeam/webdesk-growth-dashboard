@@ -47,6 +47,23 @@ export type AuditActorType = "human" | "system" | "service_account";
 export type AuditRetentionCategory = string;
 
 /**
+ * The initial controlled `retention_category` set (same three worked examples as the doc comment
+ * above) — exported as a real runtime array, not just encoded in `AuditService`'s own copy, so
+ * `AuditEventRepository.record()` can validate it too. Before this, `retentionCategory` was only
+ * checked in `AuditService` — a caller that reached the repository directly (bypassing
+ * `AuditService`) could persist an unrecognized value with no enforcement at all, since the DB
+ * column is deliberately `STRING`, not an ENUM/CHECK (see migration `00018`'s own doc comment —
+ * the vocabulary is meant to grow without a migration). `apps/dashboard-api`'s `AuditService`
+ * derives its own closed `AuditRetentionCategory` union type from this same array, so both layers
+ * share one source of truth instead of maintaining separate copies that could drift.
+ */
+export const AUDIT_RETENTION_CATEGORIES = [
+  "audit-7y",
+  "approval-audit-7y",
+  "security-log-1y",
+] as const;
+
+/**
  * Groups `event_type` values into a broader vocabulary (migration 00019) —
  * always derived by `AuditService`'s exhaustive event_type→category
  * mapping, never left to the caller to supply. STRING, same "controlled

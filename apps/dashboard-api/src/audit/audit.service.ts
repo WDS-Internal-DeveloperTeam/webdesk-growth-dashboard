@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { AUDIT_RETENTION_CATEGORIES } from "@webdesk/database";
 import type {
   AuditActorType,
   AuditEventEntity,
@@ -45,14 +46,13 @@ const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
 ];
 
 /**
- * The initial controlled `retention_category` set — the schema's own three
- * worked examples (`contracts/audit-event.schema.json`'s `retention_category`
- * description). Not exhaustive: knowledge/11-retention-backup-and-operations.md's
- * full matrix has more categories (e.g. deployment-audit events), added here
- * as later Phase 1E slices actually emit them, not pre-declared speculatively.
+ * `AUDIT_RETENTION_CATEGORIES` itself now lives in `@webdesk/database` (`packages/database/src/audit/entities.ts`)
+ * — a single source of truth `AuditEventRepository.record()` validates against too, instead of
+ * this file maintaining its own separate copy that could drift out of sync. Not exhaustive:
+ * knowledge/11-retention-backup-and-operations.md's full matrix has more categories (e.g.
+ * deployment-audit events), added there as later Phase 1E slices actually emit them, not
+ * pre-declared speculatively.
  */
-const AUDIT_RETENTION_CATEGORIES = ["audit-7y", "approval-audit-7y", "security-log-1y"] as const;
-
 export type AuditRetentionCategory = (typeof AUDIT_RETENTION_CATEGORIES)[number];
 
 /**
