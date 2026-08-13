@@ -61,6 +61,12 @@ describe("Phase 1E audit foundation (real disposable database)", () => {
       const found = await auditEvents.findRecentByActor(event.actorUserId!);
       expect(found.map((row) => row.id)).toContain(event.id);
     });
+
+    it("rejects an unrecognized retention_category, even calling this repository directly — not only via AuditService", async () => {
+      await expect(createEvent({ retentionCategory: "not-a-real-category" })).rejects.toThrow(
+        /Unrecognized audit retention_category/,
+      );
+    });
   });
 
   describe("migration 00019 — expanded schema", () => {

@@ -102,30 +102,21 @@ export class RecoveryService {
     return decided;
   }
 
-  /** Wraps `SeparationOfDutiesService.assertDistinctActors`: on denial, records a `security_exception` audit event before rethrowing, so the block itself is auditable — see this class's own doc comment. */
+  /**
+   * `SeparationOfDutiesService.assertDistinctActors` now records the `security_exception`
+   * audit_events entry itself on denial — this wrapper only supplies the entity context. See its
+   * own doc comment.
+   */
   private async assertNotSelfDeciding(
     decidedByUserId: string,
     targetUserId: string,
     requestId: string,
   ): Promise<void> {
-    try {
-      this.separationOfDuties.assertDistinctActors(
-        decidedByUserId,
-        targetUserId,
-        "target of the recovery request",
-      );
-    } catch (error) {
-      await this.auditService.record({
-        eventType: "security_exception",
-        actorUserId: decidedByUserId,
-        actorType: "human",
-        entityType: "recovery_request",
-        entityId: requestId,
-        action: "separation_of_duties_denied",
-        reason: `target:${targetUserId}`,
-        retentionCategory: "security-log-1y",
-      });
-      throw error;
-    }
+    await this.separationOfDuties.assertDistinctActors(
+      decidedByUserId,
+      targetUserId,
+      "target of the recovery request",
+      { entityType: "recovery_request", entityId: requestId },
+    );
   }
 }

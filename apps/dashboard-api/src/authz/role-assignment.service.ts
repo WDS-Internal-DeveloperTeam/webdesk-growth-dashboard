@@ -81,23 +81,28 @@ export class RoleAssignmentService {
     }
 
     await this.userRoles.assign(targetUserId, roleId);
-    await this.events.record({
-      eventType: "role_assigned",
-      userId: targetUserId,
-      success: true,
-      reason: `role:${role.key} assigned_by:${actorId}`,
-    });
-    await this.auditService.record({
-      eventType: "permission_change",
-      actorUserId: actorId,
-      actorType: "human",
-      entityType: "user",
-      entityId: targetUserId,
-      action: "role_assigned",
-      reason: `role:${role.key}`,
-      retentionCategory: "approval-audit-7y",
-    });
-    await this.sessionService.revokeAllForUser(targetUserId, "role-change", now);
+    // The auth_events write, the audit_events write, and revoking the target's sessions are three
+    // independent side effects of the same completed assignment — none reads another's result —
+    // so they run concurrently rather than as three sequential round-trips.
+    await Promise.all([
+      this.events.record({
+        eventType: "role_assigned",
+        userId: targetUserId,
+        success: true,
+        reason: `role:${role.key} assigned_by:${actorId}`,
+      }),
+      this.auditService.record({
+        eventType: "permission_change",
+        actorUserId: actorId,
+        actorType: "human",
+        entityType: "user",
+        entityId: targetUserId,
+        action: "role_assigned",
+        reason: `role:${role.key}`,
+        retentionCategory: "approval-audit-7y",
+      }),
+      this.sessionService.revokeAllForUser(targetUserId, "role-change", now),
+    ]);
   }
 
   async revokeRole(
@@ -114,52 +119,53 @@ export class RoleAssignmentService {
     if (!removed) {
       return;
     }
-    await this.events.record({
-      eventType: "role_revoked",
-      userId: targetUserId,
-      success: true,
-      reason: `role:${role.key} revoked_by:${actorId}`,
-    });
-    await this.auditService.record({
-      eventType: "permission_change",
-      actorUserId: actorId,
-      actorType: "human",
-      entityType: "user",
-      entityId: targetUserId,
-      action: "role_revoked",
-      reason: `role:${role.key}`,
-      retentionCategory: "approval-audit-7y",
-    });
-    await this.sessionService.revokeAllForUser(targetUserId, "role-change", now);
+    // Same independence as assignRole() above — none of these three depends on another's result.
+    await Promise.all([
+      this.events.record({
+        eventType: "role_revoked",
+        userId: targetUserId,
+        success: true,
+        reason: `role:${role.key} revoked_by:${actorId}`,
+      }),
+      this.auditService.record({
+        eventType: "permission_change",
+        actorUserId: actorId,
+        actorType: "human",
+        entityType: "user",
+        entityId: targetUserId,
+        action: "role_revoked",
+        reason: `role:${role.key}`,
+        retentionCategory: "approval-audit-7y",
+      }),
+      this.sessionService.revokeAllForUser(targetUserId, "role-change", now),
+    ]);
   }
 
-  /** Wraps `SeparationOfDutiesService.assertDistinctActors`: on denial, records a `separation_of_duties_denied` auth event (§22) and a general `security_exception` audit event (Phase 1E) before rethrowing, so the block itself is auditable in both trails. */
+  /**
+   * `SeparationOfDutiesService.assertDistinctActors` now records the general `security_exception`
+   * audit_events entry itself on denial; this wrapper only supplies the entity context plus the
+   * ADDITIONAL, narrower `separation_of_duties_denied` `auth_events` entry (§22's required event
+   * vocabulary) that only this login-scoped call site needs.
+   */
   private async assertNotSelfTargeting(
     actorId: string,
     targetUserId: string,
     context: string,
   ): Promise<void> {
-    try {
-      this.separationOfDuties.assertDistinctActors(actorId, targetUserId, context);
-    } catch (error) {
-      await this.events.record({
-        eventType: "separation_of_duties_denied",
-        userId: actorId,
-        success: false,
-        reason: `context:${context} target:${targetUserId}`,
-      });
-      await this.auditService.record({
-        eventType: "security_exception",
-        actorUserId: actorId,
-        actorType: "human",
-        entityType: "user",
-        entityId: targetUserId,
-        action: "separation_of_duties_denied",
-        reason: `context:${context}`,
-        retentionCategory: "security-log-1y",
-      });
-      throw error;
-    }
+    await this.separationOfDuties.assertDistinctActors(
+      actorId,
+      targetUserId,
+      context,
+      { entityType: "user", entityId: targetUserId },
+      async () => {
+        await this.events.record({
+          eventType: "separation_of_duties_denied",
+          userId: actorId,
+          success: false,
+          reason: `context:${context} target:${targetUserId}`,
+        });
+      },
+    );
   }
 
   private async requireUser(userId: string): Promise<void> {
