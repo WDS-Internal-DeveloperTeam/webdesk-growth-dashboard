@@ -83,6 +83,18 @@ export class NotificationRepository {
     return instance ? toEntity(instance) : null;
   }
 
+  /**
+   * `expectedState`, when given, makes this a conditional update
+   * (`WHERE id = :id AND delivery_state = :expectedState`) rather than a
+   * plain read-then-write — the caller read `deliveryState` to decide this
+   * patch is valid, and without pinning that same value in the `WHERE`
+   * clause, two concurrent transitions on the same notification can both
+   * pass their precondition check and one silently overwrite the other.
+   * Returns `null` both when the row doesn't exist and when the
+   * conditional update matched zero rows (the state changed under the
+   * caller) — `NotificationService` distinguishes the two by having
+   * already fetched the row itself before calling `update`.
+   */
   async update(
     id: string,
     patch: Partial<{
@@ -92,7 +104,18 @@ export class NotificationRepository {
       failureSummary: string | null;
       retryEligible: boolean;
     }>,
+    expectedState?: NotificationDeliveryState,
   ): Promise<NotificationEntity | null> {
+    if (expectedState !== undefined) {
+      const [affectedCount] = await this.model.update(patch, {
+        where: { id, deliveryState: expectedState },
+      });
+      if (affectedCount === 0) {
+        return null;
+      }
+      const instance = await this.model.findByPk(id);
+      return instance ? toEntity(instance) : null;
+    }
     const instance = await this.model.findByPk(id);
     if (!instance) {
       return null;

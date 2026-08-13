@@ -112,5 +112,33 @@ describe("Phase 1E notification foundation (real disposable database)", () => {
       const queued = await notifications.list({ notificationType, deliveryState: "queued" });
       expect(queued.map((n) => n.id)).toEqual([b.id]);
     });
+
+    it("lets only one of two concurrent conditional updates win the same state transition", async () => {
+      const notification = await notifications.create({
+        notificationType: "framework_probe",
+        severity: "medium",
+        subject: "Concurrency test",
+      });
+
+      const [toAccepted, toFailed] = await Promise.all([
+        notifications.update(
+          notification.id,
+          { deliveryState: "accepted", retryEligible: false },
+          "queued",
+        ),
+        notifications.update(
+          notification.id,
+          { deliveryState: "failed", retryEligible: false, failureSummary: "lost the race" },
+          "queued",
+        ),
+      ]);
+
+      const winners = [toAccepted, toFailed].filter((result) => result !== null);
+      expect(winners).toHaveLength(1);
+      expect(["accepted", "failed"]).toContain(winners[0]?.deliveryState);
+
+      const final = await notifications.findById(notification.id);
+      expect(["accepted", "failed"]).toContain(final?.deliveryState);
+    });
   });
 });

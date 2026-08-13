@@ -85,6 +85,7 @@ describe("NotificationService", () => {
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
         expect.objectContaining({ deliveryState: "retrying", retryEligible: true }),
+        "queued",
       );
     });
 
@@ -107,11 +108,12 @@ describe("NotificationService", () => {
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
         expect.objectContaining({ deliveryState: "accepted", retryEligible: false }),
+        "queued",
       );
       expect(result.deliveryState).toBe("accepted");
     });
 
-    it("moves to sent_to_smtp on a two-phase handoff outcome", async () => {
+    it("moves to sent_to_smtp on a two-phase handoff outcome, with retryEligible explicitly false", async () => {
       notifications.findById.mockResolvedValue(baseNotification());
       notifications.update.mockResolvedValue(baseNotification({ deliveryState: "sent_to_smtp" }));
 
@@ -120,7 +122,8 @@ describe("NotificationService", () => {
 
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
-        expect.objectContaining({ deliveryState: "sent_to_smtp" }),
+        expect.objectContaining({ deliveryState: "sent_to_smtp", retryEligible: false }),
+        "queued",
       );
     });
 
@@ -136,6 +139,7 @@ describe("NotificationService", () => {
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
         expect.objectContaining({ deliveryState: "retrying", retryEligible: true }),
+        "queued",
       );
     });
 
@@ -153,6 +157,7 @@ describe("NotificationService", () => {
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
         expect.objectContaining({ deliveryState: "permanently_failed", retryEligible: false }),
+        "queued",
       );
     });
 
@@ -170,7 +175,16 @@ describe("NotificationService", () => {
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
         expect.objectContaining({ deliveryState: "permanently_failed" }),
+        "queued",
       );
+    });
+
+    it("rejects with a conflict, not an unhandled error, when a concurrent transition already changed the state", async () => {
+      notifications.findById.mockResolvedValue(baseNotification({ deliveryState: "queued" }));
+      notifications.update.mockResolvedValue(null);
+
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      await expect(service.attemptDelivery("notif-1")).rejects.toThrow(/concurrent transition/);
     });
   });
 
@@ -185,6 +199,7 @@ describe("NotificationService", () => {
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
         expect.objectContaining({ deliveryState: "accepted" }),
+        "sent_to_smtp",
       );
     });
 
@@ -207,6 +222,23 @@ describe("NotificationService", () => {
       expect(notifications.update).toHaveBeenCalledWith(
         "notif-1",
         expect.objectContaining({ deliveryState: "permanently_failed" }),
+        "sent_to_smtp",
+      );
+    });
+
+    it("does not increment attemptCount when confirming a retryable rejection — the attempt was already counted when it was sent to SMTP", async () => {
+      notifications.findById.mockResolvedValue(
+        baseNotification({ deliveryState: "sent_to_smtp", attemptCount: 1 }),
+      );
+      notifications.update.mockResolvedValue(baseNotification({ deliveryState: "retrying" }));
+
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      await service.confirmRejected("notif-1", { permanent: false, failureSummary: "deferred" });
+
+      expect(notifications.update).toHaveBeenCalledWith(
+        "notif-1",
+        expect.objectContaining({ deliveryState: "retrying", attemptCount: 1 }),
+        "sent_to_smtp",
       );
     });
   });
@@ -226,6 +258,7 @@ describe("NotificationService", () => {
           retryEligible: false,
           failureSummary: "operator cancelled",
         }),
+        "queued",
       );
       expect(result.deliveryState).toBe("failed");
     });
@@ -235,6 +268,21 @@ describe("NotificationService", () => {
       await expect(
         buildService(new UnconfiguredNotificationDeliveryAdapter()).markFailed("notif-1", "x"),
       ).rejects.toThrow(/cannot be marked failed/);
+    });
+
+    it("can force-fail a notification stuck in sent_to_smtp, the one administrative recovery path for that state", async () => {
+      notifications.findById.mockResolvedValue(baseNotification({ deliveryState: "sent_to_smtp" }));
+      notifications.update.mockResolvedValue(baseNotification({ deliveryState: "failed" }));
+
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      const result = await service.markFailed("notif-1", "confirmation never arrived");
+
+      expect(notifications.update).toHaveBeenCalledWith(
+        "notif-1",
+        expect.objectContaining({ deliveryState: "failed" }),
+        "sent_to_smtp",
+      );
+      expect(result.deliveryState).toBe("failed");
     });
   });
 });

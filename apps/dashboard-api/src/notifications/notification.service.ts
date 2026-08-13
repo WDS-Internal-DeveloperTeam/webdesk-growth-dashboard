@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import type {
   NotificationDeliveryState,
   NotificationEntity,
@@ -38,6 +44,12 @@ function requireNotification(
 }
 
 const IN_FLIGHT_STATES: ReadonlySet<NotificationDeliveryState> = new Set(["queued", "retrying"]);
+/** `markFailed` — the one manual "give up" escape hatch — additionally reaches `sent_to_smtp`, unlike `attemptDelivery`: a notification stuck mid-handoff (adapter bug, lost webhook, confirmation that will never arrive) would otherwise have no administrative recovery path at all. */
+const MARK_FAILED_SOURCE_STATES: ReadonlySet<NotificationDeliveryState> = new Set([
+  "queued",
+  "retrying",
+  "sent_to_smtp",
+]);
 
 /**
  * The notification domain service (brief §15/§16) — the single place
@@ -80,17 +92,17 @@ export class NotificationService {
    */
   async markFailed(id: string, failureSummary: string): Promise<NotificationEntity> {
     const notification = requireNotification(await this.notifications.findById(id), id);
-    if (!IN_FLIGHT_STATES.has(notification.deliveryState)) {
+    if (!MARK_FAILED_SOURCE_STATES.has(notification.deliveryState)) {
       throw new BadRequestException(
         `Notification ${id} cannot be marked failed from state "${notification.deliveryState}"`,
       );
     }
-    const updated = await this.notifications.update(id, {
-      deliveryState: "failed",
-      retryEligible: false,
-      failureSummary,
-    });
-    return requireNotification(updated, id);
+    const updated = await this.notifications.update(
+      id,
+      { deliveryState: "failed", retryEligible: false, failureSummary },
+      notification.deliveryState,
+    );
+    return this.requireUncontested(updated, id, notification.deliveryState);
   }
 
   async attemptDelivery(id: string): Promise<NotificationEntity> {
@@ -104,7 +116,7 @@ export class NotificationService {
     const attemptCount = notification.attemptCount + 1;
     const outcome = await this.adapter.deliver(notification);
 
-    return this.applyOutcome(id, attemptCount, outcome);
+    return this.applyOutcome(id, attemptCount, outcome, notification.deliveryState);
   }
 
   /** For a future two-phase adapter that hands off to SMTP now (`sent_to_smtp`) and learns the final outcome later (bounce, delayed acceptance). No production adapter in this slice ever produces `sent_to_smtp`, so these are schema/service-ready but unexercised outside tests. */
@@ -115,14 +127,20 @@ export class NotificationService {
         `Notification ${id} cannot be confirmed accepted from state "${notification.deliveryState}"`,
       );
     }
-    const updated = await this.notifications.update(id, {
-      deliveryState: "accepted",
-      retryEligible: false,
-      failureSummary: null,
-    });
-    return requireNotification(updated, id);
+    const updated = await this.notifications.update(
+      id,
+      { deliveryState: "accepted", retryEligible: false, failureSummary: null },
+      "sent_to_smtp",
+    );
+    return this.requireUncontested(updated, id, "sent_to_smtp");
   }
 
+  /**
+   * Deliberately does NOT increment `attemptCount` — unlike `attemptDelivery`, confirming an
+   * outcome isn't itself a new delivery attempt; the attempt was already counted when
+   * `applyOutcome`'s `sent_to_smtp` branch persisted it. Re-incrementing here would double-count
+   * a single real attempt against `MAX_DELIVERY_ATTEMPTS`.
+   */
   async confirmRejected(
     id: string,
     input: { permanent: boolean; failureSummary: string },
@@ -133,54 +151,96 @@ export class NotificationService {
         `Notification ${id} cannot be confirmed rejected from state "${notification.deliveryState}"`,
       );
     }
-    return this.applyOutcome(id, notification.attemptCount, {
-      kind: input.permanent ? "rejected_permanent" : "rejected_retryable",
-      failureSummary: input.failureSummary,
-    });
+    return this.applyOutcome(
+      id,
+      notification.attemptCount,
+      {
+        kind: input.permanent ? "rejected_permanent" : "rejected_retryable",
+        failureSummary: input.failureSummary,
+      },
+      "sent_to_smtp",
+    );
+  }
+
+  /** Throws NotFoundException if the row is genuinely gone, ConflictException if a concurrent transition beat this one to the same row. */
+  private requireUncontested(
+    updated: NotificationEntity | null,
+    id: string,
+    expectedState: NotificationDeliveryState,
+  ): NotificationEntity {
+    if (updated) {
+      return updated;
+    }
+    throw new ConflictException(
+      `Notification ${id} was no longer in state "${expectedState}" when this update was applied — a concurrent transition won the race`,
+    );
   }
 
   private async applyOutcome(
     id: string,
     attemptCount: number,
     outcome: Awaited<ReturnType<NotificationDeliveryAdapter["deliver"]>>,
+    expectedState: NotificationDeliveryState,
   ): Promise<NotificationEntity> {
     let updated: NotificationEntity | null;
 
     if (outcome.kind === "sent_to_smtp") {
-      updated = await this.notifications.update(id, {
-        deliveryState: "sent_to_smtp",
-        attemptCount,
-        lastAttemptAt: new Date(),
-        failureSummary: null,
-      });
+      updated = await this.notifications.update(
+        id,
+        {
+          deliveryState: "sent_to_smtp",
+          attemptCount,
+          lastAttemptAt: new Date(),
+          // Explicit, not inherited from whatever the row had before: a notification mid-handoff
+          // isn't independently retry-eligible until confirmAccepted/confirmRejected says otherwise
+          // — leaving this unset let a stale `true` from a prior "retrying" state survive the
+          // transition and mislead any caller reading retryEligible to decide whether to offer a
+          // manual retry.
+          retryEligible: false,
+          failureSummary: null,
+        },
+        expectedState,
+      );
     } else if (outcome.kind === "accepted") {
-      updated = await this.notifications.update(id, {
-        deliveryState: "accepted",
-        attemptCount,
-        lastAttemptAt: new Date(),
-        retryEligible: false,
-        failureSummary: null,
-      });
+      updated = await this.notifications.update(
+        id,
+        {
+          deliveryState: "accepted",
+          attemptCount,
+          lastAttemptAt: new Date(),
+          retryEligible: false,
+          failureSummary: null,
+        },
+        expectedState,
+      );
     } else if (outcome.kind === "rejected_permanent") {
-      updated = await this.notifications.update(id, {
-        deliveryState: "permanently_failed",
-        attemptCount,
-        lastAttemptAt: new Date(),
-        retryEligible: false,
-        failureSummary: outcome.failureSummary,
-      });
+      updated = await this.notifications.update(
+        id,
+        {
+          deliveryState: "permanently_failed",
+          attemptCount,
+          lastAttemptAt: new Date(),
+          retryEligible: false,
+          failureSummary: outcome.failureSummary,
+        },
+        expectedState,
+      );
     } else {
       // rejected_retryable
       const willRetry = attemptCount < MAX_DELIVERY_ATTEMPTS;
-      updated = await this.notifications.update(id, {
-        deliveryState: willRetry ? "retrying" : "permanently_failed",
-        attemptCount,
-        lastAttemptAt: new Date(),
-        retryEligible: willRetry,
-        failureSummary: outcome.failureSummary,
-      });
+      updated = await this.notifications.update(
+        id,
+        {
+          deliveryState: willRetry ? "retrying" : "permanently_failed",
+          attemptCount,
+          lastAttemptAt: new Date(),
+          retryEligible: willRetry,
+          failureSummary: outcome.failureSummary,
+        },
+        expectedState,
+      );
     }
 
-    return requireNotification(updated, id);
+    return this.requireUncontested(updated, id, expectedState);
   }
 }
