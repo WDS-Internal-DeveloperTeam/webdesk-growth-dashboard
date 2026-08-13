@@ -5,6 +5,7 @@ import type {
   NotificationDeliveryOutcome,
 } from "./delivery-adapter.js";
 import { UnconfiguredNotificationDeliveryAdapter } from "./delivery-adapter.js";
+import type { AuditService } from "../audit/audit.service.js";
 import { NotificationService } from "./notification.service.js";
 
 const NOW = new Date("2026-08-13T00:00:00.000Z");
@@ -50,13 +51,19 @@ describe("NotificationService", () => {
     update: ReturnType<typeof vi.fn>;
     list: ReturnType<typeof vi.fn>;
   };
+  let auditService: { record: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     notifications = { create: vi.fn(), findById: vi.fn(), update: vi.fn(), list: vi.fn() };
+    auditService = { record: vi.fn() };
   });
 
   function buildService(adapter: NotificationDeliveryAdapter): NotificationService {
-    return new NotificationService(notifications as unknown as NotificationRepository, adapter);
+    return new NotificationService(
+      notifications as unknown as NotificationRepository,
+      adapter,
+      auditService as unknown as AuditService,
+    );
   }
 
   describe("create", () => {
@@ -69,6 +76,27 @@ describe("NotificationService", () => {
         subject: "Test notification",
       });
       expect(result.deliveryState).toBe("queued");
+    });
+
+    it("records a notification_created audit event — previously this left zero audit trail", async () => {
+      notifications.create.mockResolvedValue(baseNotification());
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      await service.create({
+        notificationType: "framework_probe",
+        severity: "critical",
+        subject: "Test notification",
+      });
+
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "notification_created",
+          actorType: "system",
+          entityType: "notification",
+          entityId: "notif-1",
+          action: "create",
+          retentionCategory: "audit-7y",
+        }),
+      );
     });
   });
 
@@ -111,6 +139,13 @@ describe("NotificationService", () => {
         "queued",
       );
       expect(result.deliveryState).toBe("accepted");
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "notification_delivery_outcome",
+          entityId: "notif-1",
+          action: "delivery_attempt_accepted",
+        }),
+      );
     });
 
     it("moves to sent_to_smtp on a two-phase handoff outcome, with retryEligible explicitly false", async () => {
@@ -201,6 +236,12 @@ describe("NotificationService", () => {
         expect.objectContaining({ deliveryState: "accepted" }),
         "sent_to_smtp",
       );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "notification_delivery_outcome",
+          action: "confirmed_accepted",
+        }),
+      );
     });
 
     it("rejects confirming acceptance from a state other than sent_to_smtp", async () => {
@@ -261,6 +302,12 @@ describe("NotificationService", () => {
         "queued",
       );
       expect(result.deliveryState).toBe("failed");
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "notification_delivery_outcome",
+          action: "marked_failed",
+        }),
+      );
     });
 
     it("rejects marking a terminal notification as failed", async () => {

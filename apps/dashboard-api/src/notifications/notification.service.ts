@@ -17,6 +17,8 @@ import {
   NOTIFICATION_REPOSITORY,
 } from "./notifications.constants.js";
 import type { NotificationDeliveryAdapter } from "./delivery-adapter.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
+import { AuditService } from "../audit/audit.service.js";
 
 export interface CreateNotificationInput {
   notificationType: string;
@@ -62,10 +64,31 @@ export class NotificationService {
   constructor(
     @Inject(NOTIFICATION_REPOSITORY) private readonly notifications: NotificationRepository,
     @Inject(NOTIFICATION_DELIVERY_ADAPTER) private readonly adapter: NotificationDeliveryAdapter,
+    private readonly auditService: AuditService,
   ) {}
 
+  /**
+   * Previously left zero record in the tamper-resistant `audit_events` trail across all five of
+   * its mutating methods (see
+   * docs/security/threat-model-phase-1e-operational-infrastructure.md's Repudiation finding) — a
+   * notification can be `severity: critical`, making its lifecycle a potentially significant
+   * operational action. No caller identity flows into any of these methods yet (no real producer
+   * exists in this slice), so every event here is attributed to the `system` actor, same as
+   * `RecoveryService.createRequest`'s own unattended path.
+   */
   async create(input: CreateNotificationInput): Promise<NotificationEntity> {
-    return this.notifications.create(input);
+    const notification = await this.notifications.create(input);
+    await this.auditService.record({
+      eventType: "notification_created",
+      actorUserId: null,
+      actorType: "system",
+      entityType: "notification",
+      entityId: notification.id,
+      action: "create",
+      reason: `notificationType:${input.notificationType} severity:${input.severity}`,
+      retentionCategory: "audit-7y",
+    });
+    return notification;
   }
 
   async findById(id: string): Promise<NotificationEntity> {
@@ -102,7 +125,9 @@ export class NotificationService {
       { deliveryState: "failed", retryEligible: false, failureSummary },
       notification.deliveryState,
     );
-    return this.requireUncontested(updated, id, notification.deliveryState);
+    const result = this.requireUncontested(updated, id, notification.deliveryState);
+    await this.recordDeliveryOutcome(id, "marked_failed", `failureSummary:${failureSummary}`);
+    return result;
   }
 
   async attemptDelivery(id: string): Promise<NotificationEntity> {
@@ -132,7 +157,9 @@ export class NotificationService {
       { deliveryState: "accepted", retryEligible: false, failureSummary: null },
       "sent_to_smtp",
     );
-    return this.requireUncontested(updated, id, "sent_to_smtp");
+    const result = this.requireUncontested(updated, id, "sent_to_smtp");
+    await this.recordDeliveryOutcome(id, "confirmed_accepted", null);
+    return result;
   }
 
   /**
@@ -160,6 +187,24 @@ export class NotificationService {
       },
       "sent_to_smtp",
     );
+  }
+
+  /** Shared audit-emission point for every `applyOutcome`/`markFailed`/`confirmAccepted` transition. */
+  private async recordDeliveryOutcome(
+    notificationId: string,
+    action: string,
+    reason: string | null,
+  ): Promise<void> {
+    await this.auditService.record({
+      eventType: "notification_delivery_outcome",
+      actorUserId: null,
+      actorType: "system",
+      entityType: "notification",
+      entityId: notificationId,
+      action,
+      reason,
+      retentionCategory: "audit-7y",
+    });
   }
 
   /** Throws NotFoundException if the row is genuinely gone, ConflictException if a concurrent transition beat this one to the same row. */
@@ -241,6 +286,14 @@ export class NotificationService {
       );
     }
 
-    return this.requireUncontested(updated, id, expectedState);
+    const result = this.requireUncontested(updated, id, expectedState);
+    await this.recordDeliveryOutcome(
+      id,
+      `delivery_attempt_${outcome.kind}`,
+      outcome.kind === "sent_to_smtp" || outcome.kind === "accepted"
+        ? null
+        : `failureSummary:${outcome.failureSummary}`,
+    );
+    return result;
   }
 }
