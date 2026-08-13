@@ -122,3 +122,40 @@ Compatibility is assessed against the skill's generic CRUD + workflow + RBAC + a
 | Not Applicable                                 | 2                          |
 
 **No true Conflicts were found** — every divergence from the skill's documented defaults is either an anticipated, schema-approved alternative (NestJS, pnpm), a straightforward extension of an existing pattern (Vercel Blob≈S3, extended RBAC action vocabulary), or a genuine net-new capability the skill has not yet encountered (Vercel serverless job execution, Google Workspace SSO, GitHub/WordPress product integrations) that requires new knowledge authored _within_ the skill's existing structure rather than any change to its architecture, layering, or forbidden-pattern rules.
+
+---
+
+## Addendum — Phase 1E implementation status (2026-08-13)
+
+This document is a Phase 0 requirements-to-skill compatibility matrix and was never updated for
+any subsequent build phase (1A–1D) either — its header "Status: Draft for review. No application
+code, migrations, or scaffolding produced" is now historically stale project-wide, not just for
+Phase 1E. Rather than rewrite the historical matrix, this addendum records which rows Phase 1E's
+six architecture slices now have real, built code against:
+
+- **DASH-GOV-07** (immutable audit events, 7-year retention) — the `retention_category`/`audit_events`
+  design this row anticipated is now real: ADR-0017 `audit_events` table with DB-level immutability
+  trigger, merged to `main` via PR #11/#13. See `docs/implementation/phase-1e-audit-architecture.md`.
+- **Module 39, Notification Center** — the delivery-state-machine pattern this row anticipated
+  (queued/sent/accepted/failed/retrying/permanently-failed) is now real code on
+  `phase-1e-notification-foundation` (PR #15, open, not merged). No real SMTP adapter yet — still
+  matches this row's "Missing from Skill (mechanism)" note for the actual delivery mechanism.
+  See `docs/implementation/phase-1e-notification-foundation.md`.
+- **Module 43, Audit Logs and System Health** — now has real code on two fronts: the audit-log half
+  via DASH-GOV-07 above, and the system-health half via `phase-1e-system-events-health` (PR #18,
+  open, not merged) — `system_events`/`system_components`/`system_health_checks`, though only the
+  manual-check-recording path exists, not the `/health/dependencies` real-probe endpoint this row
+  originally anticipated. See `docs/implementation/phase-1e-system-events-health.md`.
+- **New, not anticipated by any Part A/B/C row**: job architecture (`phase-1e-job-architecture`,
+  PR #14) and retention architecture (`phase-1e-retention-architecture`, PR #16) and operational
+  contacts (`phase-1e-operational-contacts`, PR #17) are genuinely new scope this matrix's original
+  Phase 0 pass didn't separately call out as distinct rows — retention-as-a-mechanism is implicit
+  in DASH-GOV-07's "retention/deletion job" recommendation, and operational contacts/incident
+  severity has no Phase 0 precedent at all (first introduced in the Phase 1E authorization brief).
+  See each slice's own `docs/implementation/phase-1e-*.md` as-built doc for details.
+
+**Still open**: none of these six PRs have merged except #11/#13 (audit foundation). No independent
+code review or dedicated security review existed for any Phase 1E slice prior to this addendum —
+both were performed this session; see `docs/security/threat-model-phase-1e-operational-infrastructure.md`
+and this session's code-review findings recorded via the project's `ReportFindings` mechanism (not
+reproduced in this document — see `docs/project-state/phase-1e-validation-report.md`).

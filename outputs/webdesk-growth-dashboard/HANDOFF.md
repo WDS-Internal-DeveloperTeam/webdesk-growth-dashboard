@@ -1,23 +1,59 @@
 # HANDOFF — webdesk-growth-dashboard
 
-- **Session ended:** 2026-08-12 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
+- **Session ended:** 2026-08-13 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role (Both Phase 1D gates approved 2026-08-11 — G4-1D for PR #8 and G4-1D-EXP for PR #9, each a clean CONFIRM since the required second-role security review was already complete (2026-08-10) before either gate was requested. PR #10's Next.js 16/NestJS 11/Vitest 3 dependency upgrades also merged this session, `pnpm audit` 19 → 0. Phase 1A, 1B, 1C, and both Phase 1D scopes are all now approved. Separately, ad-hoc real-Vercel-deployment troubleshooting — not a formal Task 13 execution — got `dashboard-web` live 2026-08-11, and now, as of 2026-08-12, **`dashboard-api`'s Vercel Function is genuinely live in production too** — `/health` and `/ready` return `200`, zero `500`s since the current deployment. The user provisioned the real Neon database and set all remaining env vars themselves; that surfaced 4 more real bugs (Sequelize's `pg` require, `openid-client`'s dynamic import getting bundler-rewritten a second time, that fix hiding the dependency from Vercel's tracer, and `openid-client`'s own transitive deps needing the same treatment), each found and fixed via live deployment logs, not local checks alone — see "Where we left off" below)
+- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, PRs #11/#13–#18 opened, CI green on all. Independent code review and a self-authored security review (STRIDE pass) both completed this session for the first time across all six slices — real findings surfaced in both (see `docs/security/threat-model-phase-1e-operational-infrastructure.md` and `docs/project-state/phase-1e-validation-report.md`). Neither review has had its required second-role human sign-off yet. Only audit foundation (PR #11/#13) is merged to `main`; the other five remain open, unmerged.
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1D-expanded — RBAC, fine-grained permissions, confidential-field authorization, separation-of-duties expansion (`docs/task-packages/phase-1d-rbac-permissions-expanded.md`), built on top of the already-merged PR #8 `AuthzModule` per the user's own "supersedes/expands" decision. **Implementation, validation, documentation, merge, and gate approval all complete.** Merged to `main` via PR #9 (merge commit `67a4955`); G4-1D-EXP gate approved 2026-08-11 (clean CONFIRM). See `docs/project-state/phase-1d-approval-checklist.md`'s "Sign-off" and `docs/project-state/phase-1d-validation-report.md`'s addendum. PR #8's own narrower Phase 1D (G4-1D gate) is also approved — see `docs/project-state/phase-1d-validation-report.md`'s "Sign-off — G4-1D gate" section. Phase 1A, 1B, and 1C remain approved, each scoped to itself only. Also this session: PR #10 (Next.js 16/NestJS 11/Vitest 3 dependency upgrades, `pnpm audit` 19 → 0) merged first; PR #9 was then rebased onto the resulting `main` (no conflicts) before its own merge.
-- **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean CONFIRM) is the last _recorded_ gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative). G4-1D (Phase 1D, PR #8) was also approved the same day, likewise a clean CONFIRM. G4-1C (Phase 1C) remains recorded as `status: "overridden"` / `decision: "OVERRIDE"` — that historical record is left unmodified, since it accurately reflects the state at approval time.
+- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. Audit foundation (PR #11) and its schema-expansion (PR #13) are merged to `main`. Job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), and system events/health (PR #18) are all built, pushed, CI-green, and now code-reviewed + security-reviewed — but **none of the five are merged**, and neither review has a second-role human sign-off yet. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
+- **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean CONFIRM) is still the last _approved_ gate — no Phase 1E gate has been requested or approved yet for any of the six slices. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
-> **Both Phase 1D gates are now approved (2026-08-11).** The expanded "Phase 1D" brief (RBAC,
-> fine-grained permissions, confidential-field access, a centralized policy/authorization service,
-> separation-of-duties across many more scenarios), recorded verbatim in
-> `docs/task-packages/phase-1d-rbac-permissions-expanded.md`, was explicitly authorized to begin
-> this session ("Begin Phase 1D expanded scope"), built, validated, documented, merged to `main`
-> via PR #9, and its G4-1D-EXP gate approved by explicit "Approve both Phase 1D gates now"
-> instruction. PR #8's own narrower G4-1D gate was approved in the same instruction. See "Where we
-> left off" below for the complete summary.
+> **Phase 1E status as of 2026-08-13:** all six architecture slices are built and CI-green. Audit
+> foundation (PR #11) and audit schema-expansion (PR #13) are merged. The remaining five (jobs,
+> notifications, retention, operational contacts, system events/health — PRs #14–#18) are open,
+> unmerged, each with real independent-code-review findings and real security-review findings
+> surfaced this session — see `docs/project-state/phase-1e-validation-report.md` for the full
+> consolidated record and `docs/project-state/phase-1e-approval-checklist.md` for what's still
+> outstanding before any gate can be requested. **Do not merge any of PRs #14–#18, and do not
+> request a gate for any of them, without the user reviewing the surfaced findings first** — several
+> are real bugs (a migration that will brick production if run against a populated `audit_events`
+> table; concurrency races in job/notification/retention state machines; two off-by-one bugs; an
+> RBAC-adjacent PII exposure gap) that were deliberately left unfixed pending the user's own
+> triage decision, per this project's standing pattern of surfacing rather than silently resolving.
+
+## Phase 1E — this session's actual current state (supersedes the Phase 1D sections below for "next tasks"/"blockers"/"session links" purposes)
+
+**Next tasks (queued):**
+
+1. User reviews `docs/project-state/phase-1e-validation-report.md` and
+   `docs/security/threat-model-phase-1e-operational-infrastructure.md`'s findings, decides which
+   (if any) get fixed before merge — none were fixed in this pass, per explicit scope (review only).
+2. Second-role human review of both documents, per ADR-0010's separation-of-duties principle (same
+   pattern every prior phase's threat-model doc required).
+3. Merge decisions for PRs #14–#18 (jobs, notifications, retention, operational contacts, system
+   events/health) — each independent, each its own separate authorization, same as every prior
+   Phase 1E merge this project has done.
+
+**Client blockers (waiting on):** same as before Phase 1E work began — the real emergency-
+administrator account list, the WordPress Application Password account (production/development),
+real timezone confirmation. None of Phase 1E's own deliverables are blocked on these.
+
+**Session links (Phase 1E):**
+
+- [PR #11](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/11) audit foundation — **merged**
+- [PR #13](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/13) audit schema expansion — **merged**
+- [PR #14](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/14) job architecture — open, CI green, reviewed
+- [PR #15](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/15) notification foundation — open, CI green, reviewed
+- [PR #16](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/16) retention architecture — open, CI green, reviewed
+- [PR #17](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/17) operational contacts — open, CI green, reviewed
+- [PR #18](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/18) system events & health — open, CI green, reviewed
+
+## Phase 1D (prior phase) — historical record, unchanged below
+
+The section below describes Phase 1D's own completion and is left as an accurate historical
+record of that phase; it predates Phase 1E and is not the active phase anymore.
 
 ## Where we left off
 
