@@ -8,6 +8,8 @@ import type {
 import { JOB_ATTEMPT_REPOSITORY, JOB_REPOSITORY } from "./jobs.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
 import { IdempotencyService } from "./idempotency.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as IdempotencyService above.
+import { AuditService } from "../audit/audit.service.js";
 
 export interface CreateJobInput {
   jobType: string;
@@ -64,11 +66,14 @@ export class JobService {
     @Inject(JOB_REPOSITORY) private readonly jobs: JobRepository,
     @Inject(JOB_ATTEMPT_REPOSITORY) private readonly attempts: JobAttemptRepository,
     private readonly idempotency: IdempotencyService,
+    private readonly auditService: AuditService,
   ) {}
 
   async create(input: CreateJobInput): Promise<JobEntity> {
     if (!input.idempotencyKey) {
-      return this.jobs.create(input);
+      const job = await this.jobs.create(input);
+      await this.recordJobCreated(job, input);
+      return job;
     }
 
     const scope = `job:${input.jobType}`;
@@ -106,7 +111,30 @@ export class JobService {
       throw error;
     }
     await this.idempotency.complete(reservation.reservation.id, job.id);
+    await this.recordJobCreated(job, input);
     return job;
+  }
+
+  /**
+   * `POST /jobs` previously left zero record in the tamper-resistant `audit_events` trail —
+   * `jobs.created_at`/`requested_by_user_id` exist on the row itself, but that's mutable
+   * application data, not the DB-trigger-enforced-immutable audit table (see
+   * `docs/security/threat-model-phase-1e-operational-infrastructure.md`'s Repudiation finding).
+   * Only called for a genuinely NEW job — the idempotent-duplicate early return above (an existing
+   * job, not a new creation) does not call this.
+   */
+  private async recordJobCreated(job: JobEntity, input: CreateJobInput): Promise<void> {
+    await this.auditService.record({
+      eventType: "job_created",
+      actorUserId: input.requestedByUserId ?? null,
+      actorType: input.requestedByUserId ? "human" : "system",
+      entityType: "job",
+      entityId: job.id,
+      action: "create",
+      reason: `jobType:${input.jobType}`,
+      correlationId: input.correlationId ?? null,
+      retentionCategory: "audit-7y",
+    });
   }
 
   async findById(jobId: string): Promise<JobEntity> {

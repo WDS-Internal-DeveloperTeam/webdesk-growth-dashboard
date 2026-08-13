@@ -32,6 +32,7 @@ export type AuditEventType =
   | "export_run"
   | "git_sync"
   | "webhook_processed"
+  | "job_created"
   | "job_completed"
   | "job_failed"
   | "job_retry_requested"

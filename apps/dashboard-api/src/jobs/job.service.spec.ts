@@ -1,6 +1,7 @@
 import type { JobAttemptRepository, JobEntity, JobRepository } from "@webdesk/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IdempotencyService } from "./idempotency.service.js";
+import type { AuditService } from "../audit/audit.service.js";
 import { JobService } from "./job.service.js";
 
 const NOW = new Date("2026-08-13T00:00:00.000Z");
@@ -56,6 +57,7 @@ describe("JobService", () => {
     complete: ReturnType<typeof vi.fn>;
     fail: ReturnType<typeof vi.fn>;
   };
+  let auditService: { record: ReturnType<typeof vi.fn> };
   let service: JobService;
 
   beforeEach(() => {
@@ -63,10 +65,12 @@ describe("JobService", () => {
     attempts = { create: vi.fn(), close: vi.fn(), findByJob: vi.fn() };
     attempts.create.mockResolvedValue({ id: "attempt-1", attemptNumber: 1, jobId: "job-1" });
     idempotency = { reserve: vi.fn(), complete: vi.fn(), fail: vi.fn() };
+    auditService = { record: vi.fn() };
     service = new JobService(
       jobs as unknown as JobRepository,
       attempts as unknown as JobAttemptRepository,
       idempotency as unknown as IdempotencyService,
+      auditService as unknown as AuditService,
     );
   });
 
@@ -77,6 +81,37 @@ describe("JobService", () => {
       expect(jobs.create).toHaveBeenCalledOnce();
       expect(idempotency.reserve).not.toHaveBeenCalled();
       expect(result.id).toBe("job-1");
+    });
+
+    it("records a job_created audit event for a directly-created job — previously this left zero audit trail", async () => {
+      jobs.create.mockResolvedValue(baseJob());
+      await service.create({
+        jobType: "framework_probe",
+        requestedByUserId: "actor-1",
+        correlationId: "corr-1",
+      });
+
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "job_created",
+          actorUserId: "actor-1",
+          actorType: "human",
+          entityType: "job",
+          entityId: "job-1",
+          action: "create",
+          correlationId: "corr-1",
+          retentionCategory: "audit-7y",
+        }),
+      );
+    });
+
+    it("attributes a job_created audit event to the system actor when no requester is given", async () => {
+      jobs.create.mockResolvedValue(baseJob());
+      await service.create({ jobType: "framework_probe" });
+
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ actorUserId: null, actorType: "system" }),
+      );
     });
 
     it("reserves the idempotency key and creates a job on first request", async () => {
@@ -93,9 +128,12 @@ describe("JobService", () => {
       );
       expect(jobs.create).toHaveBeenCalledOnce();
       expect(idempotency.complete).toHaveBeenCalledWith("reservation-1", "job-1");
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: "job_created", entityId: "job-1" }),
+      );
     });
 
-    it("returns the existing job on a duplicate idempotent request instead of creating a new one", async () => {
+    it("returns the existing job on a duplicate idempotent request instead of creating a new one, without a second job_created event", async () => {
       idempotency.reserve.mockResolvedValue({
         outcome: "duplicate",
         reservation: { id: "reservation-1", resultReference: "job-1" },
@@ -106,6 +144,7 @@ describe("JobService", () => {
 
       expect(jobs.create).not.toHaveBeenCalled();
       expect(result.id).toBe("job-1");
+      expect(auditService.record).not.toHaveBeenCalled();
     });
 
     it("rejects with a conflict when another request is currently processing the same key", async () => {
