@@ -9,6 +9,7 @@ import { JobsModule } from "./jobs/jobs.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
+import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
 
 const env = loadEnv(baseEnvSchema);
 const loggerOptions = buildLoggerOptions(env, "dashboard-api");
@@ -40,6 +41,7 @@ const loggerOptions = buildLoggerOptions(env, "dashboard-api");
     NotificationsModule,
     OperationalContactsModule,
     RetentionModule,
+    SystemOperationsModule,
   ],
 })
 export class AppModule implements NestModule {

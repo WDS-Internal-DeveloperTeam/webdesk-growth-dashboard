@@ -43,6 +43,7 @@ export type AuditEventType =
   | "notification_delivery_outcome"
   | "operational_contact_created"
   | "operational_contact_updated"
+  | "system_health_check_recorded"
   | "emergency_admin_login"
   | "account_recovery_request"
   | "account_recovery_decision";
