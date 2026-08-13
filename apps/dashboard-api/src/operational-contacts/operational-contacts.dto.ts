@@ -37,9 +37,15 @@ export const updateContactSchema = z.object({
 });
 export type UpdateContactDto = z.infer<typeof updateContactSchema>;
 
+// `z.coerce.boolean()` runs `Boolean(value)` — since Express query params always arrive as
+// strings, `?activeStatus=false` coerces to `Boolean("false")`, which is `true` (any non-empty
+// string is truthy). That silently inverted the filter: a caller asking for inactive contacts
+// would get active ones back. An explicit "true"/"false" literal map has no such trap.
+const booleanQueryParam = z.enum(["true", "false"]).transform((value) => value === "true");
+
 export const listContactsQuerySchema = z.object({
   area: z.string().min(1).max(64).optional(),
-  activeStatus: z.coerce.boolean().optional(),
+  activeStatus: booleanQueryParam.optional(),
 });
 export type ListContactsQueryDto = z.infer<typeof listContactsQuerySchema>;
 

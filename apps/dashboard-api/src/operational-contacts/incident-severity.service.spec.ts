@@ -90,6 +90,32 @@ describe("IncidentSeverityService", () => {
     expect(result.met).toBe(true);
   });
 
+  it("does not overcount a business day for a partial day past a whole-day boundary", async () => {
+    policies.findBySeverity.mockResolvedValue(
+      policy({ severity: "medium", responseTargetValue: 1, responseTargetUnit: "business_days" }),
+    );
+    // Opened Friday 09:00, evaluated Monday 09:01 — just over exactly 3 calendar days later.
+    // Only 1 whole business day (Monday) has actually elapsed. A cursor-vs-`to` comparison that
+    // rounds the trailing partial day UP (the pre-fix bug) would count Monday AND Tuesday,
+    // incorrectly reporting the 1-business-day target as missed.
+    const openedAt = new Date("2026-08-14T09:00:00.000Z");
+    const evaluatedAt = new Date("2026-08-17T09:01:00.000Z");
+    const result = await service.evaluateResponseTarget("medium", openedAt, evaluatedAt);
+    expect(result.applicable).toBe(true);
+    expect(result.met).toBe(true);
+  });
+
+  it("counts zero business days elapsed within the same calendar day", async () => {
+    policies.findBySeverity.mockResolvedValue(
+      policy({ severity: "medium", responseTargetValue: 0, responseTargetUnit: "business_days" }),
+    );
+    const openedAt = new Date("2026-08-13T09:00:00.000Z"); // Thursday
+    const evaluatedAt = new Date("2026-08-13T17:00:00.000Z"); // same Thursday, 8 hours later
+    const result = await service.evaluateResponseTarget("medium", openedAt, evaluatedAt);
+    expect(result.applicable).toBe(true);
+    expect(result.met).toBe(true); // 0 whole business days elapsed <= 0 target
+  });
+
   it("returns not_a_fixed_duration_target for low — never fabricates a duration that was never approved", async () => {
     policies.findBySeverity.mockResolvedValue(
       policy({

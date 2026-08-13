@@ -20,12 +20,23 @@ export interface ResponseTargetEvaluation {
 
 const MS_PER_MINUTE = 60 * 1000;
 const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
 
-/** Counts calendar days between two instants that are not Saturday/Sunday — a straightforward, bounded implementation; does not account for holidays. */
+/**
+ * Counts whole calendar days between two instants that are not Saturday/Sunday — a
+ * straightforward, bounded implementation; does not account for holidays.
+ *
+ * Iterates exactly `Math.floor((to - from) / 1 day)` times — a WHOLE-days count, not "does
+ * `cursor` still fall before `to`". The latter rounds any partial day UP to a full day: e.g.
+ * `from` and `to` eight hours apart on the same weekday would satisfy `cursor < to` on the first
+ * iteration and get counted as 1 full business day elapsed, when in reality zero full days have
+ * passed. Flooring first fixes that without changing any of the whole-day cases.
+ */
 function businessDaysBetween(from: Date, to: Date): number {
+  const wholeDaysElapsed = Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY);
   let count = 0;
   const cursor = new Date(from);
-  while (cursor < to) {
+  for (let i = 0; i < wholeDaysElapsed; i += 1) {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
     const day = cursor.getUTCDay();
     if (day !== 0 && day !== 6) {

@@ -54,16 +54,24 @@ function localTimeOfDay(atTime: Date, timeZone: string): string {
 }
 
 /**
- * Simple range check, no overnight-wraparound support (e.g. 22:00-06:00 always
- * evaluates false) — a reasonable, honestly-documented bound for this foundation
- * slice; see docs/task-packages/phase-1e-operational-contacts.md.
+ * Supports an overnight window (`workingHoursStart > workingHoursEnd`, e.g. 22:00-06:00) by
+ * treating it as wrapping past midnight — WITHOUT this, a contact configured with such hours
+ * would never be selectable: `localTime >= start && localTime <= end` is unsatisfiable for any
+ * `localTime` when `start > end`, silently excluding that contact from every escalation chain at
+ * every hour, not just outside their configured window.
  */
 function isWithinWorkingHours(contact: OperationalContactEntity, atTime: Date): boolean {
   if (!contact.workingHoursStart || !contact.workingHoursEnd || !contact.timeZone) {
     return true; // no working-hours restriction configured — always available
   }
   const localTime = localTimeOfDay(atTime, contact.timeZone);
-  return localTime >= contact.workingHoursStart && localTime <= contact.workingHoursEnd;
+  const { workingHoursStart: start, workingHoursEnd: end } = contact;
+  if (start <= end) {
+    return localTime >= start && localTime <= end;
+  }
+  // Overnight window: e.g. start=22:00, end=06:00 means "available from 22:00 to midnight, OR
+  // from midnight to 06:00".
+  return localTime >= start || localTime <= end;
 }
 
 function isEffective(contact: OperationalContactEntity, atTime: Date): boolean {

@@ -179,5 +179,41 @@ describe("OperationalContactService", () => {
 
       expect(chain.map((c) => c.id)).toEqual(["no-hours-restriction"]);
     });
+
+    it("includes a contact whose working hours wrap past midnight, at a time inside that window", async () => {
+      // NOW is 2026-08-13T00:00:00.000Z — midnight UTC, which falls inside a 22:00-06:00 window.
+      contacts.findActiveForArea.mockResolvedValue([
+        contact({
+          id: "overnight-contact",
+          workingHoursStart: "22:00:00",
+          workingHoursEnd: "06:00:00",
+          timeZone: "UTC",
+        }),
+      ]);
+
+      const chain = await service.resolveEscalationChain("devops", "high", NOW);
+
+      expect(chain.map((c) => c.id)).toEqual(["overnight-contact"]);
+    });
+
+    it("excludes a contact whose working hours wrap past midnight, at a time outside that window", async () => {
+      // 12:00 UTC falls outside a 22:00-06:00 overnight window.
+      contacts.findActiveForArea.mockResolvedValue([
+        contact({
+          id: "overnight-contact",
+          workingHoursStart: "22:00:00",
+          workingHoursEnd: "06:00:00",
+          timeZone: "UTC",
+        }),
+      ]);
+
+      const chain = await service.resolveEscalationChain(
+        "devops",
+        "high",
+        new Date("2026-08-13T12:00:00.000Z"),
+      );
+
+      expect(chain).toEqual([]);
+    });
   });
 });
