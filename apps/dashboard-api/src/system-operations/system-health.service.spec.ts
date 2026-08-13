@@ -86,13 +86,20 @@ describe("SystemHealthService", () => {
       );
     });
 
-    it("does not audit a check with no human actor (a future automated probe)", async () => {
+    it("still audits a check with no human actor (a future automated probe), attributed to the system actor", async () => {
       components.findByKey.mockResolvedValue(component());
       checks.record.mockResolvedValue(check({ checkedByUserId: null, source: "scheduled_probe" }));
 
       await service.recordCheck({ componentKey: "database", status: "healthy" });
 
-      expect(auditService.record).not.toHaveBeenCalled();
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "system_health_check_recorded",
+          actorUserId: null,
+          actorType: "system",
+          entityId: "database",
+        }),
+      );
     });
 
     it("rejects recording a check for an unknown component", async () => {

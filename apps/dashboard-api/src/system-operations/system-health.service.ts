@@ -60,22 +60,25 @@ export class SystemHealthService {
 
     const check = await this.checks.record(input);
 
-    if (input.checkedByUserId) {
-      await this.auditService.record({
-        eventType: "system_health_check_recorded",
-        actorUserId: input.checkedByUserId,
-        actorType: "human",
-        entityType: "system_component",
-        entityId: input.componentKey,
-        action: "record_check",
-        reason: `status:${input.status}`,
-        // Without this, the audit event and the system_health_checks row it describes can't be
-        // joined back together via correlationId like every other request-scoped pair in this
-        // codebase — the check row has it (persisted via `input` above), the audit row didn't.
-        correlationId: input.correlationId ?? null,
-        retentionCategory: "security-log-1y",
-      });
-    }
+    // Unconditional — this used to only fire when `checkedByUserId` was truthy, which is
+    // harmless today since the controller always supplies it, but silently skipped audit
+    // emission for any future caller (e.g. an automated probe) that omits it (see
+    // docs/security/threat-model-phase-1e-operational-infrastructure.md's Repudiation finding).
+    // A probe-originated check is attributed to the `system` actor instead of being dropped.
+    await this.auditService.record({
+      eventType: "system_health_check_recorded",
+      actorUserId: input.checkedByUserId ?? null,
+      actorType: input.checkedByUserId ? "human" : "system",
+      entityType: "system_component",
+      entityId: input.componentKey,
+      action: "record_check",
+      reason: `status:${input.status}`,
+      // Without this, the audit event and the system_health_checks row it describes can't be
+      // joined back together via correlationId like every other request-scoped pair in this
+      // codebase — the check row has it (persisted via `input` above), the audit row didn't.
+      correlationId: input.correlationId ?? null,
+      retentionCategory: "security-log-1y",
+    });
 
     return check;
   }
