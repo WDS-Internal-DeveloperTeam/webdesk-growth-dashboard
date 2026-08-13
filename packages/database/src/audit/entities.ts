@@ -37,6 +37,8 @@ export type AuditEventType =
   | "job_failed"
   | "job_retry_requested"
   | "job_cancellation_requested"
+  | "retention_hold_created"
+  | "retention_hold_released"
   | "emergency_admin_login"
   | "account_recovery_request"
   | "account_recovery_decision";

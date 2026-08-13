@@ -17,3 +17,4 @@ export * from "./authz/index.js";
 export * from "./audit/index.js";
 export * from "./jobs/index.js";
 export * from "./idempotency/index.js";
+export * from "./retention/index.js";
