@@ -21,7 +21,12 @@ describe("RecoveryService", () => {
     service = new RecoveryService(
       requests as unknown as RecoveryRequestRepository,
       events as unknown as AuthEventRepository,
-      new SeparationOfDutiesService({ findActorsForResource: vi.fn(), record: vi.fn() } as never),
+      // Same `auditService` mock passed to both constructors — SeparationOfDutiesService now
+      // records its own security_exception audit event on denial.
+      new SeparationOfDutiesService(
+        { findActorsForResource: vi.fn(), record: vi.fn() } as never,
+        auditService as unknown as AuditService,
+      ),
       auditService as unknown as AuditService,
     );
   });

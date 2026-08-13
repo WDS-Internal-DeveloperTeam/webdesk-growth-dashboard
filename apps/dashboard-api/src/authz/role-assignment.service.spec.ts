@@ -45,7 +45,13 @@ describe("RoleAssignmentService", () => {
       users as unknown as UserRepository,
       events as unknown as AuthEventRepository,
       sessionService as unknown as SessionService,
-      new SeparationOfDutiesService({ findActorsForResource: vi.fn(), record: vi.fn() } as never),
+      // Same `auditService` mock passed to both constructors — SeparationOfDutiesService now
+      // records its own security_exception audit event on denial, so assertions below checking
+      // `auditService.record` see that call regardless of which service actually made it.
+      new SeparationOfDutiesService(
+        { findActorsForResource: vi.fn(), record: vi.fn() } as never,
+        auditService as unknown as AuditService,
+      ),
       auditService as unknown as AuditService,
     );
   });
