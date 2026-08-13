@@ -1,7 +1,7 @@
 /**
  * The reusable operational-job model (Phase 1E job-architecture brief §9/§10)
- * — persistence-layer shapes for `jobs` (migration `00019`) and
- * `job_attempts` (migration `00020`). See
+ * — persistence-layer shapes for `jobs` (migration `00020`) and
+ * `job_attempts` (migration `00021`). See
  * `docs/task-packages/phase-1e-job-architecture.md`.
  */
 

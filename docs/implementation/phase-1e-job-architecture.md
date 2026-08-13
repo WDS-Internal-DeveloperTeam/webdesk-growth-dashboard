@@ -5,11 +5,11 @@ backed by real source files, real migrations, and real-database/e2e tests refere
 Covers brief §9–§14 plus the job-specific portions of §26/§28/§29/§34. See
 `docs/task-packages/phase-1e-job-architecture.md` for the design decisions and their rationale.
 
-## 1. Schema (migrations `00019`–`00021`)
+## 1. Schema (migrations `00020`–`00022`)
 
 Three tables, following §4's "reuse, don't invent per-module" rule:
 
-- **`jobs`** (`00019`) — the job record itself. `status` is a real Postgres ENUM (the 8-value
+- **`jobs`** (`00020`) — the job record itself. `status` is a real Postgres ENUM (the 8-value
   lifecycle §9 specifies exactly); `job_type`, `cancellation_state`, `failure_category` stay
   STRING (evolvable vocabularies, same reasoning as `audit_events.event_type`). Full field list
   matches §9: id, job_type, project_id (nullable, unconstrained — no `projects` table, same
@@ -18,11 +18,11 @@ Three tables, following §4's "reuse, don't invent per-module" rule:
   max_attempts, timeout_seconds, scheduled_at/started_at/finished_at/heartbeat_at,
   cancellation_state, failure_code/failure_category/failure_summary, next_retry_at,
   worker_identity, correlation_id, retention_category.
-- **`job_attempts`** (`00020`) — full attempt history, not just the latest (§10). One row per
+- **`job_attempts`** (`00021`) — full attempt history, not just the latest (§10). One row per
   execution attempt: attempt_number, started_at/finished_at, handler, result, failure_category,
   failure_summary, retry_decision, correlation_id, evidence_reference (a reference, e.g. a Sentry
   ID — never full logs duplicated into Postgres). `UNIQUE(job_id, attempt_number)`.
-- **`idempotency_keys`** (`00021`) — the reusable, DB-backed idempotency primitive (§11), not
+- **`idempotency_keys`** (`00022`) — the reusable, DB-backed idempotency primitive (§11), not
   job-specific despite jobs being its first consumer. `UNIQUE(scope, idempotency_key)` — `scope`
   namespaces the key so two unrelated operations can reuse the same literal value safely.
   `processing_state` is a real ENUM (`pending`/`completed`/`failed`).
@@ -113,7 +113,7 @@ job creation defaults, project_id/correlation_id round-trip, partial updates, th
 constraint, status-filtered listing, multi-attempt history, attempt closing, the
 `(job_id, attempt_number)` unique constraint, and all five idempotency-key behaviors (fresh
 reservation, in-progress conflict, completed duplicate, reissue-after-failure, and
-scope-isolation). Full migration `00001`→`00021` up/down round-trip verified via the suite's own
+scope-isolation). Full migration `00001`→`00022` up/down round-trip verified via the suite's own
 `beforeAll`/`afterAll`.
 
 `apps/dashboard-api/src/jobs/*.spec.ts` (30 unit tests): `JobService` (idempotent create,
@@ -129,4 +129,5 @@ across list/create/retry/cancel.
 
 Full validation run (this slice): typecheck/lint clean across all 9 workspace packages, 19/19 +
 61/61 `packages/database` tests (unit + integration), 179/179 + 44/44 `dashboard-api` tests (unit
-+ e2e), `pnpm audit` 0 vulnerabilities, prettier clean.
+
+- e2e), `pnpm audit` 0 vulnerabilities, prettier clean.

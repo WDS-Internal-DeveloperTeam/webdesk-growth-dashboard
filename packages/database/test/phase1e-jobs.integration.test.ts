@@ -6,7 +6,7 @@ import { closeConnection, getConnection } from "../src/connection.js";
 import { buildMigrator } from "../src/migrate.js";
 
 /**
- * Exercises the Phase 1E job-architecture schema (migrations 00019-00021)
+ * Exercises the Phase 1E job-architecture schema (migrations 00020-00022)
  * against a REAL, disposable PostgreSQL database — including the real
  * unique constraints (`job_attempts(job_id, attempt_number)`,
  * `idempotency_keys(scope, idempotency_key)`) and the `jobs.progress`
