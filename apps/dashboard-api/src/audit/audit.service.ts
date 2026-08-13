@@ -36,6 +36,7 @@ const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
   "webhook_processed",
   "job_completed",
   "job_failed",
+  "system_health_check_recorded",
   "emergency_admin_login",
   "account_recovery_request",
   "account_recovery_decision",
