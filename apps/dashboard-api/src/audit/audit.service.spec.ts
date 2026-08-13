@@ -25,14 +25,74 @@ describe("AuditService", () => {
     expect(events.record).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: "permission_change",
+        eventCategory: "access_control",
         actorUserId: "actor-1",
         actorType: "human",
+        sessionId: null,
+        projectId: null,
         entityType: "user",
         entityId: "user-1",
         action: "role_assigned",
+        correlationId: null,
+        sourceApplication: "dashboard-api",
+        environment: "test",
+        confidentialityClassification: "internal",
         retentionCategory: "approval-audit-7y",
         legalHold: false,
       }),
+    );
+  });
+
+  it("derives event_category from event_type without the caller having to supply one", async () => {
+    await service.record({
+      eventType: "security_exception",
+      actorType: "system",
+      entityType: "user",
+      entityId: "user-1",
+      action: "investigation",
+      retentionCategory: "security-log-1y",
+    });
+
+    expect(events.record).toHaveBeenCalledWith(
+      expect.objectContaining({ eventCategory: "security" }),
+    );
+  });
+
+  it("passes through session_id, project_id, and correlation_id when provided", async () => {
+    await service.record({
+      eventType: "data_change",
+      actorType: "system",
+      entityType: "user",
+      entityId: "user-1",
+      action: "whatever",
+      retentionCategory: "audit-7y",
+      sessionId: "session-1",
+      projectId: "project-1",
+      correlationId: "correlation-1",
+    });
+
+    expect(events.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "session-1",
+        projectId: "project-1",
+        correlationId: "correlation-1",
+      }),
+    );
+  });
+
+  it("accepts an explicit confidentiality_classification override", async () => {
+    await service.record({
+      eventType: "confidential_field_access_change",
+      actorType: "human",
+      entityType: "user",
+      entityId: "user-1",
+      action: "view",
+      retentionCategory: "audit-7y",
+      confidentialityClassification: "confidential",
+    });
+
+    expect(events.record).toHaveBeenCalledWith(
+      expect.objectContaining({ confidentialityClassification: "confidential" }),
     );
   });
 
