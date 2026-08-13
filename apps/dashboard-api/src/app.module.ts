@@ -5,6 +5,7 @@ import { AuthModule } from "./auth/auth.module.js";
 import { AuthzModule } from "./authz/authz.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { HealthModule } from "./health/health.module.js";
+import { JobsModule } from "./jobs/jobs.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 
 const env = loadEnv(baseEnvSchema);
@@ -33,7 +34,11 @@ const loggerOptions = buildLoggerOptions(env, "dashboard-api");
     HealthModule,
     AuthModule,
     AuthzModule,
+<<<<<<< HEAD
     RetentionModule,
+=======
+    JobsModule,
+>>>>>>> origin/main
   ],
 })
 export class AppModule implements NestModule {

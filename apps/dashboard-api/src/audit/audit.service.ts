@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { AUDIT_RETENTION_CATEGORIES } from "@webdesk/database";
 import type {
   AuditActorType,
   AuditEventEntity,
@@ -34,8 +35,11 @@ const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
   "export_run",
   "git_sync",
   "webhook_processed",
+  "job_created",
   "job_completed",
   "job_failed",
+  "job_retry_requested",
+  "job_cancellation_requested",
   "retention_hold_created",
   "retention_hold_released",
   "emergency_admin_login",
@@ -44,14 +48,13 @@ const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
 ];
 
 /**
- * The initial controlled `retention_category` set — the schema's own three
- * worked examples (`contracts/audit-event.schema.json`'s `retention_category`
- * description). Not exhaustive: knowledge/11-retention-backup-and-operations.md's
- * full matrix has more categories (e.g. deployment-audit events), added here
- * as later Phase 1E slices actually emit them, not pre-declared speculatively.
+ * `AUDIT_RETENTION_CATEGORIES` itself now lives in `@webdesk/database` (`packages/database/src/audit/entities.ts`)
+ * — a single source of truth `AuditEventRepository.record()` validates against too, instead of
+ * this file maintaining its own separate copy that could drift out of sync. Not exhaustive:
+ * knowledge/11-retention-backup-and-operations.md's full matrix has more categories (e.g.
+ * deployment-audit events), added there as later Phase 1E slices actually emit them, not
+ * pre-declared speculatively.
  */
-const AUDIT_RETENTION_CATEGORIES = ["audit-7y", "approval-audit-7y", "security-log-1y"] as const;
-
 export type AuditRetentionCategory = (typeof AUDIT_RETENTION_CATEGORIES)[number];
 
 /**
@@ -89,8 +92,11 @@ const AUDIT_EVENT_CATEGORIES: Record<AuditEventType, string> = {
   export_run: "operational",
   git_sync: "operational",
   webhook_processed: "operational",
+  job_created: "operational",
   job_completed: "operational",
   job_failed: "operational",
+  job_retry_requested: "operational",
+  job_cancellation_requested: "operational",
   retention_hold_created: "operational",
   retention_hold_released: "operational",
   emergency_admin_login: "authentication",
