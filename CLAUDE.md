@@ -70,11 +70,11 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 
 ## Current state
 
-- **Stage:** development **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean
-  CONFIRM) is the last recorded gate — see `outputs/webdesk-growth-dashboard/project.json`'s
-  `gates[]`, authoritative. Both Phase 1D gates (G4-1D for PR #8, G4-1D-EXP for PR #9) are now
-  approved, each a clean CONFIRM since the required second-role security review was already
-  complete before either gate was requested.
+- **Stage:** development **Current gate:** G4-1E (Phase 1E, approved 2026-08-13, clean CONFIRM) is
+  the last recorded gate — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`,
+  authoritative. Phase 1D's two gates (G4-1D for PR #8, G4-1D-EXP for PR #9) and Phase 1E's gate
+  (G4-1E) are all approved, each a clean CONFIRM since the required second-role security review
+  was already complete before the respective gate was requested.
 - **Approved:** Phase 1C — Authentication and session management (Tasks 4/5, combined) — merged to
   `main` via PR #7 at commit `102397d2f1aaf9fc5d374dd4bd58c764cb031ef9`, and the G4-1C gate
   approved 2026-08-07 — see `docs/project-state/phase-1c-approval-checklist.md`. **The gate
@@ -155,13 +155,27 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
   account, and real timezone confirmation. None of these block `dashboard-api`'s own liveness; they
   block specific features (emergency-admin login, WordPress integration, schedule-sensitive
   reporting) from being usable end-to-end.
-- **Phase 1E, audit-foundation slice — built, validated, not merged (2026-08-12).** Real ADR-0017
-  `audit_events` table with database-layer-enforced immutability (migration `00018`), the shared
-  `AuditService` emission point, and additive wiring into `RoleAssignmentService`/`RecoveryService`
-  — closes the `RecoveryService` SoD-denial audit gap. See "Recent decisions" and
-  `docs/project-state/phase-1e-audit-foundation-validation-report.md`. Branch
-  `phase-1e-audit-foundation` pushed, PR opened — merge and gate decision are separate,
-  not-yet-requested authorizations, same pattern as every prior phase.
+- **Approved: Phase 1E — six operational-infrastructure architecture slices, built, merged,
+  reviewed, and gated (2026-08-13).** Audit foundation (real ADR-0017 `audit_events` table with
+  database-layer-enforced immutability), audit schema expansion, job architecture (jobs,
+  job_attempts, idempotency_keys), notification-record foundation, retention architecture
+  (retention_policies, retention_holds), operational-contact foundation (with PII confidential-field
+  gating), and system-events/health foundation — all six slices merged to `main` (PRs #11, #13,
+  #14, #15, #16, #17, #18), plus two code-review fix PRs (#20, #21) and one security-review
+  policy-fix PR (#22, closing notification-recipient existence checks, contacts PII gating, and
+  `JobRetryService.manualRetry()`'s `maxAttempts` cap). 279/279 unit + 108/108 real-database
+  integration + 72/72 e2e tests, all passing. Every one of 23 independent-code-review findings
+  fixed and re-validated. The STRIDE security review (`docs/security/threat-model-phase-1e-
+operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5 genuine policy
+  questions individually — 8 of 10 fixed, 2 accepted as tracked technical debt (retention-hold
+  approver verification, `projectId` query-filter scoping — both latent, zero-seeded grants).
+  **Required second-role security review complete** — Jitesh D, decision "Approved as-is",
+  2026-08-13, no disputes. **G4-1E gate approved 2026-08-13 (clean CONFIRM)** — WebDesk Solution,
+  approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70` (PR #22 merge) — see
+  `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section and `project.json`'s
+  `gates[]`. **Phase 1E is closed.** Does not include the 21 real business-module endpoints, the
+  remaining Task 7 audit scope (migrating existing `auth_events` writes, a query HTTP surface, the
+  retention-deletion job), or Phase 1F — each a separate, not-yet-requested authorization.
 
 ## Active tasks (this sprint)
 
@@ -181,12 +195,13 @@ integration targets — see `SKILL.md §5` "Excluded"); any other project_type a
 4. The 21 real business-module endpoints are now the next candidate per
    `docs/phase-plans/phase-1-foundation-plan.md`, now that both Phase 1D gates are approved — not
    started automatically; still requires its own explicit authorization to begin.
-5. Phase 1E audit-foundation slice (§5–8) — **built and validated, not merged.** Branch
-   `phase-1e-audit-foundation` pushed, PR opened. Awaiting the same pattern as every prior phase:
-   review, second-role security review if the user requests one, then a separate merge
-   authorization and gate decision. See `docs/project-state/phase-1e-audit-foundation-validation-report.md`.
-   Remaining Phase 1E components (jobs, notifications, full retention system, operational
-   contacts, system health) are separate, not-yet-authorized slices.
+5. ~~Phase 1E (all six operational-infrastructure slices)~~ — **done 2026-08-13.** All six slices
+   merged, code review and security review both complete and dispositioned, second-role security
+   review complete (Jitesh D, Approved as-is), **G4-1E gate approved** (WebDesk Solution, CONFIRM)
+   — see "Current state" above and `docs/project-state/phase-1e-approval-checklist.md`'s
+   "Sign-off". Phase 1E is closed. The remaining Task 7 audit scope (migrating existing
+   `auth_events` writes into the new `audit_events` table, a query HTTP surface, the
+   retention-deletion job) and Phase 1F are separate, not-yet-authorized next candidates.
 
 ## Recent decisions
 
@@ -691,6 +706,38 @@ https` request) and proves the fix — `GoogleAuthController` had **zero** test 
   Google sign-in completed successfully. Also found and gitignored, in passing: an untracked
   `oauth-google-workspace.json` (the downloaded Google OAuth client credentials) sitting at the
   repo root, uncovered by any existing `.gitignore` pattern — never read its contents.
+- `[2026-08-13]` **Phase 1E (six operational-infrastructure architecture slices) built, merged,
+  reviewed, and gated — the full arc from this entry's predecessor's "not merged" state to closed.**
+  Summary (full detail in each phase document, cross-referenced below): all six slices — audit
+  foundation (PR #11), audit schema expansion (PR #13), job architecture (PR #14), notification
+  foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), system
+  events/health (PR #18) — were merged to `main` one at a time under explicit per-PR authorization
+  ("Yes, proceed with #N"), each requiring migration renumbering (parallel branches had claimed
+  overlapping migration numbers) and a full validation pass on a fresh disposable database before
+  merge. Two code-review fix PRs (#20: migration `00019`'s immutability-trigger self-block bug;
+  #21: SoD-denial audit logging and retention-category validation) and one docs-rewrite PR (#19)
+  followed. The user then went through all 5 genuine security-review policy questions one by one
+  (`docs/security/threat-model-phase-1e-operational-infrastructure.md`) — 3 decided "fix now"
+  (notification recipient existence checks, `operational_contacts` PII confidential-field gating,
+  `JobRetryService.manualRetry()`'s `maxAttempts` cap), 2 decided "accept as tracked debt"
+  (retention-hold approver verification, `projectId` query-filter scoping). The 3 fixes were built,
+  tested, and merged via PR #22 (commit `6ae8a36`), including a bounded `pnpm-workspace.yaml`
+  `nanoid` override to clear an unrelated CI dependency-audit failure. Asked to "do the second-role
+  human review" directly, pushed back on performing it myself (would violate ADR-0010's
+  separation-of-duties principle — the same agent that implemented and self-reviewed the work
+  cannot also be its required second, human reviewer) and instead built an HTML review packet
+  (published as a Claude artifact) for a real human to read and decide. **Jitesh D reviewed it and
+  returned "Approved as-is"** — recorded across `docs/project-state/phase-1e-approval-checklist.md`,
+  `docs/project-state/phase-1e-validation-report.md`, and
+  `docs/security/threat-model-phase-1e-operational-infrastructure.md` (commit `c1664b1`). **The
+  Phase 1E gate (G4-1E) was then separately requested and approved** — WebDesk Solution, decision
+  CONFIRM (clean pass, not an override, since the review was already complete), approved commit
+  `6ae8a36116f70ed0f4d429af12774e05b2092e70` — recorded in `outputs/webdesk-growth-dashboard/
+project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final numbers:
+  279/279 unit + 108/108 real-database integration + 72/72 e2e tests passing; 23/23 code-review
+  findings and 8/10 security-review findings fixed (2 accepted as debt); `pnpm audit` clean. Phase
+  1E is closed — the 21 real business-module endpoints, the remaining Task 7 audit scope, and
+  Phase 1F are each separate, not-yet-requested next candidates.
 
 ## Open client blockers
 
@@ -809,37 +856,32 @@ constructor` — the export simply didn't exist in the deployed CJS build) that 
 
 ---
 
-Last touched: 2026-08-12 · by Claude (This entry closes out the long production-hardening arc that
-ran through most of this session: `dashboard-web` and `dashboard-api` are both genuinely live on
-Vercel, the Neon database is fully migrated, Phase 1E's audit-foundation slice (PR #11) and a
-Google OIDC diagnostic fix (PR #12) are both merged to `main`, and — the last open item —
-**real Google Workspace SSO login now works end-to-end in production**, verified live.
+Last touched: 2026-08-13 · by Claude (This entry closes out Phase 1E, the six-slice
+operational-infrastructure body of work (audit foundation, job architecture, notification
+foundation, retention architecture, operational contacts, system events/health). All six slices
+are merged to `main`, every code-review and security-review finding has been dispositioned (8/10
+security findings fixed, 2 accepted as tracked debt by explicit user decision), the required
+second-role security review is complete (Jitesh D, "Approved as-is"), and **the Phase 1E gate
+(G4-1E) is now approved** (WebDesk Solution, clean CONFIRM, approved commit `6ae8a36`). See the
+2026-08-13 "Recent decisions" entry for the full arc and `docs/project-state/
+phase-1e-approval-checklist.md`'s "Sign-off" section for both recorded decisions.
 
-The login fix is worth summarizing on its own since it took several real, correct-at-the-time
-diagnostic steps to reach: `list-auth-events` (built earlier) showed every failure as
-`token_exchange_failed`; a `Logger.error` fix to capture the underlying `openid-client` error
-turned out not to actually reach Vercel's logs (switched to `console.error`, which does); checking
-the registered `redirect_uri` and resetting the client secret in Vercel both came back clean and
-neither fixed it. Asked to self-audit rather than keep guessing at external config, re-examined
-the actual code path and found the real bug in this repo's own code: `openid-client` derives the
-`redirect_uri` it sends to Google's token endpoint directly from the callback request's own
-protocol+host, and Express was reporting `req.protocol` as `"http"` behind Vercel's proxy because
-`trust proxy` was never set — silently sending the wrong `redirect_uri` on every real attempt, a
-mismatch Google correctly rejects. Fixed with `app.set("trust proxy", true)`, backed by a new
-regression test (`google-auth.controller.e2e-spec.ts` — this controller had zero coverage before,
-which is how the bug shipped invisibly). Full validation suite re-run clean before each push;
-pushed directly to `main` given the live-incident nature of both this and the immediately prior
-CJS-export outage (`AuditEventRepository` missing from `packages/database`'s separately-maintained
-CommonJS entrypoint, `index.cjs.ts` — also fixed and documented this session). Also found and
-gitignored, in passing, two untracked files holding real secrets that had never been covered by
-any `.gitignore` pattern: `prod-db.env` and `oauth-google-workspace.json`.
+The previous session (2026-08-12) closed out a separate production-hardening arc: `dashboard-web`
+and `dashboard-api` both went genuinely live on Vercel, the Neon database was fully migrated, and
+real Google Workspace SSO login was fixed end-to-end in production (root cause: Express's
+`req.protocol` misreading "http" behind Vercel's proxy because `trust proxy` was never set,
+silently corrupting the `redirect_uri` sent to Google's token endpoint — fixed with
+`app.set("trust proxy", true)`, backed by a new regression test).
 
 **Current state**: `dashboard-web` (https://webdesk-growth-dashboard-theta.vercel.app) and
 `dashboard-api` (https://webdesk-growth-dashboard-7v1u-beta.vercel.app) are both live and healthy;
-the production database has all migrations applied including Phase 1E's `audit_events` table; a
-real Super Admin (`jitesh@webdeskinc.com`) can sign in via Google Workspace SSO successfully.
+the production database has all migrations applied including Phase 1E's `audit_events` table
+(code deployed, not yet exercised by a real producer); a real Super Admin
+(`jitesh@webdeskinc.com`) can sign in via Google Workspace SSO successfully. Phase 1E's own new
+tables/endpoints (jobs, notifications, retention, operational contacts, system events/health) are
+merged and gated but have not had their migrations run against the real production database yet —
+that's a separate, not-yet-requested step, same pattern as every prior phase's migrations.
 Remaining open items: the real emergency-administrator account list, the WordPress Application
 Password account (production/development, only staging exists), real timezone confirmation, and —
-the next substantive body of work — the 21 real business-module endpoints or the remaining Phase 1E
-components (jobs, notifications, full retention, operational contacts, system health), each still
-requiring its own explicit authorization to begin.)
+the next substantive body of work — the 21 real business-module endpoints, the remaining Task 7
+audit scope, or Phase 1F, each still requiring its own explicit authorization to begin.)

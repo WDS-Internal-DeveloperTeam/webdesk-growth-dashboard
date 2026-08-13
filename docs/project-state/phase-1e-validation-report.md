@@ -3,7 +3,8 @@
 **Status:** Consolidates the real, independently-verified state of all six Phase 1E slices.
 Originally written 2026-08-13 while five of the six slices were still open PRs; **substantially
 rewritten 2026-08-13** now that all six are merged to `main` and the fixable findings from both
-reviews below have been closed. Follows the same discipline as
+reviews below have been closed. **Updated again 2026-08-13**: the Phase 1E gate (G4-1E) is now
+approved — see §6. Follows the same discipline as
 `docs/project-state/phase-1a-validation-report.md` through `phase-1d-validation-report.md`.
 
 **Environment:** Node.js 22.18.0 (nvm-managed), pnpm 11.20.0 via corepack — same documented
@@ -144,7 +145,11 @@ recorded.
   (§3), the full security-review disposition (§4, 8 fixed / 2 accepted as debt), and the 3 new
   fixes' own diffs — decision: **Approved as-is**, 2026-08-13, no disputes raised. See
   `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section.
-- A Phase 1E gate decision has **not** been requested. `docs/project-state/phase-1e-approval-checklist.md`
-  records the sign-off table for the review, but the gate decision itself — including recording
-  the specific approved SHA — remains a separate, explicit human step this document does not take
-  on its own.
+- ~~A Phase 1E gate decision~~ — **complete**. The Phase 1E gate (**G4-1E**) is approved —
+  WebDesk Solution, decision **CONFIRM** (clean pass, not an override, since the second-role
+  review above was already complete before the gate was requested), 2026-08-13. Approved commit
+  `6ae8a36116f70ed0f4d429af12774e05b2092e70` (PR #22 merge). See
+  `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section and
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Scope: Phase 1E operational
+  infrastructure only — does not authorize the 21 real business-module endpoints, the remaining
+  Task 7 audit scope, or Phase 1F.

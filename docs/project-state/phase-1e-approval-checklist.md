@@ -8,8 +8,10 @@ went through all 5 security-review policy questions one by one — 3 fixed (comm
 decision. **Updated again 2026-08-13**: the required second-role security review is now
 **complete** — Jitesh D reviewed the full disposition (23/23 code-review findings, 8/10
 security-review findings fixed, 2 accepted as debt) and the three new fixes' diffs, decision
-**Approved as-is**. This closes the review requirement; it is not itself a gate decision — see
-"Sign-off" below.
+**Approved as-is**. **Updated again 2026-08-13: the Phase 1E gate (G4-1E) is now approved** —
+WebDesk Solution, decision CONFIRM, approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70`
+(PR #22 merge). See "Sign-off" below and `outputs/webdesk-growth-dashboard/project.json`'s
+`gates[]`.
 
 ## Completion condition
 
@@ -25,13 +27,13 @@ Every item below must be genuinely true, verified against real evidence, before 
 | 5   | Operational-contact foundation implemented       | ✅ **Merged** — PR #17 (`b681d5f`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 6   | System-event/health foundation implemented       | ✅ **Merged** — PR #18 (`f8c04ae`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 7   | Required migrations pass                         | ✅ Verified fresh against `main`'s actual HEAD — all 33 migrations, clean up/down round trip on a disposable database. See `docs/project-state/phase-1e-validation-report.md` §2.                                                                                                                                                                                                                                                                                                                                                                                            |
-| 8   | Required tests pass                              | ✅ 279/279 unit, 108/108 database integration, 72/72 e2e, all re-verified fresh after the 3 additional fixes. GitHub Actions CI was green on the original 7-PR merge pass (13/14; the 14th a pre-existing, unrelated `nanoid` finding) — the 3 new fixes have not yet had their own CI run (not pushed). See validation report §2.                                                                                                                                                                                                                                           |
+| 8   | Required tests pass                              | ✅ 279/279 unit, 108/108 database integration, 72/72 e2e, all re-verified fresh after the 3 additional fixes. GitHub Actions CI confirmed green (14/14) on PR #22 before merge. See validation report §2.                                                                                                                                                                                                                                                                                                                                                                    |
 | 9   | Code review is complete                          | ✅ Done across all six slices. **Every finding has been fixed and re-validated** — see `docs/project-state/phase-1e-validation-report.md` §3 for the full disposition table. None remain open.                                                                                                                                                                                                                                                                                                                                                                               |
 | 10  | Security review is complete                      | ✅ `docs/security/threat-model-phase-1e-operational-infrastructure.md`, a STRIDE pass covering all six slices. 10 gaps surfaced; **8 fixed** (audit-trail coverage, unconditional audit emission, pagination caps, notification recipient existence, contacts confidential-field gating, manual-retry `maxAttempts`), **2 accepted as tracked technical debt by explicit human decision** (retention-hold approver verification, `projectId` query-filter scoping) — see validation report §4. **Second-role human review complete** — Jitesh D, Approved as-is, 2026-08-13. |
 | 11  | Documentation and traceability are updated       | ✅ `docs/implementation/requirements-traceability-matrix.md`, `outputs/webdesk-growth-dashboard/HANDOFF.md`, `docs/phase-plans/phase-1-foundation-plan.md` all updated to reflect the final merged state.                                                                                                                                                                                                                                                                                                                                                                    |
 | 12  | Phase 1E validation report is complete           | ✅ `docs/project-state/phase-1e-validation-report.md`, rewritten                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 13  | Phase 1E approval checklist is produced          | ✅ This document                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 14  | Exact remote commit SHA is verified and recorded | `main`'s HEAD as of this writing is `f8c04ae5a9981de75e5ac907935b7e0f99348bbe` — see validation report §1's table for every slice's own merge commit. **The specific SHA a human approves at gate time is recorded below, in "Sign-off," not here** — this row records what's verifiable today, not the approval itself.                                                                                                                                                                                                                                                     |
+| 14  | Exact remote commit SHA is verified and recorded | ✅ Approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70` (PR #22 merge) — recorded in "Sign-off" below and in `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`G4-1E`).                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ## Forbidden-actions check
 
@@ -65,9 +67,10 @@ Every item below must be genuinely true, verified against real evidence, before 
 
 ## Sign-off
 
-**Second-role security review: complete.** No Phase 1E gate has been requested yet — that
-remains a separate, explicit human step, per every prior phase's own pattern of keeping the
-review and the gate decision as two distinct steps.
+**Second-role security review: complete. Phase 1E gate (G4-1E): approved.** Both were their own
+separate, explicit human step, per every prior phase's own pattern of keeping the review and the
+gate decision distinct — the gate was requested, and approved, only after the review below was
+already recorded as complete.
 
 | Field                         | Value                                                                                                                                                                                              |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -77,7 +80,16 @@ review and the gate decision as two distinct steps.
 | Scope reviewed                | All 23 code-review findings' disposition, all 10 security-review findings' disposition (8 fixed / 2 accepted as debt), and the 3 new fixes' actual diffs (commits `a6305c1`, `df07eb8`, `f632e96`) |
 | Disputes raised               | None                                                                                                                                                                                               |
 
-| Role                                   | Name     | Decision          | Date       |
-| -------------------------------------- | -------- | ----------------- | ---------- |
-| Reviewer (second-role security review) | Jitesh D | ☑ Approved as-is  | 2026-08-13 |
-| Approver (gate decision)               | —        | Not yet requested | —          |
+| Field                    | Value                                                                                                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-1E                                                                                                                                                                         |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                              |
+| Gate date                | 2026-08-13                                                                                                                                                                    |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                             |
+| Approved commit          | `6ae8a36116f70ed0f4d429af12774e05b2092e70` (PR #22 merge, the last code-bearing commit — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record) |
+| Scope                    | Phase 1E operational infrastructure only. Does not authorize the 21 real business-module endpoints, the remaining Task 7 audit scope, or Phase 1F.                            |
+
+| Role                                   | Name             | Decision         | Date       |
+| -------------------------------------- | ---------------- | ---------------- | ---------- |
+| Reviewer (second-role security review) | Jitesh D         | ☑ Approved as-is | 2026-08-13 |
+| Approver (gate decision)               | WebDesk Solution | ☑ CONFIRM        | 2026-08-13 |

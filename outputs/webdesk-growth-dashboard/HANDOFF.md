@@ -2,11 +2,11 @@
 
 - **Session ended:** 2026-08-13 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, and **all six slices are now merged to `main`** (PRs #11, #13–#18, plus three fix PRs #20/#21/#22). Independent code review found real findings across all six slices — **every one has been fixed and re-validated**. A self-authored security review (STRIDE pass) found 10 gaps; the user went through all 5 genuine policy questions one by one — **8 of 10 findings are now fixed, 2 accepted as tracked technical debt** by explicit decision. **The required second-role security review is now complete** — Jitesh D reviewed the full disposition and the 3 new fixes' diffs, decision **Approved as-is**, 2026-08-13, no disputes. Only a Phase 1E gate decision remains.
+- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, and **all six slices are now merged to `main`** (PRs #11, #13–#18, plus three fix PRs #20/#21/#22). Independent code review found real findings across all six slices — **every one has been fixed and re-validated**. A self-authored security review (STRIDE pass) found 10 gaps; the user went through all 5 genuine policy questions one by one — **8 of 10 findings are now fixed, 2 accepted as tracked technical debt** by explicit decision. **The required second-role security review is complete** — Jitesh D reviewed the full disposition and the 3 new fixes' diffs, decision **Approved as-is**, 2026-08-13, no disputes. **The Phase 1E gate (G4-1E) is now approved** — WebDesk Solution, decision CONFIRM, 2026-08-13.
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. **All six are merged to `main`**: audit foundation (PR #11), audit schema-expansion (PR #13), job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), system events/health (PR #18) — plus three fix PRs (#20, #21, #22) for findings surfaced during merge reconciliation and the security review. Every code-review finding is fixed; 8 of 10 security-review findings are fixed, 2 accepted as tracked debt by explicit decision (retention-hold approver verification, `projectId` query-filter scoping). **The second-role security review is complete** (Jitesh D, Approved as-is, 2026-08-13) — see `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section. Only the Phase 1E gate decision itself remains before Phase 1F work can begin. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
-- **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean CONFIRM) is still the last _approved_ gate — no Phase 1E gate has been requested or approved yet. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
+- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. **All six are merged to `main`**: audit foundation (PR #11), audit schema-expansion (PR #13), job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), system events/health (PR #18) — plus three fix PRs (#20, #21, #22) for findings surfaced during merge reconciliation and the security review. Every code-review finding is fixed; 8 of 10 security-review findings are fixed, 2 accepted as tracked debt by explicit decision (retention-hold approver verification, `projectId` query-filter scoping). **The second-role security review is complete** (Jitesh D, Approved as-is, 2026-08-13) and **the Phase 1E gate (G4-1E) is approved** (WebDesk Solution, CONFIRM, 2026-08-13) — see `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section. Phase 1E is now closed; Phase 1F (application shell, canonical module registry, navigation, CI/staging foundation) is the next candidate, but still requires its own separate, explicit authorization to begin — same as every prior phase. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
+- **Current gate:** G4-1E (Phase 1E, approved 2026-08-13, clean CONFIRM) is now the last approved gate — approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70`. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
@@ -24,10 +24,13 @@
 > issue were decided "accept as tracked debt." **Final disposition: 8 of 10 security findings
 > fixed, 2 accepted as debt.** **The required second-role security review is now complete** —
 > Jitesh D reviewed the full code-review disposition, the full security-review disposition, and
-> the 3 new fixes' own diffs, decision **Approved as-is**, 2026-08-13, no disputes raised. See
+> the 3 new fixes' own diffs, decision **Approved as-is**, 2026-08-13, no disputes raised. **The
+> Phase 1E gate (G4-1E) is now approved** — WebDesk Solution, decision CONFIRM (clean pass, not an
+> override, since the review above was already complete before the gate was requested), 2026-08-13,
+> approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70`. See
 > `docs/project-state/phase-1e-validation-report.md` for the full consolidated record and
-> `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section for the recorded review
-> decision. **Only the Phase 1E gate decision itself remains** — not yet requested.
+> `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section for both recorded
+> decisions. **Phase 1E is now closed.**
 
 ## Phase 1E — this session's actual current state (supersedes the Phase 1D sections below for "next tasks"/"blockers"/"session links" purposes)
 
@@ -37,9 +40,10 @@
    merge authorization~~ — **done**, merged via PR #22.
 2. ~~Second-role human review~~ — **done**. Jitesh D, Approved as-is, 2026-08-13, per
    `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section.
-3. A Phase 1E gate decision — not yet requested. Once granted, Phase 1F (application shell,
-   canonical module registry, navigation, CI/staging foundation) can begin, per the authorization
-   brief's own scope.
+3. ~~A Phase 1E gate decision~~ — **done**. G4-1E approved (WebDesk Solution, CONFIRM, 2026-08-13).
+   Phase 1E is closed. Phase 1F (application shell, canonical module registry, navigation,
+   CI/staging foundation) is the next candidate per the authorization brief's own scope, but still
+   requires its own separate, explicit authorization to begin.
 
 **Client blockers (waiting on):** same as before Phase 1E work began — the real emergency-
 administrator account list, the WordPress Application Password account (production/development),
