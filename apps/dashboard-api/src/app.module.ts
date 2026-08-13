@@ -34,11 +34,8 @@ const loggerOptions = buildLoggerOptions(env, "dashboard-api");
     HealthModule,
     AuthModule,
     AuthzModule,
-<<<<<<< HEAD
-    RetentionModule,
-=======
     JobsModule,
->>>>>>> origin/main
+    RetentionModule,
   ],
 })
 export class AppModule implements NestModule {
