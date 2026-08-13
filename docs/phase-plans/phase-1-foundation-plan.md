@@ -268,7 +268,7 @@ immutability trigger, `AuditService` shared emission point — merged to `main` 
 
 Task 9 (Background-job record foundation) is partially built, differently than this plan
 anticipated: the job-record data model, retry/cancellation state machine, and idempotency
-primitive are real (`phase-1e-job-architecture`, PR #14, open, not merged) — but no real
+primitive are real (`phase-1e-job-architecture`, PR #14, **merged to `main`**) — but no real
 `dashboard-worker` handler or Vercel Queues/Workflows trigger exists yet; the task package's own
 scope decision was to prove the domain model and adapter-shaped seam only, deferring the actual
 queue/worker integration this task originally described to a separate, later authorization.
@@ -276,7 +276,9 @@ queue/worker integration this task originally described to a separate, later aut
 Four additional slices were built under a later, more detailed Phase 1E authorization brief that
 supersedes this plan's original Task-by-Task granularity for the remaining operational-
 infrastructure scope: notification-record foundation (PR #15), retention architecture (PR #16),
-operational contacts (PR #17), system events/health (PR #18) — all open, not merged, CI-green,
-code-reviewed and security-reviewed this session. See each slice's own
+operational contacts (PR #17), system events/health (PR #18) — **all merged to `main`**, CI-green,
+code-reviewed and security-reviewed. Every code-review finding has been fixed; of the 10
+security-review findings, 5 are fixed and 5 remain open as policy questions pending human decision
+— see `docs/project-state/phase-1e-validation-report.md`. See each slice's own
 `docs/task-packages/phase-1e-*.md` and `docs/implementation/phase-1e-*.md` for the actual scope,
 which is broader than this original plan's Task 7/9 entries anticipated.

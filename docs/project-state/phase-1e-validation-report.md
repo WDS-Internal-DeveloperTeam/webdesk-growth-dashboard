@@ -1,126 +1,130 @@
 # Phase 1E Validation Report — Six Operational-Infrastructure Architecture Slices
 
-**Status:** Consolidates the real, independently-verified state of all six Phase 1E slices as of
-2026-08-13 — implementation validation (already run per-branch during this session's CI-fix pass,
-reproduced here in summary), plus this document's own new work: the first independent code review
-and first security review either has ever received. Follows the same discipline as
+**Status:** Consolidates the real, independently-verified state of all six Phase 1E slices.
+Originally written 2026-08-13 while five of the six slices were still open PRs; **substantially
+rewritten 2026-08-13** now that all six are merged to `main` and the fixable findings from both
+reviews below have been closed. Follows the same discipline as
 `docs/project-state/phase-1a-validation-report.md` through `phase-1d-validation-report.md`.
 
 **Environment:** Node.js 22.18.0 (nvm-managed), pnpm 11.20.0 via corepack — same documented
 Node-version note as every prior phase's report. Local PostgreSQL 17 (Homebrew), one fresh
-disposable database per branch.
+disposable database per validation pass.
 
 ---
 
-## 1. Scope — six slices, exact commit SHAs (item 14 of the Phase 1E completion checklist)
+## 1. Scope — six slices, all merged to `main`
 
-| Slice                   | Branch                             | Exact pushed SHA                           | PR                                                                                    | Merge status                                                   |
-| ----------------------- | ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Audit foundation        | `phase-1e-audit-foundation`        | `f9a32bb49c7a910eff3a48bfd8dd3728ee93d74e` | [#11](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/11) | **Merged**                                                     |
-| Audit schema expansion  | `phase-1e-audit-schema-expansion`  | `b0e4eefa0f31849be5e1bb95f50d29500f80b449` | [#13](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/13) | **Merged** (main @ `a0a86688b32c8594497a34a87fabadc022fa68bf`) |
-| Job architecture        | `phase-1e-job-architecture`        | `084782aae4ae1d168b1b32d738faf1c994552d8a` | [#14](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/14) | Open                                                           |
-| Notification foundation | `phase-1e-notification-foundation` | `e6a19bba952d1918eeca9ae97b63d6c2be1cd504` | [#15](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/15) | Open                                                           |
-| Retention architecture  | `phase-1e-retention-architecture`  | `5839c3f325cafc2ac5c4ac6468f5c759313449a3` | [#16](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/16) | Open                                                           |
-| Operational contacts    | `phase-1e-operational-contacts`    | `ae7aa967729a930b87f95694600053889d58951a` | [#17](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/17) | Open                                                           |
-| System events & health  | `phase-1e-system-events-health`    | `b3b88a70ea6122518ca91039b6b5f66d99085d18` | [#18](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/18) | Open                                                           |
+| Slice                   | PR                                                                                    | Merge commit           | Migrations    |
+| ----------------------- | ------------------------------------------------------------------------------------- | ---------------------- | ------------- |
+| Audit foundation        | [#11](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/11) | `c62cbc1` (2026-08-12) | `00018`       |
+| Audit schema expansion  | [#13](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/13) | `a0a8668` (2026-08-13) | `00019`       |
+| Job architecture        | [#14](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/14) | `472725a`              | `00020–00022` |
+| Migration 00019 fix     | [#20](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/20) | `1a375e9`              | —             |
+| Audit-foundation fix    | [#21](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/21) | `54cf310`              | —             |
+| Retention architecture  | [#16](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/16) | `a61752f`              | `00023–00025` |
+| Notification foundation | [#15](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/15) | `2da7996`              | `00026`       |
+| Operational contacts    | [#17](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/17) | `b681d5f`              | `00027–00029` |
+| System events & health  | [#18](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/18) | `f8c04ae`              | `00030–00033` |
 
-Every branch (except the already-merged audit foundation) has had `main` (post-PR-#13) merged into
-it as of the SHAs above, resolving the migration-number collision every branch independently hit
-and adding the missing `AuditEventType` category-map entries — see each branch's own rebase commit
-message for details. All five open branches' CI is green on GitHub Actions as of these SHAs
-(Typecheck, Lint, Formatting validation, Unit tests, Integration tests, Database migration test,
-Production build, Dependency vulnerability audit, Secret-pattern scan, Workspace-boundary check —
-14/14 checks passing on each).
+`main`'s HEAD as of this rewrite is `f8c04ae5a9981de75e5ac907935b7e0f99348bbe` (before this
+documentation PR's own merge). This is a factual anchor point for what's actually on `main` — it
+is **not** itself a gate-approval SHA; that remains a separate human decision (see
+`docs/project-state/phase-1e-approval-checklist.md`).
 
-## 2. Per-slice test counts (re-verified fresh during this session's CI-fix pass)
+Each of PRs #14–#18 independently claimed the same migration numbers (`00020`–`00023`) for
+different tables, since each branch was built off an earlier `main` state in parallel. Merging
+them one at a time required reconciling `main` into each branch (resolving real, additive
+conflicts in `app.module.ts`, `AuditService`'s event-type/category maps, and the ESM/CJS barrel
+exports every time a new module was added) and renumbering each branch's own migrations to the
+next free slot before merging — recorded in each branch's own "Renumber ... migrations" commit.
 
-| Slice                   | Unit tests              | DB integration tests                                                               | e2e tests | Migration round-trip |
-| ----------------------- | ----------------------- | ---------------------------------------------------------------------------------- | --------- | -------------------- |
-| Job architecture        | 182/182                 | 65/65 (incl. `00001`→`00022`)                                                      | 44/44     | Clean                |
-| Notification foundation | — (unchanged by rebase) | —                                                                                  | —         | Clean                |
-| Retention architecture  | 170/170                 | 61/61 (incl. `00001`→`00022`)                                                      | 46/46     | Clean                |
-| Operational contacts    | 169/169                 | 60/60 (incl. `00001`→`00022`)                                                      | 44/44     | Clean                |
-| System events & health  | 161/161                 | 64/64 (incl. `00001`→`00023`, and the previously-failing FK-link test now passing) | 50/50     | Clean                |
+## 2. Final test counts (re-verified fresh against `main`'s actual HEAD, not per-branch)
 
-`pnpm audit`: 0 vulnerabilities on every branch. Prettier/ESLint/`tsc --noEmit`: clean on every
-branch (including two pre-existing prettier issues in as-built docs, fixed as part of this pass).
+Run against a single fresh disposable PostgreSQL 17 database, all 33 migrations applied in one
+pass, immediately before this document was finalized:
 
-## 3. Independent code review (item 9)
+- **Typecheck / Lint:** clean, 14/14 turbo tasks.
+- **Unit tests (`dashboard-api`):** 266/266 passing (34 test files).
+- **Database integration tests (`packages/database`, real disposable Postgres):** 108/108 passing
+  (10 test files).
+- **`dashboard-api` e2e tests (real disposable Postgres):** 72/72 passing (10 test files).
+- **Migration round trip:** clean up/down/up on all 33 migrations, including the immutability
+  trigger's own regression test.
+- **`pnpm audit`:** 0 vulnerabilities specific to this work. (A separate, pre-existing high-severity
+  `nanoid` advisory — `GHSA-2v37-7h3g-55p8`, dev-tooling only via `@nestjs/cli`/webpack/vitest's
+  postcss chain — surfaced on `main` independent of any Phase 1E change; not part of this scope,
+  flagged separately.)
+- **Secret-pattern scan:** clean, 481 tracked files.
 
-Performed for the first time across all six slices this session (audit foundation had never had
-one either, despite being merged). Full findings recorded via this session's `ReportFindings`
-tool calls, not reproduced verbatim here — summarized by severity:
+CI on each of the 7 merged PRs (#14, #20, #21, #16, #15, #17, #18) was independently confirmed
+green (13/14 checks; the 14th being the same pre-existing `nanoid` finding) immediately before
+each merge.
 
-- **PR #13 (audit schema expansion) — 1 CONFIRMED critical finding, now FIXED**: migration `00019`'s
-  backfill `UPDATE` statements would have unconditionally failed against any `audit_events` table
-  that already has rows, because migration `00018`'s immutability trigger blocks all `UPDATE`s with
-  no escape hatch (unlike `DELETE`, which has a session-local authorization flag). Never triggered
-  in production (migration `00019` was never run there before the fix landed). **Fixed in
-  [PR #20](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/20)**: the
-  backfill now runs inside a transaction that disables the trigger for its own four `UPDATE`s only,
-  then re-enables it — migration `00018` itself (already applied in production) was left untouched.
-  A regression test proves both the bug (verified failing without the fix) and the fix (passing
-  with it, and confirming immutability is still enforced afterward).
-- **PR #11 (audit foundation) — 4 CONFIRMED correctness bugs**: the missing-CJS-export bug (already
-  independently discovered and fixed post-merge via commit `2e03a57`, not part of this PR's own
-  fix); three instances of a fallible `auditService.record()` write sitting between a real state
-  change and its consequence (session revocation not reached on audit-write failure; SoD-denial
-  audit write able to mask the original `ForbiddenException`; recovery-request create/decide
-  committing before a still-fallible audit write).
-- **PR #14 (jobs) — 2 CONFIRMED, 3 PLAUSIBLE**: a genuine concurrency race in idempotency-key
-  reissue-after-failure (two concurrent requests can both "win" the same key); a job creation
-  failure permanently stranding its idempotency reservation (`IdempotencyService.fail()` is never
-  called from `JobService`); plus three plausible races/inconsistencies in the retry/cancellation
-  state machine.
-- **PR #15 (notifications) — 4 PLAUSIBLE**: no row-locking on concurrent state transitions; a
-  `retryEligible` flag that goes stale on the `sent_to_smtp` transition; an unreachable
-  administrative-recovery path for a stuck two-phase handoff; an unverified `attemptCount` handling
-  asymmetry in `confirmRejected`.
-- **PR #16 (retention) — 2 CONFIRMED, 1 PLAUSIBLE**: `RetentionCleanupService.run()` can perform
-  real soft-deletions and then lose the entire audit trail if a later candidate in the same batch
-  throws; the `retention_holds_scope_shape` CHECK constraint allows a hybrid entity+category row
-  neither the schema comment nor any consumer expects; a TOCTOU race on concurrent hold releases.
-- **PR #17 (operational contacts) — 3 CONFIRMED**: `businessDaysBetween()`'s off-by-one inflates
-  elapsed SLA time (a medium-severity incident reads as "met" almost immediately after opening);
-  `activeStatus=false` on the list-contacts query coerces to `true` via `z.coerce.boolean()`'s
-  plain `Boolean()` semantics, silently inverting the filter; an overnight (`start > end`)
-  working-hours window is accepted with no validation and then silently excludes that contact from
-  every escalation chain forever.
-- **PR #18 (system events/health) — 2 PLAUSIBLE, both minor**: `recordCheck()`'s audit event drops
-  `correlationId` even though it's available; the status-read route's "unknown for any unrecognized
-  key" design is intentional but asymmetric with the write route's 404 for the same input.
+## 3. Independent code review — findings and their disposition
 
-**None of these findings were fixed in this pass** — reviewing was the requested scope, not
-remediation. They are tracked here as the concrete, actionable output of item 9.
+Performed across all six slices. Full findings recorded via `ReportFindings` during the original
+review pass; disposition since then:
 
-## 4. Security review (item 10)
+| Slice                   | Findings                 | Disposition                                                                                                                                                                                                                                      |
+| ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Audit schema expansion  | 1 CONFIRMED (critical)   | **Fixed** — migration `00019`'s backfill was blocked by its own immutability trigger; fixed in [PR #20](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/20) with a regression test proving both the bug and the fix. |
+| Audit foundation        | 4 CONFIRMED              | **Fixed** — centralized SoD-denial audit logging, parallelized independent role writes, validated `retention_category` at both layers, in [PR #21](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/21).              |
+| Job architecture        | 2 CONFIRMED, 3 PLAUSIBLE | **Fixed** — all 5, on the `phase-1e-job-architecture` branch before merge (commit `8924e83`, "Fix the 5 job-architecture findings from independent code review").                                                                                |
+| Notification foundation | 4 PLAUSIBLE              | **Fixed** — state-machine concurrency races and stuck `sent_to_smtp` recovery, on the branch before merge (commit `22dc718`).                                                                                                                    |
+| Retention architecture  | 2 CONFIRMED, 1 PLAUSIBLE | **Fixed** — TOCTOU race on hold release, hybrid-scope CHECK gap, cleanup-run audit-trail loss, on the branch before merge (commit `6114e55`).                                                                                                    |
+| Operational contacts    | 3 CONFIRMED              | **Fixed** — `businessDaysBetween()` off-by-one, `activeStatus` query-coercion bug, overnight working-hours exclusion, on the branch before merge (commit `90b11fe`).                                                                             |
+| System events & health  | 2 PLAUSIBLE (minor)      | **Fixed** — missing `correlationId` on health-check audit events, status-route validation asymmetry, on the branch before merge (commit `b44cfdc`).                                                                                              |
+
+**Every code-review finding across all six slices has been fixed and re-validated.** None remain
+open.
+
+## 4. Security review — findings and their disposition
 
 See `docs/security/threat-model-phase-1e-operational-infrastructure.md` in full — a STRIDE pass
-covering all six slices as one document (self-reviewed only; second-role human review still
-outstanding, same as every prior phase's threat-model doc required before its own gate). Ten gaps
-surfaced, most notably: `POST /retention/holds`'s `approvedByUserId` is client-attributable with no
-verification (Spoofing); `JobService.create()` and the entirety of `NotificationService` have zero
-audit-trail coverage, not merely fallible coverage (Repudiation — this is a stronger finding than
-the code-review pass's "fallible audit write" findings, since these two write paths have no audit
-call at all); `operational_contacts` PII (name/email/phone) has no confidential-field gating
-comparable to the Phase 1D-expanded precedent (Information Disclosure); two list endpoints
-(`OperationalContactRepository`, `RetentionHoldRepository`) have no pagination cap, and
-`JobRetryService.manualRetry()` doesn't respect `maxAttempts` (Denial of Service).
+covering all six slices. Ten numbered gaps originally surfaced; disposition:
 
-## 5. Documentation and traceability (item 11)
+**Fixed (5 — the non-policy gaps, each closed with its own commit and re-validated):**
+
+- `JobService.create()` had zero audit-trail coverage — fixed (commit `e6306a8`).
+- `NotificationService`'s five mutating methods had zero audit-trail coverage — fixed (commit
+  `1c9e822`).
+- `SystemHealthService.recordCheck()`'s audit emission was conditional on `checkedByUserId` being
+  truthy — made unconditional (commit `eb4b916`).
+- `OperationalContactRepository.list()`/`findActiveForArea()` had no pagination cap — fixed
+  (commit `8db3bd7`).
+- `RetentionHoldRepository.listAll()` had no pagination cap — fixed (commit `79a265e`).
+
+**Still open — genuine policy questions, deliberately left for human decision** (per this
+project's standing pattern of surfacing rather than silently resolving; explicitly scoped this
+way by the user rather than fixed unilaterally):
+
+1. `POST /retention/holds`'s `approvedByUserId` is client-attributable with no verification a
+   named user actually approved anything (Spoofing).
+2. `POST /notifications` accepts `recipientUserId`/`recipientContactId`/`projectId` with no
+   existence/ownership check (Tampering).
+3. `GET /jobs`/`GET /notifications` accept an unchecked `projectId` query filter with no
+   route-level project scoping — latent (zero project-scoped grants exist today), same class of
+   issue as the already-tracked Phase 1D `Op.in` finding (Elevation of Privilege).
+4. `operational_contacts` PII (name/email/phone) has no confidential-field gating comparable to
+   the Phase 1D-expanded `view_confidential`/`edit_confidential` precedent (Information
+   Disclosure).
+5. `JobRetryService.manualRetry()` doesn't respect `maxAttempts` — a policy question (manual
+   override vs. automatic cap), not a straightforward bug (Denial of Service).
+
+## 5. Documentation and traceability
 
 `docs/implementation/requirements-traceability-matrix.md`, `outputs/webdesk-growth-dashboard/HANDOFF.md`,
-and `docs/phase-plans/phase-1-foundation-plan.md` were all previously silent on every Phase 1E
-slice — confirmed via grep before this session's update, zero matches for "Phase 1E" in any of the
-three. All three now have a dated addendum (traceability matrix, phase plan) or an updated live
-section (HANDOFF) recording Phase 1E's actual scope and status, appended rather than rewriting
-their own historical narrative, per this project's standing pattern.
+and `docs/phase-plans/phase-1-foundation-plan.md` all carry a dated Phase 1E addendum, now updated
+to reflect the final merged state rather than the mid-merge "5 PRs open" snapshot they originally
+recorded.
 
-## 6. What remains before any Phase 1E gate can be requested
+## 6. What remains before a Phase 1E gate can be requested
 
-- Fix or explicitly accept each finding above (owner decision, not made in this pass).
-- Second-role human review of both the code-review findings and
-  `docs/security/threat-model-phase-1e-operational-infrastructure.md`.
-- Merge decisions for PRs #14–#18 (each independent, each its own separate authorization).
-- `docs/project-state/phase-1e-approval-checklist.md` (item 13) records the sign-off table itself —
-  currently all rows unsigned.
+- Second-role human review of both the code-review findings (§3, now closed) and
+  `docs/security/threat-model-phase-1e-operational-infrastructure.md`'s 5 still-open policy
+  questions (§4) — neither has had one yet.
+- A human decision on each of the 5 open policy questions in §4: fix, accept as tracked debt, or
+  dispute.
+- `docs/project-state/phase-1e-approval-checklist.md` records the sign-off table itself —
+  currently unsigned; recording the approved SHA there is a separate, explicit human step, not
+  something this document does on its own.

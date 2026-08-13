@@ -6,14 +6,11 @@ this requires review by a second, human role before any of the covered branches 
 ready for a QA gate. **That review has not yet happened** — this document is a self-review only.
 
 Covers all six Phase 1E architecture slices as a single pass, since they share one RBAC pattern
-(reuse `system_settings`, zero-seeded new actions) and one audit-emission mechanism:
-
-- Audit foundation — merged to `main` (PR #11, #13).
-- Job architecture — `phase-1e-job-architecture` @ `084782a`, open (PR #14).
-- Notification foundation — `phase-1e-notification-foundation` @ `e6a19bb`, open (PR #15).
-- Retention architecture — `phase-1e-retention-architecture` @ `5839c3f`, open (PR #16).
-- Operational contacts — `phase-1e-operational-contacts` @ `ae7aa96`, open (PR #17).
-- System events & health — `phase-1e-system-events-health` @ `b3b88a7`, open (PR #18).
+(reuse `system_settings`, zero-seeded new actions) and one audit-emission mechanism. **Update
+2026-08-13: all six slices are now merged to `main`** (PRs #11, #13–#18) — see
+`docs/project-state/phase-1e-validation-report.md` §1 for exact merge commits. This document's
+own findings (below) are otherwise unchanged from the original self-review; the "Summary of
+accepted gaps" section records which have since been fixed.
 
 ## Out of scope for this pass
 
@@ -132,25 +129,39 @@ caller-supplied candidates, and not wired to any HTTP route in this slice regard
 
 ## Summary of accepted gaps
 
-All ten gaps found above are **surfaced, not silently resolved** — consistent with this project's
-standing pattern (e.g. Phase 1C's G4-1C OVERRIDE, Phase 1D's self-role-assignment gap) of flagging
-an open item for the human reviewer's decision rather than the implementing agent unilaterally
-deciding it's acceptable:
+All ten gaps found above were originally **surfaced, not silently resolved** — consistent with
+this project's standing pattern (e.g. Phase 1C's G4-1C OVERRIDE, Phase 1D's self-role-assignment
+gap) of flagging an open item for the human reviewer's decision rather than the implementing agent
+unilaterally deciding it's acceptable. **Update 2026-08-13:** the 5 non-policy gaps (clear bugs,
+not judgment calls) have since been fixed and re-validated; the 5 genuine policy questions remain
+open by explicit user scoping decision, not oversight:
 
-1. Retention hold `approvedByUserId` is client-attributable, not verified (Spoofing).
-2. Notification `recipientUserId`/`recipientContactId`/`projectId` accepted with no existence check (Tampering).
-3. `JobService.create()` has zero audit-trail coverage (Repudiation).
-4. `NotificationService` has zero audit-trail coverage across all five of its mutating methods (Repudiation).
-5. `SystemHealthService.recordCheck()`'s audit emission is conditional, not unconditional (Repudiation).
-6. `jobs`/`notifications` list endpoints accept an unchecked `projectId` query filter with no route-level project scoping — latent, same class as the existing Phase 1D `Op.in` finding (Elevation of Privilege).
-7. `operational_contacts` PII has no confidential-field gating, unlike the precedent set elsewhere in this codebase (Information Disclosure).
-8. `OperationalContactRepository`/`RetentionHoldRepository` list queries have no pagination cap (Denial of Service).
-9. `JobRetryService.manualRetry()` doesn't respect `maxAttempts` (Denial of Service — policy question).
-10. All ten gaps interact with the correctness bugs already surfaced in this session's separate code-review pass (in particular the audit-write-ordering issues and the migration-00019 immutability-trigger bug) — a fix pass for one should account for the other.
+1. Retention hold `approvedByUserId` is client-attributable, not verified (Spoofing). **Open —
+   policy question.**
+2. Notification `recipientUserId`/`recipientContactId`/`projectId` accepted with no existence check
+   (Tampering). **Open — policy question.**
+3. `JobService.create()` has zero audit-trail coverage (Repudiation). **Fixed** — commit `e6306a8`.
+4. `NotificationService` has zero audit-trail coverage across all five of its mutating methods
+   (Repudiation). **Fixed** — commit `1c9e822`.
+5. `SystemHealthService.recordCheck()`'s audit emission is conditional, not unconditional
+   (Repudiation). **Fixed** — commit `eb4b916`.
+6. `jobs`/`notifications` list endpoints accept an unchecked `projectId` query filter with no
+   route-level project scoping — latent, same class as the existing Phase 1D `Op.in` finding
+   (Elevation of Privilege). **Open — policy question**, same as the Phase 1D precedent it mirrors.
+7. `operational_contacts` PII has no confidential-field gating, unlike the precedent set elsewhere
+   in this codebase (Information Disclosure). **Open — policy question.**
+8. `OperationalContactRepository`/`RetentionHoldRepository` list queries have no pagination cap
+   (Denial of Service). **Fixed** — commits `8db3bd7` (contacts), `79a265e` (retention holds).
+9. `JobRetryService.manualRetry()` doesn't respect `maxAttempts` (Denial of Service — policy
+   question). **Open — policy question.**
+10. All ten gaps interact with the correctness bugs already surfaced in this session's separate
+    code-review pass (in particular the audit-write-ordering issues and the migration-00019
+    immutability-trigger bug) — both classes of finding are now fixed; see
+    `docs/project-state/phase-1e-validation-report.md` §3.
 
-None of these gaps were fixed in this pass; fixing them was not requested and is tracked here as
-technical debt requiring an explicit decision, same as every prior threat-model document in this
-project.
+The 5 remaining open items require an explicit human decision (fix, accept as tracked debt, or
+dispute) — not something this document or its author resolves unilaterally, same as every prior
+threat-model document in this project.
 
 ## Not addressed by this pass
 

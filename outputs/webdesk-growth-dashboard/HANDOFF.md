@@ -2,39 +2,40 @@
 
 - **Session ended:** 2026-08-13 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, PRs #11/#13–#18 opened, CI green on all. Independent code review and a self-authored security review (STRIDE pass) both completed this session for the first time across all six slices — real findings surfaced in both (see `docs/security/threat-model-phase-1e-operational-infrastructure.md` and `docs/project-state/phase-1e-validation-report.md`). Neither review has had its required second-role human sign-off yet. Only audit foundation (PR #11/#13) is merged to `main`; the other five remain open, unmerged.
+- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, and **all six slices are now merged to `main`** (PRs #11, #13–#18, plus two fix PRs #20/#21). Independent code review found real findings across all six slices — **every one has been fixed and re-validated**. A self-authored security review (STRIDE pass) found 10 gaps — **5 fixed** (audit-trail coverage, unconditional audit emission, pagination caps), **5 remain open as deliberate policy questions** for human decision (see `docs/security/threat-model-phase-1e-operational-infrastructure.md` and `docs/project-state/phase-1e-validation-report.md`). Neither review has had its required second-role human sign-off yet.
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. Audit foundation (PR #11) and its schema-expansion (PR #13) are merged to `main`. Job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), and system events/health (PR #18) are all built, pushed, CI-green, and now code-reviewed + security-reviewed — but **none of the five are merged**, and neither review has a second-role human sign-off yet. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
-- **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean CONFIRM) is still the last _approved_ gate — no Phase 1E gate has been requested or approved yet for any of the six slices. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
+- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. **All six are merged to `main`**: audit foundation (PR #11), audit schema-expansion (PR #13), job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), system events/health (PR #18) — plus two fix PRs (#20, #21) for findings surfaced during merge reconciliation. Every code-review finding is fixed; 5 of 10 security-review findings are fixed, 5 remain open as policy questions awaiting a human decision. Neither review has a second-role human sign-off yet — that, plus the 5 open policy questions, are what stand between here and a Phase 1E gate. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
+- **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean CONFIRM) is still the last _approved_ gate — no Phase 1E gate has been requested or approved yet. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
-> **Phase 1E status as of 2026-08-13:** all six architecture slices are built and CI-green. Audit
-> foundation (PR #11) and audit schema-expansion (PR #13) are merged. The remaining five (jobs,
-> notifications, retention, operational contacts, system events/health — PRs #14–#18) are open,
-> unmerged, each with real independent-code-review findings and real security-review findings
-> surfaced this session — see `docs/project-state/phase-1e-validation-report.md` for the full
-> consolidated record and `docs/project-state/phase-1e-approval-checklist.md` for what's still
-> outstanding before any gate can be requested. **Do not merge any of PRs #14–#18, and do not
-> request a gate for any of them, without the user reviewing the surfaced findings first** — several
-> are real bugs (a migration that will brick production if run against a populated `audit_events`
-> table; concurrency races in job/notification/retention state machines; two off-by-one bugs; an
-> RBAC-adjacent PII exposure gap) that were deliberately left unfixed pending the user's own
-> triage decision, per this project's standing pattern of surfacing rather than silently resolving.
+> **Phase 1E status as of 2026-08-13 (updated):** all six architecture slices are built, CI-green,
+> and **now merged to `main`** — audit foundation (PR #11), audit schema-expansion (PR #13), job
+> architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16),
+> operational contacts (PR #17), system events/health (PR #18). Two fix PRs (#20, #21) closing
+> findings surfaced during merge reconciliation are also merged. Every independent-code-review
+> finding across all six slices has been fixed and re-validated. Of the 10 security-review
+> findings, 5 (audit-trail coverage, unconditional audit emission, pagination caps) are fixed; 5
+> remain open as deliberate policy questions for human decision (retention-hold approver
+> verification, notification recipient existence checks, contact-PII confidential gating, a latent
+> `projectId` query-filter scoping issue, and `JobRetryService.manualRetry()`'s `maxAttempts` cap)
+> — see `docs/project-state/phase-1e-validation-report.md` for the full consolidated record and
+> `docs/project-state/phase-1e-approval-checklist.md` for what's still outstanding before any gate
+> can be requested. **Neither review has had its required second-role human sign-off yet** — that
+> plus a decision on the 5 open policy questions are what remain before a Phase 1E gate.
 
 ## Phase 1E — this session's actual current state (supersedes the Phase 1D sections below for "next tasks"/"blockers"/"session links" purposes)
 
 **Next tasks (queued):**
 
-1. User reviews `docs/project-state/phase-1e-validation-report.md` and
-   `docs/security/threat-model-phase-1e-operational-infrastructure.md`'s findings, decides which
-   (if any) get fixed before merge — none were fixed in this pass, per explicit scope (review only).
-2. Second-role human review of both documents, per ADR-0010's separation-of-duties principle (same
-   pattern every prior phase's threat-model doc required).
-3. Merge decisions for PRs #14–#18 (jobs, notifications, retention, operational contacts, system
-   events/health) — each independent, each its own separate authorization, same as every prior
-   Phase 1E merge this project has done.
+1. Second-role human review of both `docs/project-state/phase-1e-validation-report.md` §3/§4 and
+   `docs/security/threat-model-phase-1e-operational-infrastructure.md`, per ADR-0010's
+   separation-of-duties principle (same pattern every prior phase's threat-model doc required).
+2. A human decision on each of the 5 remaining open security-review policy questions: fix, accept
+   as tracked technical debt, or dispute.
+3. A Phase 1E gate decision, once the above two are done — `docs/project-state/phase-1e-approval-checklist.md`
+   records the sign-off table, currently unsigned.
 
 **Client blockers (waiting on):** same as before Phase 1E work began — the real emergency-
 administrator account list, the WordPress Application Password account (production/development),
@@ -44,11 +45,13 @@ real timezone confirmation. None of Phase 1E's own deliverables are blocked on t
 
 - [PR #11](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/11) audit foundation — **merged**
 - [PR #13](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/13) audit schema expansion — **merged**
-- [PR #14](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/14) job architecture — open, CI green, reviewed
-- [PR #15](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/15) notification foundation — open, CI green, reviewed
-- [PR #16](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/16) retention architecture — open, CI green, reviewed
-- [PR #17](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/17) operational contacts — open, CI green, reviewed
-- [PR #18](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/18) system events & health — open, CI green, reviewed
+- [PR #14](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/14) job architecture — **merged**
+- [PR #15](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/15) notification foundation — **merged**
+- [PR #16](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/16) retention architecture — **merged**
+- [PR #17](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/17) operational contacts — **merged**
+- [PR #18](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/18) system events & health — **merged**
+- [PR #20](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/20) fix: migration 00019 immutability-trigger bug — **merged**
+- [PR #21](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/21) fix: SoD-audit / retention-category validation — **merged**
 
 ## Phase 1D (prior phase) — historical record, unchanged below
 

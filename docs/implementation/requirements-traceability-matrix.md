@@ -137,25 +137,25 @@ six architecture slices now have real, built code against:
   design this row anticipated is now real: ADR-0017 `audit_events` table with DB-level immutability
   trigger, merged to `main` via PR #11/#13. See `docs/implementation/phase-1e-audit-architecture.md`.
 - **Module 39, Notification Center** — the delivery-state-machine pattern this row anticipated
-  (queued/sent/accepted/failed/retrying/permanently-failed) is now real code on
-  `phase-1e-notification-foundation` (PR #15, open, not merged). No real SMTP adapter yet — still
-  matches this row's "Missing from Skill (mechanism)" note for the actual delivery mechanism.
-  See `docs/implementation/phase-1e-notification-foundation.md`.
+  (queued/sent/accepted/failed/retrying/permanently-failed) is now real code, **merged to `main`**
+  via PR #15. No real SMTP adapter yet — still matches this row's "Missing from Skill (mechanism)"
+  note for the actual delivery mechanism. See `docs/implementation/phase-1e-notification-foundation.md`.
 - **Module 43, Audit Logs and System Health** — now has real code on two fronts: the audit-log half
-  via DASH-GOV-07 above, and the system-health half via `phase-1e-system-events-health` (PR #18,
-  open, not merged) — `system_events`/`system_components`/`system_health_checks`, though only the
-  manual-check-recording path exists, not the `/health/dependencies` real-probe endpoint this row
-  originally anticipated. See `docs/implementation/phase-1e-system-events-health.md`.
-- **New, not anticipated by any Part A/B/C row**: job architecture (`phase-1e-job-architecture`,
-  PR #14) and retention architecture (`phase-1e-retention-architecture`, PR #16) and operational
-  contacts (`phase-1e-operational-contacts`, PR #17) are genuinely new scope this matrix's original
-  Phase 0 pass didn't separately call out as distinct rows — retention-as-a-mechanism is implicit
-  in DASH-GOV-07's "retention/deletion job" recommendation, and operational contacts/incident
-  severity has no Phase 0 precedent at all (first introduced in the Phase 1E authorization brief).
-  See each slice's own `docs/implementation/phase-1e-*.md` as-built doc for details.
+  via DASH-GOV-07 above, and the system-health half, **merged to `main`** via PR #18 —
+  `system_events`/`system_components`/`system_health_checks`, though only the manual-check-recording
+  path exists, not the `/health/dependencies` real-probe endpoint this row originally anticipated.
+  See `docs/implementation/phase-1e-system-events-health.md`.
+- **New, not anticipated by any Part A/B/C row**: job architecture (PR #14), retention architecture
+  (PR #16), and operational contacts (PR #17) — all **merged to `main`** — are genuinely new scope
+  this matrix's original Phase 0 pass didn't separately call out as distinct rows —
+  retention-as-a-mechanism is implicit in DASH-GOV-07's "retention/deletion job" recommendation, and
+  operational contacts/incident severity has no Phase 0 precedent at all (first introduced in the
+  Phase 1E authorization brief). See each slice's own `docs/implementation/phase-1e-*.md` as-built
+  doc for details.
 
-**Still open**: none of these six PRs have merged except #11/#13 (audit foundation). No independent
-code review or dedicated security review existed for any Phase 1E slice prior to this addendum —
-both were performed this session; see `docs/security/threat-model-phase-1e-operational-infrastructure.md`
-and this session's code-review findings recorded via the project's `ReportFindings` mechanism (not
-reproduced in this document — see `docs/project-state/phase-1e-validation-report.md`).
+**Update 2026-08-13:** all six PRs are now merged to `main`. Independent code review and a
+self-authored security review were performed across all six slices — every code-review finding and
+5 of 10 security-review findings have since been fixed and re-validated; 5 security-review findings
+remain open as deliberate policy questions pending human decision. See
+`docs/security/threat-model-phase-1e-operational-infrastructure.md` and
+`docs/project-state/phase-1e-validation-report.md` for the full record.
