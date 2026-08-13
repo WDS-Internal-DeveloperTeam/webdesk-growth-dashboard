@@ -69,6 +69,10 @@ export class SystemHealthService {
         entityId: input.componentKey,
         action: "record_check",
         reason: `status:${input.status}`,
+        // Without this, the audit event and the system_health_checks row it describes can't be
+        // joined back together via correlationId like every other request-scoped pair in this
+        // codebase — the check row has it (persisted via `input` above), the audit row didn't.
+        correlationId: input.correlationId ?? null,
         retentionCategory: "security-log-1y",
       });
     }
@@ -76,7 +80,19 @@ export class SystemHealthService {
     return check;
   }
 
+  /**
+   * Validates `componentKey` against the seeded component list first — without this, an unknown
+   * or mistyped key silently resolved to the same `"unknown"` status a real, never-checked
+   * component would report, masking a monitoring-dashboard typo as "not yet checked" instead of
+   * a real 404. `recordCheck()` above already validates this the same way; this brings the read
+   * path to the same standard rather than leaving it asymmetric.
+   */
   async getCurrentStatus(componentKey: string): Promise<CurrentStatus> {
+    const component = await this.components.findByKey(componentKey);
+    if (!component) {
+      throw new NotFoundException(`Unknown system component: ${componentKey}`);
+    }
+
     const mostRecent = await this.checks.findMostRecentForComponent(componentKey);
     if (!mostRecent) {
       return { componentKey, status: "unknown", detail: null, checkedAt: null, source: null };

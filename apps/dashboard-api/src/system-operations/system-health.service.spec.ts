@@ -70,6 +70,7 @@ describe("SystemHealthService", () => {
         componentKey: "database",
         status: "healthy",
         checkedByUserId: "actor-1",
+        correlationId: "corr-1",
       });
 
       expect(checks.record).toHaveBeenCalledWith(
@@ -80,6 +81,7 @@ describe("SystemHealthService", () => {
           eventType: "system_health_check_recorded",
           actorUserId: "actor-1",
           entityId: "database",
+          correlationId: "corr-1",
         }),
       );
     });
@@ -103,7 +105,8 @@ describe("SystemHealthService", () => {
   });
 
   describe("getCurrentStatus", () => {
-    it("returns unknown — not healthy — for a component with zero recorded checks", async () => {
+    it("returns unknown — not healthy — for a known component with zero recorded checks", async () => {
+      components.findByKey.mockResolvedValue(component({ key: "wordpress" }));
       checks.findMostRecentForComponent.mockResolvedValue(null);
       const result = await service.getCurrentStatus("wordpress");
       expect(result).toEqual({
@@ -116,9 +119,18 @@ describe("SystemHealthService", () => {
     });
 
     it("returns the most recent recorded status", async () => {
+      components.findByKey.mockResolvedValue(component({ key: "database" }));
       checks.findMostRecentForComponent.mockResolvedValue(check({ status: "degraded" }));
       const result = await service.getCurrentStatus("database");
       expect(result.status).toBe("degraded");
+    });
+
+    it("rejects an unknown component key with a 404, not a fabricated 'unknown' status — matching recordCheck's own validation", async () => {
+      components.findByKey.mockResolvedValue(null);
+      await expect(service.getCurrentStatus("not-a-real-component")).rejects.toThrow(
+        /Unknown system component/,
+      );
+      expect(checks.findMostRecentForComponent).not.toHaveBeenCalled();
     });
   });
 
@@ -128,6 +140,7 @@ describe("SystemHealthService", () => {
         component({ key: "database" }),
         component({ key: "wordpress", displayName: "WordPress" }),
       ]);
+      components.findByKey.mockImplementation((key: string) => Promise.resolve(component({ key })));
       checks.findMostRecentForComponent.mockImplementation((key: string) =>
         key === "database" ? Promise.resolve(check()) : Promise.resolve(null),
       );

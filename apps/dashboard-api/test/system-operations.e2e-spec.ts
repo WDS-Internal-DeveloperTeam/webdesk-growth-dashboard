@@ -275,4 +275,14 @@ describe("Phase 1E system events & health endpoints (e2e, real disposable databa
       });
     });
   });
+
+  describe("GET /system-health/status/:componentKey", () => {
+    it("rejects an unknown componentKey with 404 — matching POST /system-health/checks's own validation, not a fabricated 'unknown' status", async () => {
+      const cookie = await cookieForNewSession(grantedUserId);
+      const response = await request(app.getHttpServer())
+        .get("/system-health/status/not-a-real-component")
+        .set("Cookie", cookie);
+      expect(response.status).toBe(404);
+    });
+  });
 });
