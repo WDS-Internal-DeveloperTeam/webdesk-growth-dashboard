@@ -1,8 +1,8 @@
 /**
  * The retention-policy and legal/retention-hold models (Phase 1E
  * retention-architecture brief §19/§21) — persistence-layer shapes for
- * `retention_policies` (migrations `00019`/`00020`) and `retention_holds`
- * (migration `00021`). See
+ * `retention_policies` (migrations `00020`/`00021`) and `retention_holds`
+ * (migration `00022`). See
  * `docs/task-packages/phase-1e-retention-architecture.md`.
  */
 

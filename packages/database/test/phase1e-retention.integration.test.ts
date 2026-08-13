@@ -7,7 +7,7 @@ import { buildMigrator } from "../src/migrate.js";
 
 /**
  * Exercises the Phase 1E retention-architecture schema (migrations
- * `00019`/`00020`/`00021`) against a REAL, disposable PostgreSQL database —
+ * `00020`/`00021`/`00022`) against a REAL, disposable PostgreSQL database —
  * including the seeded 25-category policy data and the `retention_holds`
  * scope-shape CHECK constraint, neither of which a mocked repository test
  * can prove.

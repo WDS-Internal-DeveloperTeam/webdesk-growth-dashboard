@@ -18,7 +18,7 @@ function toEntity(instance: Model): RetentionPolicyEntity {
   };
 }
 
-/** Read-only from the application's perspective — the 25 approved categories are seeded by migration `00020`, not created via this repository. */
+/** Read-only from the application's perspective — the 25 approved categories are seeded by migration `00021`, not created via this repository. */
 export class RetentionPolicyRepository {
   private readonly model = getRetentionModels().RetentionPolicy;
 

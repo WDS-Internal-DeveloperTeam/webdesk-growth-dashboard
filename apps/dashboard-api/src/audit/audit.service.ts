@@ -91,6 +91,8 @@ const AUDIT_EVENT_CATEGORIES: Record<AuditEventType, string> = {
   webhook_processed: "operational",
   job_completed: "operational",
   job_failed: "operational",
+  retention_hold_created: "operational",
+  retention_hold_released: "operational",
   emergency_admin_login: "authentication",
   account_recovery_request: "identity_recovery",
   account_recovery_decision: "identity_recovery",

@@ -6,9 +6,9 @@ Covers brief §19–§23 plus the retention-specific portions of §26/§28/§29/
 `docs/task-packages/phase-1e-retention-architecture.md` for the design decisions and their
 rationale.
 
-## 1. Schema (migrations `00019`–`00021`)
+## 1. Schema (migrations `00020`–`00022`)
 
-- **`retention_policies`** (`00019`, seeded by `00020`) — 25 rows, one per §20's approved
+- **`retention_policies`** (`00020`, seeded by `00021`) — 25 rows, one per §20's approved
   category: `category_key` (unique), `display_name`, `retention_value`/`retention_unit` (real
   ENUM: `days`/`years`), `anchor` (descriptive — what the retention clock starts from, e.g.
   `finished_at` for jobs, `closed_at` for security findings), `description`,
@@ -17,7 +17,7 @@ rationale.
   `retention_category` strings `AuditService` has written onto `audit_events` since the original
   audit-foundation slice; this table is now the single source of truth those strings trace back
   to.
-- **`retention_holds`** (`00021`) — generic, polymorphic: `scope` (real ENUM, `entity`/
+- **`retention_holds`** (`00022`) — generic, polymorphic: `scope` (real ENUM, `entity`/
   `category`), `resource_type`/`resource_id` (unconstrained, entity-scoped holds) or
   `category_key` (a real FK into `retention_policies`, category-scoped holds), `reason_category`,
   `reason`, `created_by_user_id` (FK → `users`), `approved_by_user_id`, `start_date`/`end_date`,
@@ -120,6 +120,6 @@ counts).
 (dry-run counts, execute-mode soft-deletion, hold-blocks-then-release-restores-eligibility).
 
 Full validation run (this slice): typecheck/lint clean across all 9 workspace packages, 19/19 +
-57/57 `packages/database` tests (unit + integration, including a full migration `00001`→`00021`
+57/57 `packages/database` tests (unit + integration, including a full migration `00001`→`00022`
 up/down round-trip), 167/167 + 46/46 `dashboard-api` tests (unit + e2e), `pnpm audit` 0
 vulnerabilities, prettier clean.
