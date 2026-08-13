@@ -20,7 +20,7 @@ function toEntity(instance: Model): IncidentSeverityPolicyEntity {
   };
 }
 
-/** Read-only from the application's perspective — the 4 approved severities are seeded by migration `00021`, not created via this repository. */
+/** Read-only from the application's perspective — the 4 approved severities are seeded by migration `00022`, not created via this repository. */
 export class IncidentSeverityPolicyRepository {
   private readonly model = getOperationalContactsModels().IncidentSeverityPolicy;
 

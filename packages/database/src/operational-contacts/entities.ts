@@ -1,8 +1,8 @@
 /**
  * The configurable operational-contact and incident-severity models
  * (Phase 1E operational-contacts brief §17/§18) — persistence-layer
- * shapes for `operational_contacts` (migration `00019`) and
- * `incident_severity_policies` (migrations `00020`/`00021`). See
+ * shapes for `operational_contacts` (migration `00020`) and
+ * `incident_severity_policies` (migrations `00021`/`00022`). See
  * `docs/task-packages/phase-1e-operational-contacts.md`.
  */
 
