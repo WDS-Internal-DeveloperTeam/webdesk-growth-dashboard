@@ -1,4 +1,9 @@
-import type { NotificationEntity, NotificationRepository } from "@webdesk/database";
+import type {
+  NotificationEntity,
+  NotificationRepository,
+  OperationalContactRepository,
+  UserRepository,
+} from "@webdesk/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   NotificationDeliveryAdapter,
@@ -51,10 +56,14 @@ describe("NotificationService", () => {
     update: ReturnType<typeof vi.fn>;
     list: ReturnType<typeof vi.fn>;
   };
+  let users: { findById: ReturnType<typeof vi.fn> };
+  let contacts: { findById: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     notifications = { create: vi.fn(), findById: vi.fn(), update: vi.fn(), list: vi.fn() };
+    users = { findById: vi.fn() };
+    contacts = { findById: vi.fn() };
     auditService = { record: vi.fn() };
   });
 
@@ -62,6 +71,8 @@ describe("NotificationService", () => {
     return new NotificationService(
       notifications as unknown as NotificationRepository,
       adapter,
+      users as unknown as UserRepository,
+      contacts as unknown as OperationalContactRepository,
       auditService as unknown as AuditService,
     );
   }
@@ -97,6 +108,62 @@ describe("NotificationService", () => {
           retentionCategory: "audit-7y",
         }),
       );
+    });
+
+    it("creates successfully when recipientUserId refers to a real user", async () => {
+      users.findById.mockResolvedValue({ id: "user-1" });
+      notifications.create.mockResolvedValue(baseNotification({ recipientUserId: "user-1" }));
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      const result = await service.create({
+        notificationType: "framework_probe",
+        severity: "medium",
+        subject: "Test notification",
+        recipientUserId: "user-1",
+      });
+      expect(users.findById).toHaveBeenCalledWith("user-1");
+      expect(result.recipientUserId).toBe("user-1");
+    });
+
+    it("rejects creation when recipientUserId does not exist — previously accepted and persisted verbatim, an IDOR/spam vector once real delivery exists", async () => {
+      users.findById.mockResolvedValue(null);
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      await expect(
+        service.create({
+          notificationType: "framework_probe",
+          severity: "medium",
+          subject: "Test notification",
+          recipientUserId: "nonexistent-user",
+        }),
+      ).rejects.toThrow(/recipientUserId does not exist/);
+      expect(notifications.create).not.toHaveBeenCalled();
+    });
+
+    it("creates successfully when recipientContactId refers to a real operational contact", async () => {
+      contacts.findById.mockResolvedValue({ id: "contact-1" });
+      notifications.create.mockResolvedValue(baseNotification({ recipientContactId: "contact-1" }));
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      const result = await service.create({
+        notificationType: "framework_probe",
+        severity: "medium",
+        subject: "Test notification",
+        recipientContactId: "contact-1",
+      });
+      expect(contacts.findById).toHaveBeenCalledWith("contact-1");
+      expect(result.recipientContactId).toBe("contact-1");
+    });
+
+    it("rejects creation when recipientContactId does not exist", async () => {
+      contacts.findById.mockResolvedValue(null);
+      const service = buildService(new UnconfiguredNotificationDeliveryAdapter());
+      await expect(
+        service.create({
+          notificationType: "framework_probe",
+          severity: "medium",
+          subject: "Test notification",
+          recipientContactId: "nonexistent-contact",
+        }),
+      ).rejects.toThrow(/recipientContactId does not exist/);
+      expect(notifications.create).not.toHaveBeenCalled();
     });
   });
 
