@@ -1,4 +1,4 @@
-import type { Model } from "sequelize";
+import { UniqueConstraintError, type Model } from "sequelize";
 import { getJobModels } from "./models.js";
 import type {
   FailureCategory,
@@ -30,19 +30,34 @@ function toEntity(instance: Model): JobAttemptEntity {
 export class JobAttemptRepository {
   private readonly model = getJobModels().JobAttempt;
 
+  /**
+   * Returns `null`, not a thrown error, when the real `(job_id, attempt_number)` UNIQUE
+   * constraint (migration `00021`) rejects a concurrent duplicate — two callers racing to
+   * start the same attempt number is a real possibility (`JobService.startAttempt()`'s own
+   * read of `attemptCount` is not itself locked), and the constraint is the actual source of
+   * truth for "did this attempt already get created," not a client-side check. The caller
+   * decides how to respond to "someone else already started this one."
+   */
   async create(input: {
     jobId: string;
     attemptNumber: number;
     handler?: string | null;
     correlationId?: string | null;
-  }): Promise<JobAttemptEntity> {
-    const instance = await this.model.create({
-      jobId: input.jobId,
-      attemptNumber: input.attemptNumber,
-      handler: input.handler ?? null,
-      correlationId: input.correlationId ?? null,
-    });
-    return toEntity(instance);
+  }): Promise<JobAttemptEntity | null> {
+    try {
+      const instance = await this.model.create({
+        jobId: input.jobId,
+        attemptNumber: input.attemptNumber,
+        handler: input.handler ?? null,
+        correlationId: input.correlationId ?? null,
+      });
+      return toEntity(instance);
+    } catch (error) {
+      if (error instanceof UniqueConstraintError) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async close(

@@ -83,8 +83,9 @@ describe("Phase 1E job architecture (real disposable database)", () => {
     it("closes an attempt with its result and retry decision", async () => {
       const job = await jobs.create({ jobType: "framework_probe" });
       const attempt = await attempts.create({ jobId: job.id, attemptNumber: 1 });
+      expect(attempt).not.toBeNull();
 
-      const closed = await attempts.close(attempt.id, {
+      const closed = await attempts.close(attempt!.id, {
         result: "failed",
         failureCategory: "retryable_transient",
         retryDecision: "will_retry",
@@ -94,10 +95,12 @@ describe("Phase 1E job architecture (real disposable database)", () => {
       expect(closed?.finishedAt).not.toBeNull();
     });
 
-    it("rejects a duplicate attempt_number for the same job at the database layer", async () => {
+    it("returns null (not a thrown error) for a duplicate attempt_number, backed by the real UNIQUE constraint", async () => {
       const job = await jobs.create({ jobType: "framework_probe" });
-      await attempts.create({ jobId: job.id, attemptNumber: 1 });
-      await expect(attempts.create({ jobId: job.id, attemptNumber: 1 })).rejects.toThrow();
+      const first = await attempts.create({ jobId: job.id, attemptNumber: 1 });
+      expect(first).not.toBeNull();
+      const second = await attempts.create({ jobId: job.id, attemptNumber: 1 });
+      expect(second).toBeNull();
     });
   });
 
@@ -157,6 +160,25 @@ describe("Phase 1E job architecture (real disposable database)", () => {
       const b = await idempotencyKeys.reserve({ scope: "job:type-b", idempotencyKey: key });
       expect(a.kind).toBe("reserved");
       expect(b.kind).toBe("reserved");
+    });
+
+    it("lets only one of two concurrent reissue-after-failure callers actually reserve the key", async () => {
+      const key = randomUUID();
+      const first = await idempotencyKeys.reserve({
+        scope: "job:framework_probe",
+        idempotencyKey: key,
+      });
+      await idempotencyKeys.fail(first.entity.id);
+
+      // Two callers race to reissue the same now-failed key at once — the real regression
+      // scenario a plain unconditional UPDATE would let both "win".
+      const [a, b] = await Promise.all([
+        idempotencyKeys.reserve({ scope: "job:framework_probe", idempotencyKey: key }),
+        idempotencyKeys.reserve({ scope: "job:framework_probe", idempotencyKey: key }),
+      ]);
+
+      const outcomes = [a.kind, b.kind].sort();
+      expect(outcomes).toEqual(["in_progress", "reserved"]);
     });
   });
 });

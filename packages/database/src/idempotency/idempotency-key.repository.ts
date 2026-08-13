@@ -1,4 +1,4 @@
-import { UniqueConstraintError, type Model } from "sequelize";
+import { Op, UniqueConstraintError, type Model } from "sequelize";
 import { getIdempotencyModels } from "./models.js";
 import type { IdempotencyKeyEntity, IdempotencyProcessingState } from "./entities.js";
 
@@ -82,16 +82,43 @@ export class IdempotencyKeyRepository {
       if (existing.processingState === "pending" && !isExpired(existing)) {
         return { kind: "in_progress", entity: existing };
       }
-      // Failed or expired-pending: safe to reissue the same reservation, same row.
-      await existingInstance.update({
-        processingState: "pending",
-        resultReference: null,
-        resourceType: input.resourceType ?? existing.resourceType,
-        action: input.action ?? existing.action,
-        requesterUserId: input.requesterUserId ?? existing.requesterUserId,
-        expiresAt: input.expiresAt ?? existing.expiresAt,
-      });
-      return { kind: "reserved", entity: toEntity(existingInstance) };
+      // Failed or expired-pending: safe to reissue the same reservation, same row — but two
+      // concurrent callers can both reach this branch for the same row (both saw it as
+      // "failed" before either wrote). A plain unconditional `.update()` would let both
+      // "win" and both proceed as if they alone reserved the key. Guard with a conditional
+      // UPDATE (same state-CAS discipline as the original `create()`'s UNIQUE constraint) so
+      // only the first writer's update actually matches a row; the loser's `affectedCount`
+      // comes back 0 and it re-reads to see what state the winner left behind.
+      const [affectedCount] = await this.model.update(
+        {
+          processingState: "pending",
+          resultReference: null,
+          resourceType: input.resourceType ?? existing.resourceType,
+          action: input.action ?? existing.action,
+          requesterUserId: input.requesterUserId ?? existing.requesterUserId,
+          expiresAt: input.expiresAt ?? existing.expiresAt,
+        },
+        {
+          where: {
+            id: existing.id,
+            [Op.or]: [
+              { processingState: "failed" },
+              { processingState: "pending", expiresAt: { [Op.lt]: new Date() } },
+            ],
+          },
+        },
+      );
+      if (affectedCount > 0) {
+        const reserved = await this.model.findByPk(existing.id);
+        return { kind: "reserved", entity: toEntity(reserved!) };
+      }
+      // Another concurrent caller's conditional UPDATE won the race — report whatever it
+      // left behind rather than pretending this caller reserved it too.
+      const afterRace = toEntity((await this.model.findByPk(existing.id))!);
+      if (afterRace.processingState === "completed") {
+        return { kind: "duplicate", entity: afterRace };
+      }
+      return { kind: "in_progress", entity: afterRace };
     }
   }
 

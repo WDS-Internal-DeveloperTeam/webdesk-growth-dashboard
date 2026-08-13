@@ -95,7 +95,16 @@ export class JobService {
       // deliberately exercising this) — fall through and create fresh rather than error out.
     }
 
-    const job = await this.jobs.create(input);
+    let job: JobEntity;
+    try {
+      job = await this.jobs.create(input);
+    } catch (error) {
+      // Un-reserve the key on a genuine creation failure — otherwise it's stuck in "pending"
+      // forever and every future request with this idempotency key gets a false "in_progress"
+      // with no way to recover short of manual intervention.
+      await this.idempotency.fail(reservation.reservation.id);
+      throw error;
+    }
     await this.idempotency.complete(reservation.reservation.id, job.id);
     return job;
   }
@@ -125,13 +134,35 @@ export class JobService {
       );
     }
 
+    // A job between retry attempts has nothing actively running — the same "not yet started,
+    // cancel immediately and safely" case JobCancellationService already handles for
+    // pending/queued jobs. Without this check, a cancellation requested while a job sits in
+    // "retrying" is silently dropped: the next automatic retry would proceed as if nothing
+    // had been asked of it.
+    if (job.status === "retrying" && job.cancellationState === "requested") {
+      await this.jobs.update(jobId, {
+        status: "cancelled",
+        cancellationState: "cancelled_safely",
+        finishedAt: new Date(),
+      });
+      throw new BadRequestException(`Job ${jobId} was cancelled before this retry could start`);
+    }
+
     const attemptNumber = job.attemptCount + 1;
-    await this.attempts.create({
+    const attempt = await this.attempts.create({
       jobId,
       attemptNumber,
       handler: input.handler ?? null,
       correlationId: input.correlationId ?? job.correlationId,
     });
+    if (!attempt) {
+      // The real (job_id, attempt_number) UNIQUE constraint caught a concurrent caller that
+      // already started this exact attempt — surface it as a clean conflict rather than an
+      // unhandled 500.
+      throw new BadRequestException(
+        `Job ${jobId} attempt ${attemptNumber} is already being started by a concurrent request`,
+      );
+    }
 
     const now = new Date();
     const updated = await this.jobs.update(jobId, {
@@ -219,6 +250,13 @@ export class JobService {
       failureSummary: input.failureSummary ?? null,
       nextRetryAt: willRetry ? computeNextRetryAt(job.attemptCount, now) : null,
       finishedAt: willRetry ? null : now,
+      // Same reasoning as complete(): a terminal failure while a cancellation was in flight
+      // arrived too late to interrupt anything — record that honestly instead of leaving a
+      // stale "requested" state on a job that's now done. Only resolves it on the terminal
+      // (!willRetry) path — if the job is about to retry, startAttempt()'s own check is what
+      // finalizes a still-pending cancellation, not this.
+      cancellationState:
+        !willRetry && job.cancellationState === "requested" ? "too_late" : job.cancellationState,
     });
     return requireJob(updated, jobId);
   }

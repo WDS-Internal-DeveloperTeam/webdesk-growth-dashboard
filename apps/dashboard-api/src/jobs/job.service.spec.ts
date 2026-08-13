@@ -51,13 +51,18 @@ describe("JobService", () => {
     close: ReturnType<typeof vi.fn>;
     findByJob: ReturnType<typeof vi.fn>;
   };
-  let idempotency: { reserve: ReturnType<typeof vi.fn>; complete: ReturnType<typeof vi.fn> };
+  let idempotency: {
+    reserve: ReturnType<typeof vi.fn>;
+    complete: ReturnType<typeof vi.fn>;
+    fail: ReturnType<typeof vi.fn>;
+  };
   let service: JobService;
 
   beforeEach(() => {
     jobs = { create: vi.fn(), findById: vi.fn(), update: vi.fn(), list: vi.fn() };
     attempts = { create: vi.fn(), close: vi.fn(), findByJob: vi.fn() };
-    idempotency = { reserve: vi.fn(), complete: vi.fn() };
+    attempts.create.mockResolvedValue({ id: "attempt-1", attemptNumber: 1, jobId: "job-1" });
+    idempotency = { reserve: vi.fn(), complete: vi.fn(), fail: vi.fn() };
     service = new JobService(
       jobs as unknown as JobRepository,
       attempts as unknown as JobAttemptRepository,
@@ -114,6 +119,21 @@ describe("JobService", () => {
       ).rejects.toThrow(/already being processed/);
       expect(jobs.create).not.toHaveBeenCalled();
     });
+
+    it("un-reserves the idempotency key instead of leaving it stuck when job creation itself fails", async () => {
+      idempotency.reserve.mockResolvedValue({
+        outcome: "proceed",
+        reservation: { id: "reservation-1" },
+      });
+      jobs.create.mockRejectedValue(new Error("db exploded"));
+
+      await expect(
+        service.create({ jobType: "framework_probe", idempotencyKey: "abc" }),
+      ).rejects.toThrow(/db exploded/);
+
+      expect(idempotency.fail).toHaveBeenCalledWith("reservation-1");
+      expect(idempotency.complete).not.toHaveBeenCalled();
+    });
   });
 
   describe("startAttempt", () => {
@@ -137,6 +157,28 @@ describe("JobService", () => {
       jobs.findById.mockResolvedValue(baseJob({ status: "running" }));
       await expect(service.startAttempt("job-1")).rejects.toThrow(/cannot start an attempt/);
       expect(attempts.create).not.toHaveBeenCalled();
+    });
+
+    it("finalizes a pending cancellation instead of starting another retry attempt", async () => {
+      jobs.findById.mockResolvedValue(
+        baseJob({ status: "retrying", attemptCount: 1, cancellationState: "requested" }),
+      );
+
+      await expect(service.startAttempt("job-1")).rejects.toThrow(/was cancelled/);
+
+      expect(attempts.create).not.toHaveBeenCalled();
+      expect(jobs.update).toHaveBeenCalledWith(
+        "job-1",
+        expect.objectContaining({ status: "cancelled", cancellationState: "cancelled_safely" }),
+      );
+    });
+
+    it("rejects with a conflict, not an unhandled error, when a concurrent caller already started this attempt", async () => {
+      jobs.findById.mockResolvedValue(baseJob({ status: "pending", attemptCount: 0 }));
+      attempts.create.mockResolvedValue(null);
+
+      await expect(service.startAttempt("job-1")).rejects.toThrow(/concurrent request/);
+      expect(jobs.update).not.toHaveBeenCalled();
     });
   });
 
@@ -256,6 +298,46 @@ describe("JobService", () => {
       jobs.findById.mockResolvedValue(baseJob({ status: "queued" }));
       await expect(service.fail("job-1", { failureCategory: "unknown" })).rejects.toThrow(
         /cannot fail/,
+      );
+    });
+
+    it("resolves a pending cancellation to too_late when the job fails terminally", async () => {
+      jobs.findById.mockResolvedValue(
+        baseJob({
+          status: "running",
+          attemptCount: 1,
+          maxAttempts: 1,
+          cancellationState: "requested",
+        }),
+      );
+      attempts.findByJob.mockResolvedValue([{ id: "attempt-1", attemptNumber: 1 }]);
+      jobs.update.mockResolvedValue(baseJob({ status: "failed" }));
+
+      await service.fail("job-1", { failureCategory: "validation" });
+
+      expect(jobs.update).toHaveBeenCalledWith(
+        "job-1",
+        expect.objectContaining({ cancellationState: "too_late" }),
+      );
+    });
+
+    it("leaves a pending cancellation as requested (not too_late) when the job is about to retry", async () => {
+      jobs.findById.mockResolvedValue(
+        baseJob({
+          status: "running",
+          attemptCount: 1,
+          maxAttempts: 3,
+          cancellationState: "requested",
+        }),
+      );
+      attempts.findByJob.mockResolvedValue([{ id: "attempt-1", attemptNumber: 1 }]);
+      jobs.update.mockResolvedValue(baseJob({ status: "retrying" }));
+
+      await service.fail("job-1", { failureCategory: "retryable_transient" });
+
+      expect(jobs.update).toHaveBeenCalledWith(
+        "job-1",
+        expect.objectContaining({ cancellationState: "requested" }),
       );
     });
   });
