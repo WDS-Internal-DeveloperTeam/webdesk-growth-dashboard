@@ -132,14 +132,17 @@ caller-supplied candidates, and not wired to any HTTP route in this slice regard
 All ten gaps found above were originally **surfaced, not silently resolved** — consistent with
 this project's standing pattern (e.g. Phase 1C's G4-1C OVERRIDE, Phase 1D's self-role-assignment
 gap) of flagging an open item for the human reviewer's decision rather than the implementing agent
-unilaterally deciding it's acceptable. **Update 2026-08-13:** the 5 non-policy gaps (clear bugs,
-not judgment calls) have since been fixed and re-validated; the 5 genuine policy questions remain
-open by explicit user scoping decision, not oversight:
+unilaterally deciding it's acceptable. **Update 2026-08-13:** the user went through all 5 genuine
+policy questions explicitly, one by one — 3 were decided "fix now" and are fixed and re-validated
+below; 2 were decided "accept as tracked debt," recorded as an explicit decision, not an
+oversight:
 
-1. Retention hold `approvedByUserId` is client-attributable, not verified (Spoofing). **Open —
-   policy question.**
+1. Retention hold `approvedByUserId` is client-attributable, not verified (Spoofing). **Accepted
+   as tracked debt** — no real legal-hold workflow exists yet and the permission is zero-seeded;
+   revisit before one goes live.
 2. Notification `recipientUserId`/`recipientContactId`/`projectId` accepted with no existence check
-   (Tampering). **Open — policy question.**
+   (Tampering). **Fixed** — commit `df07eb8` (`recipientUserId`/`recipientContactId` existence now
+   verified; `projectId` deliberately still unchecked — no `Project` entity exists yet).
 3. `JobService.create()` has zero audit-trail coverage (Repudiation). **Fixed** — commit `e6306a8`.
 4. `NotificationService` has zero audit-trail coverage across all five of its mutating methods
    (Repudiation). **Fixed** — commit `1c9e822`.
@@ -147,21 +150,26 @@ open by explicit user scoping decision, not oversight:
    (Repudiation). **Fixed** — commit `eb4b916`.
 6. `jobs`/`notifications` list endpoints accept an unchecked `projectId` query filter with no
    route-level project scoping — latent, same class as the existing Phase 1D `Op.in` finding
-   (Elevation of Privilege). **Open — policy question**, same as the Phase 1D precedent it mirrors.
+   (Elevation of Privilege). **Accepted as tracked debt** — matches the precedent already accepted
+   for the identical Phase 1D finding; revisit the moment a project-scoped grant is ever seeded
+   for these actions.
 7. `operational_contacts` PII has no confidential-field gating, unlike the precedent set elsewhere
-   in this codebase (Information Disclosure). **Open — policy question.**
+   in this codebase (Information Disclosure). **Fixed** — commit `f632e96`, gated behind the
+   existing `view_confidential` action on the `system_settings` module key.
 8. `OperationalContactRepository`/`RetentionHoldRepository` list queries have no pagination cap
    (Denial of Service). **Fixed** — commits `8db3bd7` (contacts), `79a265e` (retention holds).
 9. `JobRetryService.manualRetry()` doesn't respect `maxAttempts` (Denial of Service — policy
-   question). **Open — policy question.**
+   question). **Fixed** — commit `a6305c1`, now enforces the same cap the automatic retry path
+   already applies.
 10. All ten gaps interact with the correctness bugs already surfaced in this session's separate
     code-review pass (in particular the audit-write-ordering issues and the migration-00019
     immutability-trigger bug) — both classes of finding are now fixed; see
     `docs/project-state/phase-1e-validation-report.md` §3.
 
-The 5 remaining open items require an explicit human decision (fix, accept as tracked debt, or
-dispute) — not something this document or its author resolves unilaterally, same as every prior
-threat-model document in this project.
+**Final disposition: 8 of 10 gaps fixed and re-validated; 2 accepted as tracked technical debt by
+explicit human decision** (items 1 and 6 above) — a real decision made by the user, not something
+this document or its author resolved unilaterally, same as every prior threat-model document in
+this project.
 
 ## Not addressed by this pass
 
