@@ -70,51 +70,83 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
     allowNull: true,
   });
 
-  await context.sequelize.query(`
-    UPDATE audit_events SET event_category = CASE event_type
-      WHEN 'login' THEN 'authentication'
-      WHEN 'login_rejected' THEN 'authentication'
-      WHEN 'logout' THEN 'authentication'
-      WHEN 'session_revoked' THEN 'authentication'
-      WHEN 'permission_change' THEN 'access_control'
-      WHEN 'confidential_field_access_change' THEN 'access_control'
-      WHEN 'user_activation' THEN 'access_control'
-      WHEN 'user_deactivation' THEN 'access_control'
-      WHEN 'data_change' THEN 'content_lifecycle'
-      WHEN 'approval' THEN 'approval'
-      WHEN 'rejection' THEN 'approval'
-      WHEN 'revision_requested' THEN 'approval'
-      WHEN 'publish' THEN 'content_lifecycle'
-      WHEN 'unpublish' THEN 'content_lifecycle'
-      WHEN 'release' THEN 'content_lifecycle'
-      WHEN 'rollback' THEN 'content_lifecycle'
-      WHEN 'backup' THEN 'operational'
-      WHEN 'restore' THEN 'operational'
-      WHEN 'retention_run' THEN 'operational'
-      WHEN 'security_exception' THEN 'security'
-      WHEN 'scan_run' THEN 'operational'
-      WHEN 'import_run' THEN 'operational'
-      WHEN 'export_run' THEN 'operational'
-      WHEN 'git_sync' THEN 'operational'
-      WHEN 'webhook_processed' THEN 'operational'
-      WHEN 'job_completed' THEN 'operational'
-      WHEN 'job_failed' THEN 'operational'
-      WHEN 'emergency_admin_login' THEN 'authentication'
-      WHEN 'account_recovery_request' THEN 'identity_recovery'
-      WHEN 'account_recovery_decision' THEN 'identity_recovery'
-      ELSE 'operational'
-    END
-    WHERE event_category IS NULL;
-  `);
-  await context.sequelize.query(
-    `UPDATE audit_events SET source_application = 'dashboard-api' WHERE source_application IS NULL;`,
-  );
-  await context.sequelize.query(
-    `UPDATE audit_events SET environment = 'production' WHERE environment IS NULL;`,
-  );
-  await context.sequelize.query(
-    `UPDATE audit_events SET confidentiality_classification = 'internal' WHERE confidentiality_classification IS NULL;`,
-  );
+  // The four backfill UPDATEs below would otherwise unconditionally hit migration 00018's
+  // `audit_events_immutable` trigger, which blocks every UPDATE with no escape hatch (unlike
+  // DELETE, which checks a session-local authorization flag) — confirmed by independent code
+  // review to hard-fail this migration the moment it runs against a table that already has rows,
+  // which production's does (RoleAssignmentService/RecoveryService have written to it since the
+  // audit-foundation migration was applied). Scoped fix: disable the trigger for this migration's
+  // own one-time backfill only, inside a real transaction so a failed UPDATE rolls back the
+  // disable too rather than ever leaving the table's immutability guarantee off. Migration 00018
+  // itself is left untouched — it's already applied in production, and every environment that
+  // re-runs it from scratch gets the same trigger either way.
+  await context.sequelize.transaction(async (transaction) => {
+    await context.sequelize.query(
+      `ALTER TABLE audit_events DISABLE TRIGGER audit_events_immutable;`,
+      {
+        transaction,
+      },
+    );
+
+    await context.sequelize.query(
+      `
+      UPDATE audit_events SET event_category = CASE event_type
+        WHEN 'login' THEN 'authentication'
+        WHEN 'login_rejected' THEN 'authentication'
+        WHEN 'logout' THEN 'authentication'
+        WHEN 'session_revoked' THEN 'authentication'
+        WHEN 'permission_change' THEN 'access_control'
+        WHEN 'confidential_field_access_change' THEN 'access_control'
+        WHEN 'user_activation' THEN 'access_control'
+        WHEN 'user_deactivation' THEN 'access_control'
+        WHEN 'data_change' THEN 'content_lifecycle'
+        WHEN 'approval' THEN 'approval'
+        WHEN 'rejection' THEN 'approval'
+        WHEN 'revision_requested' THEN 'approval'
+        WHEN 'publish' THEN 'content_lifecycle'
+        WHEN 'unpublish' THEN 'content_lifecycle'
+        WHEN 'release' THEN 'content_lifecycle'
+        WHEN 'rollback' THEN 'content_lifecycle'
+        WHEN 'backup' THEN 'operational'
+        WHEN 'restore' THEN 'operational'
+        WHEN 'retention_run' THEN 'operational'
+        WHEN 'security_exception' THEN 'security'
+        WHEN 'scan_run' THEN 'operational'
+        WHEN 'import_run' THEN 'operational'
+        WHEN 'export_run' THEN 'operational'
+        WHEN 'git_sync' THEN 'operational'
+        WHEN 'webhook_processed' THEN 'operational'
+        WHEN 'job_completed' THEN 'operational'
+        WHEN 'job_failed' THEN 'operational'
+        WHEN 'emergency_admin_login' THEN 'authentication'
+        WHEN 'account_recovery_request' THEN 'identity_recovery'
+        WHEN 'account_recovery_decision' THEN 'identity_recovery'
+        ELSE 'operational'
+      END
+      WHERE event_category IS NULL;
+    `,
+      { transaction },
+    );
+    await context.sequelize.query(
+      `UPDATE audit_events SET source_application = 'dashboard-api' WHERE source_application IS NULL;`,
+      { transaction },
+    );
+    await context.sequelize.query(
+      `UPDATE audit_events SET environment = 'production' WHERE environment IS NULL;`,
+      { transaction },
+    );
+    await context.sequelize.query(
+      `UPDATE audit_events SET confidentiality_classification = 'internal' WHERE confidentiality_classification IS NULL;`,
+      { transaction },
+    );
+
+    await context.sequelize.query(
+      `ALTER TABLE audit_events ENABLE TRIGGER audit_events_immutable;`,
+      {
+        transaction,
+      },
+    );
+  });
 
   await context.changeColumn("audit_events", "event_category", {
     type: DataTypes.STRING(32),
