@@ -7,7 +7,7 @@ import { buildMigrator } from "../src/migrate.js";
 
 /**
  * Exercises the Phase 1E notification-foundation schema (migration
- * `00019-create-notifications`) against a REAL, disposable PostgreSQL
+ * `00026-create-notifications`) against a REAL, disposable PostgreSQL
  * database — including the `severity`/`delivery_state` ENUM constraints
  * and the real `recipient_user_id` FK, neither of which a mocked
  * repository test can prove.

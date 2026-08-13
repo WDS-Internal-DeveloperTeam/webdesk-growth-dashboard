@@ -6,7 +6,7 @@ Covers brief §15–§16 plus the notification-specific portions of §26/§28/§
 `docs/task-packages/phase-1e-notification-foundation.md` for the design decisions and their
 rationale.
 
-## 1. Schema (migration `00019-create-notifications`)
+## 1. Schema (migration `00026-create-notifications`)
 
 One table, `notifications`, matching §15's field list: id, notification_type (STRING, evolvable),
 severity (ENUM — `critical`/`high`/`medium`/`low`, the same four-value set §18's incident-severity
