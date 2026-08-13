@@ -8,3 +8,5 @@ export { buildMigrator } from "./migrate.js";
 export * from "./auth/index.js";
 export * from "./authz/index.js";
 export * from "./audit/index.js";
+export * from "./jobs/index.js";
+export * from "./idempotency/index.js";
