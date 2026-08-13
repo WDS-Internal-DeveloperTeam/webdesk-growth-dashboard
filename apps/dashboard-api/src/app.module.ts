@@ -6,6 +6,7 @@ import { AuthzModule } from "./authz/authz.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { HealthModule } from "./health/health.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
+import { NotificationsModule } from "./notifications/notifications.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 
 const env = loadEnv(baseEnvSchema);
@@ -35,6 +36,7 @@ const loggerOptions = buildLoggerOptions(env, "dashboard-api");
     AuthModule,
     AuthzModule,
     JobsModule,
+    NotificationsModule,
     RetentionModule,
   ],
 })

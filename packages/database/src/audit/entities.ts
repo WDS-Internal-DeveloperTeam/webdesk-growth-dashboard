@@ -39,6 +39,8 @@ export type AuditEventType =
   | "job_cancellation_requested"
   | "retention_hold_created"
   | "retention_hold_released"
+  | "notification_created"
+  | "notification_delivery_outcome"
   | "emergency_admin_login"
   | "account_recovery_request"
   | "account_recovery_decision";
