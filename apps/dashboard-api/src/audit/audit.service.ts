@@ -54,10 +54,71 @@ const AUDIT_RETENTION_CATEGORIES = ["audit-7y", "approval-audit-7y", "security-l
 
 export type AuditRetentionCategory = (typeof AUDIT_RETENTION_CATEGORIES)[number];
 
+/**
+ * Exhaustive `event_type` → `event_category` mapping (migration 00019) —
+ * `Record<AuditEventType, string>` forces a compile error if a new
+ * `event_type` is ever added to `AUDIT_EVENT_TYPES` without a category
+ * decision, so this can never silently fall out of sync. Every caller gets
+ * a meaningful category without having to know or pass one — the same
+ * "derive it centrally, don't trust each call site" reasoning
+ * `AuthorizationService` already applies to permission checks.
+ */
+const AUDIT_EVENT_CATEGORIES: Record<AuditEventType, string> = {
+  login: "authentication",
+  login_rejected: "authentication",
+  logout: "authentication",
+  session_revoked: "authentication",
+  permission_change: "access_control",
+  confidential_field_access_change: "access_control",
+  user_activation: "access_control",
+  user_deactivation: "access_control",
+  data_change: "content_lifecycle",
+  approval: "approval",
+  rejection: "approval",
+  revision_requested: "approval",
+  publish: "content_lifecycle",
+  unpublish: "content_lifecycle",
+  release: "content_lifecycle",
+  rollback: "content_lifecycle",
+  backup: "operational",
+  restore: "operational",
+  retention_run: "operational",
+  security_exception: "security",
+  scan_run: "operational",
+  import_run: "operational",
+  export_run: "operational",
+  git_sync: "operational",
+  webhook_processed: "operational",
+  job_completed: "operational",
+  job_failed: "operational",
+  emergency_admin_login: "authentication",
+  account_recovery_request: "identity_recovery",
+  account_recovery_decision: "identity_recovery",
+};
+
+/** Default `confidentiality_classification` when a caller doesn't specify one — the conservative, non-elevated value; grants no special visibility beyond standard `audit.view`. */
+const DEFAULT_CONFIDENTIALITY_CLASSIFICATION = "internal";
+
+/** The only application that has ever emitted audit events — `AuditModule` is wired into `dashboard-api`'s `AuthModule`/`AuthzModule` only, never `dashboard-worker` or `dashboard-web` (which never touches PostgreSQL, per knowledge/01). */
+const DEFAULT_SOURCE_APPLICATION = "dashboard-api";
+
+/**
+ * Same three-value vocabulary as `packages/configuration`'s already-approved
+ * `NODE_ENV` schema — not an invented environment name. Read directly from
+ * `process.env` rather than injecting the full `AuthEnv`/`loadEnv` machinery,
+ * since this is the only field `AuditService` needs from it.
+ */
+function resolveEnvironment(): string {
+  const nodeEnv = process.env["NODE_ENV"];
+  return nodeEnv === "production" || nodeEnv === "test" ? nodeEnv : "development";
+}
+
 export interface RecordAuditEventInput {
   eventType: AuditEventType;
   actorUserId?: string | null;
   actorType: AuditActorType;
+  sessionId?: string | null;
+  projectId?: string | null;
   entityType: string;
   entityId: string;
   entityVersion?: number | null;
@@ -67,6 +128,8 @@ export interface RecordAuditEventInput {
   reason?: string | null;
   relatedGateOrApprovalId?: string | null;
   gitCommitSha?: string | null;
+  correlationId?: string | null;
+  confidentialityClassification?: string;
   retentionCategory: AuditRetentionCategory;
   legalHold?: boolean;
   legalHoldReason?: string | null;
@@ -95,8 +158,11 @@ export class AuditService {
 
     return this.events.record({
       eventType: input.eventType,
+      eventCategory: AUDIT_EVENT_CATEGORIES[input.eventType],
       actorUserId: input.actorUserId ?? null,
       actorType: input.actorType,
+      sessionId: input.sessionId ?? null,
+      projectId: input.projectId ?? null,
       entityType: input.entityType,
       entityId: input.entityId,
       entityVersion: input.entityVersion ?? null,
@@ -106,6 +172,11 @@ export class AuditService {
       reason: input.reason ?? null,
       relatedGateOrApprovalId: input.relatedGateOrApprovalId ?? null,
       gitCommitSha: input.gitCommitSha ?? null,
+      correlationId: input.correlationId ?? null,
+      sourceApplication: DEFAULT_SOURCE_APPLICATION,
+      environment: resolveEnvironment(),
+      confidentialityClassification:
+        input.confidentialityClassification ?? DEFAULT_CONFIDENTIALITY_CLASSIFICATION,
       retentionCategory: input.retentionCategory,
       legalHold: input.legalHold ?? false,
       legalHoldReason: input.legalHoldReason ?? null,
