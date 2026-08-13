@@ -87,6 +87,19 @@ describe("Phase 1E operational contacts (real disposable database)", () => {
       expect(updated?.activeStatus).toBe(false);
     });
 
+    it("list() respects a caller-supplied limit — previously this query had no cap at all", async () => {
+      const area = `area-limit-${randomUUID()}`;
+      await contacts.create({ contactName: "A", area, role: "primary", escalationPriority: 1 });
+      await contacts.create({ contactName: "B", area, role: "primary", escalationPriority: 2 });
+      await contacts.create({ contactName: "C", area, role: "primary", escalationPriority: 3 });
+
+      const limited = await contacts.list({ area, limit: 2 });
+      expect(limited).toHaveLength(2);
+
+      const all = await contacts.list({ area });
+      expect(all).toHaveLength(3);
+    });
+
     it("findActiveForArea excludes inactive contacts", async () => {
       const area = `area-${randomUUID()}`;
       const active = await contacts.create({

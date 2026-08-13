@@ -46,6 +46,12 @@ const booleanQueryParam = z.enum(["true", "false"]).transform((value) => value =
 export const listContactsQuerySchema = z.object({
   area: z.string().min(1).max(64).optional(),
   activeStatus: booleanQueryParam.optional(),
+  // Same bound as every other list endpoint in this Phase 1E slate (jobs/notifications/
+  // system-events) — this repository's own query previously had no LIMIT/pagination cap at all
+  // (docs/security/threat-model-phase-1e-operational-infrastructure.md's Denial of Service
+  // finding), unlike every one of those.
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 export type ListContactsQueryDto = z.infer<typeof listContactsQuerySchema>;
 

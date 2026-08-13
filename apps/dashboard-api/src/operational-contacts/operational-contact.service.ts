@@ -173,7 +173,7 @@ export class OperationalContactService {
   }
 
   async list(
-    filter: { area?: string; activeStatus?: boolean } = {},
+    filter: { area?: string; activeStatus?: boolean; limit?: number; offset?: number } = {},
   ): Promise<readonly OperationalContactEntity[]> {
     return this.contacts.list(filter);
   }

@@ -33,6 +33,9 @@ function toEntity(instance: Model): OperationalContactEntity {
   };
 }
 
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
 export class OperationalContactRepository {
   private readonly model = getOperationalContactsModels().OperationalContact;
 
@@ -102,7 +105,7 @@ export class OperationalContactRepository {
   }
 
   async list(
-    filter: { area?: string; activeStatus?: boolean } = {},
+    filter: { area?: string; activeStatus?: boolean; limit?: number; offset?: number } = {},
   ): Promise<readonly OperationalContactEntity[]> {
     const where: Record<string, unknown> = {};
     if (filter.area) {
@@ -114,17 +117,32 @@ export class OperationalContactRepository {
     // `role`-based ordering (primary before backup) is NOT done here — alphabetically "backup" <
     // "primary", so a naive SQL ORDER BY role would be wrong. The caller (`OperationalContactService`)
     // handles primary-before-backup ordering explicitly; this repository only orders by priority.
+    // Same 50-default/200-max bound as every other list query in this Phase 1E slate
+    // (jobs/notifications/system-events) — this query previously had no LIMIT/pagination cap at
+    // all (docs/security/threat-model-phase-1e-operational-infrastructure.md's Denial of Service
+    // finding).
+    const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
     const rows = await this.model.findAll({
       where,
       order: [["escalationPriority", "ASC"]],
+      limit,
+      offset: filter.offset ?? 0,
     });
     return rows.map(toEntity);
   }
 
+  /**
+   * Deliberately NOT caller-paginated — `resolveEscalationChain` needs the FULL currently-active
+   * set for a single area to resolve correctly, so a default page size would silently drop real
+   * contacts. `MAX_LIST_LIMIT` here is only a hard safety ceiling against unbounded growth (the
+   * same Denial of Service finding `list()` above addresses), not a real pagination boundary —
+   * far larger than any plausible number of contacts configured for one area.
+   */
   async findActiveForArea(area: string): Promise<readonly OperationalContactEntity[]> {
     const rows = await this.model.findAll({
       where: { area, activeStatus: true },
       order: [["escalationPriority", "ASC"]],
+      limit: MAX_LIST_LIMIT,
     });
     return rows.map(toEntity);
   }
