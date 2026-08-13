@@ -86,6 +86,7 @@ export class NotificationService {
       entityId: notification.id,
       action: "create",
       reason: `notificationType:${input.notificationType} severity:${input.severity}`,
+      correlationId: input.correlationId ?? null,
       retentionCategory: "audit-7y",
     });
     return notification;
