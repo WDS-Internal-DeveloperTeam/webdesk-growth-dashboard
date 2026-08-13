@@ -25,19 +25,24 @@ describe("Phase 1E audit foundation (real disposable database)", () => {
     await closeConnection();
   });
 
-  async function createEvent() {
+  async function createEvent(overrides: Partial<Parameters<typeof auditEvents.record>[0]> = {}) {
     const user = await users.create({
       email: `audit-test-${randomUUID()}@webdesksolution.com`,
       displayName: "Audit Test",
     });
     return auditEvents.record({
       eventType: "permission_change",
+      eventCategory: "access_control",
       actorUserId: user.id,
       actorType: "human",
       entityType: "user",
       entityId: user.id,
       action: "role_assigned",
+      sourceApplication: "dashboard-api",
+      environment: "test",
+      confidentialityClassification: "internal",
       retentionCategory: "approval-audit-7y",
+      ...overrides,
     });
   }
 
@@ -55,6 +60,66 @@ describe("Phase 1E audit foundation (real disposable database)", () => {
       const event = await createEvent();
       const found = await auditEvents.findRecentByActor(event.actorUserId!);
       expect(found.map((row) => row.id)).toContain(event.id);
+    });
+
+    it("rejects an unrecognized retention_category, even calling this repository directly — not only via AuditService", async () => {
+      await expect(createEvent({ retentionCategory: "not-a-real-category" })).rejects.toThrow(
+        /Unrecognized audit retention_category/,
+      );
+    });
+  });
+
+  describe("migration 00019 — expanded schema", () => {
+    it("persists event_category, source_application, environment, and confidentiality_classification", async () => {
+      const event = await createEvent({
+        eventCategory: "access_control",
+        sourceApplication: "dashboard-api",
+        environment: "test",
+        confidentialityClassification: "internal",
+      });
+
+      expect(event.eventCategory).toBe("access_control");
+      expect(event.sourceApplication).toBe("dashboard-api");
+      expect(event.environment).toBe("test");
+      expect(event.confidentialityClassification).toBe("internal");
+    });
+
+    it("round-trips session_id, project_id, and correlation_id as null when not provided", async () => {
+      const event = await createEvent();
+
+      expect(event.sessionId).toBeNull();
+      expect(event.projectId).toBeNull();
+      expect(event.correlationId).toBeNull();
+    });
+
+    it("round-trips a real project_id and correlation_id when provided", async () => {
+      const projectId = randomUUID();
+      const correlationId = randomUUID();
+      const event = await createEvent({ projectId, correlationId });
+
+      expect(event.projectId).toBe(projectId);
+      expect(event.correlationId).toBe(correlationId);
+    });
+
+    it("rejects a NULL event_category, source_application, environment, or confidentiality_classification at the database layer", async () => {
+      const user = await users.create({
+        email: `audit-notnull-${randomUUID()}@webdesksolution.com`,
+        displayName: "Audit Not-Null Test",
+      });
+      const sequelize = getConnection();
+
+      await expect(
+        sequelize.query(
+          `INSERT INTO audit_events
+             (id, event_type, actor_user_id, actor_type, entity_type, entity_id, action,
+              source_application, environment, confidentiality_classification, retention_category,
+              created_at)
+           VALUES
+             (:id, 'permission_change', :actorUserId, 'human', 'user', :entityId, 'role_assigned',
+              'dashboard-api', 'test', 'internal', 'approval-audit-7y', now());`,
+          { replacements: { id: randomUUID(), actorUserId: user.id, entityId: user.id } },
+        ),
+      ).rejects.toThrow(/event_category/);
     });
   });
 
@@ -109,11 +174,15 @@ describe("Phase 1E audit foundation (real disposable database)", () => {
       });
       const event = await auditEvents.record({
         eventType: "security_exception",
+        eventCategory: "security",
         actorUserId: user.id,
         actorType: "human",
         entityType: "user",
         entityId: user.id,
         action: "investigation",
+        sourceApplication: "dashboard-api",
+        environment: "test",
+        confidentialityClassification: "internal",
         retentionCategory: "security-log-1y",
         legalHold: true,
         legalHoldReason: "active investigation",
@@ -142,12 +211,16 @@ describe("Phase 1E audit foundation (real disposable database)", () => {
       await expect(
         auditEvents.record({
           eventType: "release",
+          eventCategory: "content_lifecycle",
           actorUserId: user.id,
           actorType: "human",
           entityType: "user",
           entityId: user.id,
           action: "deploy",
           gitCommitSha: "not-a-real-sha",
+          sourceApplication: "dashboard-api",
+          environment: "test",
+          confidentialityClassification: "internal",
           retentionCategory: "audit-7y",
         }),
       ).rejects.toThrow();

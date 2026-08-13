@@ -1,6 +1,9 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import type { AuthorizationActionRepository } from "@webdesk/database";
 import { AUTHORIZATION_ACTION_REPOSITORY } from "../../authz/authz.constants.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
+import { AuditService } from "../../audit/audit.service.js";
+import type { AuditRetentionCategory } from "../../audit/audit.service.js";
 
 /**
  * `knowledge/12-dashboard-security-controls.md` "Separation of duties" /
@@ -29,11 +32,44 @@ export class SeparationOfDutiesService {
   constructor(
     @Inject(AUTHORIZATION_ACTION_REPOSITORY)
     private readonly authorizationActions: AuthorizationActionRepository,
+    private readonly auditService: AuditService,
   ) {}
 
-  /** Throws if `approverId` and `actorId` (the submitter/implementer/target) are the same — never returns a boolean for the caller to accidentally ignore. */
-  assertDistinctActors(approverId: string, actorId: string, context: string): void {
+  /**
+   * Throws if `approverId` and `actorId` (the submitter/implementer/target) are the same — never
+   * returns a boolean for the caller to accidentally ignore.
+   *
+   * On denial, ALWAYS records a `security_exception` audit_events entry itself before throwing —
+   * `RoleAssignmentService.assertNotSelfTargeting` and `RecoveryService.assertNotSelfDeciding`
+   * previously each reimplemented an identical try/catch/audit-record/rethrow wrapper around this
+   * call; centralizing it here means a future caller gets the audit trail automatically instead
+   * of having to remember to wrap it too. `entity` supplies the caller-specific `entityType`/
+   * `entityId`/`retentionCategory` for that audit event; `onDenied`, if given, runs first — for a
+   * caller that also needs its own additional, domain-specific record (e.g.
+   * `RoleAssignmentService`'s `separation_of_duties_denied` `auth_events` entry, a narrower
+   * login-scoped trail this service has no dependency on).
+   */
+  async assertDistinctActors(
+    approverId: string,
+    actorId: string,
+    context: string,
+    entity: { entityType: string; entityId: string; retentionCategory?: AuditRetentionCategory },
+    onDenied?: () => Promise<void>,
+  ): Promise<void> {
     if (approverId === actorId) {
+      if (onDenied) {
+        await onDenied();
+      }
+      await this.auditService.record({
+        eventType: "security_exception",
+        actorUserId: approverId,
+        actorType: "human",
+        entityType: entity.entityType,
+        entityId: entity.entityId,
+        action: "separation_of_duties_denied",
+        reason: `context:${context}`,
+        retentionCategory: entity.retentionCategory ?? "security-log-1y",
+      });
       throw new ForbiddenException(
         `Separation of duties: the ${context} cannot also approve their own submission.`,
       );
