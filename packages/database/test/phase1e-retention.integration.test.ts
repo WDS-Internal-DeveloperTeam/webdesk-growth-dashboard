@@ -169,5 +169,22 @@ describe("Phase 1E retention architecture (real disposable database)", () => {
       const final = await holds.findById(hold.id);
       expect(final?.status).toBe("released");
     });
+
+    it("listAll() respects a caller-supplied limit — previously this query had no cap at all", async () => {
+      const user = await createUser();
+      for (let i = 0; i < 3; i += 1) {
+        await holds.create({
+          scope: "entity",
+          resourceType: "jobs",
+          resourceId: randomUUID(),
+          reasonCategory: "legal",
+          reason: `pagination test ${i}`,
+          createdByUserId: user.id,
+        });
+      }
+
+      const limited = await holds.listAll({ limit: 2 });
+      expect(limited.length).toBeLessThanOrEqual(2);
+    });
   });
 });

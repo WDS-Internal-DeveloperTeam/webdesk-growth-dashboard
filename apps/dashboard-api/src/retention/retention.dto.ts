@@ -41,5 +41,11 @@ export type CheckEligibilityDto = z.infer<typeof checkEligibilitySchema>;
 
 export const listHoldsQuerySchema = z.object({
   status: z.enum(["active", "released"]).optional(),
+  // Same bound as every other list endpoint in this Phase 1E slate (jobs/notifications/
+  // system-events/operational-contacts) — this query previously had no LIMIT/pagination cap at
+  // all (docs/security/threat-model-phase-1e-operational-infrastructure.md's Denial of Service
+  // finding).
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 export type ListHoldsQueryDto = z.infer<typeof listHoldsQuerySchema>;

@@ -25,6 +25,9 @@ function toEntity(instance: Model): RetentionHoldEntity {
   };
 }
 
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
 export class RetentionHoldRepository {
   private readonly model = getRetentionModels().RetentionHold;
 
@@ -77,13 +80,24 @@ export class RetentionHoldRepository {
   }
 
   async listAll(
-    filter: { status?: RetentionHoldEntity["status"] } = {},
+    filter: { status?: RetentionHoldEntity["status"]; limit?: number; offset?: number } = {},
   ): Promise<readonly RetentionHoldEntity[]> {
     const where: Record<string, unknown> = {};
     if (filter.status) {
       where.status = filter.status;
     }
-    const rows = await this.model.findAll({ where, order: [["createdAt", "DESC"]] });
+    // Same 50-default/200-max bound as every other list query in this Phase 1E slate
+    // (jobs/notifications/system-events/operational-contacts) — this query previously had no
+    // LIMIT/pagination cap at all
+    // (docs/security/threat-model-phase-1e-operational-infrastructure.md's Denial of Service
+    // finding).
+    const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+    const rows = await this.model.findAll({
+      where,
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset: filter.offset ?? 0,
+    });
     return rows.map(toEntity);
   }
 

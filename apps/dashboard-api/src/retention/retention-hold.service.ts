@@ -119,7 +119,7 @@ export class RetentionHoldService {
   }
 
   async listHolds(
-    filter: { status?: RetentionHoldEntity["status"] } = {},
+    filter: { status?: RetentionHoldEntity["status"]; limit?: number; offset?: number } = {},
   ): Promise<readonly RetentionHoldEntity[]> {
     return this.holds.listAll(filter);
   }
