@@ -84,4 +84,60 @@ describe("RetentionCleanupService", () => {
       }),
     );
   });
+
+  it("names exactly which records were deleted in the audit event, not just aggregate counts", async () => {
+    eligibility.evaluate.mockResolvedValue(decision({ eligible: true }));
+    const deleter: RetentionRecordDeleter = { softDelete: vi.fn() };
+
+    await service.run([CANDIDATE], "execute", "actor-1", deleter);
+
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        afterState: expect.objectContaining({
+          deletedRecords: [
+            {
+              categoryKey: CANDIDATE.categoryKey,
+              resourceType: CANDIDATE.resourceType,
+              resourceId: CANDIDATE.resourceId,
+            },
+          ],
+        }),
+      }),
+    );
+  });
+
+  it("still records an audit event for the deletions that already happened, even if a later candidate's deletion throws", async () => {
+    eligibility.evaluate.mockResolvedValue(decision({ eligible: true }));
+    const deleter: RetentionRecordDeleter = {
+      softDelete: vi
+        .fn()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error("deletion backend unavailable")),
+    };
+
+    await expect(
+      service.run(
+        [CANDIDATE, { ...CANDIDATE, resourceId: "job-2" }],
+        "execute",
+        "actor-1",
+        deleter,
+      ),
+    ).rejects.toThrow(/deletion backend unavailable/);
+
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        afterState: expect.objectContaining({
+          evaluated: 1,
+          deleted: 1,
+          deletedRecords: [
+            {
+              categoryKey: CANDIDATE.categoryKey,
+              resourceType: CANDIDATE.resourceType,
+              resourceId: CANDIDATE.resourceId,
+            },
+          ],
+        }),
+      }),
+    );
+  });
 });

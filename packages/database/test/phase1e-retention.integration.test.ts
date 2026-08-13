@@ -131,5 +131,43 @@ describe("Phase 1E retention architecture (real disposable database)", () => {
         ),
       ).rejects.toThrow(/retention_holds_scope_shape/);
     });
+
+    it("rejects a hybrid row carrying both entity fields and a category_key at the database layer", async () => {
+      const user = await createUser();
+      const sequelize = getConnection();
+      await expect(
+        sequelize.query(
+          `INSERT INTO retention_holds
+             (id, scope, resource_type, resource_id, category_key, reason_category, reason,
+              created_by_user_id, status, start_date, created_at, updated_at)
+           VALUES (:id, 'entity', 'jobs', :resourceId, 'job-failed-120d', 'legal', 'x',
+                   :userId, 'active', now(), now(), now());`,
+          { replacements: { id: randomUUID(), resourceId: randomUUID(), userId: user.id } },
+        ),
+      ).rejects.toThrow(/retention_holds_scope_shape/);
+    });
+
+    it("lets only one of two concurrent release attempts on the same hold win", async () => {
+      const user = await createUser();
+      const hold = await holds.create({
+        scope: "entity",
+        resourceType: "jobs",
+        resourceId: randomUUID(),
+        reasonCategory: "legal",
+        reason: "litigation hold",
+        createdByUserId: user.id,
+      });
+
+      const [first, second] = await Promise.all([
+        holds.release(hold.id, { releaseReason: "first release", releasedByUserId: user.id }),
+        holds.release(hold.id, { releaseReason: "second release", releasedByUserId: user.id }),
+      ]);
+
+      const winners = [first, second].filter((result) => result !== null);
+      expect(winners).toHaveLength(1);
+
+      const final = await holds.findById(hold.id);
+      expect(final?.status).toBe("released");
+    });
   });
 });

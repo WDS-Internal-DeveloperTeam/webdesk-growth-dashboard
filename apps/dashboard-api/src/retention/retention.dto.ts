@@ -16,6 +16,12 @@ export const createHoldSchema = z
   })
   .refine((value) => value.scope !== "category" || value.categoryKey, {
     message: "A category-scoped hold requires categoryKey",
+  })
+  .refine((value) => value.scope !== "entity" || !value.categoryKey, {
+    message: "An entity-scoped hold must not also carry a categoryKey",
+  })
+  .refine((value) => value.scope !== "category" || (!value.resourceType && !value.resourceId), {
+    message: "A category-scoped hold must not also carry resourceType/resourceId",
   });
 export type CreateHoldDto = z.infer<typeof createHoldSchema>;
 

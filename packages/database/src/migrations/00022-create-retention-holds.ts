@@ -99,11 +99,16 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
     },
   });
 
+  // Each branch also requires the OTHER scope's fields to be NULL — without that, a row could
+  // satisfy the 'entity' branch (resource_type/resource_id set) while ALSO carrying a category_key,
+  // a "hybrid" row neither branch alone rejects. Such a row would be picked up by
+  // `findActiveForCategory` even though it was created as an entity-scoped hold, silently
+  // widening which resources a category-scoped hold suspends deletion for.
   await context.sequelize.query(
     `ALTER TABLE retention_holds
        ADD CONSTRAINT retention_holds_scope_shape CHECK (
-         (scope = 'entity' AND resource_type IS NOT NULL AND resource_id IS NOT NULL)
-         OR (scope = 'category' AND category_key IS NOT NULL)
+         (scope = 'entity' AND resource_type IS NOT NULL AND resource_id IS NOT NULL AND category_key IS NULL)
+         OR (scope = 'category' AND category_key IS NOT NULL AND resource_type IS NULL AND resource_id IS NULL)
        );`,
   );
 

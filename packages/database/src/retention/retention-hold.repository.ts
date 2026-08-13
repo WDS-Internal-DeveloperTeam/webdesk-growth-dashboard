@@ -87,21 +87,36 @@ export class RetentionHoldRepository {
     return rows.map(toEntity);
   }
 
-  /** Requires a release reason — enforced here, not just at the service layer, so "silently release a hold" (§21) has no code path even for a future direct caller of this repository. */
+  /**
+   * Requires a release reason — enforced here, not just at the service layer, so "silently
+   * release a hold" (§21) has no code path even for a future direct caller of this repository.
+   *
+   * The update is conditional on `status = 'active'` (`WHERE id = :id AND status = 'active'`),
+   * not a plain `findByPk` + `.update()` — the service layer reads the hold's status to decide
+   * this release is valid, and without pinning that same status in the `WHERE` clause, two
+   * concurrent `releaseHold` calls on the same hold could both pass that precondition check and
+   * both "win", double-recording the release and letting the second call's reason silently
+   * overwrite the first's. Returns `null` when the row doesn't exist OR when the conditional
+   * update matched zero rows (already released under the caller) — `RetentionHoldService`
+   * distinguishes the two by having already fetched the row itself before calling `release`.
+   */
   async release(
     id: string,
     input: { releaseReason: string; releasedByUserId: string },
   ): Promise<RetentionHoldEntity | null> {
-    const instance = await this.model.findByPk(id);
-    if (!instance) {
+    const [affectedCount] = await this.model.update(
+      {
+        status: "released",
+        releaseReason: input.releaseReason,
+        releasedByUserId: input.releasedByUserId,
+        releasedAt: new Date(),
+      },
+      { where: { id, status: "active" } },
+    );
+    if (affectedCount === 0) {
       return null;
     }
-    await instance.update({
-      status: "released",
-      releaseReason: input.releaseReason,
-      releasedByUserId: input.releasedByUserId,
-      releasedAt: new Date(),
-    });
-    return toEntity(instance);
+    const instance = await this.model.findByPk(id);
+    return instance ? toEntity(instance) : null;
   }
 }

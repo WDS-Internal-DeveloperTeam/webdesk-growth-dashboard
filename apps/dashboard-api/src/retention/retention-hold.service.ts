@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import type {
   RetentionHoldEntity,
   RetentionHoldRepository,
@@ -35,13 +41,25 @@ export class RetentionHoldService {
   ) {}
 
   async createHold(input: CreateHoldInput): Promise<RetentionHoldEntity> {
-    if (input.scope === "entity" && (!input.resourceType || !input.resourceId)) {
-      throw new BadRequestException(
-        "An entity-scoped hold requires both resourceType and resourceId",
-      );
+    if (input.scope === "entity") {
+      if (!input.resourceType || !input.resourceId) {
+        throw new BadRequestException(
+          "An entity-scoped hold requires both resourceType and resourceId",
+        );
+      }
+      if (input.categoryKey) {
+        throw new BadRequestException("An entity-scoped hold must not also carry a categoryKey");
+      }
     }
-    if (input.scope === "category" && !input.categoryKey) {
-      throw new BadRequestException("A category-scoped hold requires categoryKey");
+    if (input.scope === "category") {
+      if (!input.categoryKey) {
+        throw new BadRequestException("A category-scoped hold requires categoryKey");
+      }
+      if (input.resourceType || input.resourceId) {
+        throw new BadRequestException(
+          "A category-scoped hold must not also carry resourceType/resourceId",
+        );
+      }
     }
 
     const hold = await this.holds.create(input);
@@ -78,7 +96,12 @@ export class RetentionHoldService {
 
     const released = await this.holds.release(id, input);
     if (!released) {
-      throw new NotFoundException(`Retention hold not found: ${id}`);
+      // `existing` was confirmed present and active moments ago, so a `null` here means the
+      // repository's conditional update matched zero rows — a concurrent `releaseHold` call on
+      // this same hold won the race, not that the row is missing.
+      throw new ConflictException(
+        `Retention hold ${id} was already released by a concurrent request`,
+      );
     }
 
     await this.auditService.record({

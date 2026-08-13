@@ -61,35 +61,53 @@ export class RetentionCleanupService {
     }
 
     const results: CleanupCandidateResult[] = [];
-    for (const candidate of candidates) {
-      const decision = await this.eligibility.evaluate(candidate);
-      let deleted = false;
-      if (mode === "execute" && decision.eligible) {
-        await deleter!.softDelete(candidate);
-        deleted = true;
+    // The audit record is emitted from `finally`, not after the loop: if `deleter.softDelete`
+    // throws partway through, every candidate already pushed to `results` (i.e. already deleted)
+    // must still be audited — an aggregate event recorded only on the happy path would leave a
+    // real deletion with no audit trail at all whenever a later candidate in the same run fails.
+    try {
+      for (const candidate of candidates) {
+        const decision = await this.eligibility.evaluate(candidate);
+        let deleted = false;
+        if (mode === "execute" && decision.eligible) {
+          await deleter!.softDelete(candidate);
+          deleted = true;
+        }
+        results.push({ candidate, decision, deleted });
       }
-      results.push({ candidate, decision, deleted });
+    } finally {
+      const eligible = results.filter((result) => result.decision.eligible).length;
+      const deletedCount = results.filter((result) => result.deleted).length;
+
+      await this.auditService.record({
+        eventType: "retention_run",
+        actorUserId: executedByUserId,
+        actorType: "human",
+        entityType: "retention_run",
+        entityId: randomUUID(),
+        action: mode,
+        afterState: {
+          mode,
+          evaluated: results.length,
+          eligible,
+          ineligible: results.length - eligible,
+          deleted: deletedCount,
+          // Names exactly which records this run deleted — the aggregate counts alone can't
+          // answer "which rows" if this audit trail is ever consulted after the fact.
+          deletedRecords: results
+            .filter((result) => result.deleted)
+            .map((result) => ({
+              categoryKey: result.candidate.categoryKey,
+              resourceType: result.candidate.resourceType,
+              resourceId: result.candidate.resourceId,
+            })),
+        },
+        retentionCategory: "audit-7y",
+      });
     }
 
     const eligible = results.filter((result) => result.decision.eligible).length;
     const deletedCount = results.filter((result) => result.deleted).length;
-
-    await this.auditService.record({
-      eventType: "retention_run",
-      actorUserId: executedByUserId,
-      actorType: "human",
-      entityType: "retention_run",
-      entityId: randomUUID(),
-      action: mode,
-      afterState: {
-        mode,
-        evaluated: results.length,
-        eligible,
-        ineligible: results.length - eligible,
-        deleted: deletedCount,
-      },
-      retentionCategory: "audit-7y",
-    });
 
     return {
       mode,

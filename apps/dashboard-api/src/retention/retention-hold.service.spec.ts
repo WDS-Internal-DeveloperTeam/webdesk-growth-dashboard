@@ -94,6 +94,36 @@ describe("RetentionHoldService", () => {
       ).rejects.toThrow(/requires categoryKey/);
       expect(holds.create).not.toHaveBeenCalled();
     });
+
+    it("rejects an entity-scoped hold that also carries a categoryKey", async () => {
+      await expect(
+        service.createHold({
+          scope: "entity",
+          resourceType: "jobs",
+          resourceId: "job-1",
+          categoryKey: "job-failed-120d",
+          reasonCategory: "legal",
+          reason: "x",
+          createdByUserId: "actor-1",
+        }),
+      ).rejects.toThrow(/must not also carry a categoryKey/);
+      expect(holds.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects a category-scoped hold that also carries resourceType/resourceId", async () => {
+      await expect(
+        service.createHold({
+          scope: "category",
+          categoryKey: "job-failed-120d",
+          resourceType: "jobs",
+          resourceId: "job-1",
+          reasonCategory: "legal",
+          reason: "x",
+          createdByUserId: "actor-1",
+        }),
+      ).rejects.toThrow(/must not also carry resourceType\/resourceId/);
+      expect(holds.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("releaseHold", () => {
@@ -141,6 +171,15 @@ describe("RetentionHoldService", () => {
         service.releaseHold("hold-1", { releaseReason: "x", releasedByUserId: "actor-2" }),
       ).rejects.toThrow(/already released/);
       expect(holds.release).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a conflict, not an unhandled error, when a concurrent release already won the same hold", async () => {
+      holds.findById.mockResolvedValue(activeHold());
+      holds.release.mockResolvedValue(null);
+
+      await expect(
+        service.releaseHold("hold-1", { releaseReason: "x", releasedByUserId: "actor-2" }),
+      ).rejects.toThrow(/already released by a concurrent request/);
     });
   });
 });
