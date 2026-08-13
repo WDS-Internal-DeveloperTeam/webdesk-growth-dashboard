@@ -277,8 +277,29 @@ Four additional slices were built under a later, more detailed Phase 1E authoriz
 supersedes this plan's original Task-by-Task granularity for the remaining operational-
 infrastructure scope: notification-record foundation (PR #15), retention architecture (PR #16),
 operational contacts (PR #17), system events/health (PR #18) — **all merged to `main`**, CI-green,
-code-reviewed and security-reviewed. Every code-review finding has been fixed; of the 10
-security-review findings, 5 are fixed and 5 remain open as policy questions pending human decision
-— see `docs/project-state/phase-1e-validation-report.md`. See each slice's own
-`docs/task-packages/phase-1e-*.md` and `docs/implementation/phase-1e-*.md` for the actual scope,
-which is broader than this original plan's Task 7/9 entries anticipated.
+code-reviewed and security-reviewed. See each slice's own `docs/task-packages/phase-1e-*.md` and
+`docs/implementation/phase-1e-*.md` for the actual scope, which is broader than this original
+plan's Task 7/9 entries anticipated.
+
+**Update 2026-08-13 — Phase 1E fully closed.** All 23 code-review findings fixed and re-validated.
+Of the 10 security-review findings, the user decided each of the 5 genuine policy questions
+individually: 8 of 10 total findings fixed, 2 accepted as tracked technical debt by explicit
+decision (retention-hold approver verification, `projectId` query-filter scoping — both latent,
+zero-seeded grants). The required second-role security review is complete (Jitesh D, "Approved
+as-is", 2026-08-13) and **the Phase 1E gate (G4-1E) is approved** (WebDesk Solution, CONFIRM,
+approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70`) — see
+`docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section and `project.json`'s
+`gates[]`. Phase 1E is closed.
+
+## Addendum — Phase 1F kickoff (2026-08-13)
+
+A detailed Phase 1F authorization brief (application shell, canonical 43-module registry,
+permission-aware navigation, shared UI states, observability, CI/staging foundation, module
+implementation roadmap — explicitly not the 43 modules' business functionality) supersedes this
+plan's original Tasks 10 ("Basic dashboard shell"), 11 ("Health checks and observability"), 12
+("CI validation"), and 13 ("Staging deployment foundation"), and narrows Task 8 ("Project and user
+foundations") to a minimal project-context read/validation slice only — no full Projects/Users
+CRUD. See `docs/task-packages/phase-1f-application-shell.md`'s "Conflict recorded" section for the
+full reasoning, matching the same supersession pattern already established above for Tasks 7/9.
+Pre-implementation verification found no blocking gap; work is underway on branch
+`phase-1f-application-shell`.
