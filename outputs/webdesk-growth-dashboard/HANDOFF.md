@@ -2,45 +2,44 @@
 
 - **Session ended:** 2026-08-13 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, and **all six slices are now merged to `main`** (PRs #11, #13–#18, plus two fix PRs #20/#21). Independent code review found real findings across all six slices — **every one has been fixed and re-validated**. A self-authored security review (STRIDE pass) found 10 gaps; the user went through all 5 genuine policy questions one by one — combined with the 5 non-policy gaps already fixed, **8 of 10 are now fixed, 2 accepted as tracked technical debt** by explicit decision. The 3 additional fixes exist as real commits on branch `fix-phase1e-security-review-policy-decisions`, validated fresh, **not yet pushed/PR'd/merged**. Neither review has had its required second-role human sign-off yet.
+- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, and **all six slices are now merged to `main`** (PRs #11, #13–#18, plus three fix PRs #20/#21/#22). Independent code review found real findings across all six slices — **every one has been fixed and re-validated**. A self-authored security review (STRIDE pass) found 10 gaps; the user went through all 5 genuine policy questions one by one — **8 of 10 findings are now fixed, 2 accepted as tracked technical debt** by explicit decision. **The required second-role security review is now complete** — Jitesh D reviewed the full disposition and the 3 new fixes' diffs, decision **Approved as-is**, 2026-08-13, no disputes. Only a Phase 1E gate decision remains.
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. **All six are merged to `main`**: audit foundation (PR #11), audit schema-expansion (PR #13), job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), system events/health (PR #18) — plus two fix PRs (#20, #21) for findings surfaced during merge reconciliation. Every code-review finding is fixed. Of the 10 security-review findings: 8 fixed (5 in the original pass, 3 more — notification recipient existence, contacts confidential-field gating, manual-retry `maxAttempts` — on branch `fix-phase1e-security-review-policy-decisions`, not yet merged), 2 accepted as tracked debt by explicit decision (retention-hold approver verification, `projectId` query-filter scoping). Neither review has a second-role human sign-off yet — that, plus merging the 3-fixes branch, are what stand between here and a Phase 1E gate. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
+- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. **All six are merged to `main`**: audit foundation (PR #11), audit schema-expansion (PR #13), job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), system events/health (PR #18) — plus three fix PRs (#20, #21, #22) for findings surfaced during merge reconciliation and the security review. Every code-review finding is fixed; 8 of 10 security-review findings are fixed, 2 accepted as tracked debt by explicit decision (retention-hold approver verification, `projectId` query-filter scoping). **The second-role security review is complete** (Jitesh D, Approved as-is, 2026-08-13) — see `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section. Only the Phase 1E gate decision itself remains before Phase 1F work can begin. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
 - **Current gate:** G4-1D-EXP (Phase 1D-expanded, passed 2026-08-11, clean CONFIRM) is still the last _approved_ gate — no Phase 1E gate has been requested or approved yet. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
 
-> **Phase 1E status as of 2026-08-13 (updated twice):** all six architecture slices are built,
-> CI-green, and **now merged to `main`** — audit foundation (PR #11), audit schema-expansion
+> **Phase 1E status as of 2026-08-13 (updated three times):** all six architecture slices are
+> built, CI-green, and **now merged to `main`** — audit foundation (PR #11), audit schema-expansion
 > (PR #13), job architecture (PR #14), notification foundation (PR #15), retention architecture
-> (PR #16), operational contacts (PR #17), system events/health (PR #18). Two fix PRs (#20, #21)
-> closing findings surfaced during merge reconciliation are also merged. Every independent-code-review
-> finding across all six slices has been fixed and re-validated. The user then went through all 5
+> (PR #16), operational contacts (PR #17), system events/health (PR #18). Three fix PRs (#20, #21,
+> #22) closing findings surfaced during merge reconciliation and the security-review pass are also
+> merged — `main`'s HEAD is `6ae8a36116f70ed0f4d429af12774e05b2092e70`. Every independent-code-review
+> finding across all six slices has been fixed and re-validated. The user went through all 5
 > security-review policy questions one by one, explicitly deciding each: notification recipient
 > existence checks, contact-PII confidential gating, and `JobRetryService.manualRetry()`'s
-> `maxAttempts` cap were decided "fix now" and are fixed on branch
-> `fix-phase1e-security-review-policy-decisions` (commits `df07eb8`, `f632e96`, `a6305c1`) —
-> validated fresh (279 unit / 108 db-integration / 72 e2e, all passing) but **not yet pushed, not
-> yet a PR, not yet merged**. Retention-hold approver verification and the latent `projectId`
-> query-filter scoping issue were decided "accept as tracked debt." **Final disposition: 8 of 10
-> security findings fixed, 2 accepted as debt** — see `docs/project-state/phase-1e-validation-report.md`
-> for the full consolidated record and `docs/project-state/phase-1e-approval-checklist.md` for
-> what's still outstanding before any gate can be requested. **Neither review has had its required
-> second-role human sign-off yet** — that, plus pushing/merging the 3-fixes branch, are what remain
-> before a Phase 1E gate.
+> `maxAttempts` cap were decided "fix now" (commits `df07eb8`, `f632e96`, `a6305c1`, merged via
+> PR #22). Retention-hold approver verification and the latent `projectId` query-filter scoping
+> issue were decided "accept as tracked debt." **Final disposition: 8 of 10 security findings
+> fixed, 2 accepted as debt.** **The required second-role security review is now complete** —
+> Jitesh D reviewed the full code-review disposition, the full security-review disposition, and
+> the 3 new fixes' own diffs, decision **Approved as-is**, 2026-08-13, no disputes raised. See
+> `docs/project-state/phase-1e-validation-report.md` for the full consolidated record and
+> `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section for the recorded review
+> decision. **Only the Phase 1E gate decision itself remains** — not yet requested.
 
 ## Phase 1E — this session's actual current state (supersedes the Phase 1D sections below for "next tasks"/"blockers"/"session links" purposes)
 
 **Next tasks (queued):**
 
-1. Push branch `fix-phase1e-security-review-policy-decisions`, open a PR, and get a separate merge
-   authorization — same pattern as every other Phase 1E branch.
-2. Second-role human review of `docs/project-state/phase-1e-validation-report.md` §3/§4 and
-   `docs/security/threat-model-phase-1e-operational-infrastructure.md`, per ADR-0010's
-   separation-of-duties principle (same pattern every prior phase's threat-model doc required) —
-   covering both the original findings and the 3 new fixes.
-3. A Phase 1E gate decision, once the above two are done — `docs/project-state/phase-1e-approval-checklist.md`
-   records the sign-off table, currently unsigned.
+1. ~~Push branch `fix-phase1e-security-review-policy-decisions`, open a PR, and get a separate
+   merge authorization~~ — **done**, merged via PR #22.
+2. ~~Second-role human review~~ — **done**. Jitesh D, Approved as-is, 2026-08-13, per
+   `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section.
+3. A Phase 1E gate decision — not yet requested. Once granted, Phase 1F (application shell,
+   canonical module registry, navigation, CI/staging foundation) can begin, per the authorization
+   brief's own scope.
 
 **Client blockers (waiting on):** same as before Phase 1E work began — the real emergency-
 administrator account list, the WordPress Application Password account (production/development),
@@ -57,6 +56,7 @@ real timezone confirmation. None of Phase 1E's own deliverables are blocked on t
 - [PR #18](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/18) system events & health — **merged**
 - [PR #20](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/20) fix: migration 00019 immutability-trigger bug — **merged**
 - [PR #21](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/21) fix: SoD-audit / retention-category validation — **merged**
+- [PR #22](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/22) fix: 3 security-review policy findings (notification recipients, contacts PII gating, manual-retry cap) — **merged**
 
 ## Phase 1D (prior phase) — historical record, unchanged below
 

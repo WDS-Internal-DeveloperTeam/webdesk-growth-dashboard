@@ -1,16 +1,18 @@
 # Threat Model — Phase 1E Operational Infrastructure
 
-**Status:** Draft STRIDE pass, authored by the same agent that implemented these slices — per
-`docs/security/threat-model-plan.md`'s procedure and ADR-0010's separation-of-duties principle,
-this requires review by a second, human role before any of the covered branches are considered
-ready for a QA gate. **That review has not yet happened** — this document is a self-review only.
+**Status:** Originally a self-review only, authored by the same agent that implemented these
+slices — per `docs/security/threat-model-plan.md`'s procedure and ADR-0010's separation-of-duties
+principle, this required review by a second, human role. **That review is now complete**: Jitesh D
+reviewed the full findings disposition below (8 of 10 fixed, 2 accepted as tracked debt) and the 3
+newest fixes' own diffs — decision **Approved as-is**, 2026-08-13, no disputes raised. See
+`docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section for the recorded decision.
 
 Covers all six Phase 1E architecture slices as a single pass, since they share one RBAC pattern
 (reuse `system_settings`, zero-seeded new actions) and one audit-emission mechanism. **Update
-2026-08-13: all six slices are now merged to `main`** (PRs #11, #13–#18) — see
-`docs/project-state/phase-1e-validation-report.md` §1 for exact merge commits. This document's
-own findings (below) are otherwise unchanged from the original self-review; the "Summary of
-accepted gaps" section records which have since been fixed.
+2026-08-13: all six slices are now merged to `main`**, along with the 3 additional fixes via
+PR #22 (`main`'s HEAD is `6ae8a36`) — see `docs/project-state/phase-1e-validation-report.md` §1
+for exact merge commits. This document's own findings (below) are otherwise unchanged from the
+original self-review; the "Summary of accepted gaps" section records which have since been fixed.
 
 ## Out of scope for this pass
 

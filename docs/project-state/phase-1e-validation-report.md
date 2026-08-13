@@ -137,12 +137,14 @@ recorded.
 ## 6. What remains before a Phase 1E gate can be requested
 
 - The 3 additional fixes (§4) exist as real commits on branch
-  `fix-phase1e-security-review-policy-decisions` — validated fresh (§2), but **not yet pushed,
-  not yet a PR, not yet merged to `main`.** That's a separate, explicit "push and open a PR" step,
-  then its own separate merge authorization, same pattern as every other Phase 1E branch.
-- Second-role human review of the code-review findings (§3, closed), the security-review findings
-  (§4, now 8 fixed / 2 accepted as debt), and the 3 new fixes' own diffs — none of these has had
-  one yet.
-- `docs/project-state/phase-1e-approval-checklist.md` records the sign-off table itself —
-  currently unsigned; recording the approved SHA there is a separate, explicit human step, not
-  something this document does on its own.
+  `fix-phase1e-security-review-policy-decisions` — merged via
+  [PR #22](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/22),
+  `main`'s HEAD is now `6ae8a36116f70ed0f4d429af12774e05b2092e70`.
+- ~~Second-role human review~~ — **complete**. Jitesh D reviewed the full code-review disposition
+  (§3), the full security-review disposition (§4, 8 fixed / 2 accepted as debt), and the 3 new
+  fixes' own diffs — decision: **Approved as-is**, 2026-08-13, no disputes raised. See
+  `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section.
+- A Phase 1E gate decision has **not** been requested. `docs/project-state/phase-1e-approval-checklist.md`
+  records the sign-off table for the review, but the gate decision itself — including recording
+  the specific approved SHA — remains a separate, explicit human step this document does not take
+  on its own.
