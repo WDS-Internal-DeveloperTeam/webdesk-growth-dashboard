@@ -1,8 +1,8 @@
 /**
  * The system-activity and system-health models (Phase 1E system-events-
  * health brief §24/§25) — persistence-layer shapes for `system_events`
- * (migration `00019`), `system_components` (migrations `00020`/`00021`),
- * and `system_health_checks` (migration `00022`). See
+ * (migration `00020`), `system_components` (migrations `00021`/`00022`),
+ * and `system_health_checks` (migration `00023`). See
  * `docs/task-packages/phase-1e-system-events-health.md`.
  */
 

@@ -7,21 +7,21 @@ foundation, system-health foundation) plus the relevant portions of §26/§28/§
 
 ## Schema
 
-Three new tables, migrations `00019`–`00022`:
+Three new tables, migrations `00020`–`00023`:
 
-- **`system_events`** (`00019`) — the user-facing activity feed. `event_type` (STRING(64), open
+- **`system_events`** (`00020`) — the user-facing activity feed. `event_type` (STRING(64), open
   vocabulary), `category`, `severity` (nullable ENUM `critical`/`high`/`medium`/`low`, same
   vocabulary as `incident_severity_policies`), `source_application`, polymorphic
   `related_entity_type`/`related_entity_id` (unconstrained, same reasoning as
   `audit_events.entity_id`), `correlation_id`, `message` (required), `metadata` (JSONB), and
   `related_audit_event_id` — a **real** nullable FK → `audit_events.id`, `ON DELETE SET NULL`.
   Append-only (`created_at` only, no `updated_at`).
-- **`system_components`** (`00020`) — a small catalog table: `key` (unique STRING(64)),
+- **`system_components`** (`00021`) — a small catalog table: `key` (unique STRING(64)),
   `display_name`, `description`. Seeded, not application-writable.
-- **`system_components` seed** (`00021`) — exactly the 10 approved subsystems from brief §25:
+- **`system_components` seed** (`00022`) — exactly the 10 approved subsystems from brief §25:
   `api`, `database`, `background_execution`, `notification_delivery`, `integrations`, `storage`,
   `github`, `wordpress`, `email`, `queue_workflow_systems`.
-- **`system_health_checks`** (`00022`) — append-only status-observation history. `component_key`
+- **`system_health_checks`** (`00023`) — append-only status-observation history. `component_key`
   (FK → `system_components.key`, `ON DELETE RESTRICT` — a component in active use can't be
   silently dropped out from under its history), `status` (ENUM
   `unknown`/`healthy`/`degraded`/`unavailable`/`not_configured`), `detail`, `checked_by_user_id`
@@ -127,7 +127,7 @@ this project's own standing artifact-leakage caution):
 - `pnpm lint` — clean, all 9 packages.
 - `pnpm format` — clean (9 files auto-fixed via `format:write`, all whitespace/style only,
   verified no content change).
-- `packages/database` unit + integration: migration `00019`–`00022` up/down round-trip clean;
+- `packages/database` unit + integration: migration `00020`–`00023` up/down round-trip clean;
   60/60 integration tests (12 new).
 - `apps/dashboard-api` unit: 158/158 (9 new).
 - `apps/dashboard-api` integration (e2e): 50/50 (11 new).

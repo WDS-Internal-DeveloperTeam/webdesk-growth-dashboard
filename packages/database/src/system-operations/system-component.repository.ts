@@ -14,7 +14,7 @@ function toEntity(instance: Model): SystemComponentEntity {
   };
 }
 
-/** Read-only from the application's perspective — the 10 approved components are seeded by migration `00021`, not created via this repository. */
+/** Read-only from the application's perspective — the 10 approved components are seeded by migration `00022`, not created via this repository. */
 export class SystemComponentRepository {
   private readonly model = getSystemOperationsModels().SystemComponent;
 

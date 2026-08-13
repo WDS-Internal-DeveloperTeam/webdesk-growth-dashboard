@@ -24,7 +24,7 @@ const SEEDED_COMPONENT_KEYS = [
 ];
 
 /**
- * Exercises the system-events-health schema (migrations 00019-00022)
+ * Exercises the system-events-health schema (migrations 00020-00023)
  * against a REAL, disposable PostgreSQL database — the seeded component
  * catalog, the append-only health-check history, and the FK constraints
  * (system_health_checks.component_key RESTRICT, checked_by_user_id SET
@@ -147,11 +147,15 @@ describe("Phase 1E system events & health (real disposable database)", () => {
       });
       const auditEvent = await auditEvents.record({
         eventType: "security_exception",
+        eventCategory: "security",
         actorUserId: user.id,
         actorType: "human",
         entityType: "system_component",
         entityId: "api",
         action: "record_check",
+        sourceApplication: "dashboard-api",
+        environment: "test",
+        confidentialityClassification: "internal",
         retentionCategory: "security-log-1y",
       });
 
