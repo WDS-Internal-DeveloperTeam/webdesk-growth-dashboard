@@ -30,6 +30,12 @@ export class JobRetryService {
     if (job.status !== "failed") {
       return { eligible: false, reason: `job is in status "${job.status}", not "failed"` };
     }
+    if (job.attemptCount >= job.maxAttempts) {
+      return {
+        eligible: false,
+        reason: `attemptCount ${job.attemptCount} has reached maxAttempts ${job.maxAttempts}`,
+      };
+    }
     return { eligible: true, reason: null };
   }
 

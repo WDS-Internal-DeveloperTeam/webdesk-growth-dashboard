@@ -71,6 +71,33 @@ describe("JobRetryService", () => {
       const result = await service.checkEligibility("job-1");
       expect(result).toEqual({ eligible: false, reason: "job_not_found" });
     });
+
+    it("is not eligible when attemptCount has already reached maxAttempts", async () => {
+      jobs.findById.mockResolvedValue(
+        baseJob({ status: "failed", attemptCount: 3, maxAttempts: 3 }),
+      );
+      const result = await service.checkEligibility("job-1");
+      expect(result).toEqual({
+        eligible: false,
+        reason: "attemptCount 3 has reached maxAttempts 3",
+      });
+    });
+
+    it("is not eligible when attemptCount has exceeded maxAttempts", async () => {
+      jobs.findById.mockResolvedValue(
+        baseJob({ status: "failed", attemptCount: 4, maxAttempts: 3 }),
+      );
+      const result = await service.checkEligibility("job-1");
+      expect(result.eligible).toBe(false);
+    });
+
+    it("is eligible when attemptCount is still below maxAttempts", async () => {
+      jobs.findById.mockResolvedValue(
+        baseJob({ status: "failed", attemptCount: 2, maxAttempts: 3 }),
+      );
+      const result = await service.checkEligibility("job-1");
+      expect(result).toEqual({ eligible: true, reason: null });
+    });
   });
 
   describe("manualRetry", () => {
@@ -109,6 +136,15 @@ describe("JobRetryService", () => {
       await expect(service.manualRetry("job-1", "actor-1")).rejects.toThrow(
         /not eligible for manual retry/,
       );
+      expect(jobs.update).not.toHaveBeenCalled();
+      expect(auditService.record).not.toHaveBeenCalled();
+    });
+
+    it("rejects manually retrying a job that has already exhausted maxAttempts", async () => {
+      jobs.findById.mockResolvedValue(
+        baseJob({ status: "failed", attemptCount: 3, maxAttempts: 3 }),
+      );
+      await expect(service.manualRetry("job-1", "actor-1")).rejects.toThrow(/maxAttempts/);
       expect(jobs.update).not.toHaveBeenCalled();
       expect(auditService.record).not.toHaveBeenCalled();
     });
