@@ -20,6 +20,12 @@ import { SessionGuard } from "../auth/session/session.guard.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { PermissionGuard } from "../authz/permission.guard.js";
 import { RequirePermission } from "../authz/require-permission.decorator.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
+import { AuthorizationService } from "../authz/authorization.service.js";
+import {
+  redactConfidentialFields,
+  redactConfidentialFieldsFromList,
+} from "../authz/confidential-field.util.js";
 import {
   createContactSchema,
   escalationChainQuerySchema,
@@ -36,6 +42,49 @@ import { OperationalContactService } from "./operational-contact.service.js";
 type ContactsRequest = AuthenticatedRequest & RequestWithCorrelationId;
 
 /**
+ * PII fields per `docs/security/threat-model-phase-1e-operational-infrastructure.md`'s
+ * Information Disclosure finding — previously returned unfiltered to any caller with plain
+ * `contacts_view`, unlike the `view_confidential`/`edit_confidential` precedent Phase 1D-expanded
+ * set elsewhere in this codebase. Gated behind the existing generic `view_confidential` action on
+ * the same `system_settings` module key every contacts route already uses (no dedicated
+ * contacts-specific confidential action exists or is needed).
+ */
+const CONFIDENTIAL_CONTACT_FIELDS: readonly (keyof OperationalContactEntity)[] = [
+  "contactName",
+  "contactEmail",
+  "contactPhone",
+];
+
+/**
+ * `redactConfidentialFields`'s generic constraint (`T extends Record<string, unknown>`) doesn't
+ * structurally match a plain interface without an index signature — `OperationalContactEntity`
+ * has none, same as every other entity in `packages/database`, so TypeScript rejects passing it
+ * directly. These wrappers contain the one necessary cast in one place rather than repeating it
+ * at each of the three call sites below.
+ */
+function redactContact(
+  record: OperationalContactEntity,
+  canViewConfidential: boolean,
+): OperationalContactEntity {
+  return redactConfidentialFields(
+    record as unknown as Record<string, unknown>,
+    CONFIDENTIAL_CONTACT_FIELDS,
+    canViewConfidential,
+  ) as unknown as OperationalContactEntity;
+}
+
+function redactContacts(
+  records: readonly OperationalContactEntity[],
+  canViewConfidential: boolean,
+): readonly OperationalContactEntity[] {
+  return redactConfidentialFieldsFromList(
+    records as unknown as Record<string, unknown>[],
+    CONFIDENTIAL_CONTACT_FIELDS,
+    canViewConfidential,
+  ) as unknown as readonly OperationalContactEntity[];
+}
+
+/**
  * The operational-contact HTTP surface (brief §28) — same "prove the
  * framework" role every other Phase 1E controller has played. Reuses
  * `system_settings` with new, zero-seeded actions
@@ -49,7 +98,10 @@ type ContactsRequest = AuthenticatedRequest & RequestWithCorrelationId;
 @Controller("operational-contacts")
 @UseGuards(SessionGuard)
 export class OperationalContactsController {
-  constructor(private readonly contactService: OperationalContactService) {}
+  constructor(
+    private readonly contactService: OperationalContactService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   @Get()
   @UseGuards(PermissionGuard)
@@ -60,7 +112,12 @@ export class OperationalContactsController {
     @Req() req: ContactsRequest,
   ): Promise<ApiSuccessResponse<readonly OperationalContactEntity[]>> {
     const contacts = await this.contactService.list(query);
-    return { success: true, data: contacts, correlationId: req.correlationId ?? "unknown" };
+    const canViewConfidential = await this.authorizationService.canViewConfidential(
+      req.authUser!.id,
+      "system_settings",
+    );
+    const data = redactContacts(contacts, canViewConfidential);
+    return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
   @Get("escalation-chain")
@@ -78,7 +135,12 @@ export class OperationalContactsController {
       query.severity,
       query.atTime,
     );
-    return { success: true, data: chain, correlationId: req.correlationId ?? "unknown" };
+    const canViewConfidential = await this.authorizationService.canViewConfidential(
+      req.authUser!.id,
+      "system_settings",
+    );
+    const data = redactContacts(chain, canViewConfidential);
+    return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
   @Get(":id")
@@ -90,7 +152,12 @@ export class OperationalContactsController {
     @Req() req: ContactsRequest,
   ): Promise<ApiSuccessResponse<OperationalContactEntity>> {
     const contact = await this.contactService.findById(id);
-    return { success: true, data: contact, correlationId: req.correlationId ?? "unknown" };
+    const canViewConfidential = await this.authorizationService.canViewConfidential(
+      req.authUser!.id,
+      "system_settings",
+    );
+    const data = redactContact(contact, canViewConfidential);
+    return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
   @Post()

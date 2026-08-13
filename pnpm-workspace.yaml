@@ -47,6 +47,16 @@ allowBuilds:
 # (@angular-devkit/core@19.2.x) whose own ajv-formats->ajv path no longer
 # resolves to the vulnerable version -- confirmed via `pnpm why ajv`.
 #
+# nanoid: resolved to the single version 3.3.17 (patched >=3.3.18) purely
+# transitively via postcss (next@16.3.0's own dependency, and separately via
+# webpack/vite's dev-tooling chains -- @nestjs/cli, vitest) -- confirmed via
+# `pnpm why nanoid` before overriding. No direct caller in this codebase; a
+# patch-level bump within the same 3.x line postcss already resolves to, so
+# no behavioral risk. GHSA-2v37-7h3g-55p8 (custom generators loop
+# indefinitely when size is zero) -- surfaced 2026-08-13, unrelated to any
+# code change in that session's PR, confirmed present on `main` independent
+# of it.
+#
 # See docs/project-state/dependency-audit-2026-08-07.md (original triage) and
 # docs/project-state/dependency-audit-2026-08-08.md (this session's bumps)
 # for the full record.
@@ -62,3 +72,4 @@ overrides:
   body-parser: '>=1.20.6 <2.0.0'
   uuid: '>=11.1.1 <12.0.0'
   vite: '>=6.4.3 <7.0.0'
+  nanoid: '>=3.3.18 <4.0.0'

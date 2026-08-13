@@ -10,6 +10,8 @@ import type {
   NotificationEntity,
   NotificationRepository,
   NotificationSeverity,
+  OperationalContactRepository,
+  UserRepository,
 } from "@webdesk/database";
 import {
   MAX_DELIVERY_ATTEMPTS,
@@ -17,6 +19,8 @@ import {
   NOTIFICATION_REPOSITORY,
 } from "./notifications.constants.js";
 import type { NotificationDeliveryAdapter } from "./delivery-adapter.js";
+import { USER_REPOSITORY } from "../auth/config/auth.constants.js";
+import { OPERATIONAL_CONTACT_REPOSITORY } from "../operational-contacts/operational-contacts.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
 import { AuditService } from "../audit/audit.service.js";
 
@@ -64,6 +68,9 @@ export class NotificationService {
   constructor(
     @Inject(NOTIFICATION_REPOSITORY) private readonly notifications: NotificationRepository,
     @Inject(NOTIFICATION_DELIVERY_ADAPTER) private readonly adapter: NotificationDeliveryAdapter,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    @Inject(OPERATIONAL_CONTACT_REPOSITORY)
+    private readonly contacts: OperationalContactRepository,
     private readonly auditService: AuditService,
   ) {}
 
@@ -75,8 +82,23 @@ export class NotificationService {
    * operational action. No caller identity flows into any of these methods yet (no real producer
    * exists in this slice), so every event here is attributed to the `system` actor, same as
    * `RecoveryService.createRequest`'s own unattended path.
+   *
+   * Also closes the threat model's Tampering finding: `recipientUserId`/`recipientContactId` were
+   * previously accepted and persisted verbatim with no existence check, a real IDOR/spam vector
+   * the moment a real delivery adapter goes live. `projectId` is deliberately NOT checked here —
+   * no `Project` entity exists yet in `packages/database` (CLAUDE.md's standing rule against
+   * creating one without separate authorization), so there is nothing to check it against.
    */
   async create(input: CreateNotificationInput): Promise<NotificationEntity> {
+    if (input.recipientUserId && !(await this.users.findById(input.recipientUserId))) {
+      throw new BadRequestException(`recipientUserId does not exist: ${input.recipientUserId}`);
+    }
+    if (input.recipientContactId && !(await this.contacts.findById(input.recipientContactId))) {
+      throw new BadRequestException(
+        `recipientContactId does not exist: ${input.recipientContactId}`,
+      );
+    }
+
     const notification = await this.notifications.create(input);
     await this.auditService.record({
       eventType: "notification_created",
