@@ -1,5 +1,6 @@
 import type { Model } from "sequelize";
 import { getAuditModels } from "./models.js";
+import { AUDIT_RETENTION_CATEGORIES } from "./entities.js";
 import type {
   AuditActorType,
   AuditConfidentialityClassification,
@@ -72,6 +73,15 @@ export class AuditEventRepository {
     legalHold?: boolean;
     legalHoldReason?: string | null;
   }): Promise<AuditEventEntity> {
+    // `AuditService` already checks this before calling here, but the `retention_category`
+    // column is deliberately a plain STRING, not an ENUM/CHECK (so the vocabulary can grow
+    // without a migration) — validating only in `AuditService` left any caller that reached this
+    // repository directly with zero enforcement. Checking here too closes that gap regardless of
+    // caller, from the same shared allowlist `AuditService` derives its own type from.
+    if (!(AUDIT_RETENTION_CATEGORIES as readonly string[]).includes(input.retentionCategory)) {
+      throw new Error(`Unrecognized audit retention_category: ${input.retentionCategory}`);
+    }
+
     const instance = await this.model.create({
       eventType: input.eventType,
       eventCategory: input.eventCategory,
