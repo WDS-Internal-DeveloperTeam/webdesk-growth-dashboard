@@ -51,14 +51,16 @@ Performed for the first time across all six slices this session (audit foundatio
 one either, despite being merged). Full findings recorded via this session's `ReportFindings`
 tool calls, not reproduced verbatim here — summarized by severity:
 
-- **PR #13 (audit schema expansion) — 1 CONFIRMED critical finding**: migration `00019`'s backfill
-  `UPDATE` statements will unconditionally fail against any `audit_events` table that already has
-  rows, because migration `00018`'s immutability trigger blocks all `UPDATE`s with no escape hatch
-  (unlike `DELETE`, which has a session-local authorization flag). **Not yet triggered in
-  production** (migration `00019` has not been run there), but a live landmine on `main` right
-  now — the next operator who runs the standard `pnpm --filter @webdesk/database run migrate`
-  against the real Neon database will hit it. **Requires a fix before that migration is ever run
-  in production.**
+- **PR #13 (audit schema expansion) — 1 CONFIRMED critical finding, now FIXED**: migration `00019`'s
+  backfill `UPDATE` statements would have unconditionally failed against any `audit_events` table
+  that already has rows, because migration `00018`'s immutability trigger blocks all `UPDATE`s with
+  no escape hatch (unlike `DELETE`, which has a session-local authorization flag). Never triggered
+  in production (migration `00019` was never run there before the fix landed). **Fixed in
+  [PR #20](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/20)**: the
+  backfill now runs inside a transaction that disables the trigger for its own four `UPDATE`s only,
+  then re-enables it — migration `00018` itself (already applied in production) was left untouched.
+  A regression test proves both the bug (verified failing without the fix) and the fix (passing
+  with it, and confirming immutability is still enforced afterward).
 - **PR #11 (audit foundation) — 4 CONFIRMED correctness bugs**: the missing-CJS-export bug (already
   independently discovered and fixed post-merge via commit `2e03a57`, not part of this PR's own
   fix); three instances of a fallible `auditService.record()` write sitting between a real state

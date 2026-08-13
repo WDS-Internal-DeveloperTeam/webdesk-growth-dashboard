@@ -59,8 +59,10 @@ a second, human role yet**:
 - [ ] Read `docs/security/threat-model-phase-1e-operational-infrastructure.md` in full.
 - [ ] For each finding, decide: fix before merge, accept as tracked technical debt, or dispute the
       finding itself.
-- [ ] Confirm the PR #13 migration-immutability-trigger finding in particular — it is the one
-      finding in this pass with a real, near-term production-safety consequence (any operator running
+- [x] ~~Confirm the PR #13 migration-immutability-trigger finding in particular~~ — **fixed** in
+      [PR #20](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/20),
+      not merged yet. This was the one finding in this pass with a real, near-term
+      production-safety consequence (any operator running
       `pnpm --filter @webdesk/database run migrate` against production once `audit_events` has rows
       will hit it) and should be resolved before that migration is ever run there, independent of
       whether the other nine PR findings are accepted as-is.
