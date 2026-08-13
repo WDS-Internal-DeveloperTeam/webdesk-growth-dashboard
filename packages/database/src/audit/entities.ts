@@ -34,6 +34,8 @@ export type AuditEventType =
   | "webhook_processed"
   | "job_completed"
   | "job_failed"
+  | "retention_hold_created"
+  | "retention_hold_released"
   | "emergency_admin_login"
   | "account_recovery_request"
   | "account_recovery_decision";
