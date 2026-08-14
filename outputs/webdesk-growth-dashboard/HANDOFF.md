@@ -2,10 +2,10 @@
 
 - **Session ended:** 2026-08-14 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role. Phase 1F (application shell, canonical 43-module registry extension, registry-driven navigation, observability foundation, accessibility, staging documentation, module-implementation roadmap) fully built on branch `phase-1f-application-shell`, off `main` at the G4-1E approved commit. Independent code review (8-angle, high effort) run against the full branch diff — 9 of 14 findings fixed, 5 recorded as tracked technical debt with reasoning. A right-sized security review found no Critical/High finding; one precondition flagged (Sentry's exception forwarding needs `beforeSend` scrubbing before any real `SENTRY_DSN` is ever set — currently inert). **Not yet pushed, not yet reviewed by a second-role human, not yet gated** — see `docs/project-state/phase-1f-validation-report.md` and `phase-1f-approval-checklist.md`.
+- **Last active agent:** Backend role. Phase 1F (application shell, canonical 43-module registry extension, registry-driven navigation, observability foundation, accessibility, staging documentation, module-implementation roadmap) fully built, pushed to `origin`, and open as [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23). Independent code review (8-angle, high effort) run against the full branch diff — 9 of 14 findings fixed, 5 recorded as tracked technical debt with reasoning. A right-sized security review found no Critical/High finding; one precondition flagged (Sentry's exception forwarding needs `beforeSend` scrubbing before any real `SENTRY_DSN` is ever set — currently inert). **The required second-role human review is now complete** — Jitesh D and Brijesh D, decision Approved as-is, 2026-08-14, no disputes. **A Phase 1F gate decision has not been requested yet** — see `docs/project-state/phase-1f-validation-report.md` and `phase-1f-approval-checklist.md`'s "Sign-off" section.
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1F — application shell, canonical module registry, navigation authorization, UI foundation, observability, CI/accessibility, staging documentation, and module-implementation planning artifacts, per the Phase 1F authorization brief. Built entirely on branch `phase-1f-application-shell` (13 commits, 86 files, ~5750 insertions) — **not yet pushed to `origin`**. Builds zero business functionality for any of the 43 real modules (`module_registry.implementation_status = 'not_started'` for all 43) — shell/registry/observability plumbing only, per the brief's own explicit scope boundary. Phase 1E and all prior phases remain approved and unaffected. Per the brief's own completion condition (§49: "Stop after Phase 1F. Wait for human approval"), this phase stops here — no merge, no production deploy, no Wave 1/module-implementation start.
+- **Active phase:** Phase 1F — application shell, canonical module registry, navigation authorization, UI foundation, observability, CI/accessibility, staging documentation, and module-implementation planning artifacts, per the Phase 1F authorization brief. Built on branch `phase-1f-application-shell` (16 commits, pushed to `origin`, PR #23 open against `main`). Builds zero business functionality for any of the 43 real modules (`module_registry.implementation_status = 'not_started'` for all 43) — shell/registry/observability plumbing only, per the brief's own explicit scope boundary. Phase 1E and all prior phases remain approved and unaffected. Per the brief's own completion condition (§49: "Stop after Phase 1F. Wait for human approval"), this phase stops here — no merge, no production deploy, no Wave 1/module-implementation start, until a gate decision is separately requested and made.
 - **Current gate:** G4-1E (Phase 1E, approved 2026-08-13, clean CONFIRM) remains the last **approved** gate — Phase 1F has no gate decision yet. Approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70`. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
@@ -27,9 +27,13 @@
 > inert unscrubbed exception forwarding — must fix before any real DSN — a narrow `/me` vs
 > `/me/navigation` account-status asymmetry, `NavigationService` reimplementing capability logic
 > inline instead of using `AuthorizationService`, a transient migration-gap type cast, and 43
-> module keys hand-duplicated across 3 files). **Not yet pushed to `origin`, not yet independently
-> reviewed by a second human, not yet gated.** See `docs/project-state/phase-1f-validation-report.md`
-> and `docs/project-state/phase-1f-approval-checklist.md` for the full record.
+> module keys hand-duplicated across 3 files). **Pushed to `origin`, PR #23 open.** **Required
+> second-role human review complete** — Jitesh D and Brijesh D reviewed the full code-review
+> disposition and the full security review, decision **Approved as-is**, 2026-08-14, no disputes
+> raised. **A Phase 1F gate decision has not been requested or made** — that remains a separate,
+> explicit step, per this project's established pattern of never conflating review completion
+> with a gate decision. See `docs/project-state/phase-1f-validation-report.md` and
+> `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off" section for the full record.
 
 > **Phase 1E status as of 2026-08-13 (updated three times):** all six architecture slices are
 > built, CI-green, and **now merged to `main`** — audit foundation (PR #11), audit schema-expansion

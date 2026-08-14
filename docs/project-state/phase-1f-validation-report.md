@@ -115,9 +115,11 @@ following this report (see "Recent decisions" entries dated 2026-08-14).
 - ~~Independent code review~~ — **complete** (§3).
 - ~~Security review~~ — **complete** (§4).
 - `docs/project-state/phase-1f-approval-checklist.md` — produced alongside this report.
-- **Required second-role human review** — not yet requested. Per this project's established
-  pattern (Phase 1C/1D/1D-expanded/1E), the same agent that implemented and self-reviewed this work
-  cannot also be its required second, human reviewer (ADR-0010's separation-of-duties principle).
+- ~~Required second-role human review~~ — **complete**. Jitesh D and Brijesh D reviewed the full
+  code-review disposition (9 fixed / 5 tracked as debt) and the full security review (no
+  Critical/High finding; Sentry `beforeSend` precondition) — decision **Approved as-is**,
+  2026-08-14, no disputes raised. See
+  `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off" section.
 - **A Phase 1F gate decision** — not yet requested; remains separate from the review above, per
   every prior phase's own pattern of keeping the review and the gate decision distinct.
 - **Git workflow completion** — push the branch, open a PR. Per the brief's own explicit

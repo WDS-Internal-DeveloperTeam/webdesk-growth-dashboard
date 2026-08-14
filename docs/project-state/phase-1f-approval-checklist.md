@@ -1,7 +1,8 @@
 # Phase 1F Approval Checklist — Application Shell, Module Registry, Observability & Staging Foundation
 
-**Status:** Not yet gated. Written once all Phase 1F work was built and fully validated, following
-the same pattern as `docs/project-state/phase-1e-approval-checklist.md`.
+**Status:** Required second-role human review complete (2026-08-14, Jitesh D and Brijesh D,
+Approved as-is). **Not yet gated** — a Phase 1F gate decision is a separate, not-yet-requested
+step, per this project's own pattern of keeping the review and the gate decision distinct.
 
 ## Completion condition
 
@@ -52,29 +53,42 @@ phase-1f-staging-foundation.md` §5, `phase-1f-observability.md` §5).
 - No Wave 1 / module-implementation work was started — the roadmap and template are planning
   artifacts only, per their own "Status" lines.
 
-## Required second-role human review — ASSIGNED, NOT YET COMPLETE
+## Required second-role human review — COMPLETE
 
-Reviewers assigned 2026-08-14 (WebDesk Solution) — Jitesh D and Brijesh D, same reviewers as both
-Phase 1D reviews and Phase 1E's review. This is an assignment only, not a completed review — see
-`outputs/webdesk-growth-dashboard/project.json`'s `audit_log` for the recorded assignment.
-
-- [ ] Independent code-review findings (validation report §3) and their disposition (9 fixed / 5
-      tracked as debt) — reviewer: **Jitesh D and Brijesh D**.
-- [ ] `docs/implementation/phase-1f-security-review.md`'s findings and disposition, including the
-      Sentry-scrubbing precondition — reviewer: **Jitesh D and Brijesh D**.
+- [x] Independent code-review findings (validation report §3) and their disposition (9 fixed / 5
+      tracked as debt) — reviewed by: **Jitesh D and Brijesh D**, 2026-08-14, **Approved as-is**.
+- [x] `docs/implementation/phase-1f-security-review.md`'s findings and disposition, including the
+      Sentry-scrubbing precondition — reviewed by: **Jitesh D and Brijesh D**, 2026-08-14,
+      **Approved as-is**.
 
 ## Reviewer's own checklist (for whoever performs the second-role review)
 
-- [ ] Read `docs/project-state/phase-1f-validation-report.md` in full, including §3.
-- [ ] Read `docs/implementation/phase-1f-security-review.md` in full.
-- [ ] Spot-check that the 9 "fixed" code-review findings are genuinely fixed — each is tied to the
+- [x] Read `docs/project-state/phase-1f-validation-report.md` in full, including §3.
+- [x] Read `docs/implementation/phase-1f-security-review.md` in full.
+- [x] Spot-check that the 9 "fixed" code-review findings are genuinely fixed — each is tied to the
       "Fix findings from independent code review of Phase 1F" commit, not just narrated.
-- [ ] Confirm the 5 items accepted as tracked technical debt are acceptable as-is, or dispute any.
-- [ ] Confirm the Sentry `beforeSend` scrubbing precondition is understood as a **blocker for
+- [x] Confirm the 5 items accepted as tracked technical debt are acceptable as-is, or dispute any.
+- [x] Confirm the Sentry `beforeSend` scrubbing precondition is understood as a **blocker for
       setting a real `SENTRY_DSN`**, not an optional nice-to-have.
-- [ ] Record your decision, then add a "Sign-off" section below, following the exact format
+- [x] Record your decision, then add a "Sign-off" section below, following the exact format
       `docs/project-state/phase-1e-approval-checklist.md`'s own "Sign-off" section uses.
 
 ## Sign-off
 
-_Not yet completed — awaiting the required second-role human review above._
+**Second-role human review: complete.** Both the independent code-review disposition and the
+security review were read and approved. **A Phase 1F gate decision has not been requested or
+made** — that remains its own separate, explicit step, per this project's established pattern of
+never conflating review completion with a gate decision.
+
+| Field                          | Value                                                                                                                                                |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewers (second-role review) | Jitesh D and Brijesh D                                                                                                                               |
+| Review date                    | 2026-08-14                                                                                                                                           |
+| Decision                       | Approved as-is                                                                                                                                       |
+| Scope reviewed                 | Full code-review disposition (9 fixed / 5 tracked as debt) and the full security review (no Critical/High finding; Sentry `beforeSend` precondition) |
+| Disputes raised                | None                                                                                                                                                 |
+
+| Role                          | Name                          | Decision         | Date       |
+| ----------------------------- | ----------------------------- | ---------------- | ---------- |
+| Reviewer (second-role review) | Jitesh D and Brijesh D        | ☑ Approved as-is | 2026-08-14 |
+| Approver (gate decision)      | _pending — not yet requested_ |                  |            |
