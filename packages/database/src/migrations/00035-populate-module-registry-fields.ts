@@ -30,15 +30,22 @@ import type { QueryInterface } from "sequelize";
  *   help content or steward is documented anywhere in the approved specs
  *   (confirmed by direct search); shown honestly as unavailable rather
  *   than invented (brief §35).
- * - `view_permission_action`: `${key}_view` uniformly for all 43, matching
- *   the shipped `(moduleKey, action)` convention's `_view` suffix already
- *   used by `retention_view`/`contacts_view`/`system_health_view`. Two
- *   already-shipped, unrelated endpoints (`catalog.controller.ts`'s plain
- *   "view", `system-operations.controller.ts`'s "system_settings_configure")
- *   use different action strings, but those gate different, already-built
- *   routes — not this registry's own future per-module view route — so a
- *   uniform, predictable convention here is more maintainable than matching
- *   either inconsistently.
+ * - `view_permission_action`: plain `"view"` for all 43 — NOT a per-module
+ *   `${key}_view` string. The already-seeded 458-grant RBAC matrix
+ *   (migration 00013) grants a single `"view"` action per PERMISSION
+ *   GROUP (the 21-row `modules` table), shared by every product module
+ *   under that group — exactly brief §3's "multiple UI modules may map to
+ *   the same permission group." A per-module `${key}_view` action string
+ *   would match nothing in the real seeded grants, silently leaving
+ *   navigation empty for every role until 43 new zero-seeded actions were
+ *   separately authorized and granted — which this migration does not do
+ *   (brief §27: "no module may invent authorization outside the central
+ *   catalog without approved migration/change"). `retention_view`/
+ *   `contacts_view`/`system_health_view` are a different, narrower case:
+ *   real Phase 1E sub-resources that needed finer granularity than their
+ *   shared `system_settings` group's own `view` grant, added as their own
+ *   explicit, reviewed migrations — not a precedent for inventing one
+ *   action per product module here.
  *
  * Navigation grouping/order into the 10 approved wireframe nav labels
  * (`07_Low_Fidelity_Wireframes.md` §1: Home, Projects, Pages, Libraries,
@@ -652,7 +659,7 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
           navigationOrder: update.navigationOrder,
           route: update.route,
           iconReference: update.iconReference,
-          viewPermissionAction: `${update.key}_view`,
+          viewPermissionAction: "view",
           documentationReference: DOC_REFERENCE,
           dependencies: update.dependencies ? JSON.stringify(update.dependencies) : null,
           confidentialityLevel: update.confidentialityLevel,

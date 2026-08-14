@@ -11,6 +11,8 @@ import { RoleAssignmentController } from "./role-assignment.controller.js";
 import { CapabilitiesController } from "./capabilities.controller.js";
 import { CatalogService } from "./catalog.service.js";
 import { CatalogController } from "./catalog.controller.js";
+import { NavigationService } from "./navigation.service.js";
+import { NavigationController } from "./navigation.controller.js";
 
 /**
  * Phase 1D — RBAC (docs/task-packages/phase-1d-rbac-authorization.md,
@@ -27,7 +29,12 @@ import { CatalogController } from "./catalog.controller.js";
  */
 @Module({
   imports: [AuthModule, AuditModule],
-  controllers: [RoleAssignmentController, CapabilitiesController, CatalogController],
+  controllers: [
+    RoleAssignmentController,
+    CapabilitiesController,
+    CatalogController,
+    NavigationController,
+  ],
   providers: [
     ...authzRepositoryProviders,
     { provide: USER_REPOSITORY, useFactory: () => new UserRepository() },
@@ -36,6 +43,7 @@ import { CatalogController } from "./catalog.controller.js";
     PermissionGuard,
     RoleAssignmentService,
     CatalogService,
+    NavigationService,
   ],
   exports: [AuthorizationService, PermissionGuard],
 })
