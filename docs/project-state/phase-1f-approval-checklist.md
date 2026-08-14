@@ -52,12 +52,16 @@ phase-1f-staging-foundation.md` §5, `phase-1f-observability.md` §5).
 - No Wave 1 / module-implementation work was started — the roadmap and template are planning
   artifacts only, per their own "Status" lines.
 
-## Required second-role human review — NOT YET COMPLETE
+## Required second-role human review — ASSIGNED, NOT YET COMPLETE
+
+Reviewers assigned 2026-08-14 (WebDesk Solution) — Jitesh D and Brijesh D, same reviewers as both
+Phase 1D reviews and Phase 1E's review. This is an assignment only, not a completed review — see
+`outputs/webdesk-growth-dashboard/project.json`'s `audit_log` for the recorded assignment.
 
 - [ ] Independent code-review findings (validation report §3) and their disposition (9 fixed / 5
-      tracked as debt) — reviewer: _pending assignment_.
+      tracked as debt) — reviewer: **Jitesh D and Brijesh D**.
 - [ ] `docs/implementation/phase-1f-security-review.md`'s findings and disposition, including the
-      Sentry-scrubbing precondition — reviewer: _pending assignment_.
+      Sentry-scrubbing precondition — reviewer: **Jitesh D and Brijesh D**.
 
 ## Reviewer's own checklist (for whoever performs the second-role review)
 

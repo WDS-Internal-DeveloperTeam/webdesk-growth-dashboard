@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-13T00:00:00Z",
-    "version": 11
+    "updated_at": "2026-08-14T00:00:00Z",
+    "version": 12
   },
 
   "tech_stack": {
@@ -386,6 +386,22 @@
       },
       "project_version_before": 10,
       "project_version_after": 11
+    },
+    {
+      "timestamp": "2026-08-14T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "assigned the second-role human reviewer for Phase 1F (independent code-review disposition and security review)",
+      "details": {
+        "documents_reviewed": [
+          "docs/project-state/phase-1f-validation-report.md",
+          "docs/implementation/phase-1f-security-review.md"
+        ],
+        "reviewer": "WebDesk Solution — Jitesh D and Brijesh D",
+        "note": "Resolves the 'reviewer: pending assignment' blocker recorded against ADR-0010's separation-of-duties requirement in docs/project-state/phase-1f-approval-checklist.md. This is an owner assignment only, not a completed review — the review itself, and any Phase 1F gate decision, remain outstanding until actually performed and recorded, same pattern as the Phase 1D assignment entry above."
+      },
+      "project_version_before": 11,
+      "project_version_after": 12
     }
   ]
 }
