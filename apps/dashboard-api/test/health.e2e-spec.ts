@@ -44,6 +44,12 @@ describe("Health endpoints (integration)", () => {
     expect(response.body.service).toBe("dashboard-api");
   });
 
+  it("GET /health includes build metadata", async () => {
+    const response = await request(app.getHttpServer()).get("/health");
+    expect(response.body.build).toBeDefined();
+    expect(response.body.build.version).toBe("0.1.0");
+  });
+
   it("GET /ready returns 200 with status ok", async () => {
     const response = await request(app.getHttpServer()).get("/ready");
     expect(response.status).toBe(200);

@@ -8,6 +8,7 @@ import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
 import { loadAuthEnv } from "./auth/config/auth-env.js";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter.js";
+import { initSentry } from "./observability/sentry.js";
 
 /**
  * Bootstrapped inside a Vercel Function handler at Phase 1C+ (ADR-0003) —
@@ -17,6 +18,7 @@ import { AllExceptionsFilter } from "./common/all-exceptions.filter.js";
  */
 async function bootstrap(): Promise<void> {
   const env = loadEnv(baseEnvSchema);
+  initSentry(env.SENTRY_DSN);
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
 
   // See api/index.ts's matching call for why this matters — harmless here

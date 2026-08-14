@@ -1,5 +1,10 @@
 import { Module, type MiddlewareConsumer, type NestModule } from "@nestjs/common";
-import { buildLoggerOptions, loadEnv, baseEnvSchema } from "@webdesk/configuration";
+import {
+  buildLoggerOptions,
+  getBuildMetadata,
+  loadEnv,
+  baseEnvSchema,
+} from "@webdesk/configuration";
 import { LoggerModule } from "nestjs-pino";
 import { AuthModule } from "./auth/auth.module.js";
 import { AuthzModule } from "./authz/authz.module.js";
@@ -13,12 +18,22 @@ import { SystemOperationsModule } from "./system-operations/system-operations.mo
 
 const env = loadEnv(baseEnvSchema);
 const loggerOptions = buildLoggerOptions(env, "dashboard-api");
+// Kept in sync with package.json's own "version" field manually — same
+// constraint as apps/dashboard-api/src/health/health.controller.ts's own
+// API_VERSION constant (rootDir excludes importing package.json directly).
+const buildMetadata = getBuildMetadata("0.1.0");
 
 @Module({
   imports: [
     LoggerModule.forRoot({
       pinoHttp: {
         ...loggerOptions,
+        base: {
+          ...loggerOptions.base,
+          environment: buildMetadata.environment,
+          version: buildMetadata.version,
+          commitSha: buildMetadata.commitShaShort,
+        },
         redact: {
           // Session/OIDC cookies and auth request bodies must never reach
           // general logs in plaintext (docs/security/data-classification.md

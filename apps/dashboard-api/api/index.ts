@@ -10,6 +10,7 @@ import { Logger } from "nestjs-pino";
 import { AppModule } from "../src/app.module.js";
 import { loadAuthEnv } from "../src/auth/config/auth-env.js";
 import { AllExceptionsFilter } from "../src/common/all-exceptions.filter.js";
+import { initSentry } from "../src/observability/sentry.js";
 
 /**
  * Vercel Function entrypoint (ADR-0003) — the Nest app is bootstrapped once
@@ -33,7 +34,8 @@ expressApp.set("trust proxy", true);
 let bootstrapped: Promise<void> | undefined;
 
 async function bootstrap(): Promise<void> {
-  loadEnv(baseEnvSchema);
+  const env = loadEnv(baseEnvSchema);
+  initSentry(env.SENTRY_DSN);
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
     bufferLogs: true,
   });

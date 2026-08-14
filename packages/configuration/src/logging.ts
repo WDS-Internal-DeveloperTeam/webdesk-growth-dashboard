@@ -13,6 +13,21 @@ import type { BaseEnv } from "./env.js";
  * names (e.g. specific token/credential field names once those integrations
  * exist). Never log Confidential/Restricted data in plaintext, per
  * docs/security/data-classification.md.
+ *
+ * Phase 1F brief §20's explicit category list (`docs/task-packages/
+ * phase-1f-application-shell.md`) and the real field names that carry each
+ * category in this codebase today:
+ * - Passwords: `*.password` (existing)
+ * - Tokens / session identifiers: `*.token`, `*.rawToken` (the actual
+ *   session-token field name — see `session.service.ts`/`google-auth.service.ts`)
+ * - TOTP secrets: `*.totpSecret`, `*.totpSecretEncrypted` (still redacted
+ *   even encrypted — ciphertext has no business appearing in logs either)
+ * - OAuth secrets: `*.clientSecret`, `*.GOOGLE_OAUTH_CLIENT_SECRET`
+ * - SMTP credentials: `*.smtpPassword`, `*.SMTP_PASSWORD` — no real SMTP
+ *   integration is wired yet (WDS-004), kept pattern-ready for when one is
+ * - Authorization headers / cookies: existing `req.headers.*` entries
+ * - Secret environment values: `*.DATABASE_URL` (existing),
+ *   `*.TOTP_ENCRYPTION_KEY`
  */
 export const DEFAULT_REDACT_PATHS: readonly string[] = [
   "*.password",
@@ -26,6 +41,14 @@ export const DEFAULT_REDACT_PATHS: readonly string[] = [
   "*.connectionString",
   "*.databaseUrl",
   "*.DATABASE_URL",
+  "*.rawToken",
+  "*.totpSecret",
+  "*.totpSecretEncrypted",
+  "*.clientSecret",
+  "*.GOOGLE_OAUTH_CLIENT_SECRET",
+  "*.smtpPassword",
+  "*.SMTP_PASSWORD",
+  "*.TOTP_ENCRYPTION_KEY",
 ];
 
 export interface PinoLikeOptions {

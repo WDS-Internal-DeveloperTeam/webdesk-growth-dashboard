@@ -56,11 +56,22 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 export type HealthStatus = "ok" | "degraded" | "down";
 
+/** Safe build/release metadata (Phase 1F brief §24) — see `@webdesk/configuration`'s `getBuildMetadata`. */
+export interface HealthCheckBuildInfo {
+  readonly version: string;
+  readonly commitSha: string;
+  readonly commitShaShort: string;
+  readonly environment: string;
+  readonly deploymentId: string;
+  readonly processStartedAt: string;
+}
+
 export interface HealthCheckResult {
   readonly status: HealthStatus;
   readonly service: string;
   readonly timestamp: string;
   readonly checks?: Readonly<Record<string, HealthStatus>>;
+  readonly build?: HealthCheckBuildInfo;
 }
 
 /**
