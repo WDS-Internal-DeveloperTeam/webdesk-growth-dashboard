@@ -1,8 +1,10 @@
 # Phase 1F Approval Checklist — Application Shell, Module Registry, Observability & Staging Foundation
 
 **Status:** Required second-role human review complete (2026-08-14, Jitesh D and Brijesh D,
-Approved as-is). **Not yet gated** — a Phase 1F gate decision is a separate, not-yet-requested
-step, per this project's own pattern of keeping the review and the gate decision distinct.
+Approved as-is). **The Phase 1F gate (G4-1F) is now approved** — WebDesk Solution, decision
+CONFIRM, 2026-08-14. See "Sign-off" below and `outputs/webdesk-growth-dashboard/project.json`'s
+`gates[]`. **Branch `phase-1f-application-shell` (PR #23) is not yet merged to `main`** — merging
+remains its own separate, not-yet-requested authorization.
 
 ## Completion condition
 
@@ -75,10 +77,10 @@ phase-1f-staging-foundation.md` §5, `phase-1f-observability.md` §5).
 
 ## Sign-off
 
-**Second-role human review: complete.** Both the independent code-review disposition and the
-security review were read and approved. **A Phase 1F gate decision has not been requested or
-made** — that remains its own separate, explicit step, per this project's established pattern of
-never conflating review completion with a gate decision.
+**Second-role human review: complete. Phase 1F gate (G4-1F): approved.** Both were their own
+separate, explicit human step, per every prior phase's own pattern of keeping the review and the
+gate decision distinct — the gate was requested, and approved, only after the review below was
+already recorded as complete.
 
 | Field                          | Value                                                                                                                                                |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -88,7 +90,16 @@ never conflating review completion with a gate decision.
 | Scope reviewed                 | Full code-review disposition (9 fixed / 5 tracked as debt) and the full security review (no Critical/High finding; Sentry `beforeSend` precondition) |
 | Disputes raised                | None                                                                                                                                                 |
 
-| Role                          | Name                          | Decision         | Date       |
-| ----------------------------- | ----------------------------- | ---------------- | ---------- |
-| Reviewer (second-role review) | Jitesh D and Brijesh D        | ☑ Approved as-is | 2026-08-14 |
-| Approver (gate decision)      | _pending — not yet requested_ |                  |            |
+| Field                    | Value                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-1F                                                                                                                                                                                                                                                                                                                                                             |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                                                                                                                                                                                                                  |
+| Gate date                | 2026-08-14                                                                                                                                                                                                                                                                                                                                                        |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                                                                                                                                                                                                                 |
+| Approved commit          | `7d84f040bce67fa7cd1e92aa69e8512021b39b64` on branch `phase-1f-application-shell` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record                                                                                                                                                                                           |
+| Scope                    | Phase 1F application shell and observability foundation only. **Branch/PR #23 is not yet merged to `main`** — merging remains its own separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule. Does not authorize the 21 real business-module endpoints, the remaining Task 7 audit scope, or any module-implementation wave. |
+
+| Role                          | Name                   | Decision         | Date       |
+| ----------------------------- | ---------------------- | ---------------- | ---------- |
+| Reviewer (second-role review) | Jitesh D and Brijesh D | ☑ Approved as-is | 2026-08-14 |
+| Approver (gate decision)      | WebDesk Solution       | ☑ CONFIRM        | 2026-08-14 |

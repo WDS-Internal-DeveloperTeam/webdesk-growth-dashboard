@@ -176,6 +176,32 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
   `gates[]`. **Phase 1E is closed.** Does not include the 21 real business-module endpoints, the
   remaining Task 7 audit scope (migrating existing `auth_events` writes, a query HTTP surface, the
   retention-deletion job), or Phase 1F — each a separate, not-yet-requested authorization.
+- **Approved: Phase 1F — application shell, canonical module registry, navigation authorization,
+  observability, and CI/accessibility/staging foundations, built, reviewed, and gated
+  (2026-08-14).** Extends the existing 43-module `module_registry` with the full field set the
+  shell reads (migrations `00034`/`00035`); registry-driven, permission-aware navigation
+  (`GET /me/navigation`, `GET /me`); the `dashboard-web` authenticated application shell; a shared
+  design-system/UI-state foundation (`packages/ui`); an observability foundation (redaction
+  coverage, safe build/release metadata, a Sentry integration built and tested but deliberately
+  inert — no real `SENTRY_DSN` exists); automated WCAG 2.2 AA accessibility checks (axe-core, zero
+  violations); staging-environment documentation stopped at the provisioning boundary (no resource
+  provisioned); and planning-only module-implementation roadmap/task-package-template artifacts.
+  Builds **zero business functionality** for any of the 43 real modules
+  (`module_registry.implementation_status = 'not_started'` for all 43). 294 unit + 108 real-
+  database integration + 79 e2e + 9 Playwright tests, all passing. Independent code review
+  (8-angle, high effort) surfaced 14 findings — 9 fixed, 5 recorded as tracked technical debt
+  (most notably: Sentry's exception forwarding needs `beforeSend` scrubbing before any real
+  `SENTRY_DSN` is ever set — currently zero exposure since none exists). A right-sized security
+  review (no new business data model this phase, so not a full STRIDE document) found no
+  Critical/High finding. **Required second-role human review complete** — Jitesh D and Brijesh D,
+  decision "Approved as-is", 2026-08-14, no disputes. **G4-1F gate approved 2026-08-14 (clean
+  CONFIRM)** — WebDesk Solution, approved commit `7d84f040bce67fa7cd1e92aa69e8512021b39b64` on
+  branch `phase-1f-application-shell` — see `docs/project-state/phase-1f-approval-checklist.md`'s
+  "Sign-off" section and `project.json`'s `gates[]`. **Branch/PR #23 is NOT YET MERGED to `main`**
+  — unlike every prior phase, this gate was approved before merge; merging remains its own
+  separate, not-yet-requested authorization under the standing "no auto-merge" rule. Does not
+  include the 21 real business-module endpoints, the remaining Task 7 audit scope, or any
+  module-implementation wave — each a separate, not-yet-requested authorization.
 
 ## Active tasks (this sprint)
 
@@ -202,6 +228,17 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    "Sign-off". Phase 1E is closed. The remaining Task 7 audit scope (migrating existing
    `auth_events` writes into the new `audit_events` table, a query HTTP surface, the
    retention-deletion job) and Phase 1F are separate, not-yet-authorized next candidates.
+6. ~~Phase 1F (application shell, module registry, navigation, observability, CI/accessibility,
+   staging documentation, module roadmap)~~ — **done 2026-08-14.** Built, code-reviewed,
+   security-reviewed, pushed to `origin`, and opened as
+   [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23).
+   Second-role human review complete (Jitesh D and Brijesh D, Approved as-is), **G4-1F gate
+   approved** (WebDesk Solution, CONFIRM) — see "Current state" above and
+   `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off". **PR #23 is not yet merged**
+   — merging remains its own separate, not-yet-requested authorization. The remaining Task 7 audit
+   scope, the 21 real business-module endpoints, and any module-implementation wave (see
+   `docs/phase-plans/module-implementation-roadmap.md`) are separate, not-yet-authorized next
+   candidates.
 
 ## Recent decisions
 
@@ -738,6 +775,61 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   findings and 8/10 security-review findings fixed (2 accepted as debt); `pnpm audit` clean. Phase
   1E is closed — the 21 real business-module endpoints, the remaining Task 7 audit scope, and
   Phase 1F are each separate, not-yet-requested next candidates.
+- `[2026-08-14]` **Phase 1F (application shell, canonical module registry, navigation
+  authorization, observability, CI/accessibility, staging documentation, module-implementation
+  roadmap) built, reviewed, and gated — approved but not yet merged.** Built on branch
+  `phase-1f-application-shell` off `main` at the G4-1E approved commit, in slices matching the
+  brief's own structure: module-registry extension (migrations `00034`/`00035`, real data for all
+  43 modules sourced from the approved specs), registry/permission-mapping validation, the
+  `GET /me/navigation` and `GET /me` endpoints, `packages/ui`'s design-token/page-shell/UI-state
+  foundation, the `dashboard-web` authenticated application shell, an observability foundation
+  (extended Pino redaction, `getBuildMetadata()` wired into `/health`/`/ready` and the request
+  logger, a Sentry integration built and unit-tested but deliberately inert since no real
+  `SENTRY_DSN` exists), automated WCAG 2.2 AA accessibility checks (axe-core, zero violations on
+  every page reachable without a session), staging-environment documentation stopped explicitly at
+  the provisioning boundary (records what exists — two Vercel projects that are, in practice,
+  production — and what a real isolated staging setup would need, without inventing any resource),
+  and a module-implementation roadmap computed mechanically from the registry's own `dependencies`
+  field (Tarjan SCC + topological sort, surfacing three genuine dependency cycles in the seeded
+  data as explicit co-dependent groups rather than resolving them arbitrarily) plus a reusable
+  task-package template. Builds **zero business functionality** for any of the 43 real modules.
+  Ran this project's own `code-review` skill (8 finder angles, high effort) against the full
+  branch diff before writing the validation report — 14 findings surfaced, 9 fixed (a dropped
+  `font-family` outside the shell, 5 design-token groups never wired into CSS custom properties, a
+  version constant triplicated across 3 files, sidebar navigation rendering alphabetically instead
+  of the approved wireframe order, duplicate/conflicting page headings on the error/not-found
+  boundaries, a missing `NEXT_PUBLIC_API_BASE_URL` silently becoming "signed out" with no log — the
+  same misconfiguration class behind the 2026-08-12 production outage — a session-fetch dedup
+  relying on implicit Next.js memoization instead of explicit `cache()`, a weakened test assertion,
+  and a narrowed security-header test), 5 recorded as tracked technical debt with reasoning
+  (`NavigationService` reimplementing capability-filter logic inline instead of calling
+  `AuthorizationService`; Sentry forwarding exceptions with no `beforeSend` scrubbing — flagged as
+  a hard precondition before any real `SENTRY_DSN` is ever set, currently zero exposure since none
+  exists; a narrow `GET /me` vs `GET /me/navigation` account-status asymmetry; a transient
+  migration-gap type cast; and 43 module keys hand-duplicated across 3 files). A right-sized
+  security review (no new business data model this phase, so not a full STRIDE document) found no
+  Critical/High finding. Full validation: 294 unit + 108 real-database integration + 79 e2e + 9
+  Playwright tests, all passing; migration up/down round trip clean (35 migrations); module-
+  registry validation passing (43 modules, 21 permission groups); `pnpm audit` 0 vulnerabilities;
+  secret scan clean. Asked to push and open a PR — held locally first per explicit instruction (a
+  quick local preview check in the meantime surfaced a real, unrelated local-dev-setup gap: no
+  `.env.local` existed for `dashboard-web`, so `/auth/sign-in` crashed on the missing
+  `NEXT_PUBLIC_API_BASE_URL` — fixed by copying the project's own documented `.env.example`,
+  gitignored, not a code change). Pushed and opened
+  [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23) once
+  explicitly authorized. **Required second-role human review complete** — Jitesh D and Brijesh D,
+  decision "Approved as-is", 2026-08-14, no disputes raised, recorded in
+  `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off" section and `project.json`'s
+  `audit_log`. **The Phase 1F gate (G4-1F) was then separately requested and approved** — WebDesk
+  Solution, decision CONFIRM (clean pass, not an override, since the review was already complete),
+  approved commit `7d84f040bce67fa7cd1e92aa69e8512021b39b64` on branch
+  `phase-1f-application-shell` — recorded in `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` and the approval checklist's "Sign-off" section. **Unlike every prior gate in this
+  project's history, PR #23 is still unmerged** — this gate approval was requested and granted
+  before merge, since this project's standing "no auto-merge" rule treats merging as its own
+  separate, explicit authorization regardless of gate status, not something a gate implies. Phase
+  1F's own real business-module endpoints, the remaining Task 7 audit scope, and any module-
+  implementation wave are each separate, not-yet-requested next candidates.
 
 ## Open client blockers
 
@@ -856,32 +948,40 @@ constructor` — the export simply didn't exist in the deployed CJS build) that 
 
 ---
 
-Last touched: 2026-08-13 · by Claude (This entry closes out Phase 1E, the six-slice
-operational-infrastructure body of work (audit foundation, job architecture, notification
-foundation, retention architecture, operational contacts, system events/health). All six slices
-are merged to `main`, every code-review and security-review finding has been dispositioned (8/10
-security findings fixed, 2 accepted as tracked debt by explicit user decision), the required
-second-role security review is complete (Jitesh D, "Approved as-is"), and **the Phase 1E gate
-(G4-1E) is now approved** (WebDesk Solution, clean CONFIRM, approved commit `6ae8a36`). See the
-2026-08-13 "Recent decisions" entry for the full arc and `docs/project-state/
-phase-1e-approval-checklist.md`'s "Sign-off" section for both recorded decisions.
+Last touched: 2026-08-14 · by Claude (This entry closes out Phase 1F, the application-shell/
+module-registry/observability body of work — canonical 43-module registry extension,
+registry-driven permission-aware navigation, the `dashboard-web` authenticated application shell,
+a shared design-system/UI-state foundation, an observability foundation (Sentry built and tested
+but deliberately inert), automated WCAG 2.2 AA accessibility checks, staging documentation stopped
+at the provisioning boundary, and planning-only module-implementation roadmap/task-package-
+template artifacts. Builds zero business functionality for any of the 43 real modules. Built,
+independently code-reviewed (14 findings, 9 fixed, 5 tracked as debt), security-reviewed (no
+Critical/High finding), pushed to `origin`, and opened as
+[PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23). The
+required second-role human review is complete (Jitesh D and Brijesh D, "Approved as-is"), and
+**the Phase 1F gate (G4-1F) is now approved** (WebDesk Solution, clean CONFIRM, approved commit
+`7d84f040bce67fa7cd1e92aa69e8512021b39b64`). **Unlike every prior gate, PR #23 remains unmerged**
+— this gate was approved before merge, since merging is always its own separate, explicit
+authorization in this project, never implied by a gate. See the 2026-08-14 "Recent decisions"
+entry for the full arc and `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off"
+section for both recorded decisions.
 
-The previous session (2026-08-12) closed out a separate production-hardening arc: `dashboard-web`
-and `dashboard-api` both went genuinely live on Vercel, the Neon database was fully migrated, and
-real Google Workspace SSO login was fixed end-to-end in production (root cause: Express's
-`req.protocol` misreading "http" behind Vercel's proxy because `trust proxy` was never set,
-silently corrupting the `redirect_uri` sent to Google's token endpoint — fixed with
-`app.set("trust proxy", true)`, backed by a new regression test).
+The previous session (2026-08-13) closed out Phase 1E — six operational-infrastructure
+architecture slices (audit foundation, job architecture, notification foundation, retention
+architecture, operational contacts, system events/health), merged to `main`, gated (G4-1E, clean
+CONFIRM).
 
 **Current state**: `dashboard-web` (https://webdesk-growth-dashboard-theta.vercel.app) and
-`dashboard-api` (https://webdesk-growth-dashboard-7v1u-beta.vercel.app) are both live and healthy;
-the production database has all migrations applied including Phase 1E's `audit_events` table
-(code deployed, not yet exercised by a real producer); a real Super Admin
+`dashboard-api` (https://webdesk-growth-dashboard-7v1u-beta.vercel.app) are both live and healthy,
+serving Phase 1E's merged code (Phase 1F is not merged, so it isn't live yet); the production
+database has all migrations applied through Phase 1E's `audit_events` table; a real Super Admin
 (`jitesh@webdeskinc.com`) can sign in via Google Workspace SSO successfully. Phase 1E's own new
 tables/endpoints (jobs, notifications, retention, operational contacts, system events/health) are
-merged and gated but have not had their migrations run against the real production database yet —
-that's a separate, not-yet-requested step, same pattern as every prior phase's migrations.
+merged and gated but have not had their migrations run against the real production database yet.
+Phase 1F is built, reviewed, and gated but sits entirely on an unmerged branch/PR — none of its
+code (application shell, module registry, navigation, observability) is live anywhere yet.
 Remaining open items: the real emergency-administrator account list, the WordPress Application
 Password account (production/development, only staging exists), real timezone confirmation, and —
-the next substantive body of work — the 21 real business-module endpoints, the remaining Task 7
-audit scope, or Phase 1F, each still requiring its own explicit authorization to begin.)
+the next substantive decisions — merging PR #23, the 21 real business-module endpoints, the
+remaining Task 7 audit scope, or a module-implementation wave off the roadmap, each still
+requiring its own explicit authorization.)

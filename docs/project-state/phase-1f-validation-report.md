@@ -120,8 +120,15 @@ following this report (see "Recent decisions" entries dated 2026-08-14).
   Critical/High finding; Sentry `beforeSend` precondition) — decision **Approved as-is**,
   2026-08-14, no disputes raised. See
   `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off" section.
-- **A Phase 1F gate decision** — not yet requested; remains separate from the review above, per
-  every prior phase's own pattern of keeping the review and the gate decision distinct.
+- ~~A Phase 1F gate decision~~ — **complete**. The Phase 1F gate (**G4-1F**) is approved — WebDesk
+  Solution, decision **CONFIRM** (clean pass, not an override, since the second-role review above
+  was already complete before the gate was requested), 2026-08-14. Approved commit
+  `7d84f040bce67fa7cd1e92aa69e8512021b39b64` on branch `phase-1f-application-shell`. See
+  `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off" section and
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **The branch/PR #23 is not yet
+  merged to `main`** — merging remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule; this gate approval does not itself merge or deploy
+  anything.
 - **Git workflow completion** — push the branch, open a PR. Per the brief's own explicit
   instruction (§49: "Stop after Phase 1F. Wait for human approval") and this project's standing
   rule, **no merge, no production deploy, and no Wave 1 / module-implementation start** happens
