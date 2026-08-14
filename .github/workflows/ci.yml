@@ -2,7 +2,9 @@ name: CI
 
 # Foundation CI: install, typecheck, lint, format, unit tests, integration
 # tests (apps/dashboard-api's own auth e2e suite plus dashboard-web's
-# Playwright smoke test — needs a disposable postgres:16 service container
+# Playwright smoke test, which also runs the Phase 1F axe-core WCAG 2.2 AA
+# checks in tests/e2e/accessibility.spec.ts — needs a disposable postgres:16
+# service container
 # as of Phase 1C, since dashboard-api's AuthModule genuinely needs a real
 # database to construct), a database migration test (Phase 1B — its own
 # separate disposable postgres:16 service container, not the real chosen
@@ -182,7 +184,7 @@ jobs:
         run: pnpm --filter @webdesk/dashboard-api test:integration
       - name: dashboard-web Playwright browsers
         run: pnpm --filter @webdesk/dashboard-web exec playwright install --with-deps chromium
-      - name: dashboard-web smoke test
+      - name: dashboard-web smoke test + accessibility checks
         run: pnpm --filter @webdesk/dashboard-web test:integration
 
   database-migration-test:
