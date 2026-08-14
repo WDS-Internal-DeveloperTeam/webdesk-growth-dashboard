@@ -13,10 +13,10 @@ Two real Vercel projects exist (`docs/project-state/setup-input-register.md`, "A
 project IDs / topology"), both created ad hoc by the user on 2026-08-11, both deploying directly
 from `main`:
 
-| Project                        | App             | Root directory        | Status                                                          |
-| ------------------------------- | ---------------- | ---------------------- | ---------------------------------------------------------------- |
-| `webdesk-growth-dashboard`      | `dashboard-web`  | `apps/dashboard-web`   | Live, serving real requests                                     |
-| `webdesk-growth-dashboard-7v1u` | `dashboard-api`  | `apps/dashboard-api`   | Live, serving real requests (Google SSO login confirmed working) |
+| Project                         | App             | Root directory       | Status                                                           |
+| ------------------------------- | --------------- | -------------------- | ---------------------------------------------------------------- |
+| `webdesk-growth-dashboard`      | `dashboard-web` | `apps/dashboard-web` | Live, serving real requests                                      |
+| `webdesk-growth-dashboard-7v1u` | `dashboard-api` | `apps/dashboard-api` | Live, serving real requests (Google SSO login confirmed working) |
 
 **Both of these are, in effect, the production environment.** A real Super Admin
 (`jitesh@webdeskinc.com`) can sign in via Google Workspace SSO and the database holds real
