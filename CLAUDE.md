@@ -245,6 +245,16 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    audit scope, the 21 real business-module endpoints, and any module-implementation wave (see
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
+7. **Projects module task package prepared, awaiting human approval** —
+   `docs/task-packages/module-projects-foundation.md`, built from the Phase 1F task-package
+   template per explicit instruction to prepare it (not implement). Pre-implementation
+   verification found no dependency blocker (Wave 1, no prerequisites) but several real spec
+   silences (no Projects wireframes, no status state machine, a naming collision between the
+   canonical data-model doc's project-scoped `operational_contacts` and Phase 1E's already-built
+   global one) — each flagged with a proposed, clearly-marked-as-unsourced resolution (D1-D8) for
+   the human reviewer to confirm or correct, not silently resolved. **Implementation has not
+   started** — it begins only once a human confirms the package "looks correct," per the
+   authorizing instruction's own explicit two-step design.
 
 ## Recent decisions
 
@@ -870,6 +880,35 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   no real user traffic yet, and none of the newly-migrated tables' endpoints had been exercised
   live. Recorded in `outputs/webdesk-growth-dashboard/project.json`'s `audit_log` (version 15 → 16).
   The production database is now fully migrated through `00035` — nothing known to be pending.
+
+- `[2026-08-14]` **Prepared (not implemented) the Projects module task package**, per explicit
+  instruction to use Phase 1F's own task-package template rather than a fresh giant prompt, and to
+  "run consistency checks against the approved module roadmap/specification, and stop for human
+  approval" before any code is written. Full record: `docs/task-packages/module-projects-foundation.md`.
+  Pre-implementation verification (section 0) confirmed `projects` is a genuine Wave 1 module (no
+  dependencies, per `docs/phase-plans/module-implementation-roadmap.md` and
+  `module_registry.dependencies`), that its permission group (`project_configuration`) already has
+  real seeded RBAC grants needing no new migration, and that no open Critical/High security finding
+  or missing credential blocks it. It also surfaced real silences in the source docs that this
+  package flags rather than resolves unilaterally: `03_Detailed_Module_Specifications.md`'s
+  Projects entry is thin relative to other modules (no screens/statuses/audit events/acceptance
+  criteria stated); `07_Low_Fidelity_Wireframes.md` has no Projects-specific screens at all, only
+  the shell's nav item and header "Project Switcher"; `05_Workflow_State_Machines.md` defines no
+  Project status lifecycle despite "pause"/"archive" being named actions; and, most notably,
+  `04_Data_Model_and_Ownership.md` lists `operational_contacts` under "Projects and configuration,"
+  but the actually-built table of that exact name (Phase 1E, `00027-create-operational-contacts.ts`)
+  is a global, system-wide incident-escalation contact list with no `project_id` column, matching
+  `09_Security_Backup_Retention_Operations.md`'s fixed "operational areas" list (which includes
+  "Project Management" as one area, not a client project) — a genuine naming collision between the
+  source docs and already-shipped code, flagged (design decision D1) rather than silently reused or
+  reinterpreted. Eight design decisions (D1-D8) each propose a reasoned, clearly-flagged-as-unsourced
+  resolution (status enum, phase/roadmap modeling, project team vs. project-scoped RBAC reuse via
+  the existing `user_roles.project_id` mechanism, repository metadata scoped to reference-only with
+  no live GitHub validation, retention category left unset pending confirmation, Project Switcher
+  wiring explicitly deferred, no confidential fields for V1). **Implementation has not started and
+  was not authorized to start** — this package is a proposal awaiting the human "looks correct"
+  confirmation the authorizing instruction itself made a separate, later step from preparing the
+  package.
 
 ## Open client blockers
 
