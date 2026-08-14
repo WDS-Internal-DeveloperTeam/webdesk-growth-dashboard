@@ -2,12 +2,7 @@ import { Controller, Get } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { getBuildMetadata } from "@webdesk/configuration";
 import type { HealthCheckResult } from "@webdesk/shared-types";
-
-// Kept in sync with package.json's own "version" field manually — importing
-// package.json at runtime isn't viable under this app's tsconfig ("rootDir":
-// "src" excludes it, per the same constraint documented in
-// apps/dashboard-api/tsconfig.json).
-const API_VERSION = "0.1.0";
+import { API_VERSION } from "../version.js";
 
 const buildMetadata = getBuildMetadata(API_VERSION);
 

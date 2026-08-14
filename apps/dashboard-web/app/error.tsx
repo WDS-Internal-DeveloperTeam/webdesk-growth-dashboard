@@ -24,8 +24,8 @@ export default function GlobalError({
 
   return (
     <ContentContainer>
-      <h1 style={{ textAlign: "center", fontSize: "1.5rem" }}>Something went wrong</h1>
       <ErrorState
+        titleAs="h1"
         message="An unexpected error occurred. The team has been notified."
         correlationId={error.digest}
         action={<button onClick={() => reset()}>Try again</button>}

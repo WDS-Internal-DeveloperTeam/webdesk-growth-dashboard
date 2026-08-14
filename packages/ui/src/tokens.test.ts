@@ -76,4 +76,12 @@ describe("design tokens (Phase 1F application-shell foundation)", () => {
       true,
     );
   });
+
+  it("also flattens focus, breakpoint, z-index, and motion tokens (not just color/space/status)", () => {
+    const properties = toCssCustomProperties();
+    expect(properties["--webdesk-dashboard-focus-ring-color"]).toBe(focusTokens.ringColor);
+    expect(properties["--webdesk-dashboard-breakpoint-tablet"]).toBe(breakpointTokens.tablet);
+    expect(properties["--webdesk-dashboard-zindex-modal"]).toBe(String(zIndexTokens.modal));
+    expect(properties["--webdesk-dashboard-motion-duration-base"]).toBe(motionTokens.durationBase);
+  });
 });

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import type { ModuleRegistrySummary } from "@webdesk/shared-types";
+import { APPROVED_NAVIGATION_GROUPS, type ModuleRegistrySummary } from "@webdesk/shared-types";
 import type { ServerSessionProfile } from "@/lib/server-session";
 import styles from "./app-shell.module.css";
 
@@ -26,6 +26,15 @@ const NAV_GROUP_LABELS: Readonly<Record<string, string>> = {
   settings: "Settings",
 };
 
+/**
+ * Groups navigation entries, then orders the groups per
+ * `APPROVED_NAVIGATION_GROUPS` (the approved wireframe order — home,
+ * projects, pages, ... settings), NOT the API response order (which is
+ * alphabetical, per `ModuleRegistryRepository.listForNavigation()`'s own
+ * `ORDER BY navigation_group`). Any group not in the approved list sorts
+ * after all approved ones, so an unexpected value is visible rather than
+ * silently reordering everything.
+ */
 function groupNavigation(
   navigation: readonly ModuleRegistrySummary[],
 ): ReadonlyArray<readonly [string, ModuleRegistrySummary[]]> {
@@ -35,7 +44,14 @@ function groupNavigation(
     group.push(entry);
     groups.set(entry.navigationGroup, group);
   }
-  return [...groups.entries()];
+  return [...groups.entries()].sort(([a], [b]) => {
+    const indexA = APPROVED_NAVIGATION_GROUPS.indexOf(a);
+    const indexB = APPROVED_NAVIGATION_GROUPS.indexOf(b);
+    return (
+      (indexA === -1 ? APPROVED_NAVIGATION_GROUPS.length : indexA) -
+      (indexB === -1 ? APPROVED_NAVIGATION_GROUPS.length : indexB)
+    );
+  });
 }
 
 /**

@@ -1,9 +1,6 @@
 import * as Sentry from "@sentry/node";
 import { getBuildMetadata, getSentryConfig } from "@webdesk/configuration";
-
-// Kept in sync with package.json's own "version" field manually — same
-// constraint documented in health.controller.ts's own API_VERSION constant.
-const API_VERSION = "0.1.0";
+import { API_VERSION } from "../version.js";
 
 let enabled = false;
 

@@ -168,7 +168,10 @@ export type MotionToken = keyof typeof motionTokens;
  */
 export function toCssCustomProperties(): Readonly<Record<string, string>> {
   const properties: Record<string, string> = {};
-  const groups: ReadonlyArray<readonly [string, Readonly<Record<string, string>>]> = [
+  // `controlSizeTokens` is deliberately excluded — it's a nested per-size object
+  // (`{sm: {height, paddingInline, fontSize}, ...}`), not a flat token group, and is meant to be
+  // consumed directly in JS/inline styles by size-variant components, not as CSS custom properties.
+  const groups: ReadonlyArray<readonly [string, Readonly<Record<string, string | number>>]> = [
     ["color", colorTokens],
     ["font", typographyTokens],
     ["space", spacingTokens],
@@ -177,11 +180,15 @@ export function toCssCustomProperties(): Readonly<Record<string, string>> {
     ["radius", radiusTokens],
     ["shadow", shadowTokens],
     ["status", statusTokens],
+    ["focus", focusTokens],
+    ["breakpoint", breakpointTokens],
+    ["zindex", zIndexTokens],
+    ["motion", motionTokens],
   ];
   for (const [group, tokens] of groups) {
     for (const [key, value] of Object.entries(tokens)) {
       const kebabKey = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-      properties[`--webdesk-dashboard-${group}-${kebabKey}`] = value;
+      properties[`--webdesk-dashboard-${group}-${kebabKey}`] = String(value);
     }
   }
   return properties;

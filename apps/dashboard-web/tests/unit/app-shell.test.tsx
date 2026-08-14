@@ -122,6 +122,33 @@ describe("AppShell", () => {
     expect(screen.getByText("Page content")).toBeInTheDocument();
   });
 
+  it("orders navigation groups per APPROVED_NAVIGATION_GROUPS, not alphabetically or API order", () => {
+    // Deliberately out of both alphabetical and canonical order in the input array —
+    // "workflow" and "projects" both sort after "libraries"/"pages" alphabetically, but
+    // APPROVED_NAVIGATION_GROUPS puts "projects" second and "workflow" fifth.
+    const outOfOrder: ModuleRegistrySummary[] = [
+      navEntry({ key: "workflow_mod", displayName: "Workflow Mod", navigationGroup: "workflow" }),
+      navEntry({ key: "settings_mod", displayName: "Settings Mod", navigationGroup: "settings" }),
+      navEntry({ key: "projects_mod", displayName: "Projects Mod", navigationGroup: "projects" }),
+      navEntry({ key: "home_mod", displayName: "Home Mod", navigationGroup: "home" }),
+    ];
+    render(
+      <AppShell
+        me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
+        navigation={outOfOrder}
+      >
+        <p>Page content</p>
+      </AppShell>,
+    );
+    const links = screen.getAllByRole("link").filter((link) => link.textContent?.endsWith(" Mod"));
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Home Mod",
+      "Projects Mod",
+      "Workflow Mod",
+      "Settings Mod",
+    ]);
+  });
+
   it("renders no navigation items when the caller has no visible modules", () => {
     render(
       <AppShell

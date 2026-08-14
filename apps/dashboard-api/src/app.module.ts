@@ -15,13 +15,11 @@ import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
+import { API_VERSION } from "./version.js";
 
 const env = loadEnv(baseEnvSchema);
 const loggerOptions = buildLoggerOptions(env, "dashboard-api");
-// Kept in sync with package.json's own "version" field manually — same
-// constraint as apps/dashboard-api/src/health/health.controller.ts's own
-// API_VERSION constant (rootDir excludes importing package.json directly).
-const buildMetadata = getBuildMetadata("0.1.0");
+const buildMetadata = getBuildMetadata(API_VERSION);
 
 @Module({
   imports: [

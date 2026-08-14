@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import type { ApiSuccessResponse, ModuleRegistrySummary } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
 
@@ -21,11 +22,22 @@ export interface ServerSession {
   readonly navigation: readonly ModuleRegistrySummary[];
 }
 
-/** `getApiBaseUrl()` throws when unconfigured — treated as "cannot be authenticated," not a crash. */
+/**
+ * `getApiBaseUrl()` throws when unconfigured — treated as "cannot be
+ * authenticated," not a crash, so environments with no real backend (the
+ * Playwright smoke-test fixture, `/auth/sign-in` itself) don't crash. But a
+ * genuinely missing `NEXT_PUBLIC_API_BASE_URL` in a real deployment is a
+ * real misconfiguration (the exact class of bug behind the 2026-08-12
+ * production `500` on `/auth/sign-in` — see CLAUDE.md's decision log) that
+ * would otherwise disappear into an ordinary-looking "please sign in"
+ * redirect with zero trace. Logged here so it's still visible in Vercel's
+ * runtime logs even though the user only ever sees "signed out."
+ */
 function tryGetApiBaseUrl(): string | null {
   try {
     return getApiBaseUrl();
-  } catch {
+  } catch (error) {
+    console.error("getServerSession: NEXT_PUBLIC_API_BASE_URL is not configured", error);
     return null;
   }
 }
@@ -37,8 +49,15 @@ function tryGetApiBaseUrl(): string | null {
  * silently treated as "signed out" — an API outage must surface as an
  * error, not a misleading prompt to log back in (brief §19's own
  * error-handling philosophy).
+ *
+ * Wrapped in React's `cache()` so the `(shell)` layout and a page under it
+ * (e.g. `home/page.tsx`) both calling this for the same request share one
+ * real pair of `dashboard-api` calls — Next.js's fetch memoization already
+ * happens to dedupe this implicitly today, but that's an incidental
+ * property of identical fetch args during a render pass, not a guarantee;
+ * `cache()` makes the dedup explicit and robust against future refactors.
  */
-export async function getServerSession(): Promise<ServerSession | null> {
+export const getServerSession = cache(async (): Promise<ServerSession | null> => {
   const apiBaseUrl = tryGetApiBaseUrl();
   if (!apiBaseUrl) {
     return null;
@@ -71,4 +90,4 @@ export async function getServerSession(): Promise<ServerSession | null> {
   >;
 
   return { me: meBody.data, navigation: navigationBody.data };
-}
+});

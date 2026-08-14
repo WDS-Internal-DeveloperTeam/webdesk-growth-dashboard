@@ -68,15 +68,30 @@ describe("CatalogService", () => {
 
       const result = await service.listModuleRegistry();
       expect(result).toEqual([
-        expect.objectContaining({
+        {
           id: "r1",
           key: "case_study_library",
           name: "Case Study Library",
           permissionGroupKey: "case_studies",
-          route: "/case-study-library",
+          displayName: "Case Study Library",
+          description: "Published and unpublished case studies.",
           navigationGroup: "libraries",
+          navigationOrder: 4,
+          route: "/case-study-library",
+          iconReference: "library",
+          v1InclusionStatus: "included",
           implementationStatus: "not_started",
-        }),
+          viewPermissionAction: "case_study_library_view",
+          actionPermissions: null,
+          featureStatus: "Not Started",
+          documentationReference: "docs.md",
+          helpDocumentReference: null,
+          owner: "TBD",
+          dependencies: null,
+          confidentialityLevel: null,
+          badgeSupport: true,
+          deprecationReference: null,
+        },
       ]);
     });
 

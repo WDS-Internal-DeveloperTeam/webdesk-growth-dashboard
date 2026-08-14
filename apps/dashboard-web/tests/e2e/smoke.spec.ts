@@ -31,4 +31,15 @@ test.describe("Phase 1F application-shell smoke test", () => {
     expect(response?.headers()["x-frame-options"]).toBe("DENY");
     expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
   });
+
+  test("secure default headers are also present on the real page an unauthenticated visit lands on", async ({
+    page,
+  }) => {
+    // "/" redirects to "/auth/sign-in" — the actual page a signed-out visitor's browser renders.
+    // A header-matcher regression that only broke the redirect target wouldn't be caught by the
+    // /health-only check above, since /health is never in that redirect chain.
+    const response = await page.goto("/");
+    expect(response?.headers()["x-frame-options"]).toBe("DENY");
+    expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
+  });
 });

@@ -78,6 +78,14 @@ export function EmptyState({ title, description, action }: EmptyStateProps): Rea
 
 export interface ErrorStateProps {
   readonly title?: string;
+  /**
+   * Renders `title` as a real `<h1>` instead of the default styled `<p>`.
+   * Set this when the state IS the page (a full-page boundary like
+   * `app/error.tsx`, which needs a real top-level heading) — leave it unset
+   * when embedding this state inside a page that already has its own
+   * heading, so two `<h1>`s don't collide.
+   */
+  readonly titleAs?: "p" | "h1";
   /** Safe, user-facing message only — never a stack trace, SQL, or internal path (brief §22). */
   readonly message: string;
   readonly correlationId?: string;
@@ -86,14 +94,16 @@ export interface ErrorStateProps {
 
 export function ErrorState({
   title = "Something went wrong",
+  titleAs = "p",
   message,
   correlationId,
   action,
 }: ErrorStateProps): ReactNode {
+  const Title = titleAs;
   return (
     <div style={containerStyle} role="alert">
       <span style={badgeStyle(colorTokens.dangerSurface, colorTokens.danger)}>Error</span>
-      <p style={titleStyle}>{title}</p>
+      <Title style={titleStyle}>{title}</Title>
       <p style={bodyStyle}>{message}</p>
       {correlationId ? (
         <p style={{ ...bodyStyle, fontFamily: typographyTokens.fontFamilyMono }}>
@@ -125,19 +135,25 @@ export function ForbiddenState({
 }
 
 export interface NotFoundStateProps {
+  readonly title?: string;
+  /** See `ErrorStateProps.titleAs` — same reasoning. */
+  readonly titleAs?: "p" | "h1";
   readonly message?: string;
 }
 
 /** Handles invalid routes/resources (brief §15). */
 export function NotFoundState({
+  title = "We couldn't find that",
+  titleAs = "p",
   message = "The page or record you're looking for doesn't exist or may have been removed.",
 }: NotFoundStateProps): ReactNode {
+  const Title = titleAs;
   return (
     <div style={containerStyle}>
       <span style={badgeStyle(colorTokens.mutedSurface, colorTokens.foregroundMuted)}>
         Not found
       </span>
-      <p style={titleStyle}>We couldn&apos;t find that</p>
+      <Title style={titleStyle}>{title}</Title>
       <p style={bodyStyle}>{message}</p>
     </div>
   );
