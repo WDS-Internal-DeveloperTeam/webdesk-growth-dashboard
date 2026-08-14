@@ -201,10 +201,12 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
   explicit "merge PR #23" authorization — merge commit `1e8f343c4779237a4fe75c3c663716877990dc20`,
   all 14 CI checks green before merge. Both `dashboard-web` and `dashboard-api` auto-deployed to
   production on the merge and were verified live directly (`/health`'s `build.commitSha` matches
-  the merge commit; `dashboard-web`'s `/` correctly redirects to `/auth/sign-in`). Phase 1F's own
-  schema migrations (`00034`/`00035`) have not been run against the real production database yet.
-  Does not include the 21 real business-module endpoints, the remaining Task 7 audit scope, or any
-  module-implementation wave — each a separate, not-yet-requested authorization.
+  the merge commit; `dashboard-web`'s `/` correctly redirects to `/auth/sign-in`). **All 35
+  production migrations are now applied (2026-08-14)** — see the dedicated "Recent decisions" entry
+  below; this run also retroactively applied all of Phase 1E's remaining operational-infrastructure
+  schema, which had never been migrated to production despite being merged/gated a day and a half
+  earlier. Does not include the 21 real business-module endpoints, the remaining Task 7 audit scope,
+  or any module-implementation wave — each a separate, not-yet-requested authorization.
 
 ## Active tasks (this sprint)
 
@@ -238,9 +240,9 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23) (merge
    commit `1e8f343c4779237a4fe75c3c663716877990dc20`) — see "Current state" above and
    `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off". Both `dashboard-web` and
-   `dashboard-api` auto-deployed to production on the merge and were verified live. Remaining:
-   running Phase 1F's production database migrations (`00034`/`00035`), the Task 7 audit scope,
-   the 21 real business-module endpoints, and any module-implementation wave (see
+   `dashboard-api` auto-deployed to production on the merge and were verified live. **All 35
+   production database migrations run 2026-08-14** (see "Recent decisions"). Remaining: the Task 7
+   audit scope, the 21 real business-module endpoints, and any module-implementation wave (see
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
 
@@ -842,12 +844,32 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   metadata feature itself works in production), and `dashboard-web`'s `/` correctly redirected an
   unauthenticated visitor to `/auth/sign-in` via the new `(shell)` layout's session gate (proving
   the new application shell code is genuinely live and behaviorally correct, not just deployed).
-  **Phase 1F's own schema migrations (`00034`/`00035`) have not been run against the real
-  production database yet** — same "user runs it themselves" pattern as every prior phase's
-  production migration; `/health`/`/ready` don't touch the database, so their liveness doesn't
-  prove the schema is there. Phase 1F's own real business-module endpoints, the remaining Task 7
-  audit scope, and any module-implementation wave are each separate, not-yet-requested next
-  candidates.
+  At the time of this entry, Phase 1F's own schema migrations (`00034`/`00035`) had not yet been
+  run against the real production database — **since resolved, see the next entry below.**
+  Phase 1F's own real business-module endpoints, the remaining Task 7 audit scope, and any
+  module-implementation wave are each separate, not-yet-requested next candidates.
+- `[2026-08-14]` **Ran all pending production database migrations, surfacing and closing a
+  previously-undocumented gap.** User ran `pnpm --filter @webdesk/database run migrate` themselves
+  (sourcing `prod-db.env`, same credential-handling discipline as every prior production DB
+  operation — Claude never saw the real `DATABASE_URL`). Output: `Applied 17 migration(s)`, naming
+  all 17. Independently verified via a second, separate command (`migrate:status`, Umzug's own
+  `executed()`/`pending()` read-only bookkeeping, not just the `migrate` command's own success
+  message): all 35 migrations executed, 0 pending. **Only 2 of the 17 applied migrations
+  (`00034`/`00035`) were the Phase 1F migrations this run was originally requested for.** The other
+  15 (`00019` through `00033`) were the **entire remaining Phase 1E operational-infrastructure
+  schema** — audit-schema expansion, `jobs`/`job_attempts`/`idempotency_keys`,
+  `retention_policies`/`retention_holds`, `notifications`, `operational_contacts`/
+  `incident_severity_policies`, `system_events`/`system_components`/`system_health_checks` — merged
+  to `main` and gated (G4-1E, CONFIRM) on 2026-08-13, but **never actually applied to production
+  until this run**. The last production migration before this one was `00018`
+  (`create-audit-events`, run 2026-08-12); everything merged after that sat unapplied in production
+  for roughly a day and a half. This was not previously flagged as a known gap — `CLAUDE.md`/
+  `HANDOFF.md` stated only that "the production database has all migrations applied through Phase
+  1E's `audit_events` table," which was accurate but didn't make explicit that the rest of Phase
+  1E's schema was still pending. No production impact is known to have resulted: this project has
+  no real user traffic yet, and none of the newly-migrated tables' endpoints had been exercised
+  live. Recorded in `outputs/webdesk-growth-dashboard/project.json`'s `audit_log` (version 15 → 16).
+  The production database is now fully migrated through `00035` — nothing known to be pending.
 
 ## Open client blockers
 
@@ -997,13 +1019,16 @@ CONFIRM).
 **Current state**: `dashboard-web` (https://webdesk-growth-dashboard-theta.vercel.app) and
 `dashboard-api` (https://webdesk-growth-dashboard-7v1u-beta.vercel.app) are both live and healthy,
 now serving Phase 1F's merged code (application shell, module registry, permission-aware
-navigation, observability foundation) in addition to everything through Phase 1E. The production
-database has all migrations applied through Phase 1E's `audit_events` table — **Phase 1F's own
-migrations (`00034`/`00035`, the module registry) have NOT been run against production yet**;
-`/health`/`/ready` never query the database, so the deployment being live and healthy does not
-demonstrate otherwise. A real Super Admin (`jitesh@webdeskinc.com`) can sign in via Google
-Workspace SSO successfully. Remaining open items: the real emergency-administrator account list,
-the WordPress Application Password account (production/development, only staging exists), real
-timezone confirmation, and — the next substantive decisions — running Phase 1F's production
-migrations, the 21 real business-module endpoints, the remaining Task 7 audit scope, or a
-module-implementation wave off the roadmap, each still requiring its own explicit authorization.)
+navigation, observability foundation) in addition to everything through Phase 1E. **The production
+database now has all 35 migrations applied (run 2026-08-14)** — this run also retroactively
+applied all of Phase 1E's remaining operational-infrastructure schema (`00019`–`00033`: jobs,
+retention, notifications, operational contacts, system events/health), which had been merged and
+gated since 2026-08-13 but never actually migrated to production until now (a previously-
+undocumented gap, closed same-day, no known production impact — see the dedicated "Recent
+decisions" entry). A real Super Admin (`jitesh@webdeskinc.com`) can sign in via Google Workspace
+SSO successfully. Remaining open items: the real emergency-administrator account list, the
+WordPress Application Password account (production/development, only staging exists), real
+timezone confirmation, and — the next substantive decisions — the 21 real business-module
+endpoints, the remaining Task 7 audit scope (query HTTP surface, retention-deletion job), Task 9's
+real background-worker/queue wiring, or a module-implementation wave off the roadmap, each still
+requiring its own explicit authorization.)

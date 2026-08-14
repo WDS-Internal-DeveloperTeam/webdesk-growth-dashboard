@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-14T00:00:00Z",
-    "version": 15
+    "version": 16
   },
 
   "tech_stack": {
@@ -463,6 +463,38 @@
       },
       "project_version_before": 14,
       "project_version_after": 15
+    },
+    {
+      "timestamp": "2026-08-14T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "ran pnpm --filter @webdesk/database run migrate against the real production database, applying all pending migrations",
+      "details": {
+        "migrations_applied": [
+          "00019-expand-audit-events",
+          "00020-create-jobs",
+          "00021-create-job-attempts",
+          "00022-create-idempotency-keys",
+          "00023-create-retention-policies",
+          "00024-seed-retention-policies",
+          "00025-create-retention-holds",
+          "00026-create-notifications",
+          "00027-create-operational-contacts",
+          "00028-create-incident-severity-policies",
+          "00029-seed-incident-severity-policies",
+          "00030-create-system-events",
+          "00031-create-system-components",
+          "00032-seed-system-components",
+          "00033-create-system-health-checks",
+          "00034-extend-module-registry",
+          "00035-populate-module-registry-fields"
+        ],
+        "verification": "Independently confirmed via a second, separate command — pnpm --filter @webdesk/database run migrate:status (Umzug's own executed()/pending() read-only bookkeeping, not just the migrate command's own success message) — showing all 35 migrations executed and 0 pending.",
+        "gap_discovered_and_closed": "Only 2 of the 17 applied migrations (00034/00035) were the Phase 1F module-registry migrations this run was originally requested for. The other 15 (00019 through 00033) are the ENTIRE remaining Phase 1E operational-infrastructure schema (audit-schema expansion, jobs/job_attempts/idempotency_keys, retention_policies/retention_holds, notifications, operational_contacts/incident_severity_policies, system_events/system_components/system_health_checks) — merged to main and gated (G4-1E, CONFIRM) on 2026-08-13, but never actually applied to the production database until this run. The last production migration before this one was 00018 (create-audit-events, run 2026-08-12) — every migration merged after that sat unapplied in production for roughly a day and a half. This was not previously flagged as a known gap in CLAUDE.md/HANDOFF.md; both stated only that 'the production database has all migrations applied through Phase 1E's audit_events table,' which was accurate but did not make explicit that the rest of Phase 1E's schema was still pending. No production impact is known to have resulted, since this project has no real user traffic yet and none of the newly-migrated tables' endpoints had been exercised live.",
+        "credential_handling": "Run entirely by the user in their own terminal, sourcing prod-db.env — Claude never saw the real DATABASE_URL, consistent with this project's standing credential-handling discipline for every prior production database operation."
+      },
+      "project_version_before": 15,
+      "project_version_after": 16
     }
   ]
 }
