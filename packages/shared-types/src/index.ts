@@ -183,3 +183,22 @@ export interface ModuleRegistrySummary {
    *  by capability-aware endpoints (e.g. navigation); absent/undefined from unfiltered catalog reads. */
   readonly canView?: boolean;
 }
+
+/**
+ * The 10 approved top-level navigation labels (`07_Low_Fidelity_Wireframes.md` §1). The single
+ * source both `dashboard-web`'s navigation rendering and `validate-module-registry.ts` read —
+ * changing a module's nav group without updating this list (or vice versa) is exactly the drift
+ * the Phase 1F registry validation catches.
+ */
+export const APPROVED_NAVIGATION_GROUPS: readonly string[] = [
+  "home",
+  "projects",
+  "pages",
+  "libraries",
+  "workflow",
+  "scans",
+  "technical",
+  "releases",
+  "help",
+  "settings",
+];

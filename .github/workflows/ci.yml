@@ -231,6 +231,13 @@ jobs:
         run: npx turbo run build --filter=@webdesk/database
       - name: Migration up/down round-trip
         run: pnpm --filter @webdesk/database migrate:test
+      # migrate:test's own "down" step only reverts the single last migration, so re-apply
+      # everything fresh before validating — the module registry needs its full, real data,
+      # not a rolled-back-by-one-step schema (Phase 1F, docs/task-packages/phase-1f-application-shell.md).
+      - name: Apply migrations for registry validation
+        run: pnpm --filter @webdesk/database migrate
+      - name: Module-registry and permission-mapping validation
+        run: pnpm --filter @webdesk/database validate:module-registry
       - name: Database foundation integration tests
         run: pnpm --filter @webdesk/database test:integration
 

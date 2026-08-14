@@ -25,7 +25,8 @@
     "migrate:status": "pnpm build && node dist/migrate-status.js",
     "list-tables": "pnpm build && node dist/list-tables.js",
     "list-auth-events": "pnpm build && node dist/list-auth-events.js",
-    "migrate:test": "pnpm build && node dist/migrate.js up && node dist/migrate.js down"
+    "migrate:test": "pnpm build && node dist/migrate.js up && node dist/migrate.js down",
+    "validate:module-registry": "pnpm build && node dist/validate-module-registry.js"
   },
   "dependencies": {
     "@webdesk/configuration": "workspace:*",
