@@ -197,10 +197,13 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
   decision "Approved as-is", 2026-08-14, no disputes. **G4-1F gate approved 2026-08-14 (clean
   CONFIRM)** — WebDesk Solution, approved commit `7d84f040bce67fa7cd1e92aa69e8512021b39b64` on
   branch `phase-1f-application-shell` — see `docs/project-state/phase-1f-approval-checklist.md`'s
-  "Sign-off" section and `project.json`'s `gates[]`. **Branch/PR #23 is NOT YET MERGED to `main`**
-  — unlike every prior phase, this gate was approved before merge; merging remains its own
-  separate, not-yet-requested authorization under the standing "no auto-merge" rule. Does not
-  include the 21 real business-module endpoints, the remaining Task 7 audit scope, or any
+  "Sign-off" section and `project.json`'s `gates[]`. **PR #23 was then merged to `main`** under
+  explicit "merge PR #23" authorization — merge commit `1e8f343c4779237a4fe75c3c663716877990dc20`,
+  all 14 CI checks green before merge. Both `dashboard-web` and `dashboard-api` auto-deployed to
+  production on the merge and were verified live directly (`/health`'s `build.commitSha` matches
+  the merge commit; `dashboard-web`'s `/` correctly redirects to `/auth/sign-in`). Phase 1F's own
+  schema migrations (`00034`/`00035`) have not been run against the real production database yet.
+  Does not include the 21 real business-module endpoints, the remaining Task 7 audit scope, or any
   module-implementation wave — each a separate, not-yet-requested authorization.
 
 ## Active tasks (this sprint)
@@ -230,14 +233,15 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    retention-deletion job) and Phase 1F are separate, not-yet-authorized next candidates.
 6. ~~Phase 1F (application shell, module registry, navigation, observability, CI/accessibility,
    staging documentation, module roadmap)~~ — **done 2026-08-14.** Built, code-reviewed,
-   security-reviewed, pushed to `origin`, and opened as
-   [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23).
-   Second-role human review complete (Jitesh D and Brijesh D, Approved as-is), **G4-1F gate
-   approved** (WebDesk Solution, CONFIRM) — see "Current state" above and
-   `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off". **PR #23 is not yet merged**
-   — merging remains its own separate, not-yet-requested authorization. The remaining Task 7 audit
-   scope, the 21 real business-module endpoints, and any module-implementation wave (see
-   `docs/phase-plans/module-implementation-roadmap.md`) are separate, not-yet-authorized next
+   security-reviewed, second-role human reviewed (Jitesh D and Brijesh D, Approved as-is),
+   **G4-1F gate approved** (WebDesk Solution, CONFIRM), and **merged to `main`** via
+   [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23) (merge
+   commit `1e8f343c4779237a4fe75c3c663716877990dc20`) — see "Current state" above and
+   `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off". Both `dashboard-web` and
+   `dashboard-api` auto-deployed to production on the merge and were verified live. Remaining:
+   running Phase 1F's production database migrations (`00034`/`00035`), the Task 7 audit scope,
+   the 21 real business-module endpoints, and any module-implementation wave (see
+   `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
 
 ## Recent decisions
@@ -825,11 +829,25 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   approved commit `7d84f040bce67fa7cd1e92aa69e8512021b39b64` on branch
   `phase-1f-application-shell` — recorded in `outputs/webdesk-growth-dashboard/project.json`'s
   `gates[]` and the approval checklist's "Sign-off" section. **Unlike every prior gate in this
-  project's history, PR #23 is still unmerged** — this gate approval was requested and granted
-  before merge, since this project's standing "no auto-merge" rule treats merging as its own
-  separate, explicit authorization regardless of gate status, not something a gate implies. Phase
-  1F's own real business-module endpoints, the remaining Task 7 audit scope, and any module-
-  implementation wave are each separate, not-yet-requested next candidates.
+  project's history, this gate approval was requested and granted before merge** — this project's
+  standing "no auto-merge" rule treats merging as its own separate, explicit authorization
+  regardless of gate status, never something a gate implies. **PR #23 was then merged to `main`
+  under explicit "merge PR #23" authorization** — waited for all 14 CI checks to go green
+  (Integration tests and Database migration test were still running at request time), merge commit
+  `1e8f343c4779237a4fe75c3c663716877990dc20`. Both `dashboard-web` and `dashboard-api` auto-
+  deployed to production on the merge (Vercel's standing auto-deploy-on-push-to-`main` behavior)
+  and were **verified live directly, not just via CI's own Vercel status check** —
+  `dashboard-api`'s `/health` returned `build.commitSha == 1e8f343...`/`environment ==
+"production"` (proving the exact merged commit is what's serving, and that the new build-
+  metadata feature itself works in production), and `dashboard-web`'s `/` correctly redirected an
+  unauthenticated visitor to `/auth/sign-in` via the new `(shell)` layout's session gate (proving
+  the new application shell code is genuinely live and behaviorally correct, not just deployed).
+  **Phase 1F's own schema migrations (`00034`/`00035`) have not been run against the real
+  production database yet** — same "user runs it themselves" pattern as every prior phase's
+  production migration; `/health`/`/ready` don't touch the database, so their liveness doesn't
+  prove the schema is there. Phase 1F's own real business-module endpoints, the remaining Task 7
+  audit scope, and any module-implementation wave are each separate, not-yet-requested next
+  candidates.
 
 ## Open client blockers
 
@@ -958,13 +976,18 @@ template artifacts. Builds zero business functionality for any of the 43 real mo
 independently code-reviewed (14 findings, 9 fixed, 5 tracked as debt), security-reviewed (no
 Critical/High finding), pushed to `origin`, and opened as
 [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23). The
-required second-role human review is complete (Jitesh D and Brijesh D, "Approved as-is"), and
-**the Phase 1F gate (G4-1F) is now approved** (WebDesk Solution, clean CONFIRM, approved commit
-`7d84f040bce67fa7cd1e92aa69e8512021b39b64`). **Unlike every prior gate, PR #23 remains unmerged**
-— this gate was approved before merge, since merging is always its own separate, explicit
-authorization in this project, never implied by a gate. See the 2026-08-14 "Recent decisions"
-entry for the full arc and `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off"
-section for both recorded decisions.
+required second-role human review is complete (Jitesh D and Brijesh D, "Approved as-is"), **the
+Phase 1F gate (G4-1F) was approved** (WebDesk Solution, clean CONFIRM, approved commit
+`7d84f040bce67fa7cd1e92aa69e8512021b39b64`) — unusually, before merge, since merging is always its
+own separate, explicit authorization in this project, never implied by a gate — and **PR #23 has
+since been merged to `main`** (merge commit `1e8f343c4779237a4fe75c3c663716877990dc20`), under a
+separate explicit "merge PR #23" authorization, after waiting for all 14 CI checks green. Both
+Vercel projects auto-deployed on the merge and were independently live-verified (not just trusted
+from Vercel's own status check): `dashboard-api`'s `/health` returned the exact merge commit SHA
+in its `build.commitSha` field, and `dashboard-web`'s `/` correctly rendered the new `(shell)`
+route group's unauthenticated sign-in redirect. See the 2026-08-14 "Recent decisions" entry for
+the full arc and `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off" section for both
+recorded decisions.
 
 The previous session (2026-08-13) closed out Phase 1E — six operational-infrastructure
 architecture slices (audit foundation, job architecture, notification foundation, retention
@@ -973,15 +996,14 @@ CONFIRM).
 
 **Current state**: `dashboard-web` (https://webdesk-growth-dashboard-theta.vercel.app) and
 `dashboard-api` (https://webdesk-growth-dashboard-7v1u-beta.vercel.app) are both live and healthy,
-serving Phase 1E's merged code (Phase 1F is not merged, so it isn't live yet); the production
-database has all migrations applied through Phase 1E's `audit_events` table; a real Super Admin
-(`jitesh@webdeskinc.com`) can sign in via Google Workspace SSO successfully. Phase 1E's own new
-tables/endpoints (jobs, notifications, retention, operational contacts, system events/health) are
-merged and gated but have not had their migrations run against the real production database yet.
-Phase 1F is built, reviewed, and gated but sits entirely on an unmerged branch/PR — none of its
-code (application shell, module registry, navigation, observability) is live anywhere yet.
-Remaining open items: the real emergency-administrator account list, the WordPress Application
-Password account (production/development, only staging exists), real timezone confirmation, and —
-the next substantive decisions — merging PR #23, the 21 real business-module endpoints, the
-remaining Task 7 audit scope, or a module-implementation wave off the roadmap, each still
-requiring its own explicit authorization.)
+now serving Phase 1F's merged code (application shell, module registry, permission-aware
+navigation, observability foundation) in addition to everything through Phase 1E. The production
+database has all migrations applied through Phase 1E's `audit_events` table — **Phase 1F's own
+migrations (`00034`/`00035`, the module registry) have NOT been run against production yet**;
+`/health`/`/ready` never query the database, so the deployment being live and healthy does not
+demonstrate otherwise. A real Super Admin (`jitesh@webdeskinc.com`) can sign in via Google
+Workspace SSO successfully. Remaining open items: the real emergency-administrator account list,
+the WordPress Application Password account (production/development, only staging exists), real
+timezone confirmation, and — the next substantive decisions — running Phase 1F's production
+migrations, the 21 real business-module endpoints, the remaining Task 7 audit scope, or a
+module-implementation wave off the roadmap, each still requiring its own explicit authorization.)

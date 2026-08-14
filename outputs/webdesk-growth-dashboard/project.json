@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-14T00:00:00Z",
-    "version": 14
+    "version": 15
   },
 
   "tech_stack": {
@@ -164,7 +164,8 @@
       "decided_by": "WebDesk Solution",
       "decided_at": "2026-08-14T00:00:00Z",
       "decision": "CONFIRM",
-      "notes": "Phase 1F — canonical 43-module registry extension, registry-driven/permission-aware navigation, the dashboard-web application shell, shared design-system/UI-state foundation (packages/ui), observability foundation (redaction, build metadata, a deliberately-inert Sentry integration), automated WCAG 2.2 AA accessibility checks, staging-environment documentation (stopped at the provisioning boundary, nothing provisioned), and planning-only module-implementation roadmap/task-package-template artifacts — approved, scope 'Phase 1F application shell and observability foundation only' — see docs/project-state/phase-1f-approval-checklist.md and its 'Sign-off' section. Builds zero business functionality for any of the 43 real modules (module_registry.implementation_status = 'not_started' for all 43). 294 unit + 108 real-database integration + 79 e2e + 9 Playwright tests (incl. 3 axe-core WCAG 2.2 AA checks, zero violations), all passing; migration up/down round trip clean; module-registry validation passing; pnpm audit clean; secret scan clean. Independent code review (8-angle, high effort) surfaced 14 findings — 9 fixed, 5 recorded as tracked technical debt with reasoning. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D and Brijesh D, 2026-08-14, decision 'Approved as-is', no disputes raised) was already complete before this gate was requested. Approved commit 7d84f040bce67fa7cd1e92aa69e8512021b39b64 on branch phase-1f-application-shell — IMPORTANT: this branch is NOT YET MERGED to main (open as PR #23); unlike every prior gate in this project's history, this gate approval precedes merge, since this project's standing rule treats merge as its own separate, explicit authorization regardless of gate status ('no auto-merge'). Does not itself authorize merging PR #23, production deployment, or the start of any module-implementation wave — each remains a separate, not-yet-requested authorization."
+      "notes": "Phase 1F — canonical 43-module registry extension, registry-driven/permission-aware navigation, the dashboard-web application shell, shared design-system/UI-state foundation (packages/ui), observability foundation (redaction, build metadata, a deliberately-inert Sentry integration), automated WCAG 2.2 AA accessibility checks, staging-environment documentation (stopped at the provisioning boundary, nothing provisioned), and planning-only module-implementation roadmap/task-package-template artifacts — approved, scope 'Phase 1F application shell and observability foundation only' — see docs/project-state/phase-1f-approval-checklist.md and its 'Sign-off' section. Builds zero business functionality for any of the 43 real modules (module_registry.implementation_status = 'not_started' for all 43). 294 unit + 108 real-database integration + 79 e2e + 9 Playwright tests (incl. 3 axe-core WCAG 2.2 AA checks, zero violations), all passing; migration up/down round trip clean; module-registry validation passing; pnpm audit clean; secret scan clean. Independent code review (8-angle, high effort) surfaced 14 findings — 9 fixed, 5 recorded as tracked technical debt with reasoning. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D and Brijesh D, 2026-08-14, decision 'Approved as-is', no disputes raised) was already complete before this gate was requested. Approved commit 7d84f040bce67fa7cd1e92aa69e8512021b39b64 on branch phase-1f-application-shell — IMPORTANT: this branch is NOT YET MERGED to main (open as PR #23); unlike every prior gate in this project's history, this gate approval precedes merge, since this project's standing rule treats merge as its own separate, explicit authorization regardless of gate status ('no auto-merge'). Does not itself authorize merging PR #23, production deployment, or the start of any module-implementation wave — each remains a separate, not-yet-requested authorization.",
+      "merge_resolution_note": "RESOLVED 2026-08-14: PR #23 merged to main under explicit 'merge PR #23' authorization, merge commit 1e8f343c4779237a4fe75c3c663716877990dc20. Vercel auto-deployed both dashboard-web and dashboard-api to production on push to main; both deployments verified live and healthy directly (not just CI's own Vercel status check) — dashboard-api's /health returned build.commitSha == 1e8f343c4779237a4fe75c3c663716877990dc20 and environment == 'production', confirming the exact merged commit is what's actually serving; dashboard-web's / correctly redirected an unauthenticated visitor to /auth/sign-in via the new (shell) layout's session gate, confirming the new application shell code is genuinely live and behaviorally correct, not just deployed. This note is appended rather than rewriting the gate's own historical 'not yet merged' text, which accurately reflected the state at gate-approval time."
     }
   ],
 
@@ -447,6 +448,21 @@
       },
       "project_version_before": 13,
       "project_version_after": 14
+    },
+    {
+      "timestamp": "2026-08-14T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "merged PR #23 (Phase 1F: application shell, module registry, observability foundation) into main",
+      "details": {
+        "pull_request": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23",
+        "merge_commit_sha": "1e8f343c4779237a4fe75c3c663716877990dc20",
+        "ci_status": "14/14 checks green before merge (including Integration tests and Database migration test, which were still in progress at merge-request time and were waited on to completion)",
+        "production_verification": "Both dashboard-web and dashboard-api Vercel projects auto-deployed on push to main; both verified live directly post-deploy, not just via CI's Vercel status check — dashboard-api's /health returned build.commitSha == 1e8f343c4779237a4fe75c3c663716877990dc20, environment == 'production'; dashboard-web's / correctly redirected to /auth/sign-in via the new (shell) layout's session gate.",
+        "note": "Phase 1F's code (application shell, module registry, registry-driven navigation, observability foundation) is now genuinely live in production for the first time. No migration for Phase 1F's own schema changes (00034/00035) has been run against the real production database yet by this entry — that remains the same 'user runs pnpm --filter @webdesk/database run migrate themselves' pattern as every prior phase's production migration."
+      },
+      "project_version_before": 14,
+      "project_version_after": 15
     }
   ]
 }
