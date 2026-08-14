@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { ModuleRegistryRepository, ModuleRepository } from "@webdesk/database";
 import type { ModuleRegistrySummary, ModuleSummary } from "@webdesk/shared-types";
 import { MODULE_REGISTRY_REPOSITORY, MODULE_REPOSITORY } from "./authz.constants.js";
+import { toModuleRegistrySummary } from "./module-registry.mapper.js";
 
 /**
  * Read-only composition over the two module concepts
@@ -27,11 +28,6 @@ export class CatalogService {
       this.modules.listAll(),
     ]);
     const keyById = new Map(permissionGroups.map((module) => [module.id, module.key]));
-    return entries.map((entry) => ({
-      id: entry.id,
-      key: entry.key,
-      name: entry.name,
-      permissionGroupKey: keyById.get(entry.permissionGroupId) ?? "unknown",
-    }));
+    return entries.map((entry) => toModuleRegistrySummary(entry, keyById));
   }
 }

@@ -13,6 +13,15 @@ export const baseEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   PORT: z.coerce.number().int().min(1).max(65535).optional(),
+  /**
+   * Phase 1F brief §19–§22 authorizes Sentry error tracking, but no real
+   * Sentry project/DSN exists yet (not in docs/project-state/
+   * setup-input-register.md) — kept optional and undefined by default, same
+   * "build the mechanism, no real send until configured" pattern as
+   * NotificationsModule's UnconfiguredNotificationDeliveryAdapter. See
+   * @webdesk/configuration's `getSentryConfig`.
+   */
+  SENTRY_DSN: z.string().url().optional(),
 });
 
 export type BaseEnv = z.infer<typeof baseEnvSchema>;

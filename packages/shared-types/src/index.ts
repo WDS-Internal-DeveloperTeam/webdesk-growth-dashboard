@@ -56,11 +56,22 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 export type HealthStatus = "ok" | "degraded" | "down";
 
+/** Safe build/release metadata (Phase 1F brief §24) — see `@webdesk/configuration`'s `getBuildMetadata`. */
+export interface HealthCheckBuildInfo {
+  readonly version: string;
+  readonly commitSha: string;
+  readonly commitShaShort: string;
+  readonly environment: string;
+  readonly deploymentId: string;
+  readonly processStartedAt: string;
+}
+
 export interface HealthCheckResult {
   readonly status: HealthStatus;
   readonly service: string;
   readonly timestamp: string;
   readonly checks?: Readonly<Record<string, HealthStatus>>;
+  readonly build?: HealthCheckBuildInfo;
 }
 
 /**
@@ -141,10 +152,64 @@ export interface ModuleSummary {
   readonly name: string;
 }
 
-/** The 43 real dashboard feature modules from `02_Version_1_Module_Inclusion_Matrix.md`, each mapped to the permission group that gates it. */
+/**
+ * The 43 real dashboard feature modules from `02_Version_1_Module_Inclusion_Matrix.md`, each
+ * mapped to the permission group that gates it. Extended by Phase 1F
+ * (`docs/task-packages/phase-1f-application-shell.md`) with the full field set the application
+ * shell's registry-driven navigation reads — the canonical module registry, not a duplicate.
+ */
 export interface ModuleRegistrySummary {
   readonly id: string;
   readonly key: string;
   readonly name: string;
   readonly permissionGroupKey: string;
+  readonly displayName: string | null;
+  readonly description: string | null;
+  readonly navigationGroup: string;
+  readonly navigationOrder: number;
+  readonly route: string;
+  readonly iconReference: string | null;
+  readonly v1InclusionStatus: "included" | "deferred" | "future";
+  readonly implementationStatus:
+    | "not_started"
+    | "foundation_only"
+    | "in_development"
+    | "ready_for_review"
+    | "approved"
+    | "available"
+    | "deferred"
+    | "blocked"
+    | "deprecated";
+  readonly viewPermissionAction: string;
+  readonly actionPermissions: readonly string[] | null;
+  readonly featureStatus: string | null;
+  readonly documentationReference: string | null;
+  readonly helpDocumentReference: string | null;
+  readonly owner: string | null;
+  readonly dependencies: readonly string[] | null;
+  readonly confidentialityLevel: string | null;
+  readonly badgeSupport: boolean;
+  readonly deprecationReference: string | null;
+  /** Whether the current caller may view this module, per their effective capabilities — set only
+   *  by capability-aware endpoints (e.g. navigation); absent/undefined from unfiltered catalog reads. */
+  readonly canView?: boolean;
 }
+
+/**
+ * The 10 approved top-level navigation labels (`07_Low_Fidelity_Wireframes.md` §1). The single
+ * source both `dashboard-web`'s navigation rendering and `validate-module-registry.ts` read —
+ * changing a module's nav group without updating this list (or vice versa) is exactly the drift
+ * the Phase 1F registry validation catches.
+ */
+export const APPROVED_NAVIGATION_GROUPS: readonly string[] = [
+  "home",
+  "projects",
+  "pages",
+  "libraries",
+  "workflow",
+  "scans",
+  "technical",
+  "releases",
+  "help",
+  "settings",
+];

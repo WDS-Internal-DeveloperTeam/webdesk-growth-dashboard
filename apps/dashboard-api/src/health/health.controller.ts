@@ -1,6 +1,10 @@
 import { Controller, Get } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { getBuildMetadata } from "@webdesk/configuration";
 import type { HealthCheckResult } from "@webdesk/shared-types";
+import { API_VERSION } from "../version.js";
+
+const buildMetadata = getBuildMetadata(API_VERSION);
 
 @ApiTags("health")
 @Controller()
@@ -18,6 +22,7 @@ export class HealthController {
       status: "ok",
       service: "dashboard-api",
       timestamp: new Date().toISOString(),
+      build: buildMetadata,
     };
   }
 
@@ -37,6 +42,7 @@ export class HealthController {
       service: "dashboard-api",
       timestamp: new Date().toISOString(),
       checks: {},
+      build: buildMetadata,
     };
   }
 }

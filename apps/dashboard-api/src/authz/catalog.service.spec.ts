@@ -33,31 +33,71 @@ describe("CatalogService", () => {
     });
   });
 
+  const registryEntryFixture = {
+    id: "r1",
+    key: "case_study_library",
+    name: "Case Study Library",
+    permissionGroupId: "m1",
+    displayName: "Case Study Library",
+    description: "Published and unpublished case studies.",
+    navigationGroup: "libraries",
+    navigationOrder: 4,
+    route: "/case-study-library",
+    iconReference: "library",
+    v1InclusionStatus: "included",
+    implementationStatus: "not_started",
+    viewPermissionAction: "case_study_library_view",
+    actionPermissions: null,
+    featureStatus: "Not Started",
+    documentationReference: "docs.md",
+    helpDocumentReference: null,
+    owner: "TBD",
+    dependencies: null,
+    confidentialityLevel: null,
+    badgeSupport: true,
+    visibilityRules: null,
+    deprecationReference: null,
+    registryVersion: 1,
+    lastReviewedAt: null,
+  };
+
   describe("listModuleRegistry", () => {
     it("resolves each entry's permission group id to its key", async () => {
-      moduleRegistry.listAll.mockResolvedValue([
-        {
-          id: "r1",
-          key: "case_study_library",
-          name: "Case Study Library",
-          permissionGroupId: "m1",
-        },
-      ]);
+      moduleRegistry.listAll.mockResolvedValue([registryEntryFixture]);
       modules.listAll.mockResolvedValue([{ id: "m1", key: "case_studies", name: "Case studies" }]);
 
-      expect(await service.listModuleRegistry()).toEqual([
+      const result = await service.listModuleRegistry();
+      expect(result).toEqual([
         {
           id: "r1",
           key: "case_study_library",
           name: "Case Study Library",
           permissionGroupKey: "case_studies",
+          displayName: "Case Study Library",
+          description: "Published and unpublished case studies.",
+          navigationGroup: "libraries",
+          navigationOrder: 4,
+          route: "/case-study-library",
+          iconReference: "library",
+          v1InclusionStatus: "included",
+          implementationStatus: "not_started",
+          viewPermissionAction: "case_study_library_view",
+          actionPermissions: null,
+          featureStatus: "Not Started",
+          documentationReference: "docs.md",
+          helpDocumentReference: null,
+          owner: "TBD",
+          dependencies: null,
+          confidentialityLevel: null,
+          badgeSupport: true,
+          deprecationReference: null,
         },
       ]);
     });
 
     it("falls back to 'unknown' if a registry entry's permission group can't be resolved", async () => {
       moduleRegistry.listAll.mockResolvedValue([
-        { id: "r1", key: "orphan", name: "Orphan", permissionGroupId: "does-not-exist" },
+        { ...registryEntryFixture, id: "r1", key: "orphan", permissionGroupId: "does-not-exist" },
       ]);
       modules.listAll.mockResolvedValue([]);
 

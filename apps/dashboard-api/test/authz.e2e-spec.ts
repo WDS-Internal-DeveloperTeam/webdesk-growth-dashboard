@@ -364,6 +364,69 @@ describe("Phase 1D authz endpoints (e2e, real disposable database)", () => {
     });
   });
 
+  describe("GET /me (Phase 1F application shell §8, user/account area)", () => {
+    it("rejects with 401 when there is no session cookie", async () => {
+      const response = await request(app.getHttpServer()).get("/me");
+      expect(response.status).toBe(401);
+    });
+
+    it("returns the caller's own basic identity, never another user's", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer()).get("/me").set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      expect(response.body.data.id).toBe(superAdminUserId);
+      expect(response.body.data.email).toBe("authz.super-admin.e2e@webdesksolution.com");
+    });
+  });
+
+  describe("GET /me/navigation (Phase 1F application shell §9/§10)", () => {
+    it("rejects with 401 when there is no session cookie", async () => {
+      const response = await request(app.getHttpServer()).get("/me/navigation");
+      expect(response.status).toBe(401);
+    });
+
+    it("returns all 43 modules for super_admin, who holds view on all 21 permission groups", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer())
+        .get("/me/navigation")
+        .set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(43);
+      expect(
+        response.body.data.every((entry: { canView: boolean }) => entry.canView === true),
+      ).toBe(true);
+    });
+
+    it("excludes modules gated by permission groups read_only doesn't hold (users_roles, system_settings)", async () => {
+      const cookie = await cookieForNewSession(noAccessUserId);
+      const response = await request(app.getHttpServer())
+        .get("/me/navigation")
+        .set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      const keys = response.body.data.map((entry: { key: string }) => entry.key);
+      expect(keys).not.toContain("users_roles_permissions");
+      expect(keys).not.toContain("system_settings");
+      expect(keys).not.toContain("audit_logs_and_system_health");
+      // read_only holds view on 19/21 groups -> 43 minus the 6 system_settings-gated
+      // modules minus the 1 users_roles-gated module = 36.
+      expect(response.body.data).toHaveLength(36);
+    });
+
+    it("navigation is sorted by navigation_group then navigation_order", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer())
+        .get("/me/navigation")
+        .set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      const entries: Array<{ navigationGroup: string; navigationOrder: number }> =
+        response.body.data;
+      const sortKeys = entries.map(
+        (e) => `${e.navigationGroup}:${String(e.navigationOrder).padStart(3, "0")}`,
+      );
+      expect(sortKeys).toEqual([...sortKeys].sort());
+    });
+  });
+
   describe("GET /authz/modules and /authz/module-registry (Phase 1D expanded catalog)", () => {
     it("rejects with 401 when there is no session cookie", async () => {
       const modulesResponse = await request(app.getHttpServer()).get("/authz/modules");

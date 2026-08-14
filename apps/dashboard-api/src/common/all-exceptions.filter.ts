@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import type { ApiErrorResponse } from "@webdesk/shared-types";
 import type { Response } from "express";
+import { captureException } from "../observability/sentry.js";
 import type { RequestWithCorrelationId } from "./correlation-id.middleware.js";
 
 /**
@@ -49,6 +50,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       `[${correlationId}] ${request.method} ${request.url} -> ${status}: ${message}`,
       exception instanceof Error ? exception.stack : undefined,
     );
+
+    // Only server errors (5xx) are real incidents worth an event — an
+    // expected 4xx HttpException (validation failure, not-found, etc.) is
+    // normal traffic, not something Sentry should be paged on. A no-op
+    // until a real SENTRY_DSN is configured (see observability/sentry.ts).
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      captureException(exception);
+    }
 
     const body: ApiErrorResponse = {
       success: false,

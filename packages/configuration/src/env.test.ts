@@ -18,4 +18,20 @@ describe("loadEnv", () => {
       /Environment validation failed/,
     );
   });
+
+  it("leaves SENTRY_DSN undefined when absent, never fabricating one", () => {
+    const env = loadEnv(baseEnvSchema, {});
+    expect(env.SENTRY_DSN).toBeUndefined();
+  });
+
+  it("accepts a real SENTRY_DSN URL when present", () => {
+    const env = loadEnv(baseEnvSchema, { SENTRY_DSN: "https://key@o0.ingest.sentry.io/0" });
+    expect(env.SENTRY_DSN).toBe("https://key@o0.ingest.sentry.io/0");
+  });
+
+  it("fails fast on a malformed SENTRY_DSN", () => {
+    expect(() => loadEnv(baseEnvSchema, { SENTRY_DSN: "not-a-url" })).toThrow(
+      /Environment validation failed/,
+    );
+  });
 });

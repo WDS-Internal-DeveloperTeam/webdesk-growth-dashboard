@@ -1,5 +1,10 @@
 import { Module, type MiddlewareConsumer, type NestModule } from "@nestjs/common";
-import { buildLoggerOptions, loadEnv, baseEnvSchema } from "@webdesk/configuration";
+import {
+  buildLoggerOptions,
+  getBuildMetadata,
+  loadEnv,
+  baseEnvSchema,
+} from "@webdesk/configuration";
 import { LoggerModule } from "nestjs-pino";
 import { AuthModule } from "./auth/auth.module.js";
 import { AuthzModule } from "./authz/authz.module.js";
@@ -10,15 +15,23 @@ import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
+import { API_VERSION } from "./version.js";
 
 const env = loadEnv(baseEnvSchema);
 const loggerOptions = buildLoggerOptions(env, "dashboard-api");
+const buildMetadata = getBuildMetadata(API_VERSION);
 
 @Module({
   imports: [
     LoggerModule.forRoot({
       pinoHttp: {
         ...loggerOptions,
+        base: {
+          ...loggerOptions.base,
+          environment: buildMetadata.environment,
+          version: buildMetadata.version,
+          commitSha: buildMetadata.commitShaShort,
+        },
         redact: {
           // Session/OIDC cookies and auth request bodies must never reach
           // general logs in plaintext (docs/security/data-classification.md

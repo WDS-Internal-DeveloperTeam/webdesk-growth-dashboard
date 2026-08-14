@@ -1,14 +1,42 @@
 # HANDOFF — webdesk-growth-dashboard
 
-- **Session ended:** 2026-08-13 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
+- **Session ended:** 2026-08-14 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Last active agent:** Backend role. Phase 1E (six architecture slices: audit, jobs, notifications, retention, operational contacts, system events/health) built, and **all six slices are now merged to `main`** (PRs #11, #13–#18, plus three fix PRs #20/#21/#22). Independent code review found real findings across all six slices — **every one has been fixed and re-validated**. A self-authored security review (STRIDE pass) found 10 gaps; the user went through all 5 genuine policy questions one by one — **8 of 10 findings are now fixed, 2 accepted as tracked technical debt** by explicit decision. **The required second-role security review is complete** — Jitesh D reviewed the full disposition and the 3 new fixes' diffs, decision **Approved as-is**, 2026-08-13, no disputes. **The Phase 1E gate (G4-1E) is now approved** — WebDesk Solution, decision CONFIRM, 2026-08-13.
+- **Last active agent:** Backend role. Phase 1F (application shell, canonical 43-module registry extension, registry-driven navigation, observability foundation, accessibility, staging documentation, module-implementation roadmap) fully built, pushed to `origin`, and open as [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23). Independent code review (8-angle, high effort) run against the full branch diff — 9 of 14 findings fixed, 5 recorded as tracked technical debt with reasoning. A right-sized security review found no Critical/High finding; one precondition flagged (Sentry's exception forwarding needs `beforeSend` scrubbing before any real `SENTRY_DSN` is ever set — currently inert). **The required second-role human review is complete** — Jitesh D and Brijesh D, decision Approved as-is, 2026-08-14, no disputes. **The Phase 1F gate (G4-1F) is now approved** — WebDesk Solution, decision CONFIRM, 2026-08-14. **PR #23 is not yet merged to `main`** — see `docs/project-state/phase-1f-validation-report.md` and `phase-1f-approval-checklist.md`'s "Sign-off" section.
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
-- **Active phase:** Phase 1E — six operational-infrastructure architecture slices per the Phase 1E authorization brief. **All six are merged to `main`**: audit foundation (PR #11), audit schema-expansion (PR #13), job architecture (PR #14), notification foundation (PR #15), retention architecture (PR #16), operational contacts (PR #17), system events/health (PR #18) — plus three fix PRs (#20, #21, #22) for findings surfaced during merge reconciliation and the security review. Every code-review finding is fixed; 8 of 10 security-review findings are fixed, 2 accepted as tracked debt by explicit decision (retention-hold approver verification, `projectId` query-filter scoping). **The second-role security review is complete** (Jitesh D, Approved as-is, 2026-08-13) and **the Phase 1E gate (G4-1E) is approved** (WebDesk Solution, CONFIRM, 2026-08-13) — see `docs/project-state/phase-1e-approval-checklist.md`'s "Sign-off" section. Phase 1E is now closed; Phase 1F (application shell, canonical module registry, navigation, CI/staging foundation) is the next candidate, but still requires its own separate, explicit authorization to begin — same as every prior phase. Phase 1A, 1B, 1C, and both Phase 1D scopes remain approved from prior phases, unaffected by this phase.
-- **Current gate:** G4-1E (Phase 1E, approved 2026-08-13, clean CONFIRM) is now the last approved gate — approved commit `6ae8a36116f70ed0f4d429af12774e05b2092e70`. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
+- **Active phase:** Phase 1F — application shell, canonical module registry, navigation authorization, UI foundation, observability, CI/accessibility, staging documentation, and module-implementation planning artifacts, per the Phase 1F authorization brief. Built on branch `phase-1f-application-shell` (16 commits, pushed to `origin`, PR #23 open against `main`, gate approved but **not yet merged**). Builds zero business functionality for any of the 43 real modules (`module_registry.implementation_status = 'not_started'` for all 43) — shell/registry/observability plumbing only, per the brief's own explicit scope boundary. Phase 1E and all prior phases remain approved and unaffected. Per this project's standing "no auto-merge" rule, merging PR #23, production deployment, and any Wave 1/module-implementation start all remain separate, not-yet-requested authorizations even though the gate is now approved.
+- **Current gate:** **G4-1F** (Phase 1F, approved 2026-08-14, clean CONFIRM) is now the last approved gate — approved commit `7d84f040bce67fa7cd1e92aa69e8512021b39b64` on branch `phase-1f-application-shell` (PR #23, not yet merged). See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (authoritative).
 
 > Gate status is authoritative ONLY in `project.json.gates[]`. If this file and `project.json` ever disagree, `project.json` wins.
+
+> **Phase 1F status as of 2026-08-14:** all planned work is built and fully validated on branch
+> `phase-1f-application-shell` (13 commits: kickoff, module-registry extension, registry
+> validation, navigation API, design-system/UI-state components, identity API, application shell,
+> observability foundation, accessibility checks, staging documentation, module roadmap + task
+> template, code-review fixes, implementation docs, security review). Full validation suite: 294
+> `dashboard-api` unit + 108 database integration + 79 e2e + 9 Playwright (incl. 3 axe-core WCAG
+> 2.2 AA checks, zero violations) all passing; migration up/down round trip clean (35 migrations);
+> module-registry validation passing (43 modules, 21 permission groups); `pnpm audit` 0
+> vulnerabilities; secret scan clean (530 files); production build clean. Independent code review
+> (8-angle, high effort) surfaced 14 findings — 9 fixed (a dropped `font-family`, 5 unwired design-
+> token groups, a triplicated version constant, alphabetical-instead-of-canonical nav ordering,
+> duplicate/conflicting page headings, a silently-swallowed missing-env-var case matching a real
+> prior production incident, an implicit-vs-explicit fetch-memoization gap, a weakened test
+> assertion, and a narrowed security-header test), 5 recorded as tracked debt (Sentry's currently-
+> inert unscrubbed exception forwarding — must fix before any real DSN — a narrow `/me` vs
+> `/me/navigation` account-status asymmetry, `NavigationService` reimplementing capability logic
+> inline instead of using `AuthorizationService`, a transient migration-gap type cast, and 43
+> module keys hand-duplicated across 3 files). **Pushed to `origin`, PR #23 open.** **Required
+> second-role human review complete** — Jitesh D and Brijesh D reviewed the full code-review
+> disposition and the full security review, decision **Approved as-is**, 2026-08-14, no disputes
+> raised. **The Phase 1F gate (G4-1F) is now approved** — WebDesk Solution, decision **CONFIRM**
+> (clean pass, not an override, since the second-role review was already complete before the gate
+> was requested), 2026-08-14, approved commit `7d84f040bce67fa7cd1e92aa69e8512021b39b64`. **PR #23
+> remains unmerged** — merging is its own separate, not-yet-requested authorization under this
+> project's standing "no auto-merge" rule; this gate approval does not itself merge or deploy
+> anything. See `docs/project-state/phase-1f-validation-report.md` and
+> `docs/project-state/phase-1f-approval-checklist.md`'s "Sign-off" section for the full record.
 
 > **Phase 1E status as of 2026-08-13 (updated three times):** all six architecture slices are
 > built, CI-green, and **now merged to `main`** — audit foundation (PR #11), audit schema-expansion

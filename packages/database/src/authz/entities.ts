@@ -34,11 +34,45 @@ export interface UserRoleEntity extends BaseEntity {
  * The 43 real dashboard feature modules (`02_Version_1_Module_Inclusion_Matrix.md`) — a pure
  * lookup/resource registry, distinct from `ModuleEntity` (the 21-row permission-granting
  * granularity). See docs/implementation/phase-1d-permission-catalog.md §3.
+ *
+ * Extended by migrations 00034/00035 (Phase 1F, `docs/task-packages/phase-1f-application-shell.md`)
+ * with the full field set the application shell's registry-driven navigation needs — this is the
+ * ONE canonical registry; `dashboard-web` does not maintain a competing copy.
  */
 export interface ModuleRegistryEntity extends BaseEntity {
   readonly key: string;
   readonly name: string;
   readonly permissionGroupId: string;
+  readonly displayName: string | null;
+  readonly description: string | null;
+  readonly navigationGroup: string;
+  readonly navigationOrder: number;
+  readonly route: string;
+  readonly iconReference: string | null;
+  readonly v1InclusionStatus: "included" | "deferred" | "future";
+  readonly implementationStatus:
+    | "not_started"
+    | "foundation_only"
+    | "in_development"
+    | "ready_for_review"
+    | "approved"
+    | "available"
+    | "deferred"
+    | "blocked"
+    | "deprecated";
+  readonly viewPermissionAction: string;
+  readonly actionPermissions: readonly string[] | null;
+  readonly featureStatus: string | null;
+  readonly documentationReference: string | null;
+  readonly helpDocumentReference: string | null;
+  readonly owner: string | null;
+  readonly dependencies: readonly string[] | null;
+  readonly confidentialityLevel: string | null;
+  readonly badgeSupport: boolean;
+  readonly visibilityRules: Readonly<Record<string, unknown>> | null;
+  readonly deprecationReference: string | null;
+  readonly registryVersion: number;
+  readonly lastReviewedAt: string | null;
 }
 
 /**

@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-1E",
+    "current_gate": "G4-1F",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-13T00:00:00Z",
-    "version": 11
+    "updated_at": "2026-08-14T00:00:00Z",
+    "version": 14
   },
 
   "tech_stack": {
@@ -154,6 +154,17 @@
       "decided_at": "2026-08-13T00:00:00Z",
       "decision": "CONFIRM",
       "notes": "Phase 1E — audit foundation, job architecture, notification foundation, retention architecture, operational contacts, system events/health (six architecture slices) — approved, scope 'Phase 1E operational infrastructure only' — see docs/project-state/phase-1e-approval-checklist.md and its 'Sign-off' section. All six slices merged to main (PRs #11, #13, #14, #15, #16, #17, #18), plus 2 code-review fix PRs (#20, #21) and 1 security-review policy-fix PR (#22). 279/279 unit + 108/108 real-database integration + 72/72 e2e tests, all passing; every code-review finding (23) fixed and re-validated; all 10 security-review findings dispositioned (8 fixed, 2 accepted as tracked technical debt by explicit user decision). Approved merge commit 6ae8a36116f70ed0f4d429af12774e05b2092e70 (PR #22, the last code-bearing commit on main; docs-only commit c1664b146b4daca916e37aae2efd52c0210f1bbc recording the review sign-off followed on top of it). status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human security review of docs/security/threat-model-phase-1e-operational-infrastructure.md (ADR-0010 separation-of-duties) was already complete (WebDesk Solution — Jitesh D, 2026-08-13, decision 'Approved as-is', no disputes raised) before this gate was requested. Does not include the 21 real business-module endpoints, real SMTP delivery, real Vercel Cron/Queue wiring, or real health probes — all separate, not-yet-authorized work, per the threat model's own 'Not addressed by this pass' section."
+    },
+    {
+      "id": "G4-1F",
+      "type": "qa-security-gate",
+      "scope": "phase-1f-application-shell",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-14T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Phase 1F — canonical 43-module registry extension, registry-driven/permission-aware navigation, the dashboard-web application shell, shared design-system/UI-state foundation (packages/ui), observability foundation (redaction, build metadata, a deliberately-inert Sentry integration), automated WCAG 2.2 AA accessibility checks, staging-environment documentation (stopped at the provisioning boundary, nothing provisioned), and planning-only module-implementation roadmap/task-package-template artifacts — approved, scope 'Phase 1F application shell and observability foundation only' — see docs/project-state/phase-1f-approval-checklist.md and its 'Sign-off' section. Builds zero business functionality for any of the 43 real modules (module_registry.implementation_status = 'not_started' for all 43). 294 unit + 108 real-database integration + 79 e2e + 9 Playwright tests (incl. 3 axe-core WCAG 2.2 AA checks, zero violations), all passing; migration up/down round trip clean; module-registry validation passing; pnpm audit clean; secret scan clean. Independent code review (8-angle, high effort) surfaced 14 findings — 9 fixed, 5 recorded as tracked technical debt with reasoning. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D and Brijesh D, 2026-08-14, decision 'Approved as-is', no disputes raised) was already complete before this gate was requested. Approved commit 7d84f040bce67fa7cd1e92aa69e8512021b39b64 on branch phase-1f-application-shell — IMPORTANT: this branch is NOT YET MERGED to main (open as PR #23); unlike every prior gate in this project's history, this gate approval precedes merge, since this project's standing rule treats merge as its own separate, explicit authorization regardless of gate status ('no auto-merge'). Does not itself authorize merging PR #23, production deployment, or the start of any module-implementation wave — each remains a separate, not-yet-requested authorization."
     }
   ],
 
@@ -386,6 +397,56 @@
       },
       "project_version_before": 10,
       "project_version_after": 11
+    },
+    {
+      "timestamp": "2026-08-14T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "assigned the second-role human reviewer for Phase 1F (independent code-review disposition and security review)",
+      "details": {
+        "documents_reviewed": [
+          "docs/project-state/phase-1f-validation-report.md",
+          "docs/implementation/phase-1f-security-review.md"
+        ],
+        "reviewer": "WebDesk Solution — Jitesh D and Brijesh D",
+        "note": "Resolves the 'reviewer: pending assignment' blocker recorded against ADR-0010's separation-of-duties requirement in docs/project-state/phase-1f-approval-checklist.md. This is an owner assignment only, not a completed review — the review itself, and any Phase 1F gate decision, remain outstanding until actually performed and recorded, same pattern as the Phase 1D assignment entry above."
+      },
+      "project_version_before": 11,
+      "project_version_after": 12
+    },
+    {
+      "timestamp": "2026-08-14T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "completed the required second-role human review of Phase 1F (independent code-review disposition and security review)",
+      "details": {
+        "documents_reviewed": [
+          "docs/project-state/phase-1f-validation-report.md",
+          "docs/implementation/phase-1f-security-review.md"
+        ],
+        "reviewer": "WebDesk Solution — Jitesh D and Brijesh D",
+        "decision": "Approved as-is",
+        "disputes_raised": "None",
+        "approval_record": "docs/project-state/phase-1f-approval-checklist.md#sign-off",
+        "note": "Satisfies ADR-0010's separation-of-duties requirement for Phase 1F. Not itself a gate decision — a Phase 1F gate remains a separate, not-yet-requested authorization, same pattern as every prior phase."
+      },
+      "project_version_before": 12,
+      "project_version_after": 13
+    },
+    {
+      "timestamp": "2026-08-14T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved Phase 1F (G4-1F gate), scope Phase 1F application shell and observability foundation only",
+      "details": {
+        "branch": "phase-1f-application-shell",
+        "approved_commit_sha": "7d84f040bce67fa7cd1e92aa69e8512021b39b64",
+        "pull_request": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23",
+        "approval_record": "docs/project-state/phase-1f-approval-checklist.md#sign-off",
+        "note": "Clean CONFIRM, not an override — the required second-role human review (Jitesh D and Brijesh D, decision 'Approved as-is', no disputes raised) was already complete before this gate was requested. Branch/PR #23 is NOT YET MERGED to main — this gate approval precedes merge, since merging remains its own separate, explicit authorization under this project's standing 'no auto-merge' rule. Does not itself authorize merging, production deployment, or the start of any module-implementation wave — each remains a separate, not-yet-requested authorization."
+      },
+      "project_version_before": 13,
+      "project_version_after": 14
     }
   ]
 }

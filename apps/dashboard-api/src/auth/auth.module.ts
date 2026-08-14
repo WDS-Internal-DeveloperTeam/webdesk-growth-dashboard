@@ -9,6 +9,7 @@ import { SeparationOfDutiesService } from "./common/separation-of-duties.service
 import { SessionService } from "./session/session.service.js";
 import { SessionGuard } from "./session/session.guard.js";
 import { SessionController } from "./session/session.controller.js";
+import { MeController } from "./me.controller.js";
 import { GoogleAuthService } from "./google/google-auth.service.js";
 import { GoogleAuthController } from "./google/google-auth.controller.js";
 import { EmergencyAdminService } from "./emergency/emergency-admin.service.js";
@@ -43,7 +44,7 @@ import { RecoveryService } from "./recovery/recovery.service.js";
  */
 @Module({
   imports: [AuthConfigModule, AuditModule],
-  controllers: [GoogleAuthController, EmergencyAuthController, SessionController],
+  controllers: [GoogleAuthController, EmergencyAuthController, SessionController, MeController],
   providers: [
     ...authRepositoryProviders,
     RateLimitService,
