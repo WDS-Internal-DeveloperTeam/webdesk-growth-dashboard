@@ -1,19 +1,11 @@
+import { redirect } from "next/navigation";
+
 /**
- * Placeholder dashboard shell — Phase 1A. Not final navigation, not a real
- * dashboard module (those are separately authorized — see
- * docs/phase-plans/phase-1-foundation-plan.md).
+ * The canonical Home route is `/home` (matching the module registry's own
+ * `route` field for the `home` module — one source of truth, not two).
+ * The `(shell)` layout's own auth guard handles the unauthenticated case
+ * from there, so this redirect doesn't need to duplicate that check.
  */
-export default function DashboardShellPage() {
-  return (
-    <main style={{ padding: "2rem" }}>
-      <h1>WebDesk Growth Dashboard</h1>
-      <p>
-        Phase 1A foundation — repository and monorepo scaffold only. No business modules,
-        authentication, or data are implemented yet.
-      </p>
-      <p>
-        <a href="/health">View service health</a>
-      </p>
-    </main>
-  );
+export default function RootPage() {
+  redirect("/home");
 }
