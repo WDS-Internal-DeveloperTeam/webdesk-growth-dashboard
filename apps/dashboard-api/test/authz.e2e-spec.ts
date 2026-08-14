@@ -364,6 +364,21 @@ describe("Phase 1D authz endpoints (e2e, real disposable database)", () => {
     });
   });
 
+  describe("GET /me (Phase 1F application shell §8, user/account area)", () => {
+    it("rejects with 401 when there is no session cookie", async () => {
+      const response = await request(app.getHttpServer()).get("/me");
+      expect(response.status).toBe(401);
+    });
+
+    it("returns the caller's own basic identity, never another user's", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const response = await request(app.getHttpServer()).get("/me").set("Cookie", cookie);
+      expect(response.status).toBe(200);
+      expect(response.body.data.id).toBe(superAdminUserId);
+      expect(response.body.data.email).toBe("authz.super-admin.e2e@webdesksolution.com");
+    });
+  });
+
   describe("GET /me/navigation (Phase 1F application shell §9/§10)", () => {
     it("rejects with 401 when there is no session cookie", async () => {
       const response = await request(app.getHttpServer()).get("/me/navigation");
