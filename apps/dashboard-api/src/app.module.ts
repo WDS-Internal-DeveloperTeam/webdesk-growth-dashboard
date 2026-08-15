@@ -13,6 +13,7 @@ import { HealthModule } from "./health/health.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
+import { ProjectsModule } from "./projects/projects.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
 import { API_VERSION } from "./version.js";
@@ -53,6 +54,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     JobsModule,
     NotificationsModule,
     OperationalContactsModule,
+    ProjectsModule,
     RetentionModule,
     SystemOperationsModule,
   ],

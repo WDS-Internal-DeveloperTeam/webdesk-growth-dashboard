@@ -46,7 +46,8 @@ export type AuditEventType =
   | "system_health_check_recorded"
   | "emergency_admin_login"
   | "account_recovery_request"
-  | "account_recovery_decision";
+  | "account_recovery_decision"
+  | "project_status_changed";
 
 export type AuditActorType = "human" | "system" | "service_account";
 
