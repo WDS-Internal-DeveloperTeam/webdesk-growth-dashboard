@@ -246,7 +246,7 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
 7. ~~Projects module task package prepared, awaiting human approval~~ — **backend built,
-   independently code-reviewed, and security-reviewed 2026-08-15.**
+   independently code-reviewed, security-reviewed, and second-role human reviewed 2026-08-15.**
    `docs/task-packages/module-projects-foundation.md` was prepared, then explicit "begin
    implementation" authorization was given directly (see "Recent decisions"). Schema, API, RBAC
    wiring, and tests were built and validated, then this project's own `code-review` skill was run
@@ -255,13 +255,17 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    requested but held per this project's standing discipline (security review → second-role human
    review → gate decision, each separate, before merge); this project's own `security-review`
    skill was then run — 2 CONFIRMED findings, most severe a real privilege-escalation path in the
-   new project-approver endpoint — both fixed and re-validated (see "Recent decisions" for the
-   full account of both review passes). Branch `module-projects-foundation`, pushed as
+   new project-approver endpoint — both fixed and re-validated. A review packet (published as a
+   Claude artifact — code-review + security-review findings, fixes, validation evidence) was
+   prepared for the required second-role human review, since the implementing agent cannot also be
+   its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved"** — see
+   `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section for
+   the full record. Branch `module-projects-foundation`, pushed as
    [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) —
    **not merged, not deployed, no production migration run.** No UI yet (dashboard-web) — D7's
    Project Switcher wiring remains separate, undesigned scope. Remaining before this can be gated:
-   second-role human review, gate decision, merge authorization — each its own separate step, same
-   discipline as every prior phase.
+   a gate decision and merge authorization — each its own separate step, same discipline as every
+   prior phase.
 
 ## Recent decisions
 
@@ -1057,6 +1061,17 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   `dashboard-api` integration/e2e tests (including all 8 Projects e2e tests, up from 6) all passing.
   Not yet committed or pushed at the time this entry was written. **PR #24 remains unmerged** —
   second-role human review and a gate decision are still outstanding next steps.
+- `[2026-08-15]` Both fix commits pushed (`66de25b` code, `0812896` docs); CI then failed on
+  Formatting validation — `CLAUDE.md`'s own late edits hadn't been re-run through prettier before
+  committing — fixed with a whitespace-only line-wrap change (`93fd424`), 14/14 CI checks green
+  again. A review packet (published as a Claude artifact — code-review + security-review findings,
+  fixes, and validation evidence, with a decision section) was then prepared for the required
+  second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010) — the same pattern Phase 1E used. **Jitesh D reviewed it and returned "Approved"** —
+  recorded in the new `docs/project-state/module-projects-foundation-approval-checklist.md`'s
+  "Sign-off" section. This satisfies the last precondition before a gate decision can be
+  requested, but is not itself a gate decision or a merge authorization — both remain separate,
+  not-yet-requested steps, same discipline as every prior phase.
 
 ## Open client blockers
 

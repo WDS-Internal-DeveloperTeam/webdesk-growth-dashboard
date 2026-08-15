@@ -524,6 +524,22 @@
       },
       "project_version_before": 17,
       "project_version_after": 18
+    },
+    {
+      "timestamp": "2026-08-15T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "completed the required second-role human review of module-projects-foundation (PR #24) — decision: Approved",
+      "details": {
+        "review_mechanism": "Claude prepared a review packet (published as a Claude artifact) covering both prior review passes — the 9 CONFIRMED independent code-review findings (all fixed) and the 2 CONFIRMED security-review findings (1 High, 1 Medium, both fixed) — plus full validation evidence and a timeline, since the implementing agent cannot also be its own required second-role reviewer (ADR-0010).",
+        "ci_fix_first": "CI's Formatting validation failed on the security-fix push (CLAUDE.md's own late edits hadn't been re-run through prettier before committing) — fixed with a whitespace-only line-wrap change (commit 93fd424), 14/14 checks green before the review packet was prepared.",
+        "decision": "Approved",
+        "disputes_raised": "None recorded",
+        "record": "docs/project-state/module-projects-foundation-approval-checklist.md",
+        "not_yet_done": "This is the required second-role human review only, not a gate decision or merge authorization — both remain separate, not-yet-requested steps, same discipline as every prior phase."
+      },
+      "project_version_before": 18,
+      "project_version_after": 19
     }
   ]
 }

@@ -26,7 +26,13 @@
   endpoint despite that role deliberately lacking `users_roles:edit` in the approved matrix — both
   fixed under explicit "fix those" instruction, plus new unit and real-database e2e coverage.
   Full re-validation: typecheck/lint/format clean; 315 `dashboard-api` unit + 87
-  `dashboard-api` integration/e2e tests, all passing. Still on branch `module-projects-foundation`,
+  `dashboard-api` integration/e2e tests, all passing. A review packet (published as a Claude
+  artifact — code-review + security-review findings, fixes, and validation evidence) was then
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved"** — recorded in the
+  new `docs/project-state/module-projects-foundation-approval-checklist.md`. This satisfies the
+  last precondition before a gate decision, but is not itself a gate decision or merge
+  authorization. Still on branch `module-projects-foundation`,
   [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) — **not
   merged, not deployed, no production migration run, no UI yet.** See the 2026-08-15 "Recent
   decisions" entries in `CLAUDE.md` for the full record.
