@@ -1026,7 +1026,7 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   stale local `origin/HEAD` symref pointing at `origin/master`, an unrelated diverged branch,
   before the diff base resolved correctly) — 2 CONFIRMED findings, both re-verified at 9/10
   confidence by an independent sub-agent pass before being reported: (1) **High** — `POST
-  /projects/:projectId/approvers` was gated only by `project_configuration:approve`, which
+/projects/:projectId/approvers` was gated only by `project_configuration:approve`, which
   `owner_growth_approver` itself holds, but minting an RBAC role grant is a `users_roles` action;
   the approved matrix (`06_Roles_and_Permissions.md §3`) deliberately withholds `users_roles:edit`
   from that role (`VM`, no `E`) — so any `owner_growth_approver` could mint unlimited co-approvers
@@ -1051,7 +1051,7 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   tests covering both the default-null and explicit-projectId revoke paths and both outcome values;
   and two new real-database e2e tests in `projects.e2e-spec.ts` proving, via real HTTP requests, that
   (a) an `owner_growth_approver`-only session gets a real `403` from `POST
-  /projects/:projectId/approvers` and (b) a super_admin-assigned project-scoped grant survives a
+/projects/:projectId/approvers` and (b) a super_admin-assigned project-scoped grant survives a
   revoke call missing `?projectId=` but is genuinely removed once it's supplied. Full re-validation
   on a fresh local disposable database: typecheck/lint/format clean; 315 `dashboard-api` unit + 87
   `dashboard-api` integration/e2e tests (including all 8 Projects e2e tests, up from 6) all passing.
