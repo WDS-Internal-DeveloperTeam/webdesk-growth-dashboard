@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://webdesksolution.ca/schemas/webdesk-growth-dashboard/release-manifest.schema.json",
+  "title": "WebDesk Growth Dashboard — Release Manifest",
+  "description": "Every release records the exact approved dashboard and WordPress commit SHAs where both are involved (01_Dashboard_Master_Specification.md §6, §11). Backs the Release Center module (docs/implementation/requirements-traceability-matrix.md module #36). A release is not complete if a repository in scope lacks a remote-verified SHA (knowledge/06-github-app-integration.md's commit-verification rule, WDS-008).",
+  "type": "object",
+  "required": ["release_id", "release_type", "environment", "status", "repositories", "created_at"],
+  "properties": {
+    "release_id": { "type": "string", "format": "uuid" },
+    "release_type": {
+      "type": "string",
+      "enum": ["staging", "production", "hotfix", "rollback"]
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["development", "preview", "staging", "production"]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "checks_running",
+        "ready_for_staging",
+        "staging_deployed",
+        "staging_verification",
+        "staging_approved",
+        "production_approval",
+        "production_deployed",
+        "production_verification",
+        "completed",
+        "checks_failed",
+        "deployment_failed",
+        "verification_failed",
+        "hotfix_required",
+        "rolled_back"
+      ],
+      "description": "Mirrors 05_Workflow_State_Machines.md §10's release workflow states."
+    },
+    "repositories": {
+      "type": "array",
+      "description": "One entry per repository in scope for this release. A release spanning both repositories requires an entry for each, each independently remote-SHA-verified.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["repository", "commit_sha", "sha_verified_remote"],
+        "properties": {
+          "repository": {
+            "type": "string",
+            "enum": ["webdesk-growth-dashboard", "webdesk-wordpress-website"]
+          },
+          "commit_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "sha_verified_remote": {
+            "type": "boolean",
+            "description": "Must be true before this release can reach 'completed' — verified via a live GitHub read (GET /repos/{owner}/{repo}/commits/{sha}), never trusted from a locally-reported value (WDS-008)."
+          },
+          "pull_requests": {
+            "type": "array",
+            "items": { "type": "string", "description": "PR number or URL." }
+          },
+          "checks_passed": { "type": "boolean" }
+        }
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["approval_type", "approver_user_id", "decided_at", "decision"],
+        "properties": {
+          "approval_type": {
+            "type": "string",
+            "enum": ["staging_approval", "production_approval", "security_qa_approval"]
+          },
+          "approver_user_id": { "type": "string" },
+          "decided_at": { "type": "string", "format": "date-time" },
+          "decision": { "type": "string", "enum": ["CONFIRM", "REJECT", "REVISE"] },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "smoke_tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "result": { "type": "string", "enum": ["pass", "fail"] },
+          "ran_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "description": "Populated only when release_type = 'rollback'.",
+      "properties": {
+        "rolled_back_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "reason": { "type": "string" },
+        "replacement_release_id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "audit_context_id": { "type": "string", "format": "uuid" }
+  }
+}

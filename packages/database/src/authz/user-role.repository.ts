@@ -26,7 +26,12 @@ export class UserRoleRepository {
     const rows = await this.model.findAll({
       where: {
         userId,
-        projectId: projectId ? { [Op.in]: [null, projectId] } : null,
+        // NOT `{ [Op.in]: [null, projectId] }` — SQL's `IN` never matches NULL (three-valued
+        // logic), so that form silently excluded every global-scope role the instant a real
+        // `projectId` was passed. Previously dormant (no project-scoped route existed to exercise
+        // it) — the Projects module's `:projectId` routes are the first
+        // (docs/task-packages/module-projects-foundation.md).
+        ...(projectId ? { [Op.or]: [{ projectId: null }, { projectId }] } : { projectId: null }),
       },
       attributes: ["roleId"],
     });

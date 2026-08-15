@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://webdesksolution.ca/schemas/webdesk-growth-dashboard/job-record.schema.json",
+  "title": "WebDesk Growth Dashboard — Background Job Record",
+  "description": "The durable Postgres record every background job (Vercel Queues/Workflows/Cron-triggered) must conform to, per knowledge/04-serverless-queues-workflows-and-cron.md. There is no in-process job state in this architecture — this record IS the job's state. No in-process lock may substitute for locked_until/lock_owner below.",
+  "type": "object",
+  "required": [
+    "job_id",
+    "job_type",
+    "idempotency_key",
+    "status",
+    "attempt_count",
+    "max_attempts",
+    "timeout_seconds",
+    "created_at",
+    "created_by",
+    "project_id"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable job ID, assigned at creation, independent of any queue-provider-internal message ID."
+    },
+    "project_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Project-scope key (this project's equivalent of the base skill's tenant_id — see knowledge/10-data-ownership-and-audit.md)."
+    },
+    "job_type": {
+      "type": "string",
+      "description": "e.g. 'scan-run', 'import-run', 'notification-send', 'github-webhook-process', 'wordpress-sync', 'retention-deletion-run'."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "The natural key this job upserts on. External-system ID for sync-adjacent work; a dashboard-internal action+actor+target key for UI-triggered actions (gap-analysis.md item 5's internal-action idempotency case). Enforced as a unique constraint at the database level, not only in application code."
+    },
+    "trigger": {
+      "type": "string",
+      "enum": [
+        "vercel-queue",
+        "vercel-workflow",
+        "vercel-cron",
+        "upstash-qstash",
+        "manual-retry",
+        "manual-trigger"
+      ],
+      "description": "What caused this job record to be created or re-attempted."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running", "completed", "failed", "retrying", "dead_letter", "cancelled"],
+      "description": "Current job status. 'dead_letter' is the terminal state for an exhausted-retry job, per NODE-101 (capped retries, never unbounded)."
+    },
+    "attempt_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of attempts made so far."
+    },
+    "max_attempts": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Configured cap. Never unbounded (NODE-101)."
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum duration a single attempt is allowed, consistent with the invoking Vercel Function's own platform timeout."
+    },
+    "attempt_history": {
+      "type": "array",
+      "description": "One entry per attempt.",
+      "items": {
+        "type": "object",
+        "required": ["attempt_number", "started_at", "outcome"],
+        "properties": {
+          "attempt_number": { "type": "integer", "minimum": 1 },
+          "started_at": { "type": "string", "format": "date-time" },
+          "ended_at": { "type": "string", "format": "date-time" },
+          "outcome": {
+            "type": "string",
+            "enum": ["success", "retryable_failure", "terminal_failure", "timed_out", "cancelled"]
+          },
+          "error_message": { "type": "string" },
+          "failure_classification": {
+            "type": "string",
+            "enum": ["retryable", "terminal"],
+            "description": "Mirrors nodejs/knowledge/integration/03-rate-limits-and-backoff.md's isRetryable distinction — a 429/503/timeout is retryable, a 400/validation error is terminal and must not burn retry attempts."
+          }
+        }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "description": "Watermark/cursor/step-index, advanced only after durable persistence of the corresponding work.",
+      "properties": {
+        "watermark": { "type": "string" },
+        "step_index": { "type": "integer", "minimum": 0 },
+        "step_name": { "type": "string" },
+        "percent_complete": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "last_heartbeat_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "description": "Overlapping-run prevention. Backed by this row (Postgres) or a Redis lock referenced here — never an in-process lock (knowledge/04's 'no in-process lock may be treated as durable' rule).",
+      "properties": {
+        "locked_until": { "type": "string", "format": "date-time" },
+        "lock_owner": {
+          "type": "string",
+          "description": "Invocation/execution ID holding the lock."
+        }
+      }
+    },
+    "cancellable": {
+      "type": "boolean",
+      "description": "Whether this job, in its current state, can be safely cancelled (false once it has begun an irreversible external side effect)."
+    },
+    "manual_retry_available": {
+      "type": "boolean",
+      "description": "Whether an operator can trigger a retry from the dashboard for this job in its current status."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "created_by": {
+      "type": "string",
+      "description": "User ID (human-triggered) or 'system' (scheduler-triggered)."
+    },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "audit_context_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Links to the audit_events entry for this job's creation/terminal outcome, per knowledge/10-data-ownership-and-audit.md."
+    }
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://webdesksolution.ca/schemas/nodejs/design-tokens.schema.json",
+  "title": "Dashboard Design Tokens (Node.js)",
+  "description": "Schema for design-tokens.json driving the dashboard theme customizer. Validates structure and completeness — NOT WCAG contrast (that is a separate validator per 04-wcag-and-responsive.md). Mode-dependent color groups are declared per mode (light/dark/semi-dark). The six customizer axes (skin, mode, primary, layout, appbar, footer) are first-class.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "brand",
+    "status",
+    "modes",
+    "typography",
+    "space",
+    "radius",
+    "shadow",
+    "layout",
+    "z",
+    "customizer"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "project_id": { "type": "string", "description": "Project ID from project.json." },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "generated_by": { "type": "string", "description": "e.g. 'designer-agent v1.0.0'." },
+
+    "brand": {
+      "type": "object",
+      "description": "Mode-invariant brand colors. 'primary' is the customizer Primary color; 'primary-contrast' is the text color on it (must pass AA — validated separately).",
+      "required": ["primary", "primary-hover", "primary-contrast"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "$ref": "#/$defs/color" },
+        "primary-hover": { "$ref": "#/$defs/color" },
+        "primary-contrast": { "$ref": "#/$defs/color" }
+      }
+    },
+
+    "status": {
+      "type": "object",
+      "description": "Mode-invariant semantic colors. Map 1:1 to health-score GREEN/YELLOW/RED and sync OK/STALE/FAILED — keep stable.",
+      "required": ["success", "warning", "danger", "info"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "$ref": "#/$defs/color" },
+        "warning": { "$ref": "#/$defs/color" },
+        "danger": { "$ref": "#/$defs/color" },
+        "info": { "$ref": "#/$defs/color" }
+      }
+    },
+
+    "modes": {
+      "type": "object",
+      "description": "Per-mode surface/text groups. All three modes are required; the customizer Mode axis selects one. semi-dark adds dark sidebar/appbar surfaces (sd-*).",
+      "required": ["light", "dark", "semi-dark"],
+      "additionalProperties": false,
+      "properties": {
+        "light": { "$ref": "#/$defs/modeColors" },
+        "dark": { "$ref": "#/$defs/modeColors" },
+        "semi-dark": {
+          "allOf": [
+            { "$ref": "#/$defs/modeColors" },
+            {
+              "type": "object",
+              "required": ["sd-nav-bg", "sd-nav-text", "sd-nav-muted"],
+              "properties": {
+                "sd-nav-bg": { "$ref": "#/$defs/color" },
+                "sd-nav-text": { "$ref": "#/$defs/color" },
+                "sd-nav-muted": { "$ref": "#/$defs/color" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "typography": {
+      "type": "object",
+      "required": ["font-family", "size", "line-height", "weight"],
+      "additionalProperties": false,
+      "properties": {
+        "font-family": { "type": "string" },
+        "size": {
+          "type": "object",
+          "required": ["xs", "sm", "base", "lg", "xl", "2xl"],
+          "additionalProperties": { "type": "string" }
+        },
+        "line-height": {
+          "type": "object",
+          "required": ["tight", "base", "loose"],
+          "additionalProperties": { "type": "string" }
+        },
+        "weight": {
+          "type": "object",
+          "required": ["regular", "medium", "bold"],
+          "additionalProperties": { "type": "integer" }
+        }
+      }
+    },
+
+    "space": {
+      "type": "object",
+      "description": "rem scale.",
+      "required": ["0", "1", "2", "3", "4", "6", "8", "12", "16"],
+      "additionalProperties": { "type": "string" }
+    },
+
+    "radius": {
+      "type": "object",
+      "required": ["sm", "md", "lg", "full"],
+      "additionalProperties": { "type": "string" }
+    },
+
+    "shadow": {
+      "type": "object",
+      "required": ["sm", "md", "lg"],
+      "additionalProperties": { "type": "string" }
+    },
+
+    "layout": {
+      "type": "object",
+      "required": ["sidebar-width", "appbar-height", "content-max-width", "footer-height"],
+      "additionalProperties": { "type": "string" }
+    },
+
+    "z": {
+      "type": "object",
+      "required": ["appbar", "sidebar", "drawer", "modal"],
+      "additionalProperties": { "type": "integer" }
+    },
+
+    "customizer": {
+      "type": "object",
+      "description": "Default selections for the six theme-customizer axes. These are the persisted defaults a fresh instance ships with.",
+      "required": ["skin", "mode", "layout", "appbar", "footer"],
+      "additionalProperties": false,
+      "properties": {
+        "skin": { "type": "string", "enum": ["default", "bordered"] },
+        "mode": { "type": "string", "enum": ["light", "dark", "semi-dark"] },
+        "layout": { "type": "string", "enum": ["full", "boxed"] },
+        "appbar": { "type": "string", "enum": ["fixed", "static", "hidden"] },
+        "footer": { "type": "string", "enum": ["fixed", "static", "hidden"] },
+        "primary-swatches": {
+          "type": "array",
+          "description": "Offered Primary color swatches; each must pass AA contrast for its contrast text (validated separately).",
+          "items": { "$ref": "#/$defs/color" }
+        }
+      }
+    },
+
+    "_validation": {
+      "type": "object",
+      "description": "Record of the WCAG validation run (filled by the contrast validator, not the schema).",
+      "properties": {
+        "wcag_passed": { "type": "boolean" },
+        "validated_modes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["light", "dark", "semi-dark"] }
+        },
+        "validated_at": { "type": "string", "format": "date-time" },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["mode", "pair", "ratio", "required"],
+            "properties": {
+              "mode": { "type": "string" },
+              "pair": { "type": "string", "description": "e.g. 'text-muted on surface'." },
+              "ratio": { "type": "number" },
+              "required": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "color": {
+      "type": "string",
+      "description": "Hex (#rrggbb / #rgb), rgb()/rgba(), or hsl()/hsla().",
+      "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|rgba?\\([^)]*\\)|hsla?\\([^)]*\\))$"
+    },
+    "modeColors": {
+      "type": "object",
+      "required": ["bg", "surface", "surface-2", "border", "text", "text-muted"],
+      "properties": {
+        "bg": { "$ref": "#/$defs/color" },
+        "surface": { "$ref": "#/$defs/color" },
+        "surface-2": { "$ref": "#/$defs/color" },
+        "border": { "$ref": "#/$defs/color" },
+        "text": { "$ref": "#/$defs/color" },
+        "text-muted": { "$ref": "#/$defs/color" },
+        "text-inverse": { "$ref": "#/$defs/color" }
+      }
+    }
+  }
+}

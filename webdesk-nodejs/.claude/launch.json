@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dashboard-web",
+      "runtimeExecutable": "/Users/admin/.nvm/versions/node/v24.19.0/bin/pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "/Users/admin/Documents/Jitesh Work/WDS-Dashboard",
+        "--filter",
+        "@webdesk/dashboard-web",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "dashboard-api",
+      "runtimeExecutable": "/Users/admin/.nvm/versions/node/v24.19.0/bin/pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "/Users/admin/Documents/Jitesh Work/WDS-Dashboard",
+        "--filter",
+        "@webdesk/dashboard-api",
+        "dev"
+      ],
+      "port": 3001
+    }
+  ]
+}

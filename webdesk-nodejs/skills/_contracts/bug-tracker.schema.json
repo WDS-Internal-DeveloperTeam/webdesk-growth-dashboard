@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://webdesksolution.ca/schemas/nodejs/bug-tracker.schema.json",
+  "title": "QA Bug Tracker (Node.js)",
+  "description": "Bug lifecycle schema for the Node.js delivery system. Lifecycle: LOGGED → FIXED → RETESTING → VERIFIED → CLOSED (WONT_FIX and DUPLICATE are terminal alternatives). One file per project: /projects/[client]/qa-reports/bugs.json. Severity P1-P4 with warranty SLAs. Categories and examples are API/sync/integration-oriented (e.g. duplicate webhook processed, sync watermark gap, overlapping cron run).",
+  "type": "object",
+  "required": ["schema_version", "project", "bugs"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "project": {
+      "type": "string",
+      "description": "Client slug or project ID."
+    },
+    "last_updated": { "type": "string", "format": "date-time" },
+    "stats": {
+      "type": "object",
+      "description": "Roll-up counts for dashboards (recomputed on every write). Feeds the Master dashboard health rollup.",
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "by_status": {
+          "type": "object",
+          "properties": {
+            "LOGGED": { "type": "integer", "minimum": 0 },
+            "FIXED": { "type": "integer", "minimum": 0 },
+            "RETESTING": { "type": "integer", "minimum": 0 },
+            "VERIFIED": { "type": "integer", "minimum": 0 },
+            "CLOSED": { "type": "integer", "minimum": 0 },
+            "WONT_FIX": { "type": "integer", "minimum": 0 },
+            "DUPLICATE": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "by_severity": {
+          "type": "object",
+          "properties": {
+            "P1": { "type": "integer", "minimum": 0 },
+            "P2": { "type": "integer", "minimum": 0 },
+            "P3": { "type": "integer", "minimum": 0 },
+            "P4": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "open_by_severity": {
+          "type": "object",
+          "description": "Count of bugs not in CLOSED, WONT_FIX, or DUPLICATE.",
+          "properties": {
+            "P1": { "type": "integer", "minimum": 0 },
+            "P2": { "type": "integer", "minimum": 0 },
+            "P3": { "type": "integer", "minimum": 0 },
+            "P4": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "bugs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bug" }
+    }
+  },
+  "$defs": {
+    "bug": {
+      "type": "object",
+      "required": ["id", "title", "severity", "status", "logged_by", "logged_at"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^BUG-[0-9]{4,}$",
+          "description": "Sequential ID, e.g. BUG-0001."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 200,
+          "description": "e.g. 'Duplicate BigCommerce order webhook processed twice', 'Inventory sync watermark gap after mid-run crash'."
+        },
+        "description": {
+          "type": "string",
+          "description": "Markdown allowed. Repro steps, expected vs actual, relevant log/trace IDs."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["P1", "P2", "P3", "P4"],
+          "description": "P1=critical (sync halted / data corruption / dashboard down / auth bypass — blocks launch), P2=significant (a sync entity broken, an endpoint failing), P3=minor (cosmetic dashboard issue, non-blocking log noise), P4=nice-to-have. Warranty SLA: P1 4 business hours, P2 1 business day, P3 3 business days, P4 best effort."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["LOGGED", "FIXED", "RETESTING", "VERIFIED", "CLOSED", "WONT_FIX", "DUPLICATE"],
+          "description": "Lifecycle: LOGGED → FIXED → RETESTING → VERIFIED → CLOSED. WONT_FIX and DUPLICATE are terminal alternatives."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "api-contract",
+            "sync-engine",
+            "integration",
+            "webhook",
+            "data-integrity",
+            "auth-rbac",
+            "performance",
+            "security",
+            "observability",
+            "migration",
+            "dashboard-ui",
+            "accessibility",
+            "config",
+            "other"
+          ],
+          "description": "Node/API/sync-oriented categories. 'sync-engine' covers cron/watermark/overlap issues; 'webhook' covers idempotency/replay; 'data-integrity' covers sync parity/conflict-resolution defects."
+        },
+        "affected_systems": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "External systems / integration_targets touched, e.g. ['erp:ddi-inform','bigcommerce']."
+        },
+        "affected_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "File paths, routes, or job names affected, e.g. 'src/services/inventory-sync-service.js', 'POST /api/webhooks/bigcommerce/orders', 'job:inventory-sync'."
+        },
+        "affected_entities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "items",
+              "inventory",
+              "orders",
+              "customers",
+              "pricing",
+              "categories",
+              "shipments",
+              "other"
+            ]
+          },
+          "description": "Business entities affected by a sync/integration bug."
+        },
+        "affected_viewports": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["mobile-375", "mobile-414", "tablet-768", "desktop-1280", "desktop-1920"]
+          },
+          "description": "Only relevant for dashboard-ui category."
+        },
+        "log_refs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Trace IDs, request IDs, job-run IDs, or log query links that pin down the occurrence."
+        },
+        "repro_steps": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "expected": { "type": "string" },
+        "actual": { "type": "string" },
+        "logged_by": { "type": "string" },
+        "logged_at": { "type": "string", "format": "date-time" },
+        "assigned_to": { "type": "string" },
+        "fixed_by": { "type": "string" },
+        "fixed_at": { "type": "string", "format": "date-time" },
+        "fix_commit_sha": { "type": "string" },
+        "fix_pr_url": { "type": "string" },
+        "retest_by": { "type": "string" },
+        "retest_started_at": { "type": "string", "format": "date-time" },
+        "verified_by": { "type": "string" },
+        "verified_at": { "type": "string", "format": "date-time" },
+        "closed_at": { "type": "string", "format": "date-time" },
+        "milestone": {
+          "type": "string",
+          "description": "Which milestone this bug surfaced in (M1, M2, ...)."
+        },
+        "sprint": {
+          "type": "string",
+          "description": "Which sprint surfaced the bug (e.g. S2.1)."
+        },
+        "found_at_gate": {
+          "type": "string",
+          "enum": ["G2", "G3", "G4", "G5", "G5.5", "G6", "post-launch"],
+          "description": "Which gate / phase caught the bug."
+        },
+        "kb_candidate": {
+          "type": "boolean",
+          "description": "If true, this bug pattern should feed the feedback loop into 09-forbidden.md / the Failure Scenario Library."
+        },
+        "kb_candidate_notes": {
+          "type": "string",
+          "description": "Why this is a KB candidate and what rule it might inform (e.g. 'add idempotency-key assertion to webhook handler template')."
+        },
+        "duplicate_of": {
+          "type": "string",
+          "pattern": "^BUG-[0-9]{4,}$",
+          "description": "If status is DUPLICATE, the canonical bug ID."
+        },
+        "wont_fix_reason": {
+          "type": "string",
+          "description": "Required if status is WONT_FIX."
+        },
+        "history": {
+          "type": "array",
+          "description": "Status transition history.",
+          "items": {
+            "type": "object",
+            "required": ["from_status", "to_status", "transitioned_by", "transitioned_at"],
+            "properties": {
+              "from_status": { "type": "string" },
+              "to_status": { "type": "string" },
+              "transitioned_by": { "type": "string" },
+              "transitioned_at": { "type": "string", "format": "date-time" },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "FIXED" } } },
+          "then": { "required": ["fixed_by", "fixed_at"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "VERIFIED" } } },
+          "then": { "required": ["verified_by", "verified_at", "fixed_by", "fixed_at"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "CLOSED" } } },
+          "then": { "required": ["verified_by", "verified_at", "closed_at"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "WONT_FIX" } } },
+          "then": { "required": ["wont_fix_reason"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "DUPLICATE" } } },
+          "then": { "required": ["duplicate_of"] }
+        }
+      ]
+    }
+  }
+}

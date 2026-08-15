@@ -66,21 +66,28 @@ export class RoleAssignmentService {
     return resolved.filter((role): role is RoleEntity => role !== null);
   }
 
+  /**
+   * `projectId` (task package `docs/task-packages/module-projects-foundation.md` design decision
+   * D4) is a new, trailing, optional parameter — added after `now` rather than before it so every
+   * existing call site (real or test) that passes exactly 4 positional args is unaffected. `null`
+   * (the default) preserves the original global-scope-only behavior.
+   */
   async assignRole(
     targetUserId: string,
     roleId: string,
     actorId: string,
     now = new Date(),
+    projectId: string | null = null,
   ): Promise<void> {
     await this.assertNotSelfTargeting(actorId, targetUserId, "role-assignment actor");
     await this.requireUser(targetUserId);
     const role = await this.requireRole(roleId);
 
-    if (await this.userRoles.hasRole(targetUserId, roleId)) {
+    if (await this.userRoles.hasRole(targetUserId, roleId, projectId)) {
       throw new ConflictException(`User already holds role: ${role.key}`);
     }
 
-    await this.userRoles.assign(targetUserId, roleId);
+    await this.userRoles.assign(targetUserId, roleId, projectId);
     // The auth_events write, the audit_events write, and revoking the target's sessions are three
     // independent side effects of the same completed assignment — none reads another's result —
     // so they run concurrently rather than as three sequential round-trips.
@@ -89,12 +96,13 @@ export class RoleAssignmentService {
         eventType: "role_assigned",
         userId: targetUserId,
         success: true,
-        reason: `role:${role.key} assigned_by:${actorId}`,
+        reason: `role:${role.key} assigned_by:${actorId}${projectId ? ` project:${projectId}` : ""}`,
       }),
       this.auditService.record({
         eventType: "permission_change",
         actorUserId: actorId,
         actorType: "human",
+        projectId,
         entityType: "user",
         entityId: targetUserId,
         action: "role_assigned",
@@ -105,19 +113,27 @@ export class RoleAssignmentService {
     ]);
   }
 
+  /**
+   * `projectId`: same trailing, optional, backward-compatible addition as `assignRole()` above.
+   * Returns whether a row was actually removed — `UserRoleRepository.revoke()` matches on the
+   * exact `(userId, roleId, projectId)` triple, so a caller that omits `projectId` can never
+   * remove a project-scoped grant; surfacing the real outcome lets the controller report it
+   * accurately instead of unconditionally claiming success (security-review finding, this branch).
+   */
   async revokeRole(
     targetUserId: string,
     roleId: string,
     actorId: string,
     now = new Date(),
-  ): Promise<void> {
+    projectId: string | null = null,
+  ): Promise<boolean> {
     await this.assertNotSelfTargeting(actorId, targetUserId, "role-revocation actor");
     await this.requireUser(targetUserId);
     const role = await this.requireRole(roleId);
 
-    const removed = await this.userRoles.revoke(targetUserId, roleId);
+    const removed = await this.userRoles.revoke(targetUserId, roleId, projectId);
     if (!removed) {
-      return;
+      return false;
     }
     // Same independence as assignRole() above — none of these three depends on another's result.
     await Promise.all([
@@ -125,12 +141,13 @@ export class RoleAssignmentService {
         eventType: "role_revoked",
         userId: targetUserId,
         success: true,
-        reason: `role:${role.key} revoked_by:${actorId}`,
+        reason: `role:${role.key} revoked_by:${actorId}${projectId ? ` project:${projectId}` : ""}`,
       }),
       this.auditService.record({
         eventType: "permission_change",
         actorUserId: actorId,
         actorType: "human",
+        projectId,
         entityType: "user",
         entityId: targetUserId,
         action: "role_revoked",
@@ -139,6 +156,7 @@ export class RoleAssignmentService {
       }),
       this.sessionService.revokeAllForUser(targetUserId, "role-change", now),
     ]);
+    return true;
   }
 
   /**

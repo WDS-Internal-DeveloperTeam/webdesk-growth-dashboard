@@ -72,11 +72,32 @@ describe("RoleAssignmentController", () => {
   });
 
   it("revokeRole() calls the service with target user, role, and the acting user's id from the session", async () => {
-    roleAssignment.revokeRole.mockResolvedValue(undefined);
+    roleAssignment.revokeRole.mockResolvedValue(true);
 
-    const result = await controller.revokeRole("target-user", "role-1", requestWith());
+    const result = await controller.revokeRole("target-user", "role-1", undefined, requestWith());
 
-    expect(roleAssignment.revokeRole).toHaveBeenCalledWith("target-user", "role-1", "actor-1");
+    expect(roleAssignment.revokeRole).toHaveBeenCalledWith(
+      "target-user",
+      "role-1",
+      "actor-1",
+      undefined,
+      null,
+    );
     expect(result).toEqual({ success: true, data: { revoked: true }, correlationId: "corr-1" });
+  });
+
+  it("revokeRole() passes a given projectId through, and reports revoked:false when nothing was removed (security-review finding)", async () => {
+    roleAssignment.revokeRole.mockResolvedValue(false);
+
+    const result = await controller.revokeRole("target-user", "role-1", "project-1", requestWith());
+
+    expect(roleAssignment.revokeRole).toHaveBeenCalledWith(
+      "target-user",
+      "role-1",
+      "actor-1",
+      undefined,
+      "project-1",
+    );
+    expect(result).toEqual({ success: true, data: { revoked: false }, correlationId: "corr-1" });
   });
 });

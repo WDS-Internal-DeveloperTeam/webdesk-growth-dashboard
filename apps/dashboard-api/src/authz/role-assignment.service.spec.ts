@@ -142,7 +142,9 @@ describe("RoleAssignmentService", () => {
 
       await service.assignRole("user-1", "role-1", "actor-1", NOW);
 
-      expect(userRoles.assign).toHaveBeenCalledWith("user-1", "role-1");
+      // Third arg is `projectId`, defaulting to null (global scope) — added for the Projects
+      // module's project-scoped role assignment (docs/task-packages/module-projects-foundation.md D4).
+      expect(userRoles.assign).toHaveBeenCalledWith("user-1", "role-1", null);
       expect(events.record).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: "role_assigned",

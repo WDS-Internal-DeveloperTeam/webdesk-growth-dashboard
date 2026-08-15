@@ -50,6 +50,7 @@ const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
   "emergency_admin_login",
   "account_recovery_request",
   "account_recovery_decision",
+  "project_status_changed",
 ];
 
 /**
@@ -112,6 +113,7 @@ const AUDIT_EVENT_CATEGORIES: Record<AuditEventType, string> = {
   emergency_admin_login: "authentication",
   account_recovery_request: "identity_recovery",
   account_recovery_decision: "identity_recovery",
+  project_status_changed: "content_lifecycle",
 };
 
 /** Default `confidentiality_classification` when a caller doesn't specify one — the conservative, non-elevated value; grants no special visibility beyond standard `audit.view`. */

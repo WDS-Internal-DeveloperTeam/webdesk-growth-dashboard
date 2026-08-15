@@ -1,0 +1,63 @@
+WebDesk Growth Dashboard — Project Profile — file manifest
+Regenerated 2026-08-05 (remediation pass — added tools/ and templates/setup-input-checklist.md)
+Root: skills/nodejs/projects/custom-app-build/profiles/webdesk-growth-dashboard/
+
+Total files: 51 (including this manifest)
+
+./CHANGELOG.md
+./MANIFEST.txt
+./README.md
+./SKILL.md
+./contracts/audit-event.schema.json
+./contracts/job-record.schema.json
+./contracts/project-profile.schema.json
+./contracts/release-manifest.schema.json
+./contracts/webhook-event.schema.json
+./integrations/github/01-app-auth-and-octokit.md
+./integrations/github/02-webhooks-and-events.md
+./integrations/github/pointers.md
+./integrations/google-workspace/01-oidc-sso.md
+./integrations/google-workspace/02-smtp.md
+./integrations/google-workspace/pointers.md
+./integrations/vercel/01-functions-queues-workflows-cron.md
+./integrations/vercel/02-blob-and-postgres.md
+./integrations/vercel/pointers.md
+./integrations/wordpress/01-rest-api-and-app-passwords.md
+./integrations/wordpress/02-wp-cli-and-deployment.md
+./integrations/wordpress/pointers.md
+./knowledge/00-scope-and-precedence.md
+./knowledge/01-approved-architecture.md
+./knowledge/02-turborepo-boundaries.md
+./knowledge/03-nestjs-on-vercel.md
+./knowledge/04-serverless-queues-workflows-and-cron.md
+./knowledge/05-google-workspace-sso-and-local-admin.md
+./knowledge/06-github-app-integration.md
+./knowledge/07-wordpress-integration.md
+./knowledge/08-vercel-blob-and-file-handling.md
+./knowledge/09-google-workspace-smtp.md
+./knowledge/10-data-ownership-and-audit.md
+./knowledge/11-retention-backup-and-operations.md
+./knowledge/12-dashboard-security-controls.md
+./knowledge/13-testing-and-acceptance.md
+./knowledge/14-implementation-phases.md
+./knowledge/15-project-specific-forbidden-actions.md
+./templates/CLAUDE.md.template
+./templates/HANDOFF.md.template
+./templates/architecture-adr-template.md
+./templates/integration-contract-template.md
+./templates/project.json.example
+./templates/setup-input-checklist.md
+./templates/task-package-template.md
+./tests/context-loading-tests.md
+./tests/precedence-tests.md
+./tests/profile-validation.md
+./tests/routing-validation.md
+./tests/scenario-tests.md
+./tools/validate-all.py
+./tools/validate-project-profile.py
+
+Related, but outside this profile directory (do not re-generate here):
+- ../../../../../../../proposed-upstream-patches/   (WDS-Dashboard repo root — 12 files: README + 11 patches)
+- ../../../../../../../docs/skill-build/             (WDS-Dashboard repo root — 9 report files)
+- ../../../../../../../canonical-inputs/             (WDS-Dashboard repo root — supplied source documents:
+  Current_WordPress_Technical_Discovery.md + source PDF, agent-specifications-batch-1/ with 5 files)

@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://webdesksolution.ca/schemas/webdesk-growth-dashboard/audit-event.schema.json",
+  "title": "WebDesk Growth Dashboard — Audit Event",
+  "description": "Formalizes the audit_events shape from knowledge/10-data-ownership-and-audit.md. Immutable once written (WDS-012) except via the retention-deletion job. Distinct from, and more retention-lifecycle-aware than, the base skill's project.json audit_log — see docs/implementation/gap-analysis.md item 10.",
+  "type": "object",
+  "required": [
+    "id",
+    "event_type",
+    "actor_type",
+    "entity_type",
+    "entity_id",
+    "action",
+    "retention_category",
+    "legal_hold",
+    "created_at"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "login",
+        "login_rejected",
+        "logout",
+        "session_revoked",
+        "permission_change",
+        "confidential_field_access_change",
+        "user_activation",
+        "user_deactivation",
+        "data_change",
+        "approval",
+        "rejection",
+        "revision_requested",
+        "publish",
+        "unpublish",
+        "release",
+        "rollback",
+        "backup",
+        "restore",
+        "retention_run",
+        "security_exception",
+        "scan_run",
+        "import_run",
+        "export_run",
+        "git_sync",
+        "webhook_processed",
+        "job_completed",
+        "job_failed",
+        "emergency_admin_login",
+        "account_recovery_request",
+        "account_recovery_decision"
+      ]
+    },
+    "actor_user_id": {
+      "type": ["string", "null"],
+      "description": "Null for system-initiated events."
+    },
+    "actor_type": {
+      "type": "string",
+      "enum": ["human", "system", "service_account"]
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "The record type this event concerns, e.g. 'page', 'case_study', 'release', 'user', 'role'."
+    },
+    "entity_id": { "type": "string" },
+    "entity_version": {
+      "type": ["integer", "null"],
+      "description": "The exact version this event concerns — never 'the current version'. Null where not applicable (e.g. a login event)."
+    },
+    "action": {
+      "type": "string",
+      "description": "The specific action taken, e.g. 'approve', 'reject', 'publish', 'grant_permission'."
+    },
+    "before_state": {
+      "type": ["object", "null"],
+      "description": "Redacted per confidentiality rules (knowledge/12-dashboard-security-controls.md) before storage — never a raw dump of a confidential field."
+    },
+    "after_state": {
+      "type": ["object", "null"],
+      "description": "Same redaction rule as before_state."
+    },
+    "reason": {
+      "type": ["string", "null"],
+      "description": "Required (application-level, not schema-level) for rejections, revisions, overrides, and security exceptions."
+    },
+    "related_gate_or_approval_id": { "type": ["string", "null"], "format": "uuid" },
+    "git_commit_sha": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Where applicable, per knowledge/06-github-app-integration.md's SHA-verification rule."
+    },
+    "retention_category": {
+      "type": "string",
+      "description": "Per knowledge/11-retention-backup-and-operations.md's matrix, e.g. 'audit-7y', 'approval-audit-7y', 'security-log-1y'."
+    },
+    "legal_hold": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, this event is excluded from the retention-deletion job regardless of age. Overrides retention_category unconditionally."
+    },
+    "legal_hold_reason": { "type": ["string", "null"] },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Immutable once written. No application code path updates this row except the retention-deletion job's delete (never update)."
+    }
+  }
+}

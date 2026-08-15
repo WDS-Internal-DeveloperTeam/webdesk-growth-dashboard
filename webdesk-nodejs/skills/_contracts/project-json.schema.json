@@ -1,0 +1,569 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://webdesksolution.ca/schemas/nodejs/project.json",
+  "title": "WebDesk Node.js Project State Schema",
+  "description": "Single source of truth for every Node.js delivery project. Every agent reads this file at start of turn and writes at end. Atomic, locked, versioned. The orchestrator reads project_type + integration_targets here to scope KB loading (context-budget discipline) and never loads KB outside that scope.",
+  "type": "object",
+  "required": ["project", "tech_stack", "gates", "budget", "audit_log", "lock"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "client_slug",
+        "project_type",
+        "build_context",
+        "stage",
+        "current_gate",
+        "schema_version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "UUID v4 for the project."
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable project name, e.g. 'DDI Inform \u2194 BigCommerce Middleware'."
+        },
+        "client_slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "kebab-case client identifier used as the workspace folder name, e.g. 'ddi-systems'."
+        },
+        "schema_version": {
+          "type": "string",
+          "const": "1.0.0",
+          "description": "Version of this schema the file conforms to."
+        },
+        "project_type": {
+          "type": "string",
+          "enum": [
+            "integration-middleware",
+            "custom-app-build",
+            "frontend-tool",
+            "version-upgrade",
+            "maintenance"
+          ],
+          "description": "Drives which project-type KB arm loads. Never load another project-type's KB."
+        },
+        "build_context": {
+          "type": "string",
+          "enum": ["nodejs", "nodejs+bigcommerce", "nodejs+shopify"],
+          "description": "Node is always the primary arm. The store suffix loads ONLY that commerce integration KB \u2014 never a second technology arm."
+        },
+        "integration_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "External systems this project integrates with. The orchestrator loads integration KB ONLY for systems listed here. Examples: 'bigcommerce', 'shopify', 'erp:ddi-inform', 'erp:netsuite', 'erp:sage-100'.",
+          "examples": [["bigcommerce", "erp:ddi-inform"]]
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone string (e.g. 'America/Toronto'). The operational clock for ALL cron schedules, sync windows, report boundaries, and displayed timestamps. Stored UTC, displayed local. Mirrors the Dashboard Settings \u2192 Timezone value; changing it reschedules crons. The scheduler reads this, never the server's local tz.",
+          "examples": ["America/Toronto", "America/New_York"]
+        },
+        "tenant": {
+          "type": "object",
+          "description": "Tenancy model. Per-client dashboards plus an optional cross-client master dashboard for retainer monitoring.",
+          "required": ["mode"],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["per-client", "master"],
+              "description": "'per-client' = one dashboard instance scoped to this client's stores/ERP. 'master' = the super-admin cross-client oversight instance."
+            },
+            "master": {
+              "type": "boolean",
+              "description": "True if a master (super-admin, cross-tenant) dashboard is in scope for this engagement. Every query is tenant-scoped; only the master role has cross-tenant scope."
+            }
+          }
+        },
+        "host_target": {
+          "type": "string",
+          "enum": ["local", "aws", "gcp", "cloudflare", "heroku", "vps"],
+          "description": "Deployment target. Local-first by default; captured at G0, justified at G1.5 if non-trivial (e.g. on-prem ERP behind a VPN)."
+        },
+        "data_sensitivity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Captured at G0. Drives security baseline depth (PII handling, secrets, encryption at rest)."
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "onboarding",
+            "discovery",
+            "intake",
+            "planning",
+            "architecture",
+            "contracts",
+            "schema",
+            "design",
+            "scaffolding",
+            "development",
+            "sprint-qa",
+            "milestone-qa",
+            "observability",
+            "pre-launch",
+            "launch",
+            "monitoring",
+            "on-hold",
+            "archived"
+          ],
+          "description": "Current lifecycle stage."
+        },
+        "current_gate": {
+          "type": "string",
+          "description": "ID of the gate currently open or next to open, e.g. 'G1.5', 'G-Contracts', 'G4-sprint-2.1'."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "on-hold", "blocked", "delivered", "archived", "cancelled"]
+        },
+        "client": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "primary_contact": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "role": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "repository": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "default_branch": {
+              "type": "string",
+              "default": "main"
+            },
+            "develop_branch": {
+              "type": "string",
+              "default": "develop"
+            }
+          }
+        },
+        "assigned_team": {
+          "type": "object",
+          "description": "Named humans. Used for self-approval checks (approver must differ from doer) and override authority.",
+          "properties": {
+            "pm": {
+              "type": "string"
+            },
+            "architect": {
+              "type": "string"
+            },
+            "designer": {
+              "type": "string"
+            },
+            "backend_lead": {
+              "type": "string"
+            },
+            "frontend_lead": {
+              "type": "string"
+            },
+            "qa_lead": {
+              "type": "string"
+            },
+            "dba": {
+              "type": "string"
+            },
+            "delivery_head": {
+              "type": "string"
+            }
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Increments on every write."
+        }
+      }
+    },
+    "tech_stack": {
+      "type": "object",
+      "description": "Selected stack for this project, justified at the relevant gate (DB/ORM/storage at G-Schema; queue/runtime at G1.5). Agents read this and ask if a layer is missing rather than guessing. Default per blueprint \u00a78/\u00a710: Node 22 + Express + PostgreSQL + Sequelize.",
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "description": "e.g. 'node@22'.",
+          "default": "node@22"
+        },
+        "framework": {
+          "type": "string",
+          "enum": ["express", "fastify", "nest", "next"],
+          "default": "express"
+        },
+        "database": {
+          "type": "string",
+          "enum": ["postgresql", "mysql", "mongodb"],
+          "default": "postgresql",
+          "description": "Default PostgreSQL. Alternatives by justification at G-Schema."
+        },
+        "orm": {
+          "type": "string",
+          "enum": ["sequelize", "prisma", "typeorm"],
+          "default": "sequelize",
+          "description": "Default Sequelize (models + migrations via sequelize-cli/umzug; no raw queries outside repositories; transactions for multi-write sync ops)."
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["s3", "cloudinary", "gcs", "none"],
+          "description": "Object storage for files/exports/backups. 'none' if not needed."
+        },
+        "queue": {
+          "type": "string",
+          "enum": ["node-cron", "bullmq", "none"],
+          "description": "Scheduling/jobs. Start with node-cron for simple schedules; escalate to BullMQ+Redis when concurrency/retries/DLQ are needed."
+        },
+        "frontend": {
+          "type": "string",
+          "enum": ["react", "next", "none"],
+          "description": "'none' for headless middleware with no dashboard UI."
+        }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "description": "Mutex for atomic writes. Prevents race conditions across agents writing project.json.",
+      "required": ["locked"],
+      "properties": {
+        "locked": {
+          "type": "boolean"
+        },
+        "locked_by": {
+          "type": ["string", "null"],
+          "description": "Agent name or human ID holding the lock."
+        },
+        "locked_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "max_lock_duration_seconds": {
+          "type": "integer",
+          "default": 300
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "description": "One entry per gate event. Gate IDs are canonical per CONVENTIONS \u00a74 / gate-format.md.",
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Canonical gate ID, e.g. 'G0.5','G1','G1.5','G-Contracts','G-Schema','G2','G3','G4-sprint-2.1','G5','G5.5','G6','M6'."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "discovery",
+              "spec-validation",
+              "plan-estimate",
+              "architecture-review",
+              "contract-approval",
+              "schema-approval",
+              "design-approval",
+              "scaffold-verification",
+              "sprint-qa",
+              "milestone-regression",
+              "observability-approval",
+              "pre-launch",
+              "post-launch-monitoring"
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "description": "Sprint ID, milestone ID, or 'project'."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "open", "passed", "failed", "skipped", "expired", "overridden"]
+          },
+          "opened_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sla_hours": {
+            "type": "integer",
+            "default": 24
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approver": {
+            "type": "string",
+            "description": "Designated approver (email or role). For G-Contracts/G-Schema this is the PM, with client approval evidence in notes."
+          },
+          "backup_approver": {
+            "type": "string"
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["CONFIRM", "REJECT", "REVISE", "RENEGOTIATE", "OVERRIDE"]
+          },
+          "ticket_id": {
+            "type": ["string", "null"],
+            "description": "Recorded at G1 (estimate\u2192ticket) and on any RENEGOTIATE re-estimate. The audit anchor that change-requests re-estimate against."
+          },
+          "notes": {
+            "type": "string"
+          },
+          "escalation_log": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "description": "Token + hours budget. The orchestrator halts and writes HANDOFF.md at >90% of the context budget; never truncates silently.",
+      "properties": {
+        "token_used": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "token_cap": {
+          "type": "integer",
+          "description": "Hard cap on tokens for this project."
+        },
+        "token_alert_threshold": {
+          "type": "integer",
+          "description": "Emit an alert when token_used crosses this."
+        },
+        "hours_budget": {
+          "type": "number",
+          "description": "Quoted/approved hours (from the G1 estimate ticket)."
+        },
+        "hours_burned": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "cost_estimate_usd": {
+          "type": "number"
+        }
+      }
+    },
+    "integration_contracts": {
+      "type": "array",
+      "description": "References to entries in the Integration Contract Registry (each conforms to integration-contract.schema.json, approved at G-Contracts).",
+      "items": {
+        "type": "object",
+        "required": ["id", "ref", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Contract ID, e.g. 'IC-DDI-001'."
+          },
+          "system": {
+            "type": "string",
+            "description": "e.g. 'ddi-inform', 'bigcommerce'."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Path to the contract file, e.g. 'integration-contracts/ddi-inform.md'."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "client-approved"],
+            "description": "No integration code may be written against a 'draft' contract."
+          }
+        }
+      }
+    },
+    "rfcs": {
+      "type": "array",
+      "description": "Change-request proposals (rfc-template.md). An accepted RFC may produce an ADR and may trigger a G1 RENEGOTIATE re-estimate.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "e.g. 'RFC-003'."
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["proposed", "under-discussion", "accepted", "rejected", "superseded"]
+          },
+          "ref": {
+            "type": "string",
+            "description": "Path to the RFC file under rfcs/."
+          },
+          "resulting_adr": {
+            "type": "string",
+            "description": "ADR ID if the RFC produced one."
+          },
+          "triggers_reestimate": {
+            "type": "boolean",
+            "description": "True if accepting this RFC re-enters G1 for re-estimate."
+          }
+        }
+      }
+    },
+    "health_score": {
+      "type": ["object", "null"],
+      "description": "Project Health Score snapshot. Conforms to health-score.schema.json. Surfaced on the Master dashboard for retainer monitoring; baselined at M6.",
+      "properties": {
+        "architecture": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "test": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "dependency": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "security": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "delivery": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "rollup": {
+          "type": "string",
+          "enum": ["GREEN", "YELLOW", "RED"],
+          "description": "Worst-of the five sub-ratings (a single RED forces RED)."
+        },
+        "computed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "runbooks_status": {
+      "type": "object",
+      "description": "Presence/readiness of operational runbooks. All must be 'present' before G5.5/G6.",
+      "properties": {
+        "incident_runbooks": {
+          "type": "string",
+          "enum": ["missing", "draft", "present"]
+        },
+        "queue_recovery": {
+          "type": "string",
+          "enum": ["missing", "draft", "present"]
+        },
+        "webhook_replay": {
+          "type": "string",
+          "enum": ["missing", "draft", "present"]
+        },
+        "db_restore": {
+          "type": "string",
+          "enum": ["missing", "draft", "present"]
+        },
+        "deploy_recovery": {
+          "type": "string",
+          "enum": ["missing", "draft", "present"]
+        }
+      }
+    },
+    "audit_log_path": {
+      "type": "string",
+      "description": "Path to the append-only audit log (e.g. 'audit-log.jsonl'). The audit_log array below may mirror recent entries; the file is the durable record."
+    },
+    "audit_log": {
+      "type": "array",
+      "description": "Append-only log of every state-changing action.",
+      "items": {
+        "type": "object",
+        "required": ["timestamp", "actor", "action"],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actor": {
+            "type": "string",
+            "description": "Agent name or human ID."
+          },
+          "actor_type": {
+            "type": "string",
+            "enum": ["agent", "human", "system"]
+          },
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          },
+          "project_version_before": {
+            "type": "integer"
+          },
+          "project_version_after": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

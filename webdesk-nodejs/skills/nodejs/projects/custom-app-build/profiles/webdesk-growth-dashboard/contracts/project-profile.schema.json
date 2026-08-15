@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WebDesk Growth Dashboard — Project Profile Schema Extension",
+  "description": "CORRECTED per external verification review (2026-08-05): this file no longer claims JSON Schema `allOf` + `$ref` composition against the base skill's canonical _contracts/project-json.schema.json. That approach was tried in the prior version of this file and is WRONG — `allOf` is an intersection of constraints, not an override, so an instance still had to satisfy the base schema's restrictive enums (host_target, tech_stack.storage) even after this file's own `properties` declared wider values, and `templates/project.json.example` failed validation as a result (6 errors, confirmed by an external reviewer and reproduced here). This file now has two parts, used by ../tools/validate-project-profile.py: (1) `new_field_schemas` — standalone, self-contained schemas for the fields this project adds that the base schema has never heard of (project.project_profile, vercel_execution) — these validate on their own, no $ref needed. (2) `base_schema_patches` — a machine-readable list of patch operations the validator script applies to an IN-MEMORY DEEP COPY of the base schema before validating a project.json instance against it. The base schema file itself (_contracts/project-json.schema.json) is never read-modified-written; only a runtime copy is patched, once per validation run. No network access, no $ref resolution, and no schema-composition trick is used or claimed anywhere in this file.",
+  "new_field_schemas": {
+    "project.project_profile": {
+      "type": "string",
+      "const": "webdesk-growth-dashboard",
+      "description": "Selects this profile. This field alone does NOT cause the base orchestrator to auto-load anything — see knowledge/00-scope-and-precedence.md and SKILL.md §2 for the actual (CLAUDE.md-based) V1 loading mechanism. The base orchestrator does not currently read or act on this field; the schema-level check here only confirms the value is well-formed."
+    },
+    "vercel_execution": {
+      "type": "object",
+      "description": "Project-local, top-level block (not in the base schema at all) recording the resolved serverless execution model per knowledge/04-serverless-queues-workflows-and-cron.md. This is the actual source of truth for this project's job architecture — tech_stack.queue (patched below to 'vercel-native') exists only so the base schema's tech_stack.queue field has a truthful value; the operational detail lives here.",
+      "required": [
+        "host_target",
+        "job_execution_model",
+        "primary_job_provider",
+        "fallback_job_provider"
+      ],
+      "properties": {
+        "host_target": {
+          "type": "string",
+          "const": "vercel",
+          "description": "Must equal project.host_target once the base_schema_patches below extend that enum with 'vercel'. Kept as a separate, redundant field here (rather than only patching project.host_target) so this block is self-checking even if read in isolation."
+        },
+        "job_execution_model": {
+          "type": "string",
+          "const": "serverless-functions-no-permanent-worker",
+          "description": "Resolved per knowledge/04 — dashboard-worker is not a permanent Node.js process or container. This value must never be anything else for this project without a superseding approved decision (see knowledge/00-scope-and-precedence.md's precedence rules)."
+        },
+        "primary_job_provider": {
+          "type": "string",
+          "const": "vercel-queues-workflows-cron"
+        },
+        "fallback_job_provider": {
+          "type": "string",
+          "const": "upstash-qstash-vercel-cron"
+        },
+        "postgres_marketplace_provider": {
+          "type": ["string", "null"],
+          "description": "The exact Vercel Marketplace Postgres provider, recorded once provisioned. Null until then. Must never be 'neon' per WDS-002 — see knowledge/01-approved-architecture.md's stop-condition if no qualifying non-Neon East Coast option exists."
+        }
+      }
+    }
+  },
+  "base_schema_patches": [
+    {
+      "op": "append_enum",
+      "path": ["properties", "project", "properties", "host_target"],
+      "value": "vercel",
+      "reason": "01_Dashboard_Master_Specification.md §5 — Vercel Pro is the approved host target. Not in the base enum (local|aws|gcp|cloudflare|heroku|vps)."
+    },
+    {
+      "op": "add_property",
+      "path": ["properties", "project", "properties"],
+      "key": "project_profile",
+      "value": { "$ref_new_field": "project.project_profile" },
+      "reason": "Selects this profile. See new_field_schemas above for the actual schema (this patch op copies it in verbatim; '$ref_new_field' is a same-file lookup key resolved by the validator script, not a JSON Schema $ref)."
+    },
+    {
+      "op": "append_required",
+      "path": ["properties", "project"],
+      "value": "project_profile",
+      "reason": "Every project.json under this profile must declare it, so an agent never has to guess whether the profile applies."
+    },
+    {
+      "op": "append_enum",
+      "path": ["properties", "tech_stack", "properties", "storage"],
+      "value": "vercel-blob",
+      "reason": "08_API_and_Integration_Contracts.md §7 — private Vercel Blob is the approved object storage. Not in the base enum (s3|cloudinary|gcs|none)."
+    },
+    {
+      "op": "append_enum",
+      "path": ["properties", "tech_stack", "properties", "queue"],
+      "value": "vercel-native",
+      "reason": "Corrects the prior version of this file, which forced tech_stack.queue to the base enum's 'none' as a workaround. 'none' was inaccurate — this project DOES use a queue/job system, just not node-cron or BullMQ. 'vercel-native' is the accurate, honest value: Vercel Queues/Workflows/Cron Jobs, detailed in the vercel_execution block. Not in the base enum (node-cron|bullmq|none)."
+    },
+    {
+      "op": "add_property",
+      "path": ["properties"],
+      "key": "vercel_execution",
+      "value": { "$ref_new_field": "vercel_execution" },
+      "reason": "New top-level block, no base-schema equivalent. See new_field_schemas above."
+    },
+    {
+      "op": "append_required",
+      "path": [],
+      "value": "vercel_execution",
+      "reason": "This project's job-execution model is architecturally load-bearing (knowledge/04) — every project.json instance under this profile must record it, not leave it implicit in tech_stack.queue."
+    }
+  ]
+}

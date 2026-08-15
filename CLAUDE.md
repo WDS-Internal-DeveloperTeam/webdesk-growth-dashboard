@@ -245,16 +245,28 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    audit scope, the 21 real business-module endpoints, and any module-implementation wave (see
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
-7. **Projects module task package prepared, awaiting human approval** —
-   `docs/task-packages/module-projects-foundation.md`, built from the Phase 1F task-package
-   template per explicit instruction to prepare it (not implement). Pre-implementation
-   verification found no dependency blocker (Wave 1, no prerequisites) but several real spec
-   silences (no Projects wireframes, no status state machine, a naming collision between the
-   canonical data-model doc's project-scoped `operational_contacts` and Phase 1E's already-built
-   global one) — each flagged with a proposed, clearly-marked-as-unsourced resolution (D1-D8) for
-   the human reviewer to confirm or correct, not silently resolved. **Implementation has not
-   started** — it begins only once a human confirms the package "looks correct," per the
-   authorizing instruction's own explicit two-step design.
+7. ~~Projects module task package prepared, awaiting human approval~~ — **backend built,
+   independently code-reviewed, security-reviewed, second-role human reviewed, and gated
+   2026-08-15.** `docs/task-packages/module-projects-foundation.md` was prepared, then explicit
+   "begin implementation" authorization was given directly (see "Recent decisions"). Schema, API,
+   RBAC wiring, and tests were built and validated, then this project's own `code-review` skill
+   was run (high effort) — 9 CONFIRMED findings, most severe an IDOR letting a user authorized on
+   one project mutate another project's sub-resources by ID — all 9 fixed. "Merge PR #24" was then
+   requested but held per this project's standing discipline (security review → second-role human
+   review → gate decision, each separate, before merge); this project's own `security-review`
+   skill was then run — 2 CONFIRMED findings, most severe a real privilege-escalation path in the
+   new project-approver endpoint — both fixed and re-validated. A review packet (published as a
+   Claude artifact — code-review + security-review findings, fixes, validation evidence) was
+   prepared for the required second-role human review, since the implementing agent cannot also be
+   its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved."** **The gate
+   (G4-projects) was then separately requested and approved** — WebDesk Solution, decision
+   CONFIRM, approved commit `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` — see
+   `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section and
+   `project.json`'s `gates[]`. Branch `module-projects-foundation`, pushed as
+   [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) —
+   **not merged, not deployed, no production migration run.** No UI yet (dashboard-web) — D7's
+   Project Switcher wiring remains separate, undesigned scope. **Merging PR #24 remains its own
+   separate, not-yet-requested authorization**, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -909,6 +921,167 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   was not authorized to start** — this package is a proposal awaiting the human "looks correct"
   confirmation the authorizing instruction itself made a separate, later step from preparing the
   package.
+- `[2026-08-15]` **Built the Projects module backend**, under explicit "begin implementation of the
+  projects module" authorization, reinforcing three rules already in the task package: establish
+  canonical project context, no multi-tenancy from the two Workspace domains, and prevent
+  destructive deletion when dependent records exist. Branch `module-projects-foundation`, off
+  `main` at `5722deb`/`3c73abe`. Schema: migrations `00036`-`00044` — `projects`,
+  `project_environments`, `project_repositories`, `project_users`, `project_objectives`,
+  `roadmap_items`, plus the FK finally completing Phase 1D-expanded's
+  `user_roles.project_id`/`role_permissions.project_id` columns (their first real target, zero
+  existing rows, no backfill risk). D2's status state machine (`active`/`paused`, either →
+  `archived` terminal) and D3's one-active-phase-per-project invariant are both enforced —
+  D3 at the database layer via a partial unique index, not just application code, matching
+  ADR-0017's "enforce the real invariant at the DB layer" precedent. "Prevent destructive deletion
+  when dependent records exist" is satisfied two ways: `projects` has no hard-delete endpoint at
+  all (archive-only, per rule 8/ADR-0016's project-wide no-hard-delete policy), and
+  `RoadmapItemsService.remove()` rejects removing a roadmap item that is currently a project's
+  `active_phase_id` until reassigned or cleared — the one real dependent-record relationship this
+  schema has. "No multi-tenancy" is satisfied by construction: every `projects` row belongs to the
+  single WebDesk Solution tenant already recorded in `project.json.tenant.mode`; `webdesksolution.com`
+  and `webdeskinc.com` users are the same tenant, never separate customer accounts, and this module
+  adds no cross-tenant concept. "Canonical project context" is satisfied for the data layer (a real
+  `projects` table and `GET /projects` exist for the first time) — full UI-level project-context
+  propagation (the shell's Project Switcher) remains D7's deferred, separate scope.
+  **A real, previously-flagged bug was found and fixed in the process**: writing this module's own
+  e2e tests (a real `super_admin` session hitting a real `:projectId`-scoped route) reproduced the
+  exact "dormant `Op.in: [null, projectId]` bug" the Phase 1D independent code review surfaced on
+  2026-08-12 as tracked technical debt (`docs/project-state/phase-1d-approval-checklist.md`'s
+  "Independent code review" section) — SQL's `IN` never matches `NULL` under three-valued logic, so
+  `UserRoleRepository.findRoleIdsForUser`/`RolePermissionRepository.hasGrant`/`listGrantsForRoles`
+  silently excluded every global-scope grant the instant a real `projectId` was passed, denying
+  even a real Super Admin session 403 on every project-scoped route. Fixed with an explicit
+  `Op.or` in all three call sites — the first production code fix this exact latent gap has ever
+  received, closed now because this is the first real project-scoped route to exist.
+  `RoleAssignmentService.assignRole`/`revokeRole` gained a new, trailing, backward-compatible
+  optional `projectId` parameter (defaults to `null`, every existing call site untouched) so
+  "define approvers" (D4) reuses the existing, already-reviewed role-assignment service — including
+  its separation-of-duties check and session revocation — scoped to a real project, rather than
+  writing a new authorization mechanism. `AuthzModule` now exports `RoleAssignmentService`/
+  `ROLE_REPOSITORY` for that reuse. Full validation: 18 new unit tests (status transitions,
+  active-phase invariant, destructive-deletion guard, approver assignment), 9 new real-database
+  integration tests (including the D3 invariant and the new FK enforcement, on a real disposable
+  database with all 8 new down-migrations individually verified reversible, not just the last
+  one), 6 new e2e tests (401/403 paths, the real seeded-`project_configuration`-grant success path
+  — no new RBAC seed migration was needed, D2's invalid-transition rejection, the
+  destructive-deletion guard via real HTTP). Whole-monorepo re-validation after the fix: 312
+  `dashboard-api` unit + 117 `packages/database` integration + 85 `dashboard-api` e2e tests (all
+  three counts include the new Projects tests), typecheck/lint/format clean across all 9 packages,
+  `pnpm audit` 0 vulnerabilities, module-registry validation unaffected (still 43 modules, 21
+  permission groups). `module_registry.implementation_status` for `projects` updated to
+  `in_development` (migration `00044`) — the first module ever moved off its Phase 1F seed value of
+  `not_started`, deliberately not `available` since no UI exists yet and this hasn't been through
+  code/security review. Committed as two commits (the RBAC fix separately from the module itself,
+  for a cleaner review history), pushed, and opened as
+  [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) — **not
+  merged, not deployed, no production migration run.** No `dashboard-web` UI exists yet — that,
+  independent code review, security review, second-role human review, a gate decision, and merge
+  authorization are all separate, not-yet-requested next steps.
+- `[2026-08-15]` **Independent code review run against `module-projects-foundation` (explicit
+  "run code review on the branch" instruction), then all 9 CONFIRMED findings fixed (explicit "fix
+  the confirmed findings" instruction).** This project's own `code-review` skill ran at high
+  effort (8 finder angles, 1-vote verification) and surfaced 9 CONFIRMED findings, most severe an
+  **IDOR**: the five sub-resource repositories (environments, repositories, objectives, team,
+  roadmap items) looked up rows by primary key alone with no `projectId` in the `WHERE` clause, so
+  a user authorized on Project A could mutate or delete Project B's sub-resources by ID. Also
+  found: `RoadmapItemsService.update()` spread the caller's raw patch (including `status`) into
+  the repository write, letting a generic update bypass `setActivePhase()`'s active-phase-invariant
+  and audit-event logic; `setActivePhase()`'s three writes were sequential and non-transactional,
+  risking a partially-committed inconsistent state on failure; migration `00043` added a FK on
+  `role_permissions.project_id` that the task package's own §3 scope statement never named; an
+  unused `(project_id, status)` index on `roadmap_items` (no query ever filters by status) and a
+  missing index on `projects.updated_at` (the real default list-sort column); duplicated
+  `toJSON()`-plus-date-conversion mapping logic across all six Projects repositories; a speculative
+  single-value `provider` ENUM column with no real multi-provider requirement; and dead
+  `findById()`-style methods on four sub-resource repositories. All 9 fixed: added a shared
+  `packages/database/src/projects/entity-mapping.ts` helper (closes the duplication finding while
+  doing the IDOR-scoping edits); every sub-resource repository's `update()`/`remove()` now takes
+  `(id, projectId, ...)` and scopes its `WHERE` clause accordingly, threaded through the
+  corresponding `dashboard-api` services and controllers (added `@Param("projectId")` to 5
+  controllers); `RoadmapItemsService.update()` now explicitly whitelists only `name`/`sequence`;
+  `ProjectService.setActivePhase()` now wraps all three writes in `withTransaction()` (the
+  `packages/database` helper, genuinely unused anywhere in `dashboard-api` until now); removed the
+  unused index and added the missing one (migrations `00036`/`00041`); removed the `provider`
+  column from migration `00038`, `entities.ts`, and `models.ts`; removed the 4 dead `findById()`
+  methods. Appended a "Resolution note" to `docs/task-packages/module-projects-foundation.md`
+  acknowledging the `role_permissions.project_id` FK as scope genuinely necessary for the IDOR fix
+  to work correctly (not a silent scope creep), rather than editing the original scope statement.
+  Full re-validation on a fresh local disposable PostgreSQL 17 database (Homebrew, not the
+  project's real Neon instance): typecheck/lint/format clean across all 9 packages; 28
+  `packages/database` unit + 117 `packages/database` integration + 313 `dashboard-api` unit + 85
+  `dashboard-api` integration/e2e (including all 6 Projects e2e tests) + 8 `dashboard-web` unit
+  tests, all passing; migration up/down round-trip clean (44 migrations); module-registry
+  validation passing (43 modules, 21 permission groups); `pnpm audit` 0 vulnerabilities; secret
+  scan clean (574 files). Two test-signature-mismatch fixes required along the way: the
+  `roadmap-items.service.spec.ts` and `module-projects.integration.test.ts` assertions still called
+  the old 2-argument repository signatures; and `project.service.spec.ts`'s two `setActivePhase()`
+  tests needed a `vi.mock("@webdesk/database", ...)` stub for `withTransaction()` (it opens a real
+  Sequelize connection needing `DATABASE_URL`, irrelevant to the service's own unit-tested logic).
+  `ReportFindings` called again with all 9 findings marked `outcome: "fixed"`. Committed as two
+  commits (`8f9e7ca` code, `5b10cfc` docs) and pushed to `module-projects-foundation`, updating
+  PR #24. CI then failed on Lint/Formatting validation — a single inline `import("@webdesk/database")`
+  type in the new `vi.mock()` block eslint's `consistent-type-imports` rule flagged; fixed with a
+  scoped `eslint-disable-next-line` (no top-level type-only equivalent exists for that generic
+  parameter) — commit `16cfd3a`, all 14 CI checks green.
+- `[2026-08-15]` **"Merge PR #24" was requested directly; held per this project's standing
+  discipline** (security review → second-role human review → gate decision, each separate, before
+  merge — none of the three had happened yet). Asked the user directly whether to hold for those
+  steps or merge now as an explicit override (Phase 1C's G4-1C pattern); the user chose to hold.
+  Ran this project's own `security-review` skill against `module-projects-foundation` (fixed a
+  stale local `origin/HEAD` symref pointing at `origin/master`, an unrelated diverged branch,
+  before the diff base resolved correctly) — 2 CONFIRMED findings, both re-verified at 9/10
+  confidence by an independent sub-agent pass before being reported: (1) **High** — `POST
+/projects/:projectId/approvers` was gated only by `project_configuration:approve`, which
+  `owner_growth_approver` itself holds, but minting an RBAC role grant is a `users_roles` action;
+  the approved matrix (`06_Roles_and_Permissions.md §3`) deliberately withholds `users_roles:edit`
+  from that role (`VM`, no `E`) — so any `owner_growth_approver` could mint unlimited co-approvers
+  on any project they could approve in, a real privilege-escalation path with no other check
+  catching it. (2) **Medium** — the only role-revocation route,
+  `DELETE /authz/users/:userId/roles/:roleId`, always called `revokeRole()` with `projectId: null`,
+  and `UserRoleRepository.revoke()` matches the exact `(userId, roleId, projectId)` triple, so a
+  project-scoped grant (e.g. the one from finding 1) could never be revoked through the API — worse,
+  the endpoint always reported `{ revoked: true }` regardless of whether anything was actually
+  removed, so an operator revoking what they believed was an inappropriate grant would see success
+  while the row silently survived. Both fixed on explicit "fix those" instruction: (1)
+  `ProjectApproversService.assign()` now performs its own explicit `AuthorizationService.evaluate()`
+  check for `users_roles:edit` before delegating to `RoleAssignmentService` — confirmed against the
+  seeded matrix that this makes the endpoint effectively super-admin-only for now (only `super_admin`
+  holds `users_roles:edit`), matching the matrix's actual intent rather than inventing a new
+  restriction; (2) `RoleAssignmentService.revokeRole()` now returns whether a row was actually
+  removed (`Promise<boolean>`, was `Promise<void>`), and the controller accepts an optional
+  `?projectId=` query param, threading it through so a project-scoped grant can actually be reached,
+  and reports the real outcome (`{ revoked: false }` when nothing matched) instead of always
+  claiming success. Added a new `ProjectApproversService` unit test proving the `users_roles:edit`
+  check runs before any role lookup/assignment; two new `role-assignment.controller.spec.ts` unit
+  tests covering both the default-null and explicit-projectId revoke paths and both outcome values;
+  and two new real-database e2e tests in `projects.e2e-spec.ts` proving, via real HTTP requests, that
+  (a) an `owner_growth_approver`-only session gets a real `403` from `POST
+/projects/:projectId/approvers` and (b) a super_admin-assigned project-scoped grant survives a
+  revoke call missing `?projectId=` but is genuinely removed once it's supplied. Full re-validation
+  on a fresh local disposable database: typecheck/lint/format clean; 315 `dashboard-api` unit + 87
+  `dashboard-api` integration/e2e tests (including all 8 Projects e2e tests, up from 6) all passing.
+  Not yet committed or pushed at the time this entry was written. **PR #24 remains unmerged** —
+  second-role human review and a gate decision are still outstanding next steps.
+- `[2026-08-15]` Both fix commits pushed (`66de25b` code, `0812896` docs); CI then failed on
+  Formatting validation — `CLAUDE.md`'s own late edits hadn't been re-run through prettier before
+  committing — fixed with a whitespace-only line-wrap change (`93fd424`), 14/14 CI checks green
+  again. A review packet (published as a Claude artifact — code-review + security-review findings,
+  fixes, and validation evidence, with a decision section) was then prepared for the required
+  second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010) — the same pattern Phase 1E used. **Jitesh D reviewed it and returned "Approved"** —
+  recorded in the new `docs/project-state/module-projects-foundation-approval-checklist.md`'s
+  "Sign-off" section. This satisfies the last precondition before a gate decision can be
+  requested, but is not itself a gate decision or a merge authorization — both remain separate,
+  not-yet-requested steps, same discipline as every prior phase.
+- `[2026-08-15]` **The gate (G4-projects) was then separately requested and approved** — WebDesk
+  Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit
+  `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` on branch `module-projects-foundation` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now `G4-projects`)
+  and `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #24**, a production deployment, or a
+  production migration run — merge remains its own separate, not-yet-requested authorization, per
+  this project's standing "no auto-merge" rule (same pattern as G4-1F).
 
 ## Open client blockers
 
@@ -1071,3 +1244,10 @@ timezone confirmation, and — the next substantive decisions — the 21 real bu
 endpoints, the remaining Task 7 audit scope (query HTTP surface, retention-deletion job), Task 9's
 real background-worker/queue wiring, or a module-implementation wave off the roadmap, each still
 requiring its own explicit authorization.)
+
+**2026-08-15 update**: the Projects module backend (branch `module-projects-foundation`, PR #24)
+went through this project's own independent code review — 9 CONFIRMED findings (most severe an
+IDOR in the sub-resource repositories), all fixed and fully re-validated. See this date's "Recent
+decisions" entry for the complete account. Still not merged, not deployed, no production
+migration run — security review, second-role human review, gate decision, and merge authorization
+remain separate, not-yet-requested next steps.

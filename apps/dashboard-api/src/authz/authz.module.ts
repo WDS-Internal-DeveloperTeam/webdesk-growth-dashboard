@@ -4,6 +4,7 @@ import { AuditModule } from "../audit/audit.module.js";
 import { AuthModule } from "../auth/auth.module.js";
 import { AUTH_EVENT_REPOSITORY, USER_REPOSITORY } from "../auth/config/auth.constants.js";
 import { authzRepositoryProviders } from "./database.providers.js";
+import { ROLE_REPOSITORY } from "./authz.constants.js";
 import { AuthorizationService } from "./authorization.service.js";
 import { PermissionGuard } from "./permission.guard.js";
 import { RoleAssignmentService } from "./role-assignment.service.js";
@@ -45,6 +46,9 @@ import { NavigationController } from "./navigation.controller.js";
     CatalogService,
     NavigationService,
   ],
-  exports: [AuthorizationService, PermissionGuard],
+  // RoleAssignmentService/ROLE_REPOSITORY exported so the Projects module's ProjectApproversService
+  // (docs/task-packages/module-projects-foundation.md D4) can assign the existing
+  // owner_growth_approver role scoped to a real project, instead of reimplementing role assignment.
+  exports: [AuthorizationService, PermissionGuard, RoleAssignmentService, ROLE_REPOSITORY],
 })
 export class AuthzModule {}

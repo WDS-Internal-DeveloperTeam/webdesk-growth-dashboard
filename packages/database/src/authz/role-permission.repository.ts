@@ -44,7 +44,13 @@ export class RolePermissionRepository {
         roleId: { [Op.in]: [...roleIds] },
         moduleId,
         action,
-        projectId: projectId ? { [Op.in]: [null, projectId] } : null,
+        // NOT `{ [Op.in]: [null, projectId] }` — SQL's `IN` never matches NULL (three-valued
+        // logic: `col = NULL` is UNKNOWN, not TRUE), so that form silently excluded every
+        // global-scope grant the instant a real `projectId` was passed. Previously dormant
+        // (docs/security/threat-model-authorization-rbac.md's accepted-gaps list) because no
+        // project-scoped route existed to exercise it — the Projects module's `:projectId` routes
+        // are the first (docs/task-packages/module-projects-foundation.md).
+        ...(projectId ? { [Op.or]: [{ projectId: null }, { projectId }] } : { projectId: null }),
       },
     });
     return instance !== null;
@@ -70,7 +76,8 @@ export class RolePermissionRepository {
     const rows = await this.model.findAll({
       where: {
         roleId: { [Op.in]: [...roleIds] },
-        projectId: projectId ? { [Op.in]: [null, projectId] } : null,
+        // Same NULL/IN fix as hasGrant() above.
+        ...(projectId ? { [Op.or]: [{ projectId: null }, { projectId }] } : { projectId: null }),
       },
     });
     return rows.map(toEntity);

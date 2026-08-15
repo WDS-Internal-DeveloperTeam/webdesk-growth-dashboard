@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://webdesksolution.ca/schemas/webdesk-growth-dashboard/webhook-event.schema.json",
+  "title": "WebDesk Growth Dashboard — Webhook Event",
+  "description": "Formalizes inbound webhook records (GitHub, and WordPress if/when confirmed) per nodejs/knowledge/security/04-webhook-security.md's three-control model applied via knowledge/06-github-app-integration.md and knowledge/07-wordpress-integration.md. Unique index on (provider, event_id) enforces replay-dedupe at the database level, not only in application code.",
+  "type": "object",
+  "required": [
+    "id",
+    "provider",
+    "event_id",
+    "event_type",
+    "payload_checksum",
+    "signature_verified",
+    "received_at",
+    "status"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "provider": {
+      "type": "string",
+      "enum": ["github", "wordpress", "upstash-qstash"]
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Provider's own delivery/event ID (e.g. GitHub's X-GitHub-Delivery header value). Unique per (provider, event_id) — a repeat is acknowledged but not re-processed."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "e.g. 'pull_request', 'check_run', 'deployment_status', 'push'."
+    },
+    "payload_checksum": {
+      "type": "string",
+      "description": "SHA-256 of the raw payload body, recorded for audit/debugging without necessarily retaining the full payload long-term."
+    },
+    "signature_verified": {
+      "type": "boolean",
+      "description": "Must be true for the event to reach 'processing'. An event failing signature verification is recorded with signature_verified=false and status='rejected', never processed."
+    },
+    "signature_algorithm": {
+      "type": "string",
+      "description": "e.g. 'hmac-sha256'. Recorded for audit even though verification already happened by the time this row is written."
+    },
+    "received_at": { "type": "string", "format": "date-time" },
+    "processed_at": { "type": ["string", "null"], "format": "date-time" },
+    "status": {
+      "type": "string",
+      "enum": [
+        "received",
+        "rejected_signature",
+        "duplicate",
+        "queued",
+        "processing",
+        "processed",
+        "failed",
+        "dead_letter"
+      ]
+    },
+    "related_job_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "The background job (per job-record.schema.json) that performs the actual processing, once the webhook is acked and enqueued (ack-fast-process-async pattern)."
+    },
+    "failure_reason": { "type": ["string", "null"] },
+    "audit_context_id": { "type": ["string", "null"], "format": "uuid" }
+  }
+}

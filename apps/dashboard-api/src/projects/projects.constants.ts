@@ -1,0 +1,7 @@
+/** NestJS DI tokens for the Projects module — kept in one file, same pattern as ../audit/audit.constants.ts. */
+export const PROJECT_REPOSITORY = Symbol("PROJECT_REPOSITORY");
+export const PROJECT_ENVIRONMENT_REPOSITORY = Symbol("PROJECT_ENVIRONMENT_REPOSITORY");
+export const PROJECT_REPOSITORY_REPOSITORY = Symbol("PROJECT_REPOSITORY_REPOSITORY");
+export const PROJECT_USER_REPOSITORY = Symbol("PROJECT_USER_REPOSITORY");
+export const PROJECT_OBJECTIVE_REPOSITORY = Symbol("PROJECT_OBJECTIVE_REPOSITORY");
+export const ROADMAP_ITEM_REPOSITORY = Symbol("ROADMAP_ITEM_REPOSITORY");
