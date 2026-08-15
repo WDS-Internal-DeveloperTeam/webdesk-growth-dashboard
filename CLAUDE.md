@@ -246,26 +246,27 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
 7. ~~Projects module task package prepared, awaiting human approval~~ — **backend built,
-   independently code-reviewed, security-reviewed, and second-role human reviewed 2026-08-15.**
-   `docs/task-packages/module-projects-foundation.md` was prepared, then explicit "begin
-   implementation" authorization was given directly (see "Recent decisions"). Schema, API, RBAC
-   wiring, and tests were built and validated, then this project's own `code-review` skill was run
-   (high effort) — 9 CONFIRMED findings, most severe an IDOR letting a user authorized on one
-   project mutate another project's sub-resources by ID — all 9 fixed. "Merge PR #24" was then
+   independently code-reviewed, security-reviewed, second-role human reviewed, and gated
+   2026-08-15.** `docs/task-packages/module-projects-foundation.md` was prepared, then explicit
+   "begin implementation" authorization was given directly (see "Recent decisions"). Schema, API,
+   RBAC wiring, and tests were built and validated, then this project's own `code-review` skill
+   was run (high effort) — 9 CONFIRMED findings, most severe an IDOR letting a user authorized on
+   one project mutate another project's sub-resources by ID — all 9 fixed. "Merge PR #24" was then
    requested but held per this project's standing discipline (security review → second-role human
    review → gate decision, each separate, before merge); this project's own `security-review`
    skill was then run — 2 CONFIRMED findings, most severe a real privilege-escalation path in the
    new project-approver endpoint — both fixed and re-validated. A review packet (published as a
    Claude artifact — code-review + security-review findings, fixes, validation evidence) was
    prepared for the required second-role human review, since the implementing agent cannot also be
-   its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved"** — see
-   `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section for
-   the full record. Branch `module-projects-foundation`, pushed as
+   its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved."** **The gate
+   (G4-projects) was then separately requested and approved** — WebDesk Solution, decision
+   CONFIRM, approved commit `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` — see
+   `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section and
+   `project.json`'s `gates[]`. Branch `module-projects-foundation`, pushed as
    [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) —
    **not merged, not deployed, no production migration run.** No UI yet (dashboard-web) — D7's
-   Project Switcher wiring remains separate, undesigned scope. Remaining before this can be gated:
-   a gate decision and merge authorization — each its own separate step, same discipline as every
-   prior phase.
+   Project Switcher wiring remains separate, undesigned scope. **Merging PR #24 remains its own
+   separate, not-yet-requested authorization**, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -1072,6 +1073,15 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   "Sign-off" section. This satisfies the last precondition before a gate decision can be
   requested, but is not itself a gate decision or a merge authorization — both remain separate,
   not-yet-requested steps, same discipline as every prior phase.
+- `[2026-08-15]` **The gate (G4-projects) was then separately requested and approved** — WebDesk
+  Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit
+  `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` on branch `module-projects-foundation` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now `G4-projects`)
+  and `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #24**, a production deployment, or a
+  production migration run — merge remains its own separate, not-yet-requested authorization, per
+  this project's standing "no auto-merge" rule (same pattern as G4-1F).
 
 ## Open client blockers
 

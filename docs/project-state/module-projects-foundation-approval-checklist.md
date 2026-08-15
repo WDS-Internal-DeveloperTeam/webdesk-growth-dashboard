@@ -1,9 +1,10 @@
 # Projects Module (Foundation) Approval Checklist — Schema, API, RBAC Wiring
 
-**Status:** Required second-role human review complete (2026-08-15, Jitesh D, **Approved**). **No
-gate decision has been requested or made yet** — that remains its own separate, explicit step, per
-this project's standing discipline. **Branch `module-projects-foundation` (PR #24) is not yet
-merged to `main`.**
+**Status:** Required second-role human review complete (2026-08-15, Jitesh D, **Approved**). **The
+gate (G4-projects) is now approved** — WebDesk Solution, decision CONFIRM, 2026-08-15. See
+"Sign-off" below and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **Branch
+`module-projects-foundation` (PR #24) is not yet merged to `main`** — merging remains its own
+separate, not-yet-requested authorization.
 
 ## Completion condition
 
@@ -44,9 +45,10 @@ for this module can be requested.
 
 ## Sign-off
 
-**Second-role human review: complete.** No gate decision has been requested yet — per this
-project's standing pattern, the review and the gate decision are kept as separate, explicit steps
-(see, e.g., `docs/project-state/phase-1f-approval-checklist.md`'s own precedent).
+**Second-role human review: complete. Gate G4-projects: approved.** Both were their own separate,
+explicit human step, per every prior phase's own pattern of keeping the review and the gate
+decision distinct — the gate was requested, and approved, only after the review above was already
+recorded as complete.
 
 | Field                         | Value                                                                                                                      |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -56,7 +58,16 @@ project's standing pattern, the review and the gate decision are kept as separat
 | Scope reviewed                | Full code-review disposition (9/9 fixed) and full security-review disposition (2/2 fixed), via the published review packet |
 | Disputes raised               | None recorded                                                                                                              |
 
-| Role                          | Name     | Decision          | Date       |
-| ----------------------------- | -------- | ----------------- | ---------- |
-| Reviewer (second-role review) | Jitesh D | ☑ Approved        | 2026-08-15 |
-| Approver (gate decision)      | —        | Not yet requested | —          |
+| Field                    | Value                                                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-projects                                                                                                                                                                    |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                               |
+| Gate date                | 2026-08-15                                                                                                                                                                     |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                              |
+| Approved commit          | `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` on branch `module-projects-foundation` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record        |
+| Scope                    | Projects module foundation (schema, API, RBAC wiring) only. **Branch/PR #24 is not yet merged to `main`** — merging remains its own separate, not-yet-requested authorization. |
+
+| Role                          | Name             | Decision   | Date       |
+| ----------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved | 2026-08-15 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-15 |

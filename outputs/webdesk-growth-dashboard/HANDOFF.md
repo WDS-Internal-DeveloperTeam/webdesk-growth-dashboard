@@ -29,10 +29,14 @@
   `dashboard-api` integration/e2e tests, all passing. A review packet (published as a Claude
   artifact — code-review + security-review findings, fixes, and validation evidence) was then
   prepared for the required second-role human review, since the implementing agent cannot also be
-  its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved"** — recorded in the
-  new `docs/project-state/module-projects-foundation-approval-checklist.md`. This satisfies the
-  last precondition before a gate decision, but is not itself a gate decision or merge
-  authorization. Still on branch `module-projects-foundation`,
+  its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved."** **The gate
+  (G4-projects) was then separately requested and approved** — WebDesk Solution, decision CONFIRM,
+  approved commit `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` — recorded in
+  `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section and
+  `project.json`'s `gates[]` (`current_gate` now `G4-projects`). **This gate approval does not
+  itself authorize merging PR #24** — merge remains its own separate, not-yet-requested
+  authorization, per this project's standing "no auto-merge" rule (same pattern as G4-1F). Still
+  on branch `module-projects-foundation`,
   [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) — **not
   merged, not deployed, no production migration run, no UI yet.** See the 2026-08-15 "Recent
   decisions" entries in `CLAUDE.md` for the full record.

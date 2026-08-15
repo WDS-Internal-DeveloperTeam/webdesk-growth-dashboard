@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-1F",
+    "current_gate": "G4-projects",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -166,6 +166,18 @@
       "decision": "CONFIRM",
       "notes": "Phase 1F — canonical 43-module registry extension, registry-driven/permission-aware navigation, the dashboard-web application shell, shared design-system/UI-state foundation (packages/ui), observability foundation (redaction, build metadata, a deliberately-inert Sentry integration), automated WCAG 2.2 AA accessibility checks, staging-environment documentation (stopped at the provisioning boundary, nothing provisioned), and planning-only module-implementation roadmap/task-package-template artifacts — approved, scope 'Phase 1F application shell and observability foundation only' — see docs/project-state/phase-1f-approval-checklist.md and its 'Sign-off' section. Builds zero business functionality for any of the 43 real modules (module_registry.implementation_status = 'not_started' for all 43). 294 unit + 108 real-database integration + 79 e2e + 9 Playwright tests (incl. 3 axe-core WCAG 2.2 AA checks, zero violations), all passing; migration up/down round trip clean; module-registry validation passing; pnpm audit clean; secret scan clean. Independent code review (8-angle, high effort) surfaced 14 findings — 9 fixed, 5 recorded as tracked technical debt with reasoning. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D and Brijesh D, 2026-08-14, decision 'Approved as-is', no disputes raised) was already complete before this gate was requested. Approved commit 7d84f040bce67fa7cd1e92aa69e8512021b39b64 on branch phase-1f-application-shell — IMPORTANT: this branch is NOT YET MERGED to main (open as PR #23); unlike every prior gate in this project's history, this gate approval precedes merge, since this project's standing rule treats merge as its own separate, explicit authorization regardless of gate status ('no auto-merge'). Does not itself authorize merging PR #23, production deployment, or the start of any module-implementation wave — each remains a separate, not-yet-requested authorization.",
       "merge_resolution_note": "RESOLVED 2026-08-14: PR #23 merged to main under explicit 'merge PR #23' authorization, merge commit 1e8f343c4779237a4fe75c3c663716877990dc20. Vercel auto-deployed both dashboard-web and dashboard-api to production on push to main; both deployments verified live and healthy directly (not just CI's own Vercel status check) — dashboard-api's /health returned build.commitSha == 1e8f343c4779237a4fe75c3c663716877990dc20 and environment == 'production', confirming the exact merged commit is what's actually serving; dashboard-web's / correctly redirected an unauthenticated visitor to /auth/sign-in via the new (shell) layout's session gate, confirming the new application shell code is genuinely live and behaviorally correct, not just deployed. This note is appended rather than rewriting the gate's own historical 'not yet merged' text, which accurately reflected the state at gate-approval time."
+    },
+    {
+      "id": "G4-projects",
+      "type": "qa-security-gate",
+      "scope": "module-projects-foundation",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-15T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Projects module foundation — the first real business module built on the Phase 1F application shell/canonical module registry, and the first real exercise of the project-scoped authorization mechanism (user_roles.project_id/role_permissions.project_id) Phase 1D-expanded built but never wired to a route. Schema (migrations 00036-00044): projects plus five owned sub-resources (environments, repositories, team, objectives, roadmap items). Full CRUD API gated by PermissionGuard against already-seeded project_configuration grants — no new RBAC migration needed. Building it surfaced and closed a dormant Op.in/NULL bug in the RBAC repositories (flagged as tracked debt in the 2026-08-12 Phase 1D code review, closed now because this is the first project-scoped route to exercise it). 315 dashboard-api unit + 87 dashboard-api integration/e2e tests (plus 117 packages/database integration, run separately), all passing; migration up/down round trip clean (44 migrations); typecheck/lint/format clean; pnpm audit 0 vulnerabilities; secret scan clean; CI 14/14 checks green. Independent code review (8-angle, high effort) surfaced 9 findings, most severe an IDOR letting a user authorized on one project mutate another project's sub-resources by ID — all 9 fixed. Security review (run separately, after the code review) surfaced 2 findings — 1 High (any owner_growth_approver could mint unlimited co-approvers via the new project-approver endpoint despite that role deliberately lacking users_roles:edit in the approved matrix) and 1 Medium (project-scoped roles could not be revoked through the API, which also always reported success regardless of outcome) — both fixed with new unit and real-database e2e coverage. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-15, decision 'Approved', no disputes raised) was already complete before this gate was requested — see docs/project-state/module-projects-foundation-approval-checklist.md and its 'Sign-off' section. Approved commit 46300a31ebaa69eb1cb6b848b6e218dda2f808cc on branch module-projects-foundation — this branch (PR #24) is NOT YET MERGED to main, same standing 'no auto-merge' rule as every prior gate: merging remains its own separate, not-yet-requested authorization. Does not itself authorize merging PR #24, production deployment, a production migration run, or any dashboard-web UI work (D7's Project Switcher wiring remains separate, undesigned scope).",
+      "merge_resolution_note": null
     }
   ],
 
@@ -540,6 +552,23 @@
       },
       "project_version_before": 18,
       "project_version_after": 19
+    },
+    {
+      "timestamp": "2026-08-15T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-projects for module-projects-foundation (PR #24) — decision: CONFIRM",
+      "details": {
+        "gate": "G4-projects",
+        "scope": "module-projects-foundation",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-15, decision 'Approved', no disputes) was already complete before this gate was requested — same pattern as every prior gate in this project's history (e.g. G4-1D, G4-1D-EXP, G4-1E, G4-1F).",
+        "approved_commit": "46300a31ebaa69eb1cb6b848b6e218dda2f808cc",
+        "record": "docs/project-state/module-projects-foundation-approval-checklist.md and this entry's sibling in project.json's gates[]",
+        "not_yet_done": "This gate approval does not itself authorize merging PR #24, a production deployment, or a production migration run — merge remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+      },
+      "project_version_before": 19,
+      "project_version_after": 20
     }
   ]
 }
