@@ -30,16 +30,20 @@
   artifact — code-review + security-review findings, fixes, and validation evidence) was then
   prepared for the required second-role human review, since the implementing agent cannot also be
   its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved."** **The gate
-  (G4-projects) was then separately requested and approved** — WebDesk Solution, decision CONFIRM,
-  approved commit `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` — recorded in
-  `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section and
-  `project.json`'s `gates[]` (`current_gate` now `G4-projects`). **This gate approval does not
-  itself authorize merging PR #24** — merge remains its own separate, not-yet-requested
-  authorization, per this project's standing "no auto-merge" rule (same pattern as G4-1F). Still
-  on branch `module-projects-foundation`,
-  [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) — **not
-  merged, not deployed, no production migration run, no UI yet.** See the 2026-08-15 "Recent
-  decisions" entries in `CLAUDE.md` for the full record.
+  (G4-projects) was then separately requested and approved** — WebDesk Solution, decision CONFIRM.
+  **"Merge PR #24" was then separately requested and executed** — merge commit
+  `9ee540e67d50a471a4897d5af03cf5ccca01813f`, both Vercel projects auto-deployed and verified live
+  directly (`dashboard-api`'s `/health` returned the exact merged commit SHA; `dashboard-web`'s `/`
+  resolves to `/auth/sign-in` for an unauthenticated visitor). **The production migration was then
+  requested and run** — user ran `pnpm --filter @webdesk/database run migrate` themselves (same
+  credential-handling discipline as every prior production migration; first attempt failed with
+  `DATABASE_URL: Required` because the env file's variables weren't exported to the child process,
+  fixed with `set -a`), applying the 9 pending migrations (`00036`–`00044`), independently
+  confirmed via a separate `migrate:status` check (44 executed, 0 pending). **The Projects module
+  backend is now genuinely live in production** — code merged and deployed, schema migrated, both
+  independently verified, the full build-to-production arc closed in a single session. No
+  `dashboard-web` UI exists yet — D7's Project Switcher wiring remains separate, undesigned scope.
+  See the 2026-08-15 "Recent decisions" entries in `CLAUDE.md` for the full record.
 - **Last active agent:** Backend role. Phase 1F (application shell, canonical 43-module registry extension, registry-driven navigation, observability foundation, accessibility, staging documentation, module-implementation roadmap) fully built, code-reviewed, security-reviewed, second-role human reviewed (Jitesh D and Brijesh D, Approved as-is), gated (G4-1F, WebDesk Solution, CONFIRM), and **merged to `main`** via [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23) (merge commit `1e8f343c4779237a4fe75c3c663716877990dc20`), under explicit "merge PR #23" authorization. Both `dashboard-web` and `dashboard-api` auto-deployed to production on the merge; **both verified live directly** (not just via CI's own Vercel status check) — `dashboard-api`'s `/health` returned `build.commitSha == 1e8f343...` and `environment == "production"`, confirming the exact merged commit is what's serving; `dashboard-web`'s `/` correctly redirected an unauthenticated visitor to `/auth/sign-in` via the new `(shell)` layout's session gate. **All 35 production database migrations are now applied** — the user ran `pnpm --filter @webdesk/database run migrate` (2026-08-14), which applied 17 pending migrations, independently confirmed via a separate `migrate:status` check (35 executed, 0 pending). This surfaced a previously-undocumented gap: only 2 of the 17 (`00034`/`00035`) were Phase 1F's own migrations — the other 15 (`00019`–`00033`) were the **entire remaining Phase 1E operational-infrastructure schema** (jobs, retention, notifications, operational contacts, system events/health), merged and gated on 2026-08-13 but never actually applied to production until this run. No production impact is known (no real user traffic yet).
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard

@@ -569,6 +569,21 @@
       },
       "project_version_before": 19,
       "project_version_after": 20
+    },
+    {
+      "timestamp": "2026-08-15T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "merged PR #24 (module-projects-foundation) into main under explicit 'merge PR #24' authorization, then ran the pending production migrations",
+      "details": {
+        "merge": "Merged with a real merge commit (not squash/rebase), matching every prior merge in this project's history. Merge commit 9ee540e67d50a471a4897d5af03cf5ccca01813f.",
+        "deployment_verification": "Both Vercel projects auto-deployed on push to main and were verified live directly, not just via CI's own Vercel status check — dashboard-api's /health returned build.commitSha == 9ee540e67d50a471a4897d5af03cf5ccca01813f, confirming the exact merged commit is what's serving; dashboard-web's / resolves (via an intermediate /home hop) to /auth/sign-in for an unauthenticated visitor, confirming the session gate is intact.",
+        "migration": "User ran pnpm --filter @webdesk/database run migrate themselves, in their own terminal, sourcing prod-db.env — Claude never saw the real DATABASE_URL, consistent with this project's standing credential-handling discipline for every prior production database operation. First attempt failed with 'DATABASE_URL: Required' because prod-db.env's variables were sourced but not exported to the child pnpm/node process; fixed by re-running with `set -a` before the source command. Applied 9 migrations: 00036-create-projects, 00037-create-project-environments, 00038-create-project-repositories, 00039-create-project-users, 00040-create-project-objectives, 00041-create-roadmap-items, 00042-add-project-active-phase, 00043-add-project-scoping-fk, 00044-mark-projects-in-development.",
+        "verification": "Independently confirmed via a second, separate command (migrate:status, Umzug's own executed()/pending() read-only bookkeeping, not just the migrate command's own success message) — showing all 44 migrations executed and 0 pending.",
+        "result": "The Projects module backend (schema, API, RBAC wiring) is now genuinely live in production for the first time — code deployed and merged, schema migrated, both independently verified. No dashboard-web UI exists yet (D7's Project Switcher wiring remains separate, undesigned scope)."
+      },
+      "project_version_before": 20,
+      "project_version_after": 21
     }
   ]
 }

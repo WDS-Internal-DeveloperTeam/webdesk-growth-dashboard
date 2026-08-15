@@ -246,12 +246,13 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
 7. ~~Projects module task package prepared, awaiting human approval~~ — **backend built,
-   independently code-reviewed, security-reviewed, second-role human reviewed, and gated
-   2026-08-15.** `docs/task-packages/module-projects-foundation.md` was prepared, then explicit
-   "begin implementation" authorization was given directly (see "Recent decisions"). Schema, API,
-   RBAC wiring, and tests were built and validated, then this project's own `code-review` skill
-   was run (high effort) — 9 CONFIRMED findings, most severe an IDOR letting a user authorized on
-   one project mutate another project's sub-resources by ID — all 9 fixed. "Merge PR #24" was then
+   independently code-reviewed, security-reviewed, second-role human reviewed, gated, merged, and
+   deployed with its production migration run — 2026-08-15.**
+   `docs/task-packages/module-projects-foundation.md` was prepared, then explicit "begin
+   implementation" authorization was given directly (see "Recent decisions"). Schema, API, RBAC
+   wiring, and tests were built and validated, then this project's own `code-review` skill was run
+   (high effort) — 9 CONFIRMED findings, most severe an IDOR letting a user authorized on one
+   project mutate another project's sub-resources by ID — all 9 fixed. "Merge PR #24" was then
    requested but held per this project's standing discipline (security review → second-role human
    review → gate decision, each separate, before merge); this project's own `security-review`
    skill was then run — 2 CONFIRMED findings, most severe a real privilege-escalation path in the
@@ -260,13 +261,16 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    prepared for the required second-role human review, since the implementing agent cannot also be
    its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved."** **The gate
    (G4-projects) was then separately requested and approved** — WebDesk Solution, decision
-   CONFIRM, approved commit `46300a31ebaa69eb1cb6b848b6e218dda2f808cc` — see
+   CONFIRM. **"Merge PR #24" was then separately requested and executed** — merge commit
+   `9ee540e67d50a471a4897d5af03cf5ccca01813f`, both Vercel projects auto-deployed and were verified
+   live directly. **The production migration was then run** — user ran
+   `pnpm --filter @webdesk/database run migrate` themselves (same credential-handling discipline as
+   every prior production migration), applying the 9 pending migrations (`00036`–`00044`),
+   independently confirmed via a separate `migrate:status` check (44 executed, 0 pending). See
    `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section and
-   `project.json`'s `gates[]`. Branch `module-projects-foundation`, pushed as
-   [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) —
-   **not merged, not deployed, no production migration run.** No UI yet (dashboard-web) — D7's
-   Project Switcher wiring remains separate, undesigned scope. **Merging PR #24 remains its own
-   separate, not-yet-requested authorization**, per this project's standing "no auto-merge" rule.
+   `project.json`'s `gates[]`/`audit_log` for the full record. **The Projects module backend is now
+   genuinely live in production.** No UI yet (dashboard-web) — D7's Project Switcher wiring remains
+   separate, undesigned scope.
 
 ## Recent decisions
 
@@ -1082,6 +1086,27 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   **This gate approval does not itself authorize merging PR #24**, a production deployment, or a
   production migration run — merge remains its own separate, not-yet-requested authorization, per
   this project's standing "no auto-merge" rule (same pattern as G4-1F).
+- `[2026-08-15]` **"Merge PR #24" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase) — `9ee540e67d50a471a4897d5af03cf5ccca01813f`. Both Vercel
+  projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+  Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+9ee540e67d50a471a4897d5af03cf5ccca01813f`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via an intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The production migration was
+  then requested and run** — user ran `pnpm --filter @webdesk/database run migrate` themselves, in
+  their own terminal, sourcing `prod-db.env` — Claude never saw the real `DATABASE_URL`, same
+  credential-handling discipline as every prior production migration. First attempt failed with
+  `DATABASE_URL: Required` because the env file's variables were sourced but not exported to the
+  child `pnpm`/`node` process — fixed by re-running with `set -a` before the `source` command.
+  Applied the 9 pending migrations (`00036`–`00044`: `projects` and its five sub-resource tables,
+  the `active_phase_id` FK, the `role_permissions.project_id`/`user_roles.project_id` scoping FK,
+  and the `module_registry` status update). **Independently confirmed via a second, separate
+  command** (`migrate:status`, Umzug's own read-only bookkeeping, not just the `migrate` command's
+  own success message) — all 44 migrations executed, 0 pending. **The Projects module backend is
+  now genuinely live in production** — code merged and deployed, schema migrated, both
+  independently verified, closing out this module's full build-to-production arc in a single
+  session. Remaining: no `dashboard-web` UI exists yet (D7's Project Switcher wiring remains
+  separate, undesigned scope).
 
 ## Open client blockers
 
