@@ -1,0 +1,18 @@
+name: Architecture Fitness Tests
+on:
+  pull_request:
+    branches: ["**"]
+jobs:
+  fitness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: "npm" }
+      - run: npm ci
+      - name: Module boundaries (dependency-cruiser)
+        # Enforces: no DB access outside repositories, controllers don't import
+        # repositories directly, ERP SDKs not imported by the sync engine, etc.
+        run: npx depcruise src --config .dependency-cruiser.cjs
+      - name: Custom fitness checks
+        run: npm run test:fitness --if-present

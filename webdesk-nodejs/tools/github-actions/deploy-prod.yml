@@ -1,0 +1,27 @@
+name: Deploy Production
+on:
+  push:
+    branches: ["main"]
+# Requires G6 passed. Uses a protected environment for manual approval, and a
+# rollback step on failed health-check (see delivery-head runbooks).
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production   # configure required reviewers = manual approval gate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: "npm" }
+      - run: npm ci
+      - run: npm run build --if-present
+      - name: Migrate
+        run: npx sequelize-cli db:migrate
+      - name: Release (per-target adapter)
+        run: echo "Release to prod target=$DEPLOY_TARGET"
+        env: { DEPLOY_TARGET: "${{ vars.DEPLOY_TARGET }}" }
+      - name: Health check
+        id: health
+        run: ./scripts/health-check.sh
+      - name: Rollback on failure
+        if: failure()
+        run: ./scripts/rollback.sh || echo "wire rollback per deploy-recovery runbook"

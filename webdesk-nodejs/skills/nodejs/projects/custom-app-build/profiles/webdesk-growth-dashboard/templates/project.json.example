@@ -1,0 +1,114 @@
+{
+  "_comment": "Illustrative example only — NOT a real project state file. Every value below is TYPE- AND FORMAT-VALID against the patched schema (validate with ../tools/validate-project-profile.py). Placeholder VALUES that are syntactically valid but not yet the real answer (a dummy UUID, a dummy email, a dummy repo URL, zero-valued budget numbers) are listed with what to replace them with in ../templates/setup-input-checklist.md — that checklist is the single place 'still needs a real value' is tracked; this file itself carries no text markers inside typed fields, so it always validates cleanly.",
+
+  "project": {
+    "id": "00000000-0000-4000-8000-000000000000",
+    "name": "WebDesk Website Growth Dashboard",
+    "client_slug": "webdesk-growth-dashboard",
+    "schema_version": "1.0.0",
+    "project_type": "custom-app-build",
+    "project_profile": "webdesk-growth-dashboard",
+    "build_context": "nodejs",
+    "integration_targets": ["github", "wordpress", "google-workspace"],
+    "timezone": "America/Toronto",
+    "tenant": {
+      "mode": "per-client",
+      "master": false,
+      "_note": "This project has no cross-client master dashboard concept (single organization — see knowledge/05-google-workspace-sso-and-local-admin.md). 'per-client' here means 'this one WebDesk instance', not a multi-tenant SaaS scope."
+    },
+    "host_target": "vercel",
+    "data_sensitivity": "high",
+    "stage": "onboarding",
+    "current_gate": "G0.5",
+    "status": "active",
+    "client": {
+      "name": "WebDesk Solution",
+      "primary_contact": {
+        "name": "TBD — see setup-input-checklist.md",
+        "email": "tbd@webdesksolution.com",
+        "role": "TBD"
+      }
+    },
+    "repository": {
+      "url": "https://github.com/webdesk-org/webdesk-growth-dashboard",
+      "default_branch": "main",
+      "develop_branch": "staging"
+    },
+    "assigned_team": {
+      "pm": "TBD",
+      "architect": "TBD",
+      "designer": "TBD",
+      "backend_lead": "TBD",
+      "frontend_lead": "TBD",
+      "qa_lead": "TBD",
+      "dba": "TBD",
+      "delivery_head": "TBD"
+    },
+    "created_at": "2026-08-05T00:00:00Z",
+    "updated_at": "2026-08-05T00:00:00Z",
+    "version": 1
+  },
+
+  "tech_stack": {
+    "runtime": "node@24",
+    "framework": "nest",
+    "database": "postgresql",
+    "orm": "sequelize",
+    "storage": "vercel-blob",
+    "queue": "vercel-native",
+    "frontend": "next",
+    "_note": "storage='vercel-blob' and queue='vercel-native' are valid only under this project's patched schema (see ../contracts/project-profile.schema.json and ../tools/validate-project-profile.py), not the unpatched base schema alone. See vercel_execution below for the actual job-architecture source of truth — queue here exists only so this base-schema field carries a truthful value."
+  },
+
+  "vercel_execution": {
+    "host_target": "vercel",
+    "job_execution_model": "serverless-functions-no-permanent-worker",
+    "primary_job_provider": "vercel-queues-workflows-cron",
+    "fallback_job_provider": "upstash-qstash-vercel-cron",
+    "postgres_marketplace_provider": null,
+    "_note": "postgres_marketplace_provider is null until provisioned — see knowledge/01-approved-architecture.md's Database stop-condition. Must never be 'neon' (WDS-002). null is a valid value here (type is ['string','null'])."
+  },
+
+  "lock": {
+    "locked": false,
+    "locked_by": null,
+    "locked_at": null,
+    "expires_at": null,
+    "max_lock_duration_seconds": 300
+  },
+
+  "gates": [],
+
+  "budget": {
+    "token_used": 0,
+    "token_cap": 0,
+    "token_alert_threshold": 0,
+    "hours_budget": 0,
+    "hours_burned": 0,
+    "cost_estimate_usd": 0,
+    "_note": "All zero-valued placeholders — real numbers are recorded at the G1 estimate→ticket step, per gate-format.md. Zero is a type-valid placeholder (integer/number); it is not a claim that the real budget is zero. See setup-input-checklist.md."
+  },
+
+  "integration_contracts": [
+    { "id": "IC-GITHUB-001", "system": "github", "ref": "integration-contracts/github.md", "status": "draft" },
+    { "id": "IC-WORDPRESS-001", "system": "wordpress", "ref": "integration-contracts/wordpress.md", "status": "draft" },
+    { "id": "IC-GOOGLE-SSO-001", "system": "google-workspace-sso", "ref": "integration-contracts/google-workspace-sso.md", "status": "draft" },
+    { "id": "IC-GOOGLE-SMTP-001", "system": "google-workspace-smtp", "ref": "integration-contracts/google-workspace-smtp.md", "status": "draft" }
+  ],
+
+  "rfcs": [],
+
+  "health_score": null,
+
+  "runbooks_status": {
+    "incident_runbooks": "missing",
+    "queue_recovery": "missing",
+    "webhook_replay": "missing",
+    "db_restore": "missing",
+    "deploy_recovery": "missing",
+    "_note": "knowledge/11-retention-backup-and-operations.md also requires a retention-run-recovery runbook, not part of the base schema's runbooks_status shape — track it as a project-local addition to this object once Phase 0 begins."
+  },
+
+  "audit_log_path": "audit-log.jsonl",
+  "audit_log": []
+}

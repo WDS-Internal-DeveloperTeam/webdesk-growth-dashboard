@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://webdesksolution.ca/schemas/nodejs/health-score.schema.json",
+  "title": "Project Health Score",
+  "description": "Five-axis health score for a Node.js delivery project (blueprint §13-14). Each sub-score is 0-100 with a GREEN/YELLOW/RED rating and a one-line basis explaining how it was computed. The rollup is worst-of the five (a single RED forces a RED rollup). Baselined at M6 and recomputed on a schedule thereafter; surfaced on the Master dashboard for retainer monitoring. Rating bands (default): GREEN >= 80, YELLOW 60-79, RED < 60.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project",
+    "architecture_health",
+    "test_health",
+    "dependency_health",
+    "security_health",
+    "delivery_health",
+    "rollup",
+    "computed_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "project": {
+      "type": "string",
+      "description": "Client slug or project ID this score belongs to."
+    },
+    "architecture_health": {
+      "$ref": "#/$defs/subScore",
+      "description": "How well the codebase holds its intended shape. Computed from architecture fitness-test pass rate (controller/service/repository boundaries, no DB access outside repositories, API-version enforcement, queue retry caps), cyclomatic/complexity hotspots, and count of boundary violations. GREEN = all fitness tests pass and no new boundary debt."
+    },
+    "test_health": {
+      "$ref": "#/$defs/subScore",
+      "description": "Confidence the test suite gives. Computed from line/branch coverage vs target, presence of API contract tests, integration/contract tests vs ERP+store sandboxes, webhook idempotency/replay tests, and sync-specific tests (missed-run, overlapping-run, watermark-resume). Flaky-test rate subtracts. GREEN = coverage at target and all required test classes present and green."
+    },
+    "dependency_health": {
+      "$ref": "#/$defs/subScore",
+      "description": "Freshness and safety of the dependency tree. Computed from outdated-dependency count (majors behind), known-vulnerability count from OSV-Scanner/npm audit, and EOL runtime/library usage. GREEN = no high/critical advisories and few majors behind."
+    },
+    "security_health": {
+      "$ref": "#/$defs/subScore",
+      "description": "Security posture. Computed from OWASP-API check results, authz coverage (every tenant-scoped query scoped), secret-scan/SAST/DAST findings, secrets-management correctness (no inline secrets, rotation in place), and severity of open security findings. Any open high/critical finding caps this RED."
+    },
+    "delivery_health": {
+      "$ref": "#/$defs/subScore",
+      "description": "Delivery/operational momentum. Computed from gate SLA adherence, budget burn (hours_burned vs hours_budget, token_used vs token_cap), open P1/P2 bug count and age, sync error/alert rate, runbook completeness, and SLO/SLA attainment in monitoring. GREEN = on-budget, no aged P1/P2s, SLOs met, runbooks present."
+    },
+    "rollup": {
+      "type": "string",
+      "enum": ["GREEN", "YELLOW", "RED"],
+      "description": "Overall rating = worst of the five sub-ratings. One RED forces RED; otherwise one YELLOW forces YELLOW; else GREEN."
+    },
+    "computed_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "subScore": {
+      "type": "object",
+      "required": ["value", "rating", "basis"],
+      "properties": {
+        "value": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "0-100 score."
+        },
+        "rating": {
+          "type": "string",
+          "enum": ["GREEN", "YELLOW", "RED"],
+          "description": "Band of the value. Default bands: GREEN >= 80, YELLOW 60-79, RED < 60. A hard cap (e.g. an open critical security finding) may force RED regardless of value."
+        },
+        "basis": {
+          "type": "string",
+          "description": "One-line explanation of how this sub-score was computed for this run, e.g. 'fitness 12/12 pass, 0 boundary violations, 1 complexity hotspot'."
+        },
+        "trend": {
+          "type": "string",
+          "enum": ["up", "flat", "down"],
+          "description": "Direction vs the previous computation (optional)."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,103 @@
+---
+tier: 2
+load_when: ["session-boundary", "webdesk-growth-dashboard"]
+description: "Per-session HANDOFF.md template for the WebDesk Growth Dashboard, extending the base skill's handoff-template.md. Copy to outputs/webdesk-growth-dashboard/HANDOFF.md."
+---
+
+# HANDOFF.md Template — WebDesk Growth Dashboard
+
+> Extends `_spine/shared-knowledge/handoff-template.md` (read it for the general rules: 200-line cap, archive-and-reset when it grows, `project.json.gates[]` is the single source of truth for gate status — never hand-edit a gate status here). This version pre-fills the profile-specific fields.
+
+---
+
+```markdown
+# HANDOFF — webdesk-growth-dashboard
+
+- **Session ended:** {{YYYY-MM-DD HH:MM}} ({{project timezone, once confirmed — see
+  docs/skill-build/unresolved-items.md}})
+- **Session ID:** {{session-id-if-tracked}}
+- **Last active agent:** {{pm / architect / designer / backend-role / frontend-role / qa / code-review / delivery-head}}
+- **Build context:** nodejs
+- **Project type / profile:** custom-app-build / webdesk-growth-dashboard
+- **Active phase:** {{Phase N — see profile knowledge/14-implementation-phases.md}}
+- **Current gate:** {{derived from `project.json.gates[]` — DO NOT hand-edit as truth}}
+> Gate status is authoritative ONLY in `project.json.gates[]`. If HANDOFF and `project.json`
+> ever disagree, `project.json` wins — correct the handoff, never the reverse.
+
+## Where we left off
+
+{{1–2 sentences. Name the file. If the session touched a resolved-architecture area
+(job execution model, NestJS-on-Vercel, SSO), confirm no drift from the resolved decision
+occurred — e.g. "Implemented dashboard-worker's scan-run handler per
+knowledge/04-serverless-queues-workflows-and-cron.md; no permanent-process code introduced."}}
+
+## Files committed this session
+
+| File | Branch | Notes |
+|------|--------|-------|
+| {{...}} | {{feature/...}} | {{...}} |
+
+## Files pending commit (work in progress)
+
+| File | Status | Blocker |
+|------|--------|---------|
+| {{...}} | {{...}} | {{...}} |
+
+## Next 3 tasks (queued)
+
+1. {{...}}
+2. {{...}}
+3. {{...}}
+
+## Client blockers (waiting on)
+
+Format: `[opened-date] — what we're waiting on. Owner: human PM / client / vendor. Target unblock.`
+
+- {{[date] — Postgres Marketplace provider confirmation (Neon-exclusion stop-condition,
+  profile knowledge/01-approved-architecture.md). Owner: infrastructure owner.}}
+- {{[date] — WordPress Technical Discovery document not yet supplied — see
+  docs/skill-build/unresolved-items.md. Owner: PM.}}
+
+If none: _(none)_
+
+## Open failure modes captured this session
+
+- {{[FM-xxx] ...}}
+
+If none: _(none — clean session)_
+
+## Decisions made this session
+
+Format: `[YYYY-MM-DD] [ADR-id if applicable] — summary.` Also append to CLAUDE.md "Recent decisions".
+
+- {{[date] ADR-00xx — ...}}
+
+## Token / context usage this session (optional)
+
+- Input: {{N}} · Output: {{N}} · Est. cost: ${{N}} · Cumulative: ${{N}} / ${{budget}}
+- Context high-water mark: {{~X% of window}}
+
+## What NOT to do on resume
+
+- Do NOT design or scaffold `dashboard-worker` as a permanent process (resolved decision,
+  profile knowledge/04-serverless-queues-workflows-and-cron.md, WDS-005).
+- Do NOT load `nodejs/integrations/{bigcommerce,shopify,erp}/*` — not this project's scope.
+- {{session-specific caution, if any}}
+
+If none beyond the standing ones above: _(no additional session-specific cautions)_
+
+## Session links
+
+- Last commit: `{{hash}}` on `{{branch}}`
+- Staging URL: {{url, once provisioned}}
+- Mockup preview URL (if active): {{url}}
+- Open PRs / issues: {{list}}
+
+---
+
+Last touched: {{timestamp}} · by {{name-or-agent}}
+```
+
+---
+
+Last reviewed: 2026-08-05 (initial profile build)

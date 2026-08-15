@@ -1,0 +1,24 @@
+name: Deploy Staging
+on:
+  push:
+    branches: ["staging"]
+# Host-agnostic deploy: build -> migrate -> release -> health-check.
+# Target (aws|gcp|cloudflare|heroku|vps) is chosen per project; fill the
+# release step with the project's deploy adapter (see delivery-head/04-rollback-and-deploy).
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: "npm" }
+      - run: npm ci
+      - run: npm run build --if-present
+      - name: Migrate
+        run: npx sequelize-cli db:migrate
+      - name: Release (per-target adapter)
+        run: echo "Release to staging target=$DEPLOY_TARGET"
+        env: { DEPLOY_TARGET: "${{ vars.DEPLOY_TARGET }}" }
+      - name: Health check
+        run: ./scripts/health-check.sh || echo "wire health-check per project"
