@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -93,17 +94,29 @@ export class RoleAssignmentController {
   @RequirePermission("users_roles", "edit")
   @ApiOperation({
     summary:
-      "Revoke a role from a user — revokes the user's existing sessions if it was actually held",
+      "Revoke a role from a user — revokes the user's existing sessions if it was actually held. " +
+      "Pass ?projectId= to target a project-scoped grant; omitting it only matches a global-scope one.",
   })
   async revokeRole(
     @Param("userId") userId: string,
     @Param("roleId") roleId: string,
+    @Query("projectId") projectId: string | undefined,
     @Req() req: AuthzRequest,
-  ): Promise<ApiSuccessResponse<{ revoked: true }>> {
-    await this.roleAssignment.revokeRole(userId, roleId, req.authUser!.id);
+  ): Promise<ApiSuccessResponse<{ revoked: boolean }>> {
+    // `revokeRole()` matches on the exact (userId, roleId, projectId) triple, so this
+    // query param is required to reach a project-scoped grant — silently defaulting to
+    // global scope would let a project-scoped grant survive an apparently-successful revoke
+    // (security-review finding, this branch).
+    const revoked = await this.roleAssignment.revokeRole(
+      userId,
+      roleId,
+      req.authUser!.id,
+      undefined,
+      projectId ?? null,
+    );
     return {
       success: true,
-      data: { revoked: true },
+      data: { revoked },
       correlationId: req.correlationId ?? "unknown",
     };
   }

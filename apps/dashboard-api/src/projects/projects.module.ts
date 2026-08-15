@@ -20,9 +20,11 @@ import { RoadmapItemsController } from "./roadmap-items.controller.js";
 /**
  * The Projects module (`docs/task-packages/module-projects-foundation.md`) — the first real
  * business module built on the Phase 1F application shell / canonical module registry. Imports
- * `AuthModule` for `SessionGuard`/`OriginCheckGuard`, `AuthzModule` for `PermissionGuard` and
- * `RoleAssignmentService` (project-scoped approver assignment, D4), and `AuditModule` for
- * `AuditService`.
+ * `AuthModule` for `SessionGuard`/`OriginCheckGuard`, `AuthzModule` for `PermissionGuard`,
+ * `RoleAssignmentService` (project-scoped approver assignment, D4), and `AuthorizationService`
+ * (the second, explicit `users_roles:edit` check `ProjectApproversService` performs before
+ * delegating to `RoleAssignmentService` — security-review finding, this branch), and `AuditModule`
+ * for `AuditService`.
  */
 @Module({
   imports: [AuthModule, AuthzModule, AuditModule],

@@ -113,21 +113,27 @@ export class RoleAssignmentService {
     ]);
   }
 
-  /** `projectId`: same trailing, optional, backward-compatible addition as `assignRole()` above. */
+  /**
+   * `projectId`: same trailing, optional, backward-compatible addition as `assignRole()` above.
+   * Returns whether a row was actually removed — `UserRoleRepository.revoke()` matches on the
+   * exact `(userId, roleId, projectId)` triple, so a caller that omits `projectId` can never
+   * remove a project-scoped grant; surfacing the real outcome lets the controller report it
+   * accurately instead of unconditionally claiming success (security-review finding, this branch).
+   */
   async revokeRole(
     targetUserId: string,
     roleId: string,
     actorId: string,
     now = new Date(),
     projectId: string | null = null,
-  ): Promise<void> {
+  ): Promise<boolean> {
     await this.assertNotSelfTargeting(actorId, targetUserId, "role-revocation actor");
     await this.requireUser(targetUserId);
     const role = await this.requireRole(roleId);
 
     const removed = await this.userRoles.revoke(targetUserId, roleId, projectId);
     if (!removed) {
-      return;
+      return false;
     }
     // Same independence as assignRole() above — none of these three depends on another's result.
     await Promise.all([
@@ -150,6 +156,7 @@ export class RoleAssignmentService {
       }),
       this.sessionService.revokeAllForUser(targetUserId, "role-change", now),
     ]);
+    return true;
   }
 
   /**

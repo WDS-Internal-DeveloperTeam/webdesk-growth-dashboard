@@ -228,4 +228,91 @@ describe("Projects module endpoints (e2e, real disposable database)", () => {
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .expect(400);
   });
+
+  describe("POST /projects/:projectId/approvers (security-review fix: users_roles:edit re-check)", () => {
+    it("rejects an owner_growth_approver session with 403 — that role holds project_configuration:approve but not users_roles:edit", async () => {
+      const approverUser = await users.create({
+        email: `projects.approver.e2e.${randomUUID()}@webdesksolution.com`,
+        displayName: "Projects Approver E2E",
+        accountStatus: "active",
+      });
+      const approverRole = await roles.findByKey("owner_growth_approver");
+      if (!approverRole) {
+        throw new Error(
+          "Expected owner_growth_approver role was not seeded — check migration 00013",
+        );
+      }
+      await userRoles.assign(approverUser.id, approverRole.id);
+
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `approver-bypass-${randomUUID()}`, name: "Approver Bypass Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const approverCookie = await cookieForNewSession(approverUser.id);
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/approvers`)
+        .set("Cookie", approverCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ userId: readOnlyUserId })
+        .expect(403);
+
+      const grantedRoleIds = await userRoles.findRoleIdsForUser(readOnlyUserId, projectId);
+      expect(grantedRoleIds).not.toContain(approverRole.id);
+    });
+
+    it("allows a super_admin session (holds users_roles:edit) to assign a project-scoped approver, and the grant can then be revoked via ?projectId=", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `approver-ok-${randomUUID()}`, name: "Approver OK Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const newApprover = await users.create({
+        email: `projects.new-approver.e2e.${randomUUID()}@webdesksolution.com`,
+        displayName: "New Approver E2E",
+        accountStatus: "active",
+      });
+
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/approvers`)
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ userId: newApprover.id })
+        .expect(204);
+
+      const approverRole = await roles.findByKey("owner_growth_approver");
+      const grantedRoleIds = await userRoles.findRoleIdsForUser(newApprover.id, projectId);
+      expect(grantedRoleIds).toContain(approverRole!.id);
+
+      // Omitting ?projectId= can only match a global-scope grant — the project-scoped one survives.
+      const revokeWithoutProjectId = await request(app.getHttpServer())
+        .delete(`/authz/users/${newApprover.id}/roles/${approverRole!.id}`)
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(200);
+      expect(revokeWithoutProjectId.body.data).toEqual({ revoked: false });
+      expect(await userRoles.findRoleIdsForUser(newApprover.id, projectId)).toContain(
+        approverRole!.id,
+      );
+
+      const revokeWithProjectId = await request(app.getHttpServer())
+        .delete(`/authz/users/${newApprover.id}/roles/${approverRole!.id}`)
+        .query({ projectId })
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(200);
+      expect(revokeWithProjectId.body.data).toEqual({ revoked: true });
+      expect(await userRoles.findRoleIdsForUser(newApprover.id, projectId)).not.toContain(
+        approverRole!.id,
+      );
+    });
+  });
 });
