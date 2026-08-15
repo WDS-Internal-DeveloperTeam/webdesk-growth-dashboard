@@ -13,10 +13,13 @@ import { ProjectService } from "./project.service.js";
 // service's own logic, so it's stubbed to just invoke the callback, matching how every other
 // mocked repository call in this file already replaces DB access with a plain function.
 vi.mock("@webdesk/database", async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- vitest's importOriginal<T>() needs the actual module's type inline; no top-level type-only equivalent exists for this generic parameter.
   const actual = await importOriginal<typeof import("@webdesk/database")>();
   return {
     ...actual,
-    withTransaction: vi.fn((fn: (transaction: unknown) => unknown) => fn({ fakeTransaction: true })),
+    withTransaction: vi.fn((fn: (transaction: unknown) => unknown) =>
+      fn({ fakeTransaction: true }),
+    ),
   };
 });
 
