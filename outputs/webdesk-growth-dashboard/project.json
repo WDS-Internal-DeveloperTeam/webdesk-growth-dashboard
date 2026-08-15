@@ -509,6 +509,21 @@
       },
       "project_version_before": 16,
       "project_version_after": 17
+    },
+    {
+      "timestamp": "2026-08-15T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "assistant",
+      "action": "ran security-review skill against branch module-projects-foundation (after holding a direct 'merge PR #24' request pending this project's standing review discipline), then fixed both CONFIRMED findings",
+      "details": {
+        "merge_request_held": "The user directly requested 'merge PR #24'. Flagged that security review, second-role human review, and gate decision had not yet happened for this branch, matching every prior phase's discipline. Asked the user directly whether to hold for those steps or merge now as an explicit override (Phase 1C's G4-1C pattern); the user chose to hold.",
+        "findings_summary": "2 CONFIRMED findings via this project's own security-review skill, each independently re-verified at 9/10 confidence by a separate sub-agent pass. High: POST /projects/:projectId/approvers was gated only by project_configuration:approve, which owner_growth_approver itself holds, but minting an RBAC role grant is a users_roles action; the approved matrix (06_Roles_and_Permissions.md section 3) deliberately withholds users_roles:edit from that role (VM, no E) — so any owner_growth_approver could mint unlimited co-approvers on any project they could approve in, a real privilege-escalation path with no other check catching it. Medium: the only role-revocation route, DELETE /authz/users/:userId/roles/:roleId, always called revokeRole() with projectId: null, and UserRoleRepository.revoke() matches the exact (userId, roleId, projectId) triple, so a project-scoped grant could never be revoked through the API — worse, the endpoint always reported revoked: true regardless of whether anything was actually removed.",
+        "fixes_applied": "ProjectApproversService.assign() now performs its own explicit AuthorizationService.evaluate() check for users_roles:edit before delegating to RoleAssignmentService — confirmed against the seeded matrix this makes the endpoint effectively super-admin-only for now, matching the matrix's actual intent rather than inventing a new restriction. RoleAssignmentService.revokeRole() now returns whether a row was actually removed (Promise<boolean>, was Promise<void>), and the controller accepts an optional ?projectId= query param, threading it through so a project-scoped grant can actually be reached, and reports the real outcome instead of always claiming success. Added a new ProjectApproversService unit test proving the users_roles:edit check runs before any role lookup/assignment; two new role-assignment.controller.spec.ts unit tests covering both revoke paths and both outcome values; and two new real-database e2e tests in projects.e2e-spec.ts proving via real HTTP requests that an owner_growth_approver-only session gets a real 403 from the approver endpoint, and that a super_admin-assigned project-scoped grant survives a revoke call missing ?projectId= but is genuinely removed once supplied.",
+        "validation": "Full re-validation on a fresh local disposable PostgreSQL 17 database: typecheck/lint/format clean; 315 dashboard-api unit + 87 dashboard-api integration/e2e tests (including all 8 Projects e2e tests, up from 6), all passing.",
+        "not_yet_done": "Not committed or pushed at the time this entry was written — still on branch module-projects-foundation. PR #24 remains unmerged — second-role human review and a gate decision are still outstanding next steps."
+      },
+      "project_version_before": 17,
+      "project_version_after": 18
     }
   ]
 }
