@@ -495,6 +495,20 @@
       },
       "project_version_before": 15,
       "project_version_after": 16
+    },
+    {
+      "timestamp": "2026-08-15T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "assistant",
+      "action": "ran independent code review (high effort) against branch module-projects-foundation, then fixed all 9 CONFIRMED findings",
+      "details": {
+        "findings_summary": "9 CONFIRMED findings via this project's own code-review skill (8 finder angles, 1-vote verification). Most severe: an IDOR — the five sub-resource repositories (environments, repositories, objectives, team, roadmap items) looked up rows by primary key alone with no projectId in the WHERE clause, letting a user authorized on one project mutate or delete another project's sub-resources by ID. Also found: RoadmapItemsService.update() spread the caller's raw patch (including status) into the repository write, bypassing setActivePhase()'s active-phase invariant and audit logging; setActivePhase()'s three writes were sequential and non-transactional; migration 00043 added a role_permissions.project_id FK the task package's own scope statement never named; an unused (project_id, status) index on roadmap_items and a missing index on projects.updated_at (the real default list-sort column); duplicated toJSON()-plus-date-conversion logic across all six Projects repositories; a speculative single-value provider ENUM column; and dead findById()-style methods on four sub-resource repositories.",
+        "fixes_applied": "Added a shared packages/database/src/projects/entity-mapping.ts helper (closes the duplication finding). Every sub-resource repository's update()/remove() now takes (id, projectId, ...) and scopes its WHERE clause accordingly, threaded through the corresponding dashboard-api services and controllers. RoadmapItemsService.update() now explicitly whitelists only name/sequence. ProjectService.setActivePhase() now wraps all three writes in withTransaction() (the packages/database helper, genuinely unused anywhere in dashboard-api until now). Removed the unused index and added the missing one (migrations 00036/00041). Removed the provider column from migration 00038, entities.ts, and models.ts. Removed the 4 dead findById() methods. Appended a Resolution note to docs/task-packages/module-projects-foundation.md acknowledging the role_permissions.project_id FK as necessary for the IDOR fix, not silent scope creep.",
+        "validation": "Full re-validation on a fresh local disposable PostgreSQL 17 database (Homebrew, not the project's real Neon instance): typecheck/lint/format clean across all 9 packages; 28 packages/database unit + 117 packages/database integration + 313 dashboard-api unit + 85 dashboard-api integration/e2e (all 6 Projects e2e tests included) + 8 dashboard-web unit tests, all passing; migration up/down round-trip clean (44 migrations); module-registry validation passing (43 modules, 21 permission groups); pnpm audit 0 vulnerabilities; secret scan clean (574 files). ReportFindings called again with all 9 findings marked outcome: fixed.",
+        "not_yet_done": "Not committed or pushed at the time this entry was written — still on branch module-projects-foundation, PR #24 unchanged until pushed. Security review, second-role human review, gate decision, and merge authorization remain separate, not-yet-requested steps."
+      },
+      "project_version_before": 16,
+      "project_version_after": 17
     }
   ]
 }

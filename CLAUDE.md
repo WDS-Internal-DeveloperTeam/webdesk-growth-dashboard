@@ -245,15 +245,19 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    audit scope, the 21 real business-module endpoints, and any module-implementation wave (see
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
-7. ~~Projects module task package prepared, awaiting human approval~~ — **backend built
-   2026-08-15.** `docs/task-packages/module-projects-foundation.md` was prepared, then explicit
-   "begin implementation" authorization was given directly (see "Recent decisions"). Schema, API,
-   RBAC wiring, and tests are built, validated, committed to branch `module-projects-foundation`,
-   and pushed as [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24)
-   — **not merged, not deployed, no production migration run.** No UI yet (dashboard-web) — D7's
+7. ~~Projects module task package prepared, awaiting human approval~~ — **backend built and
+   independently code-reviewed 2026-08-15.** `docs/task-packages/module-projects-foundation.md`
+   was prepared, then explicit "begin implementation" authorization was given directly (see
+   "Recent decisions"). Schema, API, RBAC wiring, and tests were built and validated, then this
+   project's own `code-review` skill was run (high effort) against the branch — 9 CONFIRMED
+   findings, most severe an IDOR letting a user authorized on one project mutate another
+   project's sub-resources by ID — all 9 fixed and re-validated (see "Recent decisions"). Branch
+   `module-projects-foundation`, pushed as
+   [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) —
+   **not merged, not deployed, no production migration run.** No UI yet (dashboard-web) — D7's
    Project Switcher wiring remains separate, undesigned scope. Remaining before this can be gated:
-   independent code review, security review, second-role human review, gate decision, merge
-   authorization — each its own separate step, same discipline as every prior phase.
+   security review, second-role human review, gate decision, merge authorization — each its own
+   separate step, same discipline as every prior phase.
 
 ## Recent decisions
 
@@ -964,6 +968,49 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   merged, not deployed, no production migration run.** No `dashboard-web` UI exists yet — that,
   independent code review, security review, second-role human review, a gate decision, and merge
   authorization are all separate, not-yet-requested next steps.
+- `[2026-08-15]` **Independent code review run against `module-projects-foundation` (explicit
+  "run code review on the branch" instruction), then all 9 CONFIRMED findings fixed (explicit "fix
+  the confirmed findings" instruction).** This project's own `code-review` skill ran at high
+  effort (8 finder angles, 1-vote verification) and surfaced 9 CONFIRMED findings, most severe an
+  **IDOR**: the five sub-resource repositories (environments, repositories, objectives, team,
+  roadmap items) looked up rows by primary key alone with no `projectId` in the `WHERE` clause, so
+  a user authorized on Project A could mutate or delete Project B's sub-resources by ID. Also
+  found: `RoadmapItemsService.update()` spread the caller's raw patch (including `status`) into
+  the repository write, letting a generic update bypass `setActivePhase()`'s active-phase-invariant
+  and audit-event logic; `setActivePhase()`'s three writes were sequential and non-transactional,
+  risking a partially-committed inconsistent state on failure; migration `00043` added a FK on
+  `role_permissions.project_id` that the task package's own §3 scope statement never named; an
+  unused `(project_id, status)` index on `roadmap_items` (no query ever filters by status) and a
+  missing index on `projects.updated_at` (the real default list-sort column); duplicated
+  `toJSON()`-plus-date-conversion mapping logic across all six Projects repositories; a speculative
+  single-value `provider` ENUM column with no real multi-provider requirement; and dead
+  `findById()`-style methods on four sub-resource repositories. All 9 fixed: added a shared
+  `packages/database/src/projects/entity-mapping.ts` helper (closes the duplication finding while
+  doing the IDOR-scoping edits); every sub-resource repository's `update()`/`remove()` now takes
+  `(id, projectId, ...)` and scopes its `WHERE` clause accordingly, threaded through the
+  corresponding `dashboard-api` services and controllers (added `@Param("projectId")` to 5
+  controllers); `RoadmapItemsService.update()` now explicitly whitelists only `name`/`sequence`;
+  `ProjectService.setActivePhase()` now wraps all three writes in `withTransaction()` (the
+  `packages/database` helper, genuinely unused anywhere in `dashboard-api` until now); removed the
+  unused index and added the missing one (migrations `00036`/`00041`); removed the `provider`
+  column from migration `00038`, `entities.ts`, and `models.ts`; removed the 4 dead `findById()`
+  methods. Appended a "Resolution note" to `docs/task-packages/module-projects-foundation.md`
+  acknowledging the `role_permissions.project_id` FK as scope genuinely necessary for the IDOR fix
+  to work correctly (not a silent scope creep), rather than editing the original scope statement.
+  Full re-validation on a fresh local disposable PostgreSQL 17 database (Homebrew, not the
+  project's real Neon instance): typecheck/lint/format clean across all 9 packages; 28
+  `packages/database` unit + 117 `packages/database` integration + 313 `dashboard-api` unit + 85
+  `dashboard-api` integration/e2e (including all 6 Projects e2e tests) + 8 `dashboard-web` unit
+  tests, all passing; migration up/down round-trip clean (44 migrations); module-registry
+  validation passing (43 modules, 21 permission groups); `pnpm audit` 0 vulnerabilities; secret
+  scan clean (574 files). Two test-signature-mismatch fixes required along the way: the
+  `roadmap-items.service.spec.ts` and `module-projects.integration.test.ts` assertions still called
+  the old 2-argument repository signatures; and `project.service.spec.ts`'s two `setActivePhase()`
+  tests needed a `vi.mock("@webdesk/database", ...)` stub for `withTransaction()` (it opens a real
+  Sequelize connection needing `DATABASE_URL`, irrelevant to the service's own unit-tested logic).
+  `ReportFindings` called again with all 9 findings marked `outcome: "fixed"`. Not yet committed or
+  pushed at the time this entry was written — still on branch `module-projects-foundation`, PR #24
+  unchanged until pushed.
 
 ## Open client blockers
 
@@ -1126,3 +1173,10 @@ timezone confirmation, and — the next substantive decisions — the 21 real bu
 endpoints, the remaining Task 7 audit scope (query HTTP surface, retention-deletion job), Task 9's
 real background-worker/queue wiring, or a module-implementation wave off the roadmap, each still
 requiring its own explicit authorization.)
+
+**2026-08-15 update**: the Projects module backend (branch `module-projects-foundation`, PR #24)
+went through this project's own independent code review — 9 CONFIRMED findings (most severe an
+IDOR in the sub-resource repositories), all fixed and fully re-validated. See this date's "Recent
+decisions" entry for the complete account. Still not merged, not deployed, no production
+migration run — security review, second-role human review, gate decision, and merge authorization
+remain separate, not-yet-requested next steps.

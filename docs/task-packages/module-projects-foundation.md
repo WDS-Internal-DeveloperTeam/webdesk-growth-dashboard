@@ -116,6 +116,34 @@ new `projects` table is what sense (2)'s `project_id` columns will finally refer
   are the same tenant's users, never separate customer accounts. This module does not add any
   cross-tenant or customer-account concept.
 
+### Resolution note — scope actually touched (post-implementation, code review)
+
+This package's own text above (and rule 13/14) states scope as "`projects` and the pre-existing,
+already-approved `user_roles.project_id` FK slot" only. The independent code review run against
+the built branch (`module-projects-foundation`) surfaced one real deviation from that statement,
+not silently — flagged here rather than rewritten into the original scope text, matching this
+project's standing practice of appending resolution notes instead of editing historical scope
+statements (see ADR-0007's and the RBAC threat-model's own resolution-note precedent):
+
+Migration `00043-add-project-scoping-fk.ts` adds a foreign key not just on `user_roles.project_id`
+(the one this package names) but also on **`role_permissions.project_id`** — a second, distinct
+Phase 1D-expanded schema-ready scoping column this package's own text never mentions. This was a
+necessary, not incidental, change: `AuthorizationService`'s real grant-evaluation query
+(`role-permission.repository.ts`) reads `role_permissions.project_id` to decide project-scoped
+grants, and the code review's own most severe finding was that its existing `Op.in: [null,
+projectId]` filter never matches SQL `NULL` (three-valued logic) — a bug that stayed dormant only
+because no project-scoped route existed to exercise it until this module's own e2e tests did. Both
+the FK and the `Op.or`-based fix were required for `role_permissions.project_id` to behave
+correctly the first time a real project-scoped permission check ran; adding the FK to
+`user_roles.project_id` alone, as originally scoped, would have left `role_permissions.project_id`
+an orphaned, unconstrained column while this module's own authorization checks silently depended on
+it.
+
+No other authorization/RBAC file was touched beyond this FK addition and the `Op.in`→`Op.or` fix in
+`role-permission.repository.ts`/`user-role.repository.ts` — no new grant, no new module registry
+row, no behavior change for any already-shipped route. Recorded here for the human reviewer's
+"looks correct" confirmation to weigh explicitly, rather than being an unstated scope expansion.
+
 ## 4. Design decisions
 
 Numbered so §0's flagged spec silences each get one explicit, traceable proposed resolution. None

@@ -5,11 +5,21 @@
 - **Latest work:** Projects module backend built under explicit "begin implementation" authorization
   — schema (migrations `00036`-`00044`), API, RBAC wiring (including a real fix to a
   previously-flagged dormant `Op.in`/NULL bug in project-scoped permission queries, surfaced by
-  this module's own e2e tests), and tests (18 unit + 9 integration + 6 e2e, whole-monorepo
-  re-validation clean: 312 unit + 117 integration + 85 e2e, `pnpm audit` 0 vulnerabilities). Pushed
-  as [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) —
-  **not merged, not deployed, no production migration run, no UI yet.** See the 2026-08-15 "Recent
-  decisions" entry in `CLAUDE.md` for the full record.
+  this module's own e2e tests), and tests. Then this project's own `code-review` skill was run
+  (high effort, explicit "run code review on the branch" instruction) — 9 CONFIRMED findings, most
+  severe an IDOR letting a user authorized on one project mutate another project's sub-resources
+  by ID — all 9 fixed under explicit "fix the confirmed findings" instruction: IDOR scoping across
+  5 sub-resource repositories/services/controllers, a roadmap-item status-bypass fix,
+  `setActivePhase()` wrapped in a real `withTransaction()`, an unused index removed and a missing
+  one added, a speculative `provider` column and 4 dead `findById()` methods removed, and repository
+  mapping duplication collapsed into a shared `entity-mapping.ts` helper. Full re-validation on a
+  fresh local disposable database: 28 `packages/database` unit + 117 `packages/database`
+  integration + 313 `dashboard-api` unit + 85 `dashboard-api` integration/e2e + 8 `dashboard-web`
+  unit tests, all passing; typecheck/lint/format clean; migration round-trip clean; module-registry
+  validation clean; `pnpm audit` 0 vulnerabilities; secret scan clean. Still on branch
+  `module-projects-foundation`, [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24)
+  — **not merged, not deployed, no production migration run, no UI yet.** See the 2026-08-15
+  "Recent decisions" entries in `CLAUDE.md` for the full record.
 - **Last active agent:** Backend role. Phase 1F (application shell, canonical 43-module registry extension, registry-driven navigation, observability foundation, accessibility, staging documentation, module-implementation roadmap) fully built, code-reviewed, security-reviewed, second-role human reviewed (Jitesh D and Brijesh D, Approved as-is), gated (G4-1F, WebDesk Solution, CONFIRM), and **merged to `main`** via [PR #23](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/23) (merge commit `1e8f343c4779237a4fe75c3c663716877990dc20`), under explicit "merge PR #23" authorization. Both `dashboard-web` and `dashboard-api` auto-deployed to production on the merge; **both verified live directly** (not just via CI's own Vercel status check) — `dashboard-api`'s `/health` returned `build.commitSha == 1e8f343...` and `environment == "production"`, confirming the exact merged commit is what's serving; `dashboard-web`'s `/` correctly redirected an unauthenticated visitor to `/auth/sign-in` via the new `(shell)` layout's session gate. **All 35 production database migrations are now applied** — the user ran `pnpm --filter @webdesk/database run migrate` (2026-08-14), which applied 17 pending migrations, independently confirmed via a separate `migrate:status` check (35 executed, 0 pending). This surfaced a previously-undocumented gap: only 2 of the 17 (`00034`/`00035`) were Phase 1F's own migrations — the other 15 (`00019`–`00033`) were the **entire remaining Phase 1E operational-infrastructure schema** (jobs, retention, notifications, operational contacts, system events/health), merged and gated on 2026-08-13 but never actually applied to production until this run. No production impact is known (no real user traffic yet).
 - **Build context:** nodejs
 - **Project type / profile:** custom-app-build / webdesk-growth-dashboard
