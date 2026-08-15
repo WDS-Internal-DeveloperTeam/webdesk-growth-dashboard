@@ -245,16 +245,15 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    audit scope, the 21 real business-module endpoints, and any module-implementation wave (see
    `docs/phase-plans/module-implementation-roadmap.md`) — each separate, not-yet-authorized next
    candidates.
-7. **Projects module task package prepared, awaiting human approval** —
-   `docs/task-packages/module-projects-foundation.md`, built from the Phase 1F task-package
-   template per explicit instruction to prepare it (not implement). Pre-implementation
-   verification found no dependency blocker (Wave 1, no prerequisites) but several real spec
-   silences (no Projects wireframes, no status state machine, a naming collision between the
-   canonical data-model doc's project-scoped `operational_contacts` and Phase 1E's already-built
-   global one) — each flagged with a proposed, clearly-marked-as-unsourced resolution (D1-D8) for
-   the human reviewer to confirm or correct, not silently resolved. **Implementation has not
-   started** — it begins only once a human confirms the package "looks correct," per the
-   authorizing instruction's own explicit two-step design.
+7. ~~Projects module task package prepared, awaiting human approval~~ — **backend built
+   2026-08-15.** `docs/task-packages/module-projects-foundation.md` was prepared, then explicit
+   "begin implementation" authorization was given directly (see "Recent decisions"). Schema, API,
+   RBAC wiring, and tests are built, validated, committed to branch `module-projects-foundation`,
+   and pushed as [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24)
+   — **not merged, not deployed, no production migration run.** No UI yet (dashboard-web) — D7's
+   Project Switcher wiring remains separate, undesigned scope. Remaining before this can be gated:
+   independent code review, security review, second-role human review, gate decision, merge
+   authorization — each its own separate step, same discipline as every prior phase.
 
 ## Recent decisions
 
@@ -909,6 +908,62 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   was not authorized to start** — this package is a proposal awaiting the human "looks correct"
   confirmation the authorizing instruction itself made a separate, later step from preparing the
   package.
+- `[2026-08-15]` **Built the Projects module backend**, under explicit "begin implementation of the
+  projects module" authorization, reinforcing three rules already in the task package: establish
+  canonical project context, no multi-tenancy from the two Workspace domains, and prevent
+  destructive deletion when dependent records exist. Branch `module-projects-foundation`, off
+  `main` at `5722deb`/`3c73abe`. Schema: migrations `00036`-`00044` — `projects`,
+  `project_environments`, `project_repositories`, `project_users`, `project_objectives`,
+  `roadmap_items`, plus the FK finally completing Phase 1D-expanded's
+  `user_roles.project_id`/`role_permissions.project_id` columns (their first real target, zero
+  existing rows, no backfill risk). D2's status state machine (`active`/`paused`, either →
+  `archived` terminal) and D3's one-active-phase-per-project invariant are both enforced —
+  D3 at the database layer via a partial unique index, not just application code, matching
+  ADR-0017's "enforce the real invariant at the DB layer" precedent. "Prevent destructive deletion
+  when dependent records exist" is satisfied two ways: `projects` has no hard-delete endpoint at
+  all (archive-only, per rule 8/ADR-0016's project-wide no-hard-delete policy), and
+  `RoadmapItemsService.remove()` rejects removing a roadmap item that is currently a project's
+  `active_phase_id` until reassigned or cleared — the one real dependent-record relationship this
+  schema has. "No multi-tenancy" is satisfied by construction: every `projects` row belongs to the
+  single WebDesk Solution tenant already recorded in `project.json.tenant.mode`; `webdesksolution.com`
+  and `webdeskinc.com` users are the same tenant, never separate customer accounts, and this module
+  adds no cross-tenant concept. "Canonical project context" is satisfied for the data layer (a real
+  `projects` table and `GET /projects` exist for the first time) — full UI-level project-context
+  propagation (the shell's Project Switcher) remains D7's deferred, separate scope.
+  **A real, previously-flagged bug was found and fixed in the process**: writing this module's own
+  e2e tests (a real `super_admin` session hitting a real `:projectId`-scoped route) reproduced the
+  exact "dormant `Op.in: [null, projectId]` bug" the Phase 1D independent code review surfaced on
+  2026-08-12 as tracked technical debt (`docs/project-state/phase-1d-approval-checklist.md`'s
+  "Independent code review" section) — SQL's `IN` never matches `NULL` under three-valued logic, so
+  `UserRoleRepository.findRoleIdsForUser`/`RolePermissionRepository.hasGrant`/`listGrantsForRoles`
+  silently excluded every global-scope grant the instant a real `projectId` was passed, denying
+  even a real Super Admin session 403 on every project-scoped route. Fixed with an explicit
+  `Op.or` in all three call sites — the first production code fix this exact latent gap has ever
+  received, closed now because this is the first real project-scoped route to exist.
+  `RoleAssignmentService.assignRole`/`revokeRole` gained a new, trailing, backward-compatible
+  optional `projectId` parameter (defaults to `null`, every existing call site untouched) so
+  "define approvers" (D4) reuses the existing, already-reviewed role-assignment service — including
+  its separation-of-duties check and session revocation — scoped to a real project, rather than
+  writing a new authorization mechanism. `AuthzModule` now exports `RoleAssignmentService`/
+  `ROLE_REPOSITORY` for that reuse. Full validation: 18 new unit tests (status transitions,
+  active-phase invariant, destructive-deletion guard, approver assignment), 9 new real-database
+  integration tests (including the D3 invariant and the new FK enforcement, on a real disposable
+  database with all 8 new down-migrations individually verified reversible, not just the last
+  one), 6 new e2e tests (401/403 paths, the real seeded-`project_configuration`-grant success path
+  — no new RBAC seed migration was needed, D2's invalid-transition rejection, the
+  destructive-deletion guard via real HTTP). Whole-monorepo re-validation after the fix: 312
+  `dashboard-api` unit + 117 `packages/database` integration + 85 `dashboard-api` e2e tests (all
+  three counts include the new Projects tests), typecheck/lint/format clean across all 9 packages,
+  `pnpm audit` 0 vulnerabilities, module-registry validation unaffected (still 43 modules, 21
+  permission groups). `module_registry.implementation_status` for `projects` updated to
+  `in_development` (migration `00044`) — the first module ever moved off its Phase 1F seed value of
+  `not_started`, deliberately not `available` since no UI exists yet and this hasn't been through
+  code/security review. Committed as two commits (the RBAC fix separately from the module itself,
+  for a cleaner review history), pushed, and opened as
+  [PR #24](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/24) — **not
+  merged, not deployed, no production migration run.** No `dashboard-web` UI exists yet — that,
+  independent code review, security review, second-role human review, a gate decision, and merge
+  authorization are all separate, not-yet-requested next steps.
 
 ## Open client blockers
 
