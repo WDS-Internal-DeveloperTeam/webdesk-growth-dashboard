@@ -1,20 +1,8 @@
-import type { Model } from "sequelize";
 import { getProjectsModels } from "./models.js";
+import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { ObjectiveStatus, ProjectObjectiveEntity } from "./entities.js";
 
-function toEntity(instance: Model): ProjectObjectiveEntity {
-  const json = instance.toJSON() as Record<string, unknown>;
-  return {
-    id: json.id as string,
-    projectId: json.projectId as string,
-    description: json.description as string,
-    status: json.status as ObjectiveStatus,
-    createdBy: (json.createdBy as string | null) ?? null,
-    updatedBy: (json.updatedBy as string | null) ?? null,
-    createdAt: (json.createdAt as Date).toISOString(),
-    updatedAt: (json.updatedAt as Date).toISOString(),
-  };
-}
+const DATE_FIELDS = ["createdAt", "updatedAt"] as const;
 
 export class ProjectObjectiveRepository {
   private readonly model = getProjectsModels().ProjectObjective;
@@ -31,34 +19,31 @@ export class ProjectObjectiveRepository {
       createdBy: input.createdBy ?? null,
       updatedBy: input.createdBy ?? null,
     });
-    return toEntity(instance);
+    return toEntityWithIsoDates<ProjectObjectiveEntity>(instance, DATE_FIELDS);
   }
 
-  async findById(id: string): Promise<ProjectObjectiveEntity | null> {
-    const instance = await this.model.findByPk(id);
-    return instance ? toEntity(instance) : null;
-  }
-
+  /** `projectId`-scoped — see `ProjectEnvironmentRepository.update()`'s doc comment for why (IDOR fix). */
   async update(
     id: string,
+    projectId: string,
     patch: Partial<{ description: string; status: ObjectiveStatus; updatedBy: string | null }>,
   ): Promise<ProjectObjectiveEntity | null> {
-    const instance = await this.model.findByPk(id);
+    const instance = await this.model.findOne({ where: { id, projectId } });
     if (!instance) {
       return null;
     }
     await instance.update(patch);
-    return toEntity(instance);
+    return toEntityWithIsoDates<ProjectObjectiveEntity>(instance, DATE_FIELDS);
   }
 
   async listByProject(projectId: string): Promise<readonly ProjectObjectiveEntity[]> {
     const rows = await this.model.findAll({ where: { projectId }, order: [["createdAt", "ASC"]] });
-    return rows.map(toEntity);
+    return rows.map((row) => toEntityWithIsoDates<ProjectObjectiveEntity>(row, DATE_FIELDS));
   }
 
-  /** Hard delete — safe here: no other table references a `project_objectives` row (task package §26). */
-  async remove(id: string): Promise<boolean> {
-    const count = await this.model.destroy({ where: { id } });
+  /** Hard delete — safe here: no other table references a `project_objectives` row (task package §26). `projectId`-scoped (IDOR fix). */
+  async remove(id: string, projectId: string): Promise<boolean> {
+    const count = await this.model.destroy({ where: { id, projectId } });
     return count > 0;
   }
 }

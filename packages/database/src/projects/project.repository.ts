@@ -1,26 +1,9 @@
-import { Op, type Model } from "sequelize";
+import { Op, type Transaction } from "sequelize";
 import { getProjectsModels } from "./models.js";
+import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { ProjectConfidentiality, ProjectEntity, ProjectStatus } from "./entities.js";
 
-function toEntity(instance: Model): ProjectEntity {
-  const json = instance.toJSON() as Record<string, unknown>;
-  return {
-    id: json.id as string,
-    publicId: json.publicId as string,
-    name: json.name as string,
-    description: (json.description as string | null) ?? null,
-    status: json.status as ProjectStatus,
-    activePhaseId: (json.activePhaseId as string | null) ?? null,
-    ownerUserId: (json.ownerUserId as string | null) ?? null,
-    confidentiality: json.confidentiality as ProjectConfidentiality,
-    retentionCategory: (json.retentionCategory as string | null) ?? null,
-    createdBy: (json.createdBy as string | null) ?? null,
-    updatedBy: (json.updatedBy as string | null) ?? null,
-    createdAt: (json.createdAt as Date).toISOString(),
-    updatedAt: (json.updatedAt as Date).toISOString(),
-  };
-}
-
+const DATE_FIELDS = ["createdAt", "updatedAt"] as const;
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
 
@@ -45,19 +28,20 @@ export class ProjectRepository {
       createdBy: input.createdBy ?? null,
       updatedBy: input.createdBy ?? null,
     });
-    return toEntity(instance);
+    return toEntityWithIsoDates<ProjectEntity>(instance, DATE_FIELDS);
   }
 
   async findById(id: string): Promise<ProjectEntity | null> {
     const instance = await this.model.findByPk(id);
-    return instance ? toEntity(instance) : null;
+    return instance ? toEntityWithIsoDates<ProjectEntity>(instance, DATE_FIELDS) : null;
   }
 
   async findByPublicId(publicId: string): Promise<ProjectEntity | null> {
     const instance = await this.model.findOne({ where: { publicId } });
-    return instance ? toEntity(instance) : null;
+    return instance ? toEntityWithIsoDates<ProjectEntity>(instance, DATE_FIELDS) : null;
   }
 
+  /** `transaction`, when given, lets `ProjectService.setActivePhase()` update `active_phase_id` as part of the same atomic unit as the roadmap-item status writes (code-review finding, `module-projects-foundation` branch). */
   async update(
     id: string,
     patch: Partial<{
@@ -70,13 +54,14 @@ export class ProjectRepository {
       retentionCategory: string | null;
       updatedBy: string | null;
     }>,
+    transaction?: Transaction,
   ): Promise<ProjectEntity | null> {
-    const instance = await this.model.findByPk(id);
+    const instance = await this.model.findByPk(id, { transaction });
     if (!instance) {
       return null;
     }
-    await instance.update(patch);
-    return toEntity(instance);
+    await instance.update(patch, { transaction });
+    return toEntityWithIsoDates<ProjectEntity>(instance, DATE_FIELDS);
   }
 
   async list(
@@ -103,6 +88,6 @@ export class ProjectRepository {
       limit,
       offset: filter.offset ?? 0,
     });
-    return rows.map(toEntity);
+    return rows.map((row) => toEntityWithIsoDates<ProjectEntity>(row, DATE_FIELDS));
   }
 }

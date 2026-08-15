@@ -83,6 +83,8 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
   });
   // Key index per 04_Data_Model_and_Ownership.md line 41: "project status".
   await context.addIndex("projects", ["status"], { name: "projects_status_idx" });
+  // ProjectRepository.listProjects() defaults to ORDER BY updated_at DESC (code review finding).
+  await context.addIndex("projects", ["updated_at"], { name: "projects_updated_at_idx" });
 }
 
 export async function down({ context }: { context: QueryInterface }): Promise<void> {

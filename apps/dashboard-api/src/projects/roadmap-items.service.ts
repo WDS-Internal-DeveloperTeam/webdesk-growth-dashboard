@@ -48,29 +48,41 @@ export class RoadmapItemsService {
     return this.roadmapItems.listByProject(projectId);
   }
 
+  /**
+   * Only `name`/`sequence` are ever forwarded to the repository, explicitly, never a spread of the
+   * caller's raw input — `status` (part of the wider `UpdateRoadmapItemDto`) must never reach this
+   * method's write path. Setting an item `active` is only ever valid through
+   * `ProjectService.setActivePhase()`, which also updates `projects.active_phase_id` and records an
+   * audit event; letting a generic update silently flip `status` would desync that pointer and skip
+   * the audit trail entirely (code-review finding, `module-projects-foundation` branch).
+   */
   async update(
     id: string,
+    projectId: string,
     patch: { name?: string; sequence?: number },
     actorUserId: string,
   ): Promise<RoadmapItemEntity> {
-    await this.findById(id);
-    const updated = await this.roadmapItems.update(id, { ...patch, updatedBy: actorUserId });
+    const safePatch = { name: patch.name, sequence: patch.sequence, updatedBy: actorUserId };
+    const updated = await this.roadmapItems.update(id, projectId, safePatch);
     if (!updated) {
       throw new NotFoundException(`Roadmap item not found: ${id}`);
     }
     return updated;
   }
 
-  async remove(id: string, actorUserId: string): Promise<void> {
+  async remove(id: string, projectId: string, actorUserId: string): Promise<void> {
     const item = await this.findById(id);
-    const project = await this.projects.findById(item.projectId);
+    if (item.projectId !== projectId) {
+      throw new NotFoundException(`Roadmap item not found: ${id}`);
+    }
+    const project = await this.projects.findById(projectId);
     if (project?.activePhaseId === id) {
       throw new BadRequestException(
         "Cannot remove a roadmap item that is the project's active phase — reassign or clear the active phase first",
       );
     }
 
-    await this.roadmapItems.remove(id);
+    await this.roadmapItems.remove(id, projectId);
 
     await this.auditService.record({
       eventType: "data_change",

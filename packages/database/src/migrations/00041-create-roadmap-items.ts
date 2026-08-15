@@ -62,10 +62,8 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
     },
   });
 
-  // Key index per 04_Data_Model_and_Ownership.md line 41: "roadmap phase/status".
-  await context.addIndex("roadmap_items", ["project_id", "status"], {
-    name: "roadmap_items_project_status_idx",
-  });
+  // No (project_id, status) index: no query filters roadmap items by status (code review
+  // finding) — listByProject() orders by (project_id, sequence) only, covered below.
   await context.addIndex("roadmap_items", ["project_id", "sequence"], {
     name: "roadmap_items_project_sequence_idx",
   });

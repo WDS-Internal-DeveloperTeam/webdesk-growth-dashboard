@@ -24,8 +24,8 @@ export class ProjectTeamService {
     return this.team.listByProject(projectId);
   }
 
-  async remove(id: string): Promise<void> {
-    const removed = await this.team.remove(id);
+  async remove(id: string, projectId: string): Promise<void> {
+    const removed = await this.team.remove(id, projectId);
     if (!removed) {
       throw new NotFoundException(`Project team entry not found: ${id}`);
     }

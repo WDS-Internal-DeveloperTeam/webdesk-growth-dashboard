@@ -27,18 +27,22 @@ export class ProjectObjectivesService {
 
   async update(
     id: string,
+    projectId: string,
     patch: { description?: string; status?: ObjectiveStatus },
     actorUserId: string,
   ): Promise<ProjectObjectiveEntity> {
-    const updated = await this.objectives.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.objectives.update(id, projectId, {
+      ...patch,
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Project objective not found: ${id}`);
     }
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    const removed = await this.objectives.remove(id);
+  async remove(id: string, projectId: string): Promise<void> {
+    const removed = await this.objectives.remove(id, projectId);
     if (!removed) {
       throw new NotFoundException(`Project objective not found: ${id}`);
     }

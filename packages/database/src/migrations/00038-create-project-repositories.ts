@@ -21,11 +21,6 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
-    provider: {
-      type: DataTypes.ENUM("github"),
-      allowNull: false,
-      defaultValue: "github",
-    },
     repo_owner: {
       type: DataTypes.STRING(255),
       allowNull: false,
@@ -78,5 +73,4 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
 
 export async function down({ context }: { context: QueryInterface }): Promise<void> {
   await context.dropTable("project_repositories", {});
-  await context.sequelize.query(`DROP TYPE IF EXISTS "enum_project_repositories_provider";`);
 }

@@ -1,17 +1,8 @@
-import type { Model } from "sequelize";
 import { getProjectsModels } from "./models.js";
+import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { ProjectUserEntity } from "./entities.js";
 
-function toEntity(instance: Model): ProjectUserEntity {
-  const json = instance.toJSON() as Record<string, unknown>;
-  return {
-    id: json.id as string,
-    projectId: json.projectId as string,
-    userId: json.userId as string,
-    addedAt: (json.addedAt as Date).toISOString(),
-    addedBy: (json.addedBy as string | null) ?? null,
-  };
-}
+const DATE_FIELDS = ["addedAt"] as const;
 
 /** The project team roster — grants no authorization by itself (task package D4). */
 export class ProjectUserRepository {
@@ -27,27 +18,22 @@ export class ProjectUserRepository {
       userId: input.userId,
       addedBy: input.addedBy ?? null,
     });
-    return toEntity(instance);
-  }
-
-  async findById(id: string): Promise<ProjectUserEntity | null> {
-    const instance = await this.model.findByPk(id);
-    return instance ? toEntity(instance) : null;
+    return toEntityWithIsoDates<ProjectUserEntity>(instance, DATE_FIELDS);
   }
 
   async findByProjectAndUser(projectId: string, userId: string): Promise<ProjectUserEntity | null> {
     const instance = await this.model.findOne({ where: { projectId, userId } });
-    return instance ? toEntity(instance) : null;
+    return instance ? toEntityWithIsoDates<ProjectUserEntity>(instance, DATE_FIELDS) : null;
   }
 
   async listByProject(projectId: string): Promise<readonly ProjectUserEntity[]> {
     const rows = await this.model.findAll({ where: { projectId }, order: [["addedAt", "ASC"]] });
-    return rows.map(toEntity);
+    return rows.map((row) => toEntityWithIsoDates<ProjectUserEntity>(row, DATE_FIELDS));
   }
 
-  /** Hard delete — safe here: nothing else references a roster row directly (task package §26); the user's own project-scoped authorization, if any, lives separately in `user_roles` and is not affected by removing this roster entry. */
-  async remove(id: string): Promise<boolean> {
-    const count = await this.model.destroy({ where: { id } });
+  /** Hard delete — safe here: nothing else references a roster row directly (task package §26); the user's own project-scoped authorization, if any, lives separately in `user_roles` and is not affected by removing this roster entry. `projectId`-scoped (IDOR fix — see `ProjectEnvironmentRepository.update()`'s doc comment). */
+  async remove(id: string, projectId: string): Promise<boolean> {
+    const count = await this.model.destroy({ where: { id, projectId } });
     return count > 0;
   }
 }

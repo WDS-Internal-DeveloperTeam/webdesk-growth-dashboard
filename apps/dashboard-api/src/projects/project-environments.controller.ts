@@ -70,11 +70,12 @@ export class ProjectEnvironmentsController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Update a project environment" })
   async update(
+    @Param("projectId") projectId: string,
     @Param("environmentId") environmentId: string,
     @Body(new ZodValidationPipe(updateEnvironmentSchema)) body: UpdateEnvironmentDto,
     @Req() req: ProjectsRequest,
   ): Promise<ApiSuccessResponse<ProjectEnvironmentEntity>> {
-    const data = await this.environments.update(environmentId, body, req.authUser!.id);
+    const data = await this.environments.update(environmentId, projectId, body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -83,7 +84,10 @@ export class ProjectEnvironmentsController {
   @UseGuards(OriginCheckGuard, PermissionGuard)
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Remove a project environment" })
-  async remove(@Param("environmentId") environmentId: string): Promise<void> {
-    await this.environments.remove(environmentId);
+  async remove(
+    @Param("projectId") projectId: string,
+    @Param("environmentId") environmentId: string,
+  ): Promise<void> {
+    await this.environments.remove(environmentId, projectId);
   }
 }

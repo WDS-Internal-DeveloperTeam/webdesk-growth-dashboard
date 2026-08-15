@@ -1,21 +1,9 @@
-import type { Model } from "sequelize";
+import type { Transaction } from "sequelize";
 import { getProjectsModels } from "./models.js";
+import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { RoadmapItemEntity, RoadmapItemStatus } from "./entities.js";
 
-function toEntity(instance: Model): RoadmapItemEntity {
-  const json = instance.toJSON() as Record<string, unknown>;
-  return {
-    id: json.id as string,
-    projectId: json.projectId as string,
-    name: json.name as string,
-    sequence: json.sequence as number,
-    status: json.status as RoadmapItemStatus,
-    createdBy: (json.createdBy as string | null) ?? null,
-    updatedBy: (json.updatedBy as string | null) ?? null,
-    createdAt: (json.createdAt as Date).toISOString(),
-    updatedAt: (json.updatedAt as Date).toISOString(),
-  };
-}
+const DATE_FIELDS = ["createdAt", "updatedAt"] as const;
 
 export class RoadmapItemRepository {
   private readonly model = getProjectsModels().RoadmapItem;
@@ -34,29 +22,37 @@ export class RoadmapItemRepository {
       createdBy: input.createdBy ?? null,
       updatedBy: input.createdBy ?? null,
     });
-    return toEntity(instance);
+    return toEntityWithIsoDates<RoadmapItemEntity>(instance, DATE_FIELDS);
   }
 
   async findById(id: string): Promise<RoadmapItemEntity | null> {
     const instance = await this.model.findByPk(id);
-    return instance ? toEntity(instance) : null;
+    return instance ? toEntityWithIsoDates<RoadmapItemEntity>(instance, DATE_FIELDS) : null;
   }
 
+  /**
+   * `projectId`-scoped — see `ProjectEnvironmentRepository.update()`'s doc comment for why (IDOR
+   * fix). `transaction`, when given, lets `ProjectService.setActivePhase()` wrap its multi-row
+   * active-phase update in a single atomic unit instead of the previous sequential, non-transactional
+   * writes (code-review finding, `module-projects-foundation` branch).
+   */
   async update(
     id: string,
+    projectId: string,
     patch: Partial<{
       name: string;
       sequence: number;
       status: RoadmapItemStatus;
       updatedBy: string | null;
     }>,
+    transaction?: Transaction,
   ): Promise<RoadmapItemEntity | null> {
-    const instance = await this.model.findByPk(id);
+    const instance = await this.model.findOne({ where: { id, projectId }, transaction });
     if (!instance) {
       return null;
     }
-    await instance.update(patch);
-    return toEntity(instance);
+    await instance.update(patch, { transaction });
+    return toEntityWithIsoDates<RoadmapItemEntity>(instance, DATE_FIELDS);
   }
 
   async listByProject(projectId: string): Promise<readonly RoadmapItemEntity[]> {
@@ -64,17 +60,17 @@ export class RoadmapItemRepository {
       where: { projectId },
       order: [["sequence", "ASC"]],
     });
-    return rows.map(toEntity);
+    return rows.map((row) => toEntityWithIsoDates<RoadmapItemEntity>(row, DATE_FIELDS));
   }
 
   /**
    * Hard delete. Whether this is safe to call depends on a cross-table check the repository
-   * layer doesn't own — `ProjectService.deleteRoadmapItem()` confirms the item isn't the
-   * project's current `active_phase_id` before calling this (task package's "prevent destructive
-   * deletion when dependent records exist" rule).
+   * layer doesn't own — `RoadmapItemsService.remove()` confirms the item isn't the project's
+   * current `active_phase_id` before calling this (task package's "prevent destructive
+   * deletion when dependent records exist" rule). `projectId`-scoped (IDOR fix).
    */
-  async remove(id: string): Promise<boolean> {
-    const count = await this.model.destroy({ where: { id } });
+  async remove(id: string, projectId: string): Promise<boolean> {
+    const count = await this.model.destroy({ where: { id, projectId } });
     return count > 0;
   }
 }

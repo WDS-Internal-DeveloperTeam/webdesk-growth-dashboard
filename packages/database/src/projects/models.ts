@@ -63,7 +63,6 @@ export function getProjectsModels(sequelize: Sequelize = getConnection()): Proje
     {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       projectId: { type: DataTypes.UUID, allowNull: false },
-      provider: { type: DataTypes.ENUM("github"), allowNull: false, defaultValue: "github" },
       repoOwner: { type: DataTypes.STRING(255), allowNull: false },
       repoName: { type: DataTypes.STRING(255), allowNull: false },
       defaultBranch: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "main" },

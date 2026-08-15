@@ -70,11 +70,12 @@ export class ProjectObjectivesController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Update a project objective" })
   async update(
+    @Param("projectId") projectId: string,
     @Param("objectiveId") objectiveId: string,
     @Body(new ZodValidationPipe(updateObjectiveSchema)) body: UpdateObjectiveDto,
     @Req() req: ProjectsRequest,
   ): Promise<ApiSuccessResponse<ProjectObjectiveEntity>> {
-    const data = await this.objectives.update(objectiveId, body, req.authUser!.id);
+    const data = await this.objectives.update(objectiveId, projectId, body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -83,7 +84,10 @@ export class ProjectObjectivesController {
   @UseGuards(OriginCheckGuard, PermissionGuard)
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Remove a project objective" })
-  async remove(@Param("objectiveId") objectiveId: string): Promise<void> {
-    await this.objectives.remove(objectiveId);
+  async remove(
+    @Param("projectId") projectId: string,
+    @Param("objectiveId") objectiveId: string,
+  ): Promise<void> {
+    await this.objectives.remove(objectiveId, projectId);
   }
 }

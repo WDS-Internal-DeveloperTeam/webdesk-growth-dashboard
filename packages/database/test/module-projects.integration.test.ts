@@ -70,10 +70,12 @@ describe("Projects module (real disposable database)", () => {
     it("rejects a second active roadmap item for the same project at the database layer", async () => {
       const project = await projects.create({ publicId: `roadmap-${randomUUID()}`, name: "P" });
       const first = await roadmapItems.create({ projectId: project.id, name: "Discovery" });
-      await roadmapItems.update(first.id, { status: "active" });
+      await roadmapItems.update(first.id, project.id, { status: "active" });
 
       const second = await roadmapItems.create({ projectId: project.id, name: "Build" });
-      await expect(roadmapItems.update(second.id, { status: "active" })).rejects.toThrow();
+      await expect(
+        roadmapItems.update(second.id, project.id, { status: "active" }),
+      ).rejects.toThrow();
     });
 
     it("allows one active roadmap item per project, and a different active item in a different project", async () => {
@@ -82,8 +84,8 @@ describe("Projects module (real disposable database)", () => {
       const itemA = await roadmapItems.create({ projectId: projectA.id, name: "Phase A" });
       const itemB = await roadmapItems.create({ projectId: projectB.id, name: "Phase B" });
 
-      await roadmapItems.update(itemA.id, { status: "active" });
-      const updatedB = await roadmapItems.update(itemB.id, { status: "active" });
+      await roadmapItems.update(itemA.id, projectA.id, { status: "active" });
+      const updatedB = await roadmapItems.update(itemB.id, projectB.id, { status: "active" });
 
       expect(updatedB?.status).toBe("active");
     });
@@ -107,7 +109,7 @@ describe("Projects module (real disposable database)", () => {
       const objective = await objectives.create({ projectId: project.id, description: "Launch" });
 
       expect(environment.projectId).toBe(project.id);
-      expect(repository.provider).toBe("github");
+      expect(repository.repoName).toBe("example-repo");
       expect(teamEntry.userId).toBe(user.id);
       expect(objective.status).toBe("open");
 

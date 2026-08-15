@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { withTransaction } from "@webdesk/database";
 import type {
   ProjectConfidentiality,
   ProjectEntity,
@@ -164,12 +165,10 @@ export class ProjectService {
   /**
    * D3 — sets which roadmap item is "active" for this project, keeping the database's own
    * partial-unique-index invariant (at most one `active` roadmap item per project) satisfied by
-   * clearing the previous active item first. This runs as two sequential writes, not inside one
-   * database transaction (no repository method here accepts a `Transaction` handle yet) — a
-   * disclosed, accepted limitation: a concurrent `setActivePhase` call for the same project during
-   * that narrow window could theoretically race. Not expected to matter at V1's usage pattern
-   * (one operator changing one project's active phase at a time), flagged rather than silently
-   * assumed safe.
+   * clearing the previous active item first. Wrapped in `withTransaction()` (code-review finding,
+   * `module-projects-foundation` branch — the previous sequential, non-transactional writes could
+   * leave `active_phase_id` pointing at an item whose own status had already been reset to
+   * `not_started` if a later write failed) so all three writes commit or roll back together.
    */
   async setActivePhase(
     id: string,
@@ -187,19 +186,29 @@ export class ProjectService {
       }
     }
 
-    if (project.activePhaseId && project.activePhaseId !== roadmapItemId) {
-      await this.roadmapItems.update(project.activePhaseId, {
-        status: "not_started",
-        updatedBy: actorUserId,
-      });
-    }
-    if (roadmapItemId !== null) {
-      await this.roadmapItems.update(roadmapItemId, { status: "active", updatedBy: actorUserId });
-    }
+    const updated = await withTransaction(async (transaction) => {
+      if (project.activePhaseId && project.activePhaseId !== roadmapItemId) {
+        await this.roadmapItems.update(
+          project.activePhaseId,
+          id,
+          { status: "not_started", updatedBy: actorUserId },
+          transaction,
+        );
+      }
+      if (roadmapItemId !== null) {
+        await this.roadmapItems.update(
+          roadmapItemId,
+          id,
+          { status: "active", updatedBy: actorUserId },
+          transaction,
+        );
+      }
 
-    const updated = await this.projects.update(id, {
-      activePhaseId: roadmapItemId,
-      updatedBy: actorUserId,
+      return this.projects.update(
+        id,
+        { activePhaseId: roadmapItemId, updatedBy: actorUserId },
+        transaction,
+      );
     });
     if (!updated) {
       throw new NotFoundException(`Project not found: ${id}`);

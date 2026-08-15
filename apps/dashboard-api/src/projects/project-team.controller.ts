@@ -65,7 +65,10 @@ export class ProjectTeamController {
   @UseGuards(OriginCheckGuard, PermissionGuard)
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Remove a user from a project's team roster" })
-  async remove(@Param("teamEntryId") teamEntryId: string): Promise<void> {
-    await this.team.remove(teamEntryId);
+  async remove(
+    @Param("projectId") projectId: string,
+    @Param("teamEntryId") teamEntryId: string,
+  ): Promise<void> {
+    await this.team.remove(teamEntryId, projectId);
   }
 }

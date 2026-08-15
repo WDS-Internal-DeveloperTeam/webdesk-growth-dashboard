@@ -9,6 +9,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
 import { ProjectService } from "./project.service.js";
 
+// withTransaction() opens a real Sequelize connection (needs DATABASE_URL) — irrelevant to this
+// service's own logic, so it's stubbed to just invoke the callback, matching how every other
+// mocked repository call in this file already replaces DB access with a plain function.
+vi.mock("@webdesk/database", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@webdesk/database")>();
+  return {
+    ...actual,
+    withTransaction: vi.fn((fn: (transaction: unknown) => unknown) => fn({ fakeTransaction: true })),
+  };
+});
+
 const NOW = new Date("2026-08-15T00:00:00.000Z");
 
 function project(overrides: Partial<ProjectEntity> = {}): ProjectEntity {
@@ -192,15 +203,20 @@ describe("ProjectService", () => {
 
       expect(roadmapItems.update).toHaveBeenCalledWith(
         "phase-old",
+        "project-1",
         expect.objectContaining({ status: "not_started" }),
+        expect.anything(),
       );
       expect(roadmapItems.update).toHaveBeenCalledWith(
         "phase-new",
+        "project-1",
         expect.objectContaining({ status: "active" }),
+        expect.anything(),
       );
       expect(projects.update).toHaveBeenCalledWith(
         "project-1",
         expect.objectContaining({ activePhaseId: "phase-new" }),
+        expect.anything(),
       );
     });
 
@@ -213,7 +229,9 @@ describe("ProjectService", () => {
       expect(roadmapItems.findById).not.toHaveBeenCalled();
       expect(roadmapItems.update).toHaveBeenCalledWith(
         "phase-old",
+        "project-1",
         expect.objectContaining({ status: "not_started" }),
+        expect.anything(),
       );
       expect(roadmapItems.update).toHaveBeenCalledTimes(1);
     });

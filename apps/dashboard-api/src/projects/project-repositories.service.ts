@@ -24,6 +24,7 @@ export class ProjectRepositoriesService {
 
   async update(
     id: string,
+    projectId: string,
     patch: {
       repoOwner?: string;
       repoName?: string;
@@ -32,15 +33,18 @@ export class ProjectRepositoriesService {
     },
     actorUserId: string,
   ): Promise<ProjectRepositoryEntity> {
-    const updated = await this.repositories.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.repositories.update(id, projectId, {
+      ...patch,
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Project repository not found: ${id}`);
     }
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    const removed = await this.repositories.remove(id);
+  async remove(id: string, projectId: string): Promise<void> {
+    const removed = await this.repositories.remove(id, projectId);
     if (!removed) {
       throw new NotFoundException(`Project repository not found: ${id}`);
     }

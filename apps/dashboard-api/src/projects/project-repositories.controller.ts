@@ -71,11 +71,12 @@ export class ProjectRepositoriesController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Update a project's linked repository metadata" })
   async update(
+    @Param("projectId") projectId: string,
     @Param("repositoryId") repositoryId: string,
     @Body(new ZodValidationPipe(updateProjectRepositorySchema)) body: UpdateProjectRepositoryDto,
     @Req() req: ProjectsRequest,
   ): Promise<ApiSuccessResponse<ProjectRepositoryEntity>> {
-    const data = await this.repositories.update(repositoryId, body, req.authUser!.id);
+    const data = await this.repositories.update(repositoryId, projectId, body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -84,7 +85,10 @@ export class ProjectRepositoriesController {
   @UseGuards(OriginCheckGuard, PermissionGuard)
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Unlink a repository from a project" })
-  async remove(@Param("repositoryId") repositoryId: string): Promise<void> {
-    await this.repositories.remove(repositoryId);
+  async remove(
+    @Param("projectId") projectId: string,
+    @Param("repositoryId") repositoryId: string,
+  ): Promise<void> {
+    await this.repositories.remove(repositoryId, projectId);
   }
 }

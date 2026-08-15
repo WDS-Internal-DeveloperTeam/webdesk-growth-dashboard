@@ -24,18 +24,22 @@ export class ProjectEnvironmentsService {
 
   async update(
     id: string,
+    projectId: string,
     patch: { name?: string; url?: string | null; notes?: string | null },
     actorUserId: string,
   ): Promise<ProjectEnvironmentEntity> {
-    const updated = await this.environments.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.environments.update(id, projectId, {
+      ...patch,
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Project environment not found: ${id}`);
     }
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    const removed = await this.environments.remove(id);
+  async remove(id: string, projectId: string): Promise<void> {
+    const removed = await this.environments.remove(id, projectId);
     if (!removed) {
       throw new NotFoundException(`Project environment not found: ${id}`);
     }

@@ -8,7 +8,6 @@
 
 export type ProjectStatus = "active" | "paused" | "archived";
 export type ProjectConfidentiality = "public" | "internal" | "confidential" | "restricted";
-export type RepositoryProvider = "github";
 export type ObjectiveStatus = "open" | "complete";
 export type RoadmapItemStatus = "not_started" | "active" | "complete" | "skipped";
 
@@ -43,7 +42,6 @@ export interface ProjectEnvironmentEntity {
 export interface ProjectRepositoryEntity {
   readonly id: string;
   readonly projectId: string;
-  readonly provider: RepositoryProvider;
   readonly repoOwner: string;
   readonly repoName: string;
   readonly defaultBranch: string;

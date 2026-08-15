@@ -1,21 +1,8 @@
-import type { Model } from "sequelize";
 import { getProjectsModels } from "./models.js";
+import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { ProjectEnvironmentEntity } from "./entities.js";
 
-function toEntity(instance: Model): ProjectEnvironmentEntity {
-  const json = instance.toJSON() as Record<string, unknown>;
-  return {
-    id: json.id as string,
-    projectId: json.projectId as string,
-    name: json.name as string,
-    url: (json.url as string | null) ?? null,
-    notes: (json.notes as string | null) ?? null,
-    createdBy: (json.createdBy as string | null) ?? null,
-    updatedBy: (json.updatedBy as string | null) ?? null,
-    createdAt: (json.createdAt as Date).toISOString(),
-    updatedAt: (json.updatedAt as Date).toISOString(),
-  };
-}
+const DATE_FIELDS = ["createdAt", "updatedAt"] as const;
 
 export class ProjectEnvironmentRepository {
   private readonly model = getProjectsModels().ProjectEnvironment;
@@ -35,16 +22,17 @@ export class ProjectEnvironmentRepository {
       createdBy: input.createdBy ?? null,
       updatedBy: input.createdBy ?? null,
     });
-    return toEntity(instance);
+    return toEntityWithIsoDates<ProjectEnvironmentEntity>(instance, DATE_FIELDS);
   }
 
-  async findById(id: string): Promise<ProjectEnvironmentEntity | null> {
-    const instance = await this.model.findByPk(id);
-    return instance ? toEntity(instance) : null;
-  }
-
+  /**
+   * `projectId` is required and included in the `where` clause — not just an id lookup — so a
+   * caller authorized against one project can never mutate a row belonging to another (code-review
+   * finding: IDOR via unscoped `findByPk`/`destroy`, `module-projects-foundation` branch).
+   */
   async update(
     id: string,
+    projectId: string,
     patch: Partial<{
       name: string;
       url: string | null;
@@ -52,22 +40,22 @@ export class ProjectEnvironmentRepository {
       updatedBy: string | null;
     }>,
   ): Promise<ProjectEnvironmentEntity | null> {
-    const instance = await this.model.findByPk(id);
+    const instance = await this.model.findOne({ where: { id, projectId } });
     if (!instance) {
       return null;
     }
     await instance.update(patch);
-    return toEntity(instance);
+    return toEntityWithIsoDates<ProjectEnvironmentEntity>(instance, DATE_FIELDS);
   }
 
   async listByProject(projectId: string): Promise<readonly ProjectEnvironmentEntity[]> {
     const rows = await this.model.findAll({ where: { projectId }, order: [["name", "ASC"]] });
-    return rows.map(toEntity);
+    return rows.map((row) => toEntityWithIsoDates<ProjectEnvironmentEntity>(row, DATE_FIELDS));
   }
 
-  /** Hard delete — safe here: no other table references a `project_environments` row (task package §26). */
-  async remove(id: string): Promise<boolean> {
-    const count = await this.model.destroy({ where: { id } });
+  /** Hard delete — safe here: no other table references a `project_environments` row (task package §26). `projectId`-scoped for the same IDOR reason as `update()` above. */
+  async remove(id: string, projectId: string): Promise<boolean> {
+    const count = await this.model.destroy({ where: { id, projectId } });
     return count > 0;
   }
 }

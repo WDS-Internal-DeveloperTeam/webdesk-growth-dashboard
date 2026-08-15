@@ -79,7 +79,9 @@ describe("RoadmapItemsService", () => {
       roadmapItems.findById.mockResolvedValue(roadmapItem({ id: "phase-1" }));
       projects.findById.mockResolvedValue(project({ activePhaseId: "phase-1" }));
 
-      await expect(service.remove("phase-1", "actor-1")).rejects.toThrow(BadRequestException);
+      await expect(service.remove("phase-1", "project-1", "actor-1")).rejects.toThrow(
+        BadRequestException,
+      );
       expect(roadmapItems.remove).not.toHaveBeenCalled();
       expect(auditService.record).not.toHaveBeenCalled();
     });
@@ -89,9 +91,9 @@ describe("RoadmapItemsService", () => {
       projects.findById.mockResolvedValue(project({ activePhaseId: "phase-1" }));
       roadmapItems.remove.mockResolvedValue(true);
 
-      await service.remove("phase-2", "actor-1");
+      await service.remove("phase-2", "project-1", "actor-1");
 
-      expect(roadmapItems.remove).toHaveBeenCalledWith("phase-2");
+      expect(roadmapItems.remove).toHaveBeenCalledWith("phase-2", "project-1");
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: "data_change",
@@ -106,14 +108,28 @@ describe("RoadmapItemsService", () => {
       projects.findById.mockResolvedValue(project({ activePhaseId: null }));
       roadmapItems.remove.mockResolvedValue(true);
 
-      await service.remove("phase-1", "actor-1");
+      await service.remove("phase-1", "project-1", "actor-1");
 
-      expect(roadmapItems.remove).toHaveBeenCalledWith("phase-1");
+      expect(roadmapItems.remove).toHaveBeenCalledWith("phase-1", "project-1");
     });
 
     it("throws NotFoundException for a missing roadmap item", async () => {
       roadmapItems.findById.mockResolvedValue(null);
-      await expect(service.remove("missing", "actor-1")).rejects.toThrow(NotFoundException);
+      await expect(service.remove("missing", "project-1", "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it("throws NotFoundException when the roadmap item belongs to a different project (IDOR guard)", async () => {
+      roadmapItems.findById.mockResolvedValue(
+        roadmapItem({ id: "phase-1", projectId: "project-1" }),
+      );
+
+      await expect(service.remove("phase-1", "project-other", "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(roadmapItems.remove).not.toHaveBeenCalled();
+      expect(auditService.record).not.toHaveBeenCalled();
     });
   });
 });

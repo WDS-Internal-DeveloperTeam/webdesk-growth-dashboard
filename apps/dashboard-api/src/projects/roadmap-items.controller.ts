@@ -71,11 +71,12 @@ export class RoadmapItemsController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Update a roadmap item's name/sequence" })
   async update(
+    @Param("projectId") projectId: string,
     @Param("roadmapItemId") roadmapItemId: string,
     @Body(new ZodValidationPipe(updateRoadmapItemSchema)) body: UpdateRoadmapItemDto,
     @Req() req: ProjectsRequest,
   ): Promise<ApiSuccessResponse<RoadmapItemEntity>> {
-    const data = await this.roadmapItems.update(roadmapItemId, body, req.authUser!.id);
+    const data = await this.roadmapItems.update(roadmapItemId, projectId, body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -87,9 +88,10 @@ export class RoadmapItemsController {
     summary: "Remove a roadmap item (rejected if it is the project's current active phase)",
   })
   async remove(
+    @Param("projectId") projectId: string,
     @Param("roadmapItemId") roadmapItemId: string,
     @Req() req: ProjectsRequest,
   ): Promise<void> {
-    await this.roadmapItems.remove(roadmapItemId, req.authUser!.id);
+    await this.roadmapItems.remove(roadmapItemId, projectId, req.authUser!.id);
   }
 }
