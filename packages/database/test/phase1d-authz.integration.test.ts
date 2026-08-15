@@ -9,6 +9,7 @@ import {
   UserRoleRepository,
 } from "../src/authz/index.js";
 import { UserRepository } from "../src/auth/index.js";
+import { ProjectRepository } from "../src/projects/index.js";
 import { closeConnection } from "../src/connection.js";
 import { buildMigrator } from "../src/migrate.js";
 
@@ -26,6 +27,7 @@ describe("Phase 1D RBAC (real disposable database)", () => {
   const users = new UserRepository();
   const moduleRegistry = new ModuleRegistryRepository();
   const authorizationActions = new AuthorizationActionRepository();
+  const projects = new ProjectRepository();
 
   beforeAll(async () => {
     const migrator = buildMigrator();
@@ -199,8 +201,14 @@ describe("Phase 1D RBAC (real disposable database)", () => {
       });
       const readOnly = await roles.findByKey("read_only");
       const businessKnowledge = await modules.findByKey("business_knowledge");
-      const projectA = randomUUID();
-      const projectB = randomUUID();
+      // Real project rows required since migration 00043 added the FK constraint
+      // (docs/task-packages/module-projects-foundation.md) — arbitrary UUIDs no longer suffice.
+      const projectA = (
+        await projects.create({ publicId: `pa-${randomUUID()}`, name: "Project A" })
+      ).id;
+      const projectB = (
+        await projects.create({ publicId: `pb-${randomUUID()}`, name: "Project B" })
+      ).id;
 
       await userRoles.assign(user.id, readOnly!.id, projectA);
 
@@ -237,7 +245,9 @@ describe("Phase 1D RBAC (real disposable database)", () => {
         displayName: "Project Scope HasRole Test",
       });
       const developer = await roles.findByKey("developer");
-      const projectA = randomUUID();
+      const projectA = (
+        await projects.create({ publicId: `pa-${randomUUID()}`, name: "Project A" })
+      ).id;
 
       await userRoles.assign(user.id, developer!.id, projectA);
 
@@ -258,7 +268,9 @@ describe("Phase 1D RBAC (real disposable database)", () => {
         displayName: "Project Scope Both Test",
       });
       const developer = await roles.findByKey("developer");
-      const projectA = randomUUID();
+      const projectA = (
+        await projects.create({ publicId: `pa-${randomUUID()}`, name: "Project A" })
+      ).id;
 
       await userRoles.assign(user.id, developer!.id, null);
       await userRoles.assign(user.id, developer!.id, projectA);
