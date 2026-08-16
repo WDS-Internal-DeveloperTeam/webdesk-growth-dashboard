@@ -311,8 +311,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == b6d0b601db1025d6c175afae4309aa406281ff39`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Projects list page is now genuinely live in production.**
-10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, reviewed, gated, not
-    yet merged (2026-08-16).**
+10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, reviewed, gated,
+    merged, and live in production (2026-08-16).**
     `docs/implementation/dashboard-web-project-detail.md` records the full account. Not started
     automatically — built directly on the explicit "build the project detail page UI" instruction.
     No approved wireframe exists for this screen; the only prior description is
@@ -336,9 +336,12 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     published as a Claude artifact for the required second-role human review, since the
     implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
     returned "Approved."** **The gate (G4-project-detail) was then separately requested and
-    approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #27" has not been requested** —
-    merge authorization remains a separate, not-yet-requested next step, same as every other
-    slice.
+    approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #27" was then separately
+    requested and executed** — merge commit `af23ba1c0172c834d2d1311666a2811397598b14`, both
+    Vercel projects auto-deployed and were verified live directly: `dashboard-api`'s `/health`
+    returned `build.commitSha == af23ba1c0172c834d2d1311666a2811397598b14`, and `dashboard-web`'s
+    `/` resolves to `/auth/sign-in` for an unauthenticated visitor. **The Project Detail page is
+    now genuinely live in production.**
 
 ## Recent decisions
 
@@ -1441,6 +1444,17 @@ b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is
   **This gate approval does not itself authorize merging PR #27 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-16]` **"Merge PR #27" was separately requested and executed.** Merged with a real merge
+  commit (not squash/rebase), matching every prior merge in this project's history — merge commit
+  `af23ba1c0172c834d2d1311666a2811397598b14`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+af23ba1c0172c834d2d1311666a2811397598b14`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming the
+  session gate is intact. **The `dashboard-web` Project Detail page is now genuinely live in
+  production**, closing out this slice's full build-to-production arc. Backend, header switcher,
+  list page, and now the detail page are all live for the Projects module — no create/edit form or
+  pause/archive/edit actions exist yet, both separate, not-yet-requested next steps.
 
 ## Open client blockers
 
