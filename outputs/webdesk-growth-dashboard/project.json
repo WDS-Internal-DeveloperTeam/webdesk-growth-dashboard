@@ -584,6 +584,22 @@
       },
       "project_version_before": 20,
       "project_version_after": 21
+    },
+    {
+      "timestamp": "2026-08-16T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "completed required second-role human review of dashboard-web-project-switcher (PR #25) — decision: Approved",
+      "details": {
+        "branch": "dashboard-web-project-switcher",
+        "pr": 25,
+        "scope_reviewed": "Independent code-review disposition (6 findings: 4 CONFIRMED all fixed, 2 PLAUSIBLE tracked) and independent security-review disposition (0 findings above threshold), via a published review packet (Claude artifact)",
+        "record": "docs/project-state/dashboard-web-project-switcher-approval-checklist.md and this entry",
+        "disputes_raised": "None recorded",
+        "not_yet_done": "A gate decision (none requested yet for this slice) and merge authorization remain separate, not-yet-requested next steps, per this project's standing 'no auto-merge' discipline."
+      },
+      "project_version_before": 21,
+      "project_version_after": 22
     }
   ]
 }

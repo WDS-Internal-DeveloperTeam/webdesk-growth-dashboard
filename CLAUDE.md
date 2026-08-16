@@ -272,14 +272,18 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    genuinely live in production.** No full UI yet (dashboard-web) — the header Project Switcher
    itself is now built (2026-08-16, see item 8 and "Recent decisions" below), but wiring a real
    downstream "current project" context other modules read remains separate, undesigned scope.
-8. **`dashboard-web` Project Switcher — built, validated, pushed as its own branch, not yet
-   reviewed/merged (2026-08-16).** `docs/implementation/dashboard-web-project-switcher.md` records
-   the full account. Not started automatically — built directly on the explicit "build the
-   dashboard-web Project Switcher UI" instruction, since D7 already named this as the specific
-   next follow-up once the Projects module backend landed. Independent code review, security
-   review (this branch adds no new mutation surface — it only reads the already-reviewed,
-   already-gated `GET /projects`, but the project's standing review discipline still applies),
-   second-role human review, a gate decision, and merge authorization remain separate,
+8. **`dashboard-web` Project Switcher — built, code-reviewed, security-reviewed, second-role human
+   reviewed, not yet gated or merged (2026-08-16).**
+   `docs/implementation/dashboard-web-project-switcher.md` records the full account;
+   `docs/project-state/dashboard-web-project-switcher-approval-checklist.md` records the review
+   sign-off. Not started automatically — built directly on the explicit "build the dashboard-web
+   Project Switcher UI" instruction, since D7 already named this as the specific next follow-up
+   once the Projects module backend landed. Independent code review (medium effort — 6 findings, 4
+   CONFIRMED, all fixed) and a separate security review (0 findings above threshold) both ran on
+   [PR #25](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/25); a
+   review packet was published as a Claude artifact for the required second-role human review,
+   since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it
+   and returned "Approved."** A gate decision and merge authorization remain separate,
    not-yet-requested next steps, same as every other slice.
 
 ## Recent decisions
@@ -1148,6 +1152,33 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   review, security review, second-role human review, a gate decision, and merge authorization are
   each their own separate, not-yet-requested next step, unchanged from this project's standing
   discipline for every prior slice.
+- `[2026-08-16]` **Independent code review run on `dashboard-web-project-switcher` (PR #25),
+  medium effort — a small, additive UI-only slice with no new mutation surface (reuses the
+  already-reviewed, already-gated `GET /projects`).** 6 findings surfaced (4 CONFIRMED, 2
+  PLAUSIBLE). All 4 CONFIRMED fixed (commit `269b823`): (1) a network-level failure fetching
+  `GET /projects` — not just a bad HTTP status — rejected the shared `Promise.all` inside
+  `getServerSession()` and crashed the whole authenticated shell instead of just the switcher;
+  fixed by extracting a `fetchProjectSummaries()` helper that never rejects; (2) `/projects`
+  failures degraded silently with no logging, the same blind-spot class behind the 2026-08-12
+  production incident — fixed with `console.error` on both failure paths, matching the existing
+  `tryGetApiBaseUrl()` pattern; (3) the unqualified `GET /projects` call silently hit the
+  backend's default 50-row page limit, which could drop real projects and misfire the switcher's
+  stale-cookie fallback — fixed with `?limit=200` (the backend's actual max); (4) the Home page
+  still read "the Projects module hasn't been built yet" directly beneath the new, working header
+  switcher — fixed by rewording. The 2 PLAUSIBLE findings (switcher selection not re-syncing after
+  mount — currently unobservable, only one page exists under the shell layout; and the `/projects`
+  fetch being bundled into the session-resolution function — a documented, deliberate tradeoff)
+  were left as tracked, non-blocking. Added 3 regression tests for the resilience fixes (16/16
+  `dashboard-web` unit tests passing). A separate `security-review` skill run found no findings
+  above the reporting threshold — the new `wds_current_project` cookie carries zero authorization
+  weight (its one reader only pre-selects the UI, then the switcher re-validates against the real
+  project list) and its value is always a server-generated UUID, never attacker-controlled. All 14
+  CI checks passing on commit `269b823`. A review packet (published as a Claude artifact — code
+  review + security review findings, fixes, and validation evidence) was prepared for the required
+  second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
+  `docs/project-state/dashboard-web-project-switcher-approval-checklist.md`'s "Sign-off" section.
+  A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
@@ -1321,7 +1352,11 @@ that date's "Recent decisions" entries for the complete account. **The Projects 
 genuinely live in production** — no `dashboard-web` UI existed yet as of that entry.
 
 **2026-08-16 update**: the `dashboard-web` header Project Switcher (branch
-`dashboard-web-project-switcher`) is now built and validated — see this date's "Recent decisions"
-entry and `docs/implementation/dashboard-web-project-switcher.md`. Genuinely undesigned scope
-(D7), built to the smallest honest reading of the one wireframe label that named it. Not yet
-reviewed or merged.
+`dashboard-web-project-switcher`, [PR #25](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/25))
+is built, validated, independently code-reviewed (4 CONFIRMED findings fixed), security-reviewed
+(0 findings), and has completed its required second-role human review — Jitesh D, "Approved". See
+this date's "Recent decisions" entries,
+`docs/implementation/dashboard-web-project-switcher.md`, and
+`docs/project-state/dashboard-web-project-switcher-approval-checklist.md`'s "Sign-off" section.
+Genuinely undesigned scope (D7), built to the smallest honest reading of the one wireframe label
+that named it. A gate decision and merge remain separate, not-yet-requested next steps.
