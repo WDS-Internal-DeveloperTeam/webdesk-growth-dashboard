@@ -1,9 +1,10 @@
 # dashboard-web Project Switcher — Approval Checklist
 
-**Status:** Required second-role human review complete (2026-08-16, Jitesh D, **Approved**). See
-"Sign-off" below. **A gate decision has not yet been requested, and branch
-`dashboard-web-project-switcher` (PR #25) is not yet merged to `main`** — both remain their own
-separate, not-yet-requested authorizations, per this project's standing discipline.
+**Status:** Required second-role human review complete (2026-08-16, Jitesh D, **Approved**). **The
+gate (G4-project-switcher) is now approved** — WebDesk Solution, decision CONFIRM, 2026-08-16. See
+"Sign-off" below and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **Branch
+`dashboard-web-project-switcher` (PR #25) is not yet merged to `main`** — merging remains its own
+separate, not-yet-requested authorization.
 
 ## Completion condition
 
@@ -19,10 +20,10 @@ this slice can be requested.
 | 5   | Full validation clean                            | ✅ typecheck, lint, `next build` all clean                                                                                                                                                            |
 | 6   | Independent code review complete                 | ✅ Medium-effort review — 6 findings (4 CONFIRMED, 2 PLAUSIBLE); all 4 CONFIRMED fixed and re-validated. See the review packet, §2.                                                                   |
 | 7   | Security review complete                         | ✅ `security-review` skill run separately from the code review — 0 findings above the reporting threshold. See the review packet, §3.                                                                 |
-| 8   | CI green                                         | ✅ 14/14 checks passing on PR #25 as of commit `269b823`                                                                                                                                              |
+| 8   | CI green                                         | ✅ 14/14 checks passing on PR #25 as of commit `134b7fa2015fe3a58630f9718f560b865ace0794`                                                                                                             |
 | 9   | Review packet produced for second-role reviewer  | ✅ Published as a Claude artifact — code review + security review findings, fixes, and validation evidence, with a decision section                                                                   |
 | 10  | Documentation updated                            | ✅ `CLAUDE.md`, `docs/implementation/dashboard-web-project-switcher.md`, this checklist                                                                                                               |
-| 11  | Exact branch/commit verified and recorded        | ✅ Branch `dashboard-web-project-switcher`, off `main` at `03787e4`, PR #25, latest commit `269b823`                                                                                                  |
+| 11  | Exact branch/commit verified and recorded        | ✅ Branch `dashboard-web-project-switcher`, off `main` at `03787e4`, PR #25, latest commit `134b7fa2015fe3a58630f9718f560b865ace0794`                                                                 |
 
 ## Forbidden-actions check
 
@@ -43,8 +44,10 @@ this slice can be requested.
 
 ## Sign-off
 
-**Second-role human review: complete.** A gate decision and merge authorization remain separate,
-not-yet-requested next steps, same pattern as every prior phase/module.
+**Second-role human review: complete. Gate G4-project-switcher: approved.** Both were their own
+separate, explicit human step, per every prior phase's own pattern of keeping the review and the
+gate decision distinct — the gate was requested, and approved, only after the review above was
+already recorded as complete.
 
 | Field                         | Value                                                                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -54,6 +57,16 @@ not-yet-requested next steps, same pattern as every prior phase/module.
 | Scope reviewed                | Full code-review disposition (4/4 CONFIRMED fixed) and full security-review disposition (0 findings), via the published review packet |
 | Disputes raised               | None recorded                                                                                                                         |
 
-| Role                          | Name     | Decision   | Date       |
-| ----------------------------- | -------- | ---------- | ---------- |
-| Reviewer (second-role review) | Jitesh D | ☑ Approved | 2026-08-16 |
+| Field                    | Value                                                                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-project-switcher                                                                                                                                                         |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                            |
+| Gate date                | 2026-08-16                                                                                                                                                                  |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                           |
+| Approved commit          | `134b7fa2015fe3a58630f9718f560b865ace0794` on branch `dashboard-web-project-switcher` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
+| Scope                    | `dashboard-web` Project Switcher only. **Branch/PR #25 is not yet merged to `main`** — merging remains its own separate, not-yet-requested authorization.                   |
+
+| Role                          | Name             | Decision   | Date       |
+| ----------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved | 2026-08-16 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-16 |

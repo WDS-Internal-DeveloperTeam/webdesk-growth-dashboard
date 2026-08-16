@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-projects",
+    "current_gate": "G4-project-switcher",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -177,6 +177,18 @@
       "decided_at": "2026-08-15T00:00:00Z",
       "decision": "CONFIRM",
       "notes": "Projects module foundation — the first real business module built on the Phase 1F application shell/canonical module registry, and the first real exercise of the project-scoped authorization mechanism (user_roles.project_id/role_permissions.project_id) Phase 1D-expanded built but never wired to a route. Schema (migrations 00036-00044): projects plus five owned sub-resources (environments, repositories, team, objectives, roadmap items). Full CRUD API gated by PermissionGuard against already-seeded project_configuration grants — no new RBAC migration needed. Building it surfaced and closed a dormant Op.in/NULL bug in the RBAC repositories (flagged as tracked debt in the 2026-08-12 Phase 1D code review, closed now because this is the first project-scoped route to exercise it). 315 dashboard-api unit + 87 dashboard-api integration/e2e tests (plus 117 packages/database integration, run separately), all passing; migration up/down round trip clean (44 migrations); typecheck/lint/format clean; pnpm audit 0 vulnerabilities; secret scan clean; CI 14/14 checks green. Independent code review (8-angle, high effort) surfaced 9 findings, most severe an IDOR letting a user authorized on one project mutate another project's sub-resources by ID — all 9 fixed. Security review (run separately, after the code review) surfaced 2 findings — 1 High (any owner_growth_approver could mint unlimited co-approvers via the new project-approver endpoint despite that role deliberately lacking users_roles:edit in the approved matrix) and 1 Medium (project-scoped roles could not be revoked through the API, which also always reported success regardless of outcome) — both fixed with new unit and real-database e2e coverage. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-15, decision 'Approved', no disputes raised) was already complete before this gate was requested — see docs/project-state/module-projects-foundation-approval-checklist.md and its 'Sign-off' section. Approved commit 46300a31ebaa69eb1cb6b848b6e218dda2f808cc on branch module-projects-foundation — this branch (PR #24) is NOT YET MERGED to main, same standing 'no auto-merge' rule as every prior gate: merging remains its own separate, not-yet-requested authorization. Does not itself authorize merging PR #24, production deployment, a production migration run, or any dashboard-web UI work (D7's Project Switcher wiring remains separate, undesigned scope).",
+      "merge_resolution_note": null
+    },
+    {
+      "id": "G4-project-switcher",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-project-switcher",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-16T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "The dashboard-web header Project Switcher (D7's deferred follow-up from module-projects-foundation, and phase-1f-application-shell.md §2's same deferral) — a small, additive UI-only slice with no new mutation surface, reusing the already-reviewed, already-gated GET /projects. Adds ProjectSummary to packages/shared-types (the header's own 'no business-module types until authorized and implemented' condition now true for Projects), loads GET /projects alongside /me and /me/navigation in getServerSession(), and renders a native <select> switcher in AppShell's header. Selection persists to a client-side cookie only — no downstream module reads it yet, unchanged undesigned scope per D7. Independent code review (medium effort) surfaced 6 findings (4 CONFIRMED, 2 PLAUSIBLE) — all 4 CONFIRMED fixed: a /projects network-level failure no longer crashes the whole session (Promise.all isolation), both /projects failure modes now log (closing the same blind-spot class behind the 2026-08-12 production incident), GET /projects now requests ?limit=200 instead of an unbounded call (was silently capped at 50), and stale Home-page copy contradicting the new switcher was corrected. The 2 PLAUSIBLE findings (switcher selection not re-syncing post-mount — currently unobservable; and the /projects fetch being bundled into the session-resolution function — a documented, deliberate tradeoff) were left as tracked, non-blocking. Security review (run separately) found 0 findings above the reporting threshold — the new wds_current_project cookie carries zero authorization weight and its value is always a server-generated UUID. 16/16 dashboard-web unit tests (8 new), 6/6 unauthenticated Playwright smoke tests, typecheck/lint/next build all clean, CI 14/14 checks green. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes raised) was already complete before this gate was requested — see docs/project-state/dashboard-web-project-switcher-approval-checklist.md and its 'Sign-off' section. Approved commit 134b7fa2015fe3a58630f9718f560b865ace0794 on branch dashboard-web-project-switcher — this branch (PR #25) is NOT YET MERGED to main, same standing 'no auto-merge' rule as every prior gate: merging remains its own separate, not-yet-requested authorization. Does not itself authorize merging PR #25, a production deployment, or any downstream 'current project' context wiring (still separate, undesigned scope per D7).",
       "merge_resolution_note": null
     }
   ],
@@ -600,6 +612,23 @@
       },
       "project_version_before": 21,
       "project_version_after": 22
+    },
+    {
+      "timestamp": "2026-08-16T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-project-switcher for dashboard-web-project-switcher (PR #25) — decision: CONFIRM",
+      "details": {
+        "gate": "G4-project-switcher",
+        "scope": "dashboard-web-project-switcher",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes) was already complete before this gate was requested — same pattern as every prior gate in this project's history.",
+        "approved_commit": "134b7fa2015fe3a58630f9718f560b865ace0794",
+        "record": "docs/project-state/dashboard-web-project-switcher-approval-checklist.md and this entry's sibling in project.json's gates[]",
+        "not_yet_done": "This gate approval does not itself authorize merging PR #25, a production deployment, or any downstream 'current project' context wiring — merge remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+      },
+      "project_version_before": 22,
+      "project_version_after": 23
     }
   ]
 }
