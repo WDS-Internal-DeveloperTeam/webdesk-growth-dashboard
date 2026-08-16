@@ -311,6 +311,26 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == b6d0b601db1025d6c175afae4309aa406281ff39`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Projects list page is now genuinely live in production.**
+10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, validated, pushed as
+    its own branch, not yet reviewed/merged (2026-08-16).**
+    `docs/implementation/dashboard-web-project-detail.md` records the full account. Not started
+    automatically — built directly on the explicit "build the project detail page UI" instruction.
+    No approved wireframe exists for this screen; the only prior description is
+    `module-projects-foundation.md` §8's own unapproved proposal (header + Overview/Team/
+    Environments/Repositories/Roadmap tabs), explicitly flagged there as "not sourced... should be
+    confirmed or corrected." Renders the same content grouping as sections instead of client-side
+    tabs (keeps the page fully server-rendered, zero client JS, consistent with the rest of the
+    app) — Overview (public ID, confidentiality, active phase resolved by cross-referencing the
+    project's own roadmap items, owner assigned/not-assigned, team headcount, timestamps,
+    description), Roadmap, Objectives, Environments, and Repositories (linking out to GitHub).
+    Deliberately does not build the header's proposed pause/archive/edit actions (matching the list
+    page's own no-mutation-UI precedent) or any team-member identity list (no user-lookup endpoint
+    exists to resolve a `userId` to a name — only a real headcount is shown, the same constraint
+    that already shaped the list page's own "owner" column omission). The list page's rows now link
+    to this page, and its own `formatTimestamp()` was promoted into the shared `lib/projects.ts` so
+    both pages use the same one. Independent code review, security review, second-role human
+    review, a gate decision, and merge authorization remain separate, not-yet-requested next steps,
+    same as every other slice.
 
 ## Recent decisions
 
@@ -1305,6 +1325,44 @@ b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is
   list page is now genuinely live in production**, closing out this slice's full build-to-
   production arc. Backend, header switcher, and now the list page are all live — no project-detail
   page or create/edit form exists yet, both separate, not-yet-requested next steps.
+- `[2026-08-16]` **Built the `dashboard-web` Project Detail page** (`/projects/:projectId`), under
+  the explicit "build the project detail page UI" instruction. No approved wireframe exists; the
+  only prior description is `module-projects-foundation.md` §8's own unapproved proposal (header +
+  Overview/Team/Environments/Repositories/Roadmap tabs), explicitly flagged as "not sourced...
+  should be confirmed or corrected." Built the same content grouping as sections rather than
+  client-side tabs — a deliberate simplification keeping the page fully server-rendered, zero
+  client JS, consistent with every other page in this app. `packages/shared-types` gained
+  `ProjectDetail` (extends `Project` with `activePhaseId`/`ownerUserId` — legitimate here, unlike
+  the list page's `Project`, since the detail page also fetches the project's own roadmap items in
+  the same pass, so `activePhaseId` resolves to a real name by cross-reference, no fabrication),
+  `RoadmapItem`, `ProjectObjective`, `ProjectEnvironment`, `ProjectRepository`, and
+  `ProjectTeamEntry` (carries only `id` — used solely for a real, non-fabricated headcount, never
+  an identity, since no user-lookup endpoint exists yet). `lib/projects.ts` gained
+  `getProjectDetail()` — fetches `GET /projects/:projectId` first and gates on it (returns `null`
+  specifically on a 404 for the page to call `notFound()`; throws on any other non-OK status, e.g.
+  403/5xx, since none of the five sub-resource list endpoints themselves validate the parent
+  project's existence — a bogus `projectId` returns an empty array, not a 404, so the primary fetch
+  is the only way to detect a genuinely missing project) — then fans out to
+  `roadmap-items`/`objectives`/`environments`/`repositories`/`team` in parallel once the project is
+  confirmed to exist. Also promoted `formatTimestamp()` out of the list page's own file into the
+  shared `lib/projects.ts` (both pages now use the identical one) and added
+  `roadmapItemStatusBadge()`/`objectiveStatusBadge()`, following `projectStatusBadge()`'s own
+  pattern (`active`/`complete` roadmap-item statuses deliberately share the `healthy` token — both
+  are non-problem states, disambiguated by label text, not color, since the token palette has no
+  distinct "success" concept). The list page's rows now link to `/projects/{id}` — a necessary,
+  minimal follow-on now that a destination exists (previously plain, unlinked text). Deliberately
+  not built: the header's proposed pause/archive/edit actions (matching the list page's own
+  no-mutation-UI precedent) and any team-member identity list (same no-user-lookup constraint
+  already shaping the list page's "owner" column omission). Full validation: 24/24
+  `dashboard-web` unit tests (10 new), 11/11 Playwright tests (1 new — an unauthenticated visit to
+  a detail URL redirects to sign-in), typecheck (after rebuilding `packages/shared-types`, whose
+  compiled `dist/` is what `dashboard-web` actually resolves against)/lint/`next build` all clean,
+  and a live dev-server check confirmed zero server-side or console errors on the unauthenticated
+  redirect path. See `docs/implementation/dashboard-web-project-detail.md` for the full as-built
+  record. **Not yet reviewed or merged** — pushed as its own branch
+  (`dashboard-web-project-detail`); code review, security review, second-role human review, a gate
+  decision, and merge authorization are each their own separate, not-yet-requested next step,
+  unchanged from this project's standing discipline.
 
 ## Open client blockers
 
