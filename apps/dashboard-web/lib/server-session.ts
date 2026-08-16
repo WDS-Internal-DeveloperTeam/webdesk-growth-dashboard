@@ -48,6 +48,45 @@ function tryGetApiBaseUrl(): string | null {
 }
 
 /**
+ * `limit=200` (the backend's own `MAX_LIST_LIMIT`) rather than no query at all — the unqualified
+ * call was silently capped at the backend's `DEFAULT_LIST_LIMIT` of 50, so an org with more
+ * projects than that would have some silently missing from the switcher, including a caller's own
+ * previously-selected project falling out of the returned page and being wrongly treated as
+ * stale/inaccessible. This raises the threshold, it doesn't remove it — a real "browse/search all
+ * projects" UI (D7-adjacent, still undesigned) is the actual fix if project counts ever approach
+ * 200.
+ */
+const PROJECTS_FETCH_QUERY = "?limit=200";
+
+/**
+ * Never throws or rejects — unlike `/me`/`/me/navigation`, a `/projects` failure (network error OR
+ * bad HTTP status) degrades to an empty list, since the Project Switcher is header chrome, not an
+ * authentication gate. Every failure is still logged, matching `tryGetApiBaseUrl()`'s own pattern
+ * above: a silent, unlogged degrade is exactly the blind spot that made the 2026-08-12 production
+ * incident (documented in this repo's `CLAUDE.md`) invisible until deliberately instrumented.
+ */
+async function fetchProjectSummaries(
+  apiBaseUrl: string,
+  headers: HeadersInit,
+): Promise<readonly ProjectSummary[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/projects${PROJECTS_FETCH_QUERY}`, {
+      headers,
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("getServerSession: GET /projects request failed", error);
+    return [];
+  }
+  if (!response.ok) {
+    console.error(`getServerSession: GET /projects returned status ${response.status}`);
+    return [];
+  }
+  return ((await response.json()) as ApiSuccessResponse<readonly ProjectSummary[]>).data;
+}
+
+/**
  * Resolves the current request's session server-side, or `null` if there is
  * no valid session (no cookie, or `dashboard-api` returns 401). Any OTHER
  * failure (network error, 5xx, unexpected shape) is thrown rather than
@@ -81,10 +120,14 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
   }
 
   const headers = { cookie: cookieHeader };
-  const [meResponse, navigationResponse, projectsResponse] = await Promise.all([
+  // `fetchProjectSummaries` never rejects (see its own doc comment) — unlike the two calls below,
+  // a `/projects`-only network failure must not fail this whole `Promise.all` and take down `me`/
+  // `navigation` with it, which a raw `fetch()` here would do (fetch() rejects on network errors,
+  // not just resolves with a bad status, so the `.ok` checks below would never even run).
+  const [meResponse, navigationResponse, projects] = await Promise.all([
     fetch(`${apiBaseUrl}/me`, { headers, cache: "no-store" }),
     fetch(`${apiBaseUrl}/me/navigation`, { headers, cache: "no-store" }),
-    fetch(`${apiBaseUrl}/projects`, { headers, cache: "no-store" }),
+    fetchProjectSummaries(apiBaseUrl, headers),
   ]);
 
   if (meResponse.status === 401 || navigationResponse.status === 401) {
@@ -100,12 +143,6 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
   const navigationBody = (await navigationResponse.json()) as ApiSuccessResponse<
     readonly ModuleRegistrySummary[]
   >;
-  // Unlike `me`/`navigation`, a caller who genuinely lacks `project_configuration:view` (none of
-  // the seeded roles today, but the guard is real) sees an empty switcher, not a broken shell —
-  // the Project Switcher is header chrome, not an authentication gate.
-  const projects = projectsResponse.ok
-    ? ((await projectsResponse.json()) as ApiSuccessResponse<readonly ProjectSummary[]>).data
-    : [];
 
   return { me: meBody.data, navigation: navigationBody.data, projects };
 });

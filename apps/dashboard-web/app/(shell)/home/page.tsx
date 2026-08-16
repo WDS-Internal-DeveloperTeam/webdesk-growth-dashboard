@@ -29,8 +29,8 @@ export default async function HomePage() {
           Project context
         </h2>
         <NotConfiguredState
-          title="No project selected"
-          message="The Projects module hasn't been built yet, so there's no project context to show. This will appear once Projects is implemented in a later phase."
+          title="No project-scoped data yet"
+          message="The header's Project Switcher lets you pick a project, but no module yet reads that selection to filter its own data — this page and every other module still show org-wide information only."
         />
       </section>
 

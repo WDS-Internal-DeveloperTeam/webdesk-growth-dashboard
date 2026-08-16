@@ -70,6 +70,42 @@ a component was type-only (erased before Vite ever sees it, e.g. `app-shell.tsx`
 first real (value) cross-`@/` import a component has needed. Fixed by adding the matching alias to
 `vitest.config.mts`.
 
+## 2b. Code review — 4 CONFIRMED findings fixed
+
+This project's own `code-review` skill ran (medium effort) against the branch and surfaced 6
+findings — 4 CONFIRMED, 2 PLAUSIBLE. All 4 CONFIRMED findings were fixed:
+
+- **`getServerSession()`'s `Promise.all` let a `/projects` network-level failure (not just a bad
+  HTTP status) crash the whole session resolution.** `fetch()` rejects on genuine network errors
+  rather than resolving with a bad status, so the `projectsResponse.ok` guard never ran for that
+  class of failure — a transient `/projects`-only outage would take down `/me`/`/me/navigation`
+  too, exactly the "broken shell" the switcher's own design comment said it wouldn't cause. Fixed
+  by extracting a `fetchProjectSummaries()` helper that never rejects — it catches its own fetch
+  and always resolves to either the real list or `[]`.
+- **A genuine `/projects` backend failure degraded to an empty list with zero logging**, making a
+  real outage indistinguishable from a caller who legitimately has no projects — the same blind
+  spot class that caused the 2026-08-12 production incident this repo's `CLAUDE.md` documents
+  (`tryGetApiBaseUrl()`, two functions above, exists specifically because that lesson was learned
+  once already). Fixed: `fetchProjectSummaries()` now `console.error`s both failure paths (network
+  exception and non-OK status).
+- **`GET /projects` was called with no query params**, silently capped at the backend's
+  `DEFAULT_LIST_LIMIT` of 50 — an org with more projects would have some missing from the switcher
+  with no indication, and a caller's own previously-selected project falling outside that page
+  would be wrongly treated as stale/deleted by the switcher's own fallback logic. Fixed by adding
+  `?limit=200` (the backend's actual `MAX_LIST_LIMIT`) to the fetch — raises the threshold 4x,
+  doesn't remove it; a real browse/search UI is the actual fix if project counts ever approach 200,
+  and is out of scope here (same D7-adjacent undesigned-scope boundary as the rest of this slice).
+- **The Home page's "Project context" section still said "the Projects module hasn't been built
+  yet"** directly under the new, working header switcher on the same screen — a visible,
+  user-facing contradiction. Fixed: reworded to state what's actually true (a switcher exists; no
+  module yet reads the selection to scope its own data).
+
+The 2 PLAUSIBLE findings (the switcher's `selectedId` not re-syncing if `initialProjectId`/
+`projects` change after mount — currently unobservable, since only one page exists under `(shell)/`
+today; and `getServerSession()` now carrying a business-domain fetch alongside its session-auth
+concern, a naming/layering nit with a real documented rationale) were left as tracked, non-blocking
+observations, not fixed in this pass.
+
 ## 3. What was deliberately not built
 
 - Any downstream consumption of the selected project — no module reads `CURRENT_PROJECT_COOKIE`
