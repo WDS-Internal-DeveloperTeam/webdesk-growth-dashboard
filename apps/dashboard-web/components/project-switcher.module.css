@@ -1,0 +1,42 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.label {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  white-space: nowrap;
+}
+
+.select {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  max-width: 14rem;
+}
+
+.select:disabled {
+  color: var(--webdesk-dashboard-color-foreground-subtle);
+  cursor: not-allowed;
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .label {
+    display: none;
+  }
+
+  .select {
+    max-width: 8rem;
+  }
+}

@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
-import type { ApiSuccessResponse, ModuleRegistrySummary } from "@webdesk/shared-types";
+import type {
+  ApiSuccessResponse,
+  ModuleRegistrySummary,
+  ProjectSummary,
+} from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
 
 /**
@@ -20,6 +24,7 @@ export interface ServerSessionProfile {
 export interface ServerSession {
   readonly me: ServerSessionProfile;
   readonly navigation: readonly ModuleRegistrySummary[];
+  readonly projects: readonly ProjectSummary[];
 }
 
 /**
@@ -43,6 +48,45 @@ function tryGetApiBaseUrl(): string | null {
 }
 
 /**
+ * `limit=200` (the backend's own `MAX_LIST_LIMIT`) rather than no query at all — the unqualified
+ * call was silently capped at the backend's `DEFAULT_LIST_LIMIT` of 50, so an org with more
+ * projects than that would have some silently missing from the switcher, including a caller's own
+ * previously-selected project falling out of the returned page and being wrongly treated as
+ * stale/inaccessible. This raises the threshold, it doesn't remove it — a real "browse/search all
+ * projects" UI (D7-adjacent, still undesigned) is the actual fix if project counts ever approach
+ * 200.
+ */
+const PROJECTS_FETCH_QUERY = "?limit=200";
+
+/**
+ * Never throws or rejects — unlike `/me`/`/me/navigation`, a `/projects` failure (network error OR
+ * bad HTTP status) degrades to an empty list, since the Project Switcher is header chrome, not an
+ * authentication gate. Every failure is still logged, matching `tryGetApiBaseUrl()`'s own pattern
+ * above: a silent, unlogged degrade is exactly the blind spot that made the 2026-08-12 production
+ * incident (documented in this repo's `CLAUDE.md`) invisible until deliberately instrumented.
+ */
+async function fetchProjectSummaries(
+  apiBaseUrl: string,
+  headers: HeadersInit,
+): Promise<readonly ProjectSummary[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/projects${PROJECTS_FETCH_QUERY}`, {
+      headers,
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("getServerSession: GET /projects request failed", error);
+    return [];
+  }
+  if (!response.ok) {
+    console.error(`getServerSession: GET /projects returned status ${response.status}`);
+    return [];
+  }
+  return ((await response.json()) as ApiSuccessResponse<readonly ProjectSummary[]>).data;
+}
+
+/**
  * Resolves the current request's session server-side, or `null` if there is
  * no valid session (no cookie, or `dashboard-api` returns 401). Any OTHER
  * failure (network error, 5xx, unexpected shape) is thrown rather than
@@ -52,10 +96,16 @@ function tryGetApiBaseUrl(): string | null {
  *
  * Wrapped in React's `cache()` so the `(shell)` layout and a page under it
  * (e.g. `home/page.tsx`) both calling this for the same request share one
- * real pair of `dashboard-api` calls — Next.js's fetch memoization already
+ * real set of `dashboard-api` calls — Next.js's fetch memoization already
  * happens to dedupe this implicitly today, but that's an incidental
  * property of identical fetch args during a render pass, not a guarantee;
  * `cache()` makes the dedup explicit and robust against future refactors.
+ *
+ * Also loads `GET /projects` for the header Project Switcher (every real role holds
+ * `project_configuration:view` per `06_Roles_and_Permissions.md §3`, so this should never 401 for
+ * an authenticated caller in practice) — bundled here rather than fetched separately by the
+ * switcher component so it's one server-rendered set of session data, not a client-side loading
+ * flash on every page.
  */
 export const getServerSession = cache(async (): Promise<ServerSession | null> => {
   const apiBaseUrl = tryGetApiBaseUrl();
@@ -70,9 +120,14 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
   }
 
   const headers = { cookie: cookieHeader };
-  const [meResponse, navigationResponse] = await Promise.all([
+  // `fetchProjectSummaries` never rejects (see its own doc comment) — unlike the two calls below,
+  // a `/projects`-only network failure must not fail this whole `Promise.all` and take down `me`/
+  // `navigation` with it, which a raw `fetch()` here would do (fetch() rejects on network errors,
+  // not just resolves with a bad status, so the `.ok` checks below would never even run).
+  const [meResponse, navigationResponse, projects] = await Promise.all([
     fetch(`${apiBaseUrl}/me`, { headers, cache: "no-store" }),
     fetch(`${apiBaseUrl}/me/navigation`, { headers, cache: "no-store" }),
+    fetchProjectSummaries(apiBaseUrl, headers),
   ]);
 
   if (meResponse.status === 401 || navigationResponse.status === 401) {
@@ -89,5 +144,5 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
     readonly ModuleRegistrySummary[]
   >;
 
-  return { me: meBody.data, navigation: navigationBody.data };
+  return { me: meBody.data, navigation: navigationBody.data, projects };
 });

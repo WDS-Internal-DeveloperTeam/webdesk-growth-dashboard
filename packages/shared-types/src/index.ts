@@ -213,3 +213,19 @@ export const APPROVED_NAVIGATION_GROUPS: readonly string[] = [
   "help",
   "settings",
 ];
+
+/**
+ * The subset of `ProjectEntity` (`packages/database/src/projects/entities.ts`) the shell's
+ * Project Switcher needs — deliberately not the full backend entity (description, confidentiality,
+ * retention category, etc. stay server-side/module-page concerns, not header-chrome concerns).
+ * `module-projects-foundation` made `GET /projects` real for the first time
+ * (`docs/task-packages/module-projects-foundation.md` D7); this is that module's first
+ * cross-boundary type, following this file's own header rule ("no business-module types until
+ * their owning module is actually authorized and implemented" — now true for Projects).
+ */
+export interface ProjectSummary {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly status: "active" | "paused" | "archived";
+}
