@@ -311,8 +311,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == b6d0b601db1025d6c175afae4309aa406281ff39`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Projects list page is now genuinely live in production.**
-10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, code-reviewed,
-    security-reviewed, not yet merged (2026-08-16).**
+10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, reviewed, gated, not
+    yet merged (2026-08-16).**
     `docs/implementation/dashboard-web-project-detail.md` records the full account. Not started
     automatically — built directly on the explicit "build the project detail page UI" instruction.
     No approved wireframe exists for this screen; the only prior description is
@@ -335,8 +335,10 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     unrestricted URL scheme on a rendered environment link) — also fixed. A review packet was
     published as a Claude artifact for the required second-role human review, since the
     implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
-    returned "Approved."** A gate decision and merge authorization remain separate, not-yet-
-    requested next steps, same as every other slice.
+    returned "Approved."** **The gate (G4-project-detail) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #27" has not been requested** —
+    merge authorization remains a separate, not-yet-requested next step, same as every other
+    slice.
 
 ## Recent decisions
 
@@ -1429,6 +1431,16 @@ b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is
   reviewed it and returned "Approved."** See
   `docs/project-state/dashboard-web-project-detail-approval-checklist.md`'s "Sign-off" section. A
   gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-16]` **The gate (G4-project-detail) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit
+  `9203bb95cc7b8bdedc2393e501f7c900c5343209` on branch `dashboard-web-project-detail` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-project-detail`) and
+  `docs/project-state/dashboard-web-project-detail-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #27 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

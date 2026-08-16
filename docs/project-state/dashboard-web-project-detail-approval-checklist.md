@@ -1,8 +1,9 @@
 # dashboard-web Project Detail Page — Approval Checklist
 
-**Status:** Required second-role human review complete (2026-08-16, Jitesh D, **Approved**). A
-gate decision and merge authorization remain separate, not-yet-requested next steps. See
-"Sign-off" below.
+**Status:** Required second-role human review complete (2026-08-16, Jitesh D, **Approved**). **The
+gate (G4-project-detail) is approved** — WebDesk Solution, decision CONFIRM, 2026-08-16. Merge
+authorization remains a separate, not-yet-requested next step. See "Sign-off" below and
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`/`audit_log`.
 
 ## Completion condition
 
@@ -45,9 +46,10 @@ this slice can be requested.
 
 ## Sign-off
 
-**Second-role human review: complete.** A gate decision and merge authorization remain separate,
-not-yet-requested next steps, per this project's standing discipline (same pattern as every prior
-slice).
+**Second-role human review: complete. Gate G4-project-detail: approved.** Both were their own
+separate, explicit human step, per every prior phase's own pattern of keeping the review and the
+gate decision distinct — the gate was requested, and approved, only after the review above was
+already recorded as complete.
 
 | Field                         | Value                                                                                                                                                                         |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -56,3 +58,17 @@ slice).
 | Decision                      | Approved                                                                                                                                                                      |
 | Scope reviewed                | Full code-review disposition (4/4 CONFIRMED findings fixed, 3 tracked) and full security-review disposition (1 HIGH CONFIRMED finding fixed), via the published review packet |
 | Disputes raised               | None recorded                                                                                                                                                                 |
+
+| Field                    | Value                                                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-project-detail                                                                                                                                                         |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                          |
+| Gate date                | 2026-08-16                                                                                                                                                                |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                         |
+| Approved commit          | `9203bb95cc7b8bdedc2393e501f7c900c5343209` on branch `dashboard-web-project-detail` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
+| Scope                    | `dashboard-web` Project Detail page only. Merge authorization is a separate, not-yet-requested next step.                                                                 |
+
+| Role                          | Name             | Decision   | Date       |
+| ----------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved | 2026-08-16 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-16 |

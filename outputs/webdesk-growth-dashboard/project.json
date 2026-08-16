@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-projects-list",
+    "current_gate": "G4-project-detail",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -201,6 +201,18 @@
       "decided_at": "2026-08-16T00:00:00Z",
       "decision": "CONFIRM",
       "notes": "The dashboard-web Projects list page (/projects) — a single new read-only list page + lib helpers + a new shared Project type, no new mutation surface, reusing the already-reviewed, already-gated GET /projects. No approved wireframe or spec exists for this screen (confirmed against 07_Low_Fidelity_Wireframes.md and 03_Detailed_Module_Specifications.md); renders exactly what GET /projects actually returns and supports — name, status, public ID, updated-at, search, status filter, column sort, offset pagination — deliberately omitting the unsourced 'active phase'/'owner' columns from module-projects-foundation.md §8's own unapproved proposal, since those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no client component. Independent code review (medium effort) surfaced 7 findings (6 CONFIRMED, 1 PLAUSIBLE) — the 2 highest-severity CONFIRMED findings fixed: a pagination dead-end on exact page-size multiples (the old has-next-page heuristic offered a phantom 'Next' link into a guaranteed-empty page with no way back; fixed by requesting one row past the display page size to derive hasNextPage accurately, plus a new 'past the last page' empty-state branch with a real Previous link), and an overlong pasted search term crashing the whole app shell (a 400 from the backend's own max(255) validation propagated as an uncaught error to the root error.tsx; fixed with maxLength={255} on the input and a matching server-side clamp). The remaining 5 findings were left as tracked, non-blocking debt (an unbounded offset that can serialize as exponential notation on a hand-edited URL; a defensive gap in the status-badge lookup, not currently reachable since status is a real Postgres ENUM; two separate GET /projects calls per page view; and two @webdesk/ui FiltersBar-reuse/style-duplication cleanup items). 33/33 dashboard-web unit tests (4 new), 7/7 unauthenticated Playwright smoke tests, typecheck/lint/next build all clean, CI 14/14 checks green. Security review (run separately) found 0 findings above the reporting threshold — every untrusted input validates against closed enums or numeric bounds with safe fallbacks, no dangerouslySetInnerHTML, no open-redirect surface. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes raised) was already complete before this gate was requested — see docs/project-state/dashboard-web-projects-list-approval-checklist.md and its 'Sign-off' section. Approved commit e14db588abca2dc89afc02f418677112c39f4045 on branch dashboard-web-projects-list — this branch (PR #26) is NOT YET MERGED to main, same standing 'no auto-merge' rule as every prior gate: merging remains its own separate, not-yet-requested authorization. Does not itself authorize merging PR #26 or a production deployment.",
+      "merge_resolution_note": null
+    },
+    {
+      "id": "G4-project-detail",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-project-detail",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-16T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "The dashboard-web Project Detail page (/projects/:projectId) — a single new read-only detail page + lib helpers + new shared types, no new mutation surface, reusing the already-reviewed, already-gated GET /projects/:projectId and its sub-resource endpoints. No approved wireframe exists for this screen; the only prior description is module-projects-foundation.md §8's own unapproved proposal (header + Overview/Team/Environments/Repositories/Roadmap tabs), explicitly flagged there as not sourced and needing confirmation. Renders the same content grouping as server-rendered sections instead of client-side tabs, keeping the page at zero client JS. Independent code review (medium effort) surfaced 7 findings (4 CONFIRMED, 3 PLAUSIBLE) — all 4 CONFIRMED fixed: a malformed projectId producing a raw 500 instead of a clean 404 (fixed with a UUID_PATTERN check rejecting a malformed ID as not-found before any network call); sub-resource fetches waiting on the primary fetch unnecessarily, adding an avoidable round trip on every normal page view (fixed by firing all 6 requests concurrently); a stale doc comment on the list page now made false by this PR's own new link (reworded); and a monospace font stack hardcoded three times instead of using the shared typographyTokens.fontFamilyMono token (fixed). The 3 PLAUSIBLE findings were left as tracked, non-blocking debt. Security review (run separately, after the code review) surfaced 1 HIGH-severity CONFIRMED finding — stored XSS via an unrestricted URL scheme in ProjectEnvironment.url rendered as a clickable link: the backend's z.string().url() validation does not restrict scheme, so a javascript: URL passes and is persisted unsanitized, and this page was the first place in the codebase to render that stored field as a link; owner_growth_approver (not the most trusted role) holds project_configuration:edit while five other roles are view-only, giving a genuine cross-privilege attack path — fixed with a new isSafeHttpUrl() guard that only renders a stored URL as a clickable link when its protocol is http:/https:, closing the vulnerability at its actual sink regardless of what the backend allows. Backend schema hardening was flagged as a separate, out-of-scope follow-up task rather than folded into this branch. 44/44 dashboard-web unit tests (14 new across build and both fix rounds), 11/11 Playwright tests, typecheck/lint/next build all clean, CI 14/14 checks green. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes raised) was already complete before this gate was requested — see docs/project-state/dashboard-web-project-detail-approval-checklist.md and its 'Sign-off' section. Approved commit 9203bb95cc7b8bdedc2393e501f7c900c5343209 on branch dashboard-web-project-detail — this branch (PR #27) is NOT YET MERGED to main, same standing 'no auto-merge' rule as every prior gate: merging remains its own separate, not-yet-requested authorization. Does not itself authorize merging PR #27 or a production deployment.",
       "merge_resolution_note": null
     }
   ],
@@ -716,6 +728,23 @@
       },
       "project_version_before": 27,
       "project_version_after": 28
+    },
+    {
+      "timestamp": "2026-08-16T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-project-detail for dashboard-web-project-detail (PR #27) — decision: CONFIRM",
+      "details": {
+        "gate": "G4-project-detail",
+        "scope": "dashboard-web-project-detail",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes) was already complete before this gate was requested — same pattern as every prior gate in this project's history.",
+        "approved_commit": "9203bb95cc7b8bdedc2393e501f7c900c5343209",
+        "record": "docs/project-state/dashboard-web-project-detail-approval-checklist.md and this entry's sibling in project.json's gates[]",
+        "not_yet_done": "This gate approval does not itself authorize merging PR #27 or a production deployment — merge remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+      },
+      "project_version_before": 28,
+      "project_version_after": 29
     }
   ]
 }
