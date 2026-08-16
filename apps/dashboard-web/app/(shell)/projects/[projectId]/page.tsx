@@ -34,9 +34,11 @@ const CONFIDENTIALITY_LABEL: Readonly<Record<ProjectDetail["confidentiality"], s
  *  (no client component, no JS required) — a deliberate simplification, not a client-side gap.
  *  "Team" has no member-identity list (§8's proposal implies one) since no user-lookup endpoint
  *  exists yet to resolve a `userId` to a name; only the real, non-fabricated headcount is shown,
- *  same reasoning already established for `ownerUserId`/`activePhaseId` on the list page. The
- *  header's proposed pause/archive/edit actions are deliberately not built — this page is read-only,
- *  matching the list page's own precedent of shipping display-only UI before any mutation UI. */
+ *  same reasoning already established for `ownerUserId`/`activePhaseId` on the list page. An
+ *  "Edit" action now links to `/projects/:id/edit` (name/description/confidentiality only); the
+ *  header's proposed pause/archive actions are still deliberately not built — status transitions
+ *  are their own separate, dedicated action per `module-projects-foundation.md` §8, not this
+ *  form. */
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const session = await getServerSession();
   if (!session) {
@@ -62,6 +64,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         breadcrumbs={[{ label: "Projects", href: "/projects" }, { label: project.name }]}
         linkComponent={Link}
         statusBadge={<StatusBadge status={badge.token} label={badge.label} />}
+        contextActions={
+          <Link href={`/projects/${project.id}/edit`} style={editLinkStyle}>
+            Edit
+          </Link>
+        }
       />
 
       <section style={sectionStyle}>
@@ -182,6 +189,15 @@ function Fact({ label, children }: { readonly label: string; readonly children: 
     </div>
   );
 }
+
+const editLinkStyle: React.CSSProperties = {
+  fontSize: "0.875rem",
+  fontWeight: 600,
+  color: "var(--webdesk-dashboard-color-accent-foreground)",
+  background: "var(--webdesk-dashboard-color-accent)",
+  borderRadius: "var(--webdesk-dashboard-radius-sm)",
+  padding: "0.5rem 0.9rem",
+};
 
 const sectionStyle: React.CSSProperties = {
   marginBottom: "2rem",

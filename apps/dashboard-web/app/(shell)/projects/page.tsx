@@ -58,7 +58,14 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   return (
     <ContentContainer>
-      <PageHeader title="Projects" />
+      <PageHeader
+        title="Projects"
+        contextActions={
+          <Link href="/projects/new" style={newProjectLinkStyle}>
+            New project
+          </Link>
+        }
+      />
 
       <form
         method="get"
@@ -229,6 +236,15 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     </ContentContainer>
   );
 }
+
+const newProjectLinkStyle: React.CSSProperties = {
+  fontSize: "0.875rem",
+  fontWeight: 600,
+  color: "var(--webdesk-dashboard-color-accent-foreground)",
+  background: "var(--webdesk-dashboard-color-accent)",
+  borderRadius: "var(--webdesk-dashboard-radius-sm)",
+  padding: "0.5rem 0.9rem",
+};
 
 const thStyle: React.CSSProperties = {
   textAlign: "left",
