@@ -311,8 +311,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == b6d0b601db1025d6c175afae4309aa406281ff39`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Projects list page is now genuinely live in production.**
-10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, validated, pushed as
-    its own branch, not yet reviewed/merged (2026-08-16).**
+10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, code-reviewed, not yet
+    security-reviewed/merged (2026-08-16).**
     `docs/implementation/dashboard-web-project-detail.md` records the full account. Not started
     automatically — built directly on the explicit "build the project detail page UI" instruction.
     No approved wireframe exists for this screen; the only prior description is
@@ -328,7 +328,10 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     exists to resolve a `userId` to a name — only a real headcount is shown, the same constraint
     that already shaped the list page's own "owner" column omission). The list page's rows now link
     to this page, and its own `formatTimestamp()` was promoted into the shared `lib/projects.ts` so
-    both pages use the same one. Independent code review, security review, second-role human
+    both pages use the same one. Independent code review (medium effort — 7 findings, 4 CONFIRMED,
+    all fixed) ran on
+    [PR #27](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/27) — see
+    this date's "Recent decisions" entry for the fix details. Security review, second-role human
     review, a gate decision, and merge authorization remain separate, not-yet-requested next steps,
     same as every other slice.
 
@@ -1363,6 +1366,36 @@ b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is
   (`dashboard-web-project-detail`); code review, security review, second-role human review, a gate
   decision, and merge authorization are each their own separate, not-yet-requested next step,
   unchanged from this project's standing discipline.
+- `[2026-08-16]` **Independent code review run on `dashboard-web-project-detail` (PR #27), medium
+  effort — a single new read-only detail page + lib helpers + new shared types, no new mutation
+  surface (reuses the already-reviewed, already-gated `GET /projects/:projectId` and its
+  sub-resource endpoints).** 7 findings surfaced (4 CONFIRMED, 3 PLAUSIBLE). All 4 CONFIRMED fixed
+  (commit pending): (1) a malformed `projectId` in the URL produced a raw 500 instead of a clean
+  404 — this page is the first place in the app where an arbitrary URL segment reaches
+  `GET /projects/:projectId` with no format validation anywhere in `dashboard-api`'s stack — fixed
+  with a `UUID_PATTERN` check in `getProjectDetail()` that rejects a malformed ID as "not found"
+  before any network call; (2) the 5 sub-resource fetches waited on the primary project fetch even
+  though they have no genuine data dependency on it, adding an unnecessary sequential round trip to
+  every normal page view — fixed by firing all 6 requests concurrently, with a `tolerateDiscard()`
+  helper to keep an abandoned sub-resource promise's rejection (on the 404 path) from surfacing as
+  an unhandled-rejection warning; (3) the list page's own doc comment claimed "no links to a
+  project-detail page that doesn't exist yet," which this same PR makes false — reworded; (4) the
+  monospace font stack was hardcoded three times (twice new, once pre-existing in the list page)
+  instead of using `typographyTokens.fontFamilyMono` from `@webdesk/ui`, already the pattern
+  `packages/ui`'s own components follow — all three call sites now use the shared token. The 3
+  PLAUSIBLE findings were left as tracked, non-blocking debt: the roadmap-item/objective status
+  badge lookups have no fallback for an enum value outside the current union (an existing risk
+  shape from `projectStatusBadge`, extended here, only reachable via a genuine deploy-skew window);
+  the new `ProjectRepository` shared type collides in name with the pre-existing `ProjectRepository`
+  DAO class in `@webdesk/database` (no active conflict today); and the five empty-state messages
+  don't reuse the shared `EmptyState` component (a defensible call given that component's heavier,
+  page-replacing visual weight). Regression tests updated: a new test asserts a malformed
+  `projectId` never calls `fetch`; the 404 test now expects 6 concurrent fetch calls instead of 1;
+  all `getProjectDetail()` tests switched from placeholder ID strings to real UUID-shaped fixtures.
+  Full re-validation: typecheck/lint/`next build` clean, 41/41 `dashboard-web` unit tests (1 new),
+  11/11 Playwright tests. See `docs/implementation/dashboard-web-project-detail.md`'s "3b. Code
+  review" section for the full account. Security review, second-role human review, a gate decision,
+  and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 

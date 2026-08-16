@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import type { ProjectDetail } from "@webdesk/shared-types";
-import { ContentContainer, PageHeader, StatusBadge } from "@webdesk/ui";
+import { ContentContainer, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
 import { getServerSession } from "@/lib/server-session";
 import {
   formatTimestamp,
@@ -214,8 +214,7 @@ const factValueStyle: React.CSSProperties = {
 };
 
 const monoStyle: React.CSSProperties = {
-  fontFamily:
-    "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+  fontFamily: typographyTokens.fontFamilyMono,
 };
 
 const descriptionStyle: React.CSSProperties = {
@@ -256,8 +255,7 @@ const listItemStyle: React.CSSProperties = {
 };
 
 const sequenceStyle: React.CSSProperties = {
-  fontFamily:
-    "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+  fontFamily: typographyTokens.fontFamilyMono,
   color: "var(--webdesk-dashboard-color-foreground-subtle)",
   minWidth: "1.25rem",
 };

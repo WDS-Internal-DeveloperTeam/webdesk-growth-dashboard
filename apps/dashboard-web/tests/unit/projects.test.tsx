@@ -288,39 +288,53 @@ describe("getProjectDetail", () => {
     } as Response;
   }
 
-  it("returns null when GET /projects/:projectId responds 404, without fetching any sub-resource", async () => {
+  const VALID_ID = "44444444-4444-4444-4444-444444444444";
+  const MISSING_ID = "55555555-5555-5555-5555-555555555555";
+
+  it("rejects a malformed (non-UUID) projectId as not-found, without calling fetch at all", async () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as typeof fetch;
+
+    const result = await getProjectDetail("not-a-real-id");
+
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns null when GET /projects/:projectId responds 404 — the sub-resource fetches it fired concurrently are discarded, not awaited", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response);
     global.fetch = fetchMock as typeof fetch;
 
-    const result = await getProjectDetail("missing-id");
+    const result = await getProjectDetail(MISSING_ID);
 
     expect(result).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // 1 primary + 5 sub-resource fetches — all started concurrently, not gated on the primary.
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it("throws on a non-OK, non-404 primary response instead of treating it as missing", async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 } as Response);
 
-    await expect(getProjectDetail("some-id")).rejects.toThrow(/Failed to load project/);
+    await expect(getProjectDetail(VALID_ID)).rejects.toThrow(/Failed to load project/);
   });
 
   it("throws if a sub-resource fetch fails after the project itself loads successfully", async () => {
     global.fetch = vi.fn((url: string) => {
-      if (url.endsWith("/projects/some-id")) {
+      if (url.endsWith(`/projects/${VALID_ID}`)) {
         return Promise.resolve(okJson(projectDetailFixture()));
       }
       return Promise.resolve({ ok: false, status: 500 } as Response);
     }) as typeof fetch;
 
-    await expect(getProjectDetail("some-id")).rejects.toThrow(/Failed to load project/);
+    await expect(getProjectDetail(VALID_ID)).rejects.toThrow(/Failed to load project/);
   });
 
-  it("fetches the project and every sub-resource, returning a real team headcount", async () => {
+  it("fetches the project and every sub-resource concurrently, returning a real team headcount", async () => {
     const project = projectDetailFixture();
     const requestedUrls: string[] = [];
     global.fetch = vi.fn((url: string) => {
       requestedUrls.push(url);
-      if (url.endsWith("/projects/some-id")) {
+      if (url.endsWith(`/projects/${VALID_ID}`)) {
         return Promise.resolve(okJson(project));
       }
       if (url.endsWith("/roadmap-items")) {
@@ -343,7 +357,7 @@ describe("getProjectDetail", () => {
       throw new Error(`Unexpected URL in test: ${url}`);
     }) as typeof fetch;
 
-    const result = await getProjectDetail("some-id");
+    const result = await getProjectDetail(VALID_ID);
 
     expect(result).not.toBeNull();
     expect(result?.project).toEqual(project);
@@ -351,12 +365,12 @@ describe("getProjectDetail", () => {
     expect(result?.teamCount).toBe(3);
     expect(requestedUrls).toEqual(
       expect.arrayContaining([
-        "https://api.example.com/projects/some-id",
-        "https://api.example.com/projects/some-id/roadmap-items",
-        "https://api.example.com/projects/some-id/objectives",
-        "https://api.example.com/projects/some-id/environments",
-        "https://api.example.com/projects/some-id/repositories",
-        "https://api.example.com/projects/some-id/team",
+        `https://api.example.com/projects/${VALID_ID}`,
+        `https://api.example.com/projects/${VALID_ID}/roadmap-items`,
+        `https://api.example.com/projects/${VALID_ID}/objectives`,
+        `https://api.example.com/projects/${VALID_ID}/environments`,
+        `https://api.example.com/projects/${VALID_ID}/repositories`,
+        `https://api.example.com/projects/${VALID_ID}/team`,
       ]),
     );
   });

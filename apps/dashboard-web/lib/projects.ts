@@ -231,22 +231,70 @@ async function fetchProjectSubResource<T>(
 }
 
 /**
+ * A promise started for its side effect (an in-flight fetch) that may end up discarded without
+ * ever being awaited — e.g. when `getProjectDetail()` below returns early on a 404 while the
+ * sub-resource fetches it fired concurrently are still in flight. Node/Next.js logs an
+ * "unhandled rejection" warning for a promise that rejects with no handler ever attached to it,
+ * even if the caller never intended to look at the result — this attaches a no-op catch so a
+ * discarded rejection stays silent, while the original `promise` (returned unchanged) still
+ * rejects normally for any caller that does await it.
+ */
+function tolerateDiscard<T>(promise: Promise<T>): Promise<T> {
+  promise.catch(() => {});
+  return promise;
+}
+
+/** Matches the `id`/`publicId` shape every `projects`-table UUID column uses — Postgres accepts
+ *  either case, so this isn't anchored to a specific UUID version. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
  * Fetches a single project and its owned sub-resources for the detail page. Returns `null` on a
  * 404 from `GET /projects/:projectId` specifically — the caller renders Next.js's `notFound()` for
  * that case — and throws on any other non-OK status (403, 5xx, ...), same as `getProjects()`
  * above: an authorization or server failure must surface as a real error, not a misleading "this
  * project doesn't exist."
  *
- * The sub-resource fetches only run once the project itself is confirmed to exist, in parallel —
+ * `projectId` is untrusted (a reader can type anything into the URL), and this is the first place
+ * in the app where an arbitrary URL segment reaches `GET /projects/:projectId` — unlike the list
+ * page, nothing upstream already validated it. `dashboard-api` has no route-level UUID validation,
+ * so a malformed value (a typo, a stale bookmark, a bot probing the route) would otherwise reach
+ * Postgres and come back as a raw 500, not a clean 404. Rejecting an obviously-malformed ID
+ * up front, before any network call, treats it the same as "not found" — the honest read of a
+ * garbled URL — instead of surfacing the generic error boundary.
+ *
+ * The sub-resource fetches are started concurrently with the primary fetch, not gated behind it —
  * `GET /projects/:projectId/*` list endpoints don't themselves validate the parent project's
- * existence (a bogus `projectId` returns an empty array, not a 404), so gating on the primary fetch
- * first is the only way to detect a genuinely missing project.
+ * existence (a bogus `projectId` returns an empty array, not a 404), so none of them has a genuine
+ * data dependency on the primary response. Only the *decision* of whether to keep or discard their
+ * results waits on the primary fetch's status, not the fetches themselves — avoiding an extra
+ * sequential round trip on every normal (project-exists) page view.
  */
 export async function getProjectDetail(projectId: string): Promise<ProjectDetailData | null> {
+  if (!UUID_PATTERN.test(projectId)) {
+    return null;
+  }
+
   const apiBaseUrl = getApiBaseUrl();
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
   const headers = { cookie: cookieHeader };
+
+  const roadmapItemsPromise = tolerateDiscard(
+    fetchProjectSubResource<RoadmapItem>(apiBaseUrl, projectId, "roadmap-items", headers),
+  );
+  const objectivesPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectObjective>(apiBaseUrl, projectId, "objectives", headers),
+  );
+  const environmentsPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectEnvironment>(apiBaseUrl, projectId, "environments", headers),
+  );
+  const repositoriesPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectRepository>(apiBaseUrl, projectId, "repositories", headers),
+  );
+  const teamPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectTeamEntry>(apiBaseUrl, projectId, "team", headers),
+  );
 
   const projectResponse = await fetch(`${apiBaseUrl}/projects/${projectId}`, {
     headers,
@@ -261,11 +309,11 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   const project = ((await projectResponse.json()) as ApiSuccessResponse<ProjectDetail>).data;
 
   const [roadmapItems, objectives, environments, repositories, team] = await Promise.all([
-    fetchProjectSubResource<RoadmapItem>(apiBaseUrl, projectId, "roadmap-items", headers),
-    fetchProjectSubResource<ProjectObjective>(apiBaseUrl, projectId, "objectives", headers),
-    fetchProjectSubResource<ProjectEnvironment>(apiBaseUrl, projectId, "environments", headers),
-    fetchProjectSubResource<ProjectRepository>(apiBaseUrl, projectId, "repositories", headers),
-    fetchProjectSubResource<ProjectTeamEntry>(apiBaseUrl, projectId, "team", headers),
+    roadmapItemsPromise,
+    objectivesPromise,
+    environmentsPromise,
+    repositoriesPromise,
+    teamPromise,
   ]);
 
   return {

@@ -1,6 +1,12 @@
 import Link from "next/link";
 import type { Project } from "@webdesk/shared-types";
-import { ContentContainer, EmptyState, PageHeader, StatusBadge } from "@webdesk/ui";
+import {
+  ContentContainer,
+  EmptyState,
+  PageHeader,
+  StatusBadge,
+  typographyTokens,
+} from "@webdesk/ui";
 import { getServerSession } from "@/lib/server-session";
 import {
   buildProjectsHref,
@@ -29,8 +35,8 @@ const COLUMN_LABELS: Readonly<Record<ProjectSortBy, string>> = {
 /** No approved wireframe exists for a Projects list screen (only the shell nav item and header
  *  Project Switcher are sourced — see `docs/task-packages/module-projects-foundation.md` §8's own
  *  "not sourced, confirm or correct" note). This renders exactly what `GET /projects` actually
- *  returns and supports (name/status/search/sort/pagination) — no invented columns, no links to
- *  a project-detail page that doesn't exist yet. */
+ *  returns and supports (name/status/search/sort/pagination) — no invented columns; each row's
+ *  name links to `/projects/:id`, the real detail page. */
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
   // The (shell) layout already redirects unauthenticated callers to sign-in before this page
   // renders — this is a defensive fallback (same pattern as home/page.tsx), not the real guard.
@@ -276,8 +282,7 @@ function ProjectRow({ project }: { readonly project: Project }) {
       <td
         style={{
           ...tdStyle,
-          fontFamily:
-            "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+          fontFamily: typographyTokens.fontFamilyMono,
           color: "var(--webdesk-dashboard-color-foreground-muted)",
         }}
       >

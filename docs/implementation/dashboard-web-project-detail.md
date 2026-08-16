@@ -104,14 +104,60 @@ deviations from it, both recorded here rather than silently applied:
   `GET /projects/:projectId/*` list endpoints are paginated on the backend (confirmed by reading
   each controller); they return every row, already ordered.
 
+## 3b. Code review — 4 CONFIRMED findings fixed
+
+This project's own `code-review` skill ran (medium effort, 8-angle) against the branch and
+surfaced 7 findings — 4 CONFIRMED, 3 PLAUSIBLE. All 4 CONFIRMED findings were fixed:
+
+- **A malformed `projectId` produced a raw 500, not a clean 404.** This page is the first place in
+  the app where an arbitrary URL segment reaches `GET /projects/:projectId` unvalidated — no
+  `ValidationPipe`/`ParseUUIDPipe` exists anywhere in `dashboard-api`, so a non-UUID value (a typo,
+  a stale bookmark, a bot probing the route) reached Postgres and came back as a generic 500 via
+  `AllExceptionsFilter`, landing the visitor on the app's error boundary instead of a not-found
+  page. Fixed in `getProjectDetail()` with a `UUID_PATTERN` regex check up front — a malformed ID
+  is now rejected as "not found" before any network call, the honest read of a garbled URL.
+- **Sub-resource fetches waited on the primary fetch unnecessarily.** The 5 sub-resource fetches
+  had no genuine data dependency on the primary project response (`GET /projects/:projectId/*`
+  doesn't validate the parent project's existence either way), so gating their _start_ behind the
+  primary fetch — rather than just gating the _decision_ to keep or discard their results — added a
+  full extra sequential round trip to every normal (project-exists) page view. Fixed by firing all
+  6 requests concurrently; only the decision to await/use the 5 sub-resource results still waits on
+  the primary fetch's status. Discarded promises (the 404 path) get a `tolerateDiscard()` no-op
+  `.catch()` so an abandoned rejection doesn't surface as an unhandled-rejection warning.
+- **The list page's own doc comment was now false.** It said "no links to a project-detail page
+  that doesn't exist yet" — this same PR adds exactly that link. Reworded to describe what the row
+  link actually does.
+- **The monospace font stack was hardcoded three times** (twice in the new detail page, once
+  pre-existing in the list page) instead of using `typographyTokens.fontFamilyMono` from
+  `@webdesk/ui` — already the pattern `packages/ui/src/components/states.tsx` itself follows. The
+  three hand-typed copies had already drifted from the token's own value (single vs. double quotes
+  around font names). All three call sites now import and use the shared token.
+
+The 3 PLAUSIBLE findings were left as tracked, non-blocking: the roadmap-item/objective status
+badge lookups have no fallback for an enum value outside the current union (a real but existing
+risk shape already present in `projectStatusBadge`, extended here to two more enum families — only
+reachable via a genuine backend/frontend deploy-skew window); the new `ProjectRepository` shared
+type collides in name with the pre-existing `ProjectRepository` DAO class in `@webdesk/database`
+(no active conflict today — no single file imports both); and the five empty-state messages don't
+reuse the shared `EmptyState` component (a defensible call given that component's current heavy,
+page-replacing visual weight versus these inline, single-section notes).
+
+Regression tests added/updated: a new test asserting a malformed `projectId` never calls `fetch`
+at all; the 404 test updated to expect 6 fetch calls (1 primary + 5 concurrently-started
+sub-resource fetches, all discarded) instead of 1; all other `getProjectDetail()` tests switched
+from placeholder ID strings (`"some-id"`, `"missing-id"`) to real UUID-shaped fixtures now that the
+function validates format up front. Full re-validation: typecheck/lint/`next build` clean, 41/41
+`dashboard-web` unit tests (1 new), 11/11 Playwright tests.
+
 ## 4. Testing
 
-- `apps/dashboard-web/tests/unit/projects.test.tsx` — 24 tests total (10 new): `formatTimestamp()`,
-  `roadmapItemStatusBadge()`/`objectiveStatusBadge()` (every status value), and `getProjectDetail()`
-  (404 → `null` without fetching any sub-resource; non-OK/non-404 primary response → throws;
-  a sub-resource failure after a successful primary fetch → throws; the success path, asserting
-  every one of the six expected URLs was requested and the team headcount is derived from the raw
-  array length).
+- `apps/dashboard-web/tests/unit/projects.test.tsx` — 25 tests total (11 new across the initial
+  build and the code-review fix round): `formatTimestamp()`, `roadmapItemStatusBadge()`/
+  `objectiveStatusBadge()` (every status value), and `getProjectDetail()` (a malformed `projectId`
+  → `null` without calling `fetch` at all; a real 404 → `null`, with all 6 requests still fired
+  concurrently and discarded; non-OK/non-404 primary response → throws; a sub-resource failure
+  after a successful primary fetch → throws; the success path, asserting every one of the six
+  expected URLs was requested and the team headcount is derived from the raw array length).
 - `apps/dashboard-web/tests/e2e/smoke.spec.ts` — 1 new test: an unauthenticated visit to
   `/projects/{a well-formed id}` redirects to sign-in, mirroring the existing `/projects` coverage.
   Also live-verified against the dev server (no real backend available in this sandboxed
