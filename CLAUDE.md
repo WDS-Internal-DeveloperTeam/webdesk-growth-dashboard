@@ -272,9 +272,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    genuinely live in production.** No full UI yet (dashboard-web) — the header Project Switcher
    itself is now built (2026-08-16, see item 8 and "Recent decisions" below), but wiring a real
    downstream "current project" context other modules read remains separate, undesigned scope.
-8. **`dashboard-web` Project Switcher — built, code-reviewed, security-reviewed, second-role human
-   reviewed, not yet gated or merged (2026-08-16).**
-   `docs/implementation/dashboard-web-project-switcher.md` records the full account;
+8. **`dashboard-web` Project Switcher — built, reviewed, gated, merged, and live in production
+   (2026-08-16).** `docs/implementation/dashboard-web-project-switcher.md` records the full account;
    `docs/project-state/dashboard-web-project-switcher-approval-checklist.md` records the review
    sign-off. Not started automatically — built directly on the explicit "build the dashboard-web
    Project Switcher UI" instruction, since D7 already named this as the specific next follow-up
@@ -290,6 +289,24 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == 598f4d11c7b37626925de2d818c09cdb4948001b`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Project Switcher is now genuinely live in production.**
+9. **`dashboard-web` Projects list page (`/projects`) — built, reviewed, gated, not yet merged
+   (2026-08-16).** `docs/implementation/dashboard-web-projects-list.md` records the full account;
+   `docs/project-state/dashboard-web-projects-list-approval-checklist.md` records the review
+   sign-off. Not started automatically — built directly on the explicit "build the Projects list
+   page UI" instruction. No approved wireframe or spec exists for this screen (confirmed against
+   `07_Low_Fidelity_Wireframes.md` and `03_Detailed_Module_Specifications.md`); renders exactly
+   what `GET /projects` actually returns and supports — name, status, public ID, updated-at,
+   search, status filter, column sort, offset pagination — deliberately omitting "active
+   phase"/"owner" columns from `module-projects-foundation.md`'s own unapproved proposal, since
+   those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no client
+   component. Independent code review (medium effort — 7 findings, 6 CONFIRMED, the 2 highest-
+   severity fixed) and a separate security review (0 findings above threshold) both ran on
+   [PR #26](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/26); a
+   review packet was published as a Claude artifact for the required second-role human review,
+   since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it
+   and returned "Approved."** **The gate (G4-projects-list) was then separately requested and
+   approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #26" has not been requested** —
+   merge authorization remains a separate, not-yet-requested next step, same as every other slice.
 
 ## Recent decisions
 
@@ -1206,6 +1223,73 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   Project Switcher is now genuinely live in production**, closing out this slice's full
   build-to-production arc. No downstream module reads the selected-project cookie yet — wiring a
   real "current project" context remains separate, undesigned scope, unchanged from D7.
+- `[2026-08-16]` **Built the `dashboard-web` Projects list page** (`/projects`), under the explicit
+  "build the Projects list page UI" instruction. Checked for a sourced design before writing any
+  code: `07_Low_Fidelity_Wireframes.md` has 11 numbered screens and none is "Projects" (only the
+  sidebar nav item and header "Project Switcher" label); `03_Detailed_Module_Specifications.md` §2
+  names records/actions only, no screens or columns; the only prior description of a list screen
+  is `module-projects-foundation.md` §8's own unapproved proposal, explicitly flagged in that
+  document as "not sourced, should be confirmed or corrected." Built the smallest honest reading:
+  renders exactly what `GET /projects` already returns and supports — name, status, public ID,
+  updated-at, a search box, a status filter, sortable columns, and offset pagination — all via
+  plain `<form method="get">` submissions and links (no client component, no JS required). Added
+  `Project` to `packages/shared-types` as a second, wider projection of `ProjectEntity` alongside
+  the header switcher's existing narrower `ProjectSummary` (not a replacement for it). Deliberately
+  omitted "active phase" and "owner" columns from the unapproved proposal — `activePhaseId`/
+  `ownerUserId` are bare foreign keys with no name-resolution endpoint, so showing them would mean
+  either a raw UUID or a fabricated display name, both worse than omitting the column. A live
+  dev-server check (no real backend available in this environment) surfaced a real ordering bug:
+  an unauthenticated visit to `/projects` still fired the page's own `getProjects()` fetch in
+  parallel with the `(shell)` layout's redirect check, logging a real (if harmless) server-side
+  `ECONNREFUSED` error before the redirect won the race — fixed by adding the same defensive
+  `getServerSession()` guard `home/page.tsx` already uses, confirmed clean on re-check (zero
+  console/server errors). Full validation: 14 new unit tests (`parseProjectsSearchParams`,
+  `buildProjectsHref`, `projectStatusBadge`, `getProjects` — 30/30 `dashboard-web` unit tests
+  overall), 1 new Playwright smoke test (`/projects` redirects unauthenticated visitors, 7/7
+  overall), typecheck/lint/`next build` all clean. See
+  `docs/implementation/dashboard-web-projects-list.md` for the full as-built record, including what
+  was deliberately not built (a project-detail page, a create/edit form, and a reusable `<Table>`
+  component in `packages/ui` — judged premature for a single consumer). **Not yet reviewed or
+  merged** — pushed as its own branch (`dashboard-web-projects-list`); code review, security
+  review, second-role human review, a gate decision, and merge authorization are each their own
+  separate, not-yet-requested next step, unchanged from this project's standing discipline.
+- `[2026-08-16]` **Independent code review run on `dashboard-web-projects-list` (PR #26), medium
+  effort — a single new read-only list page + lib helpers + a new shared type, no new mutation
+  surface (reuses the already-reviewed, already-gated `GET /projects`).** 7 findings surfaced (6
+  CONFIRMED, 1 PLAUSIBLE). The 2 highest-severity CONFIRMED findings fixed (commit `cda53bf`): (1)
+  pagination dead-ended whenever the total project count was an exact multiple of the page size —
+  the old "has next page" heuristic (`items.length === PROJECTS_PAGE_SIZE`) offered a phantom
+  "Next" link into a guaranteed-empty page with no way back (no "Previous", no "Clear filters");
+  fixed by requesting one row past the display page size and deriving `hasNextPage` from whether
+  that extra row actually came back, plus a new "past the last page" empty-state branch with a
+  real Previous link; (2) an overlong pasted search term crashed the whole app shell (a 400 from
+  the backend's own `max(255)` validation propagated as an uncaught error to the root
+  `error.tsx`) — fixed with `maxLength={255}` on the input and a matching `.slice(0, 255)` clamp in
+  `parseProjectsSearchParams()` as the real defense-in-depth fix. The remaining 5 findings were
+  left as tracked, non-blocking debt (an unbounded offset that can serialize as exponential
+  notation on a hand-edited URL; a defensive gap in `projectStatusBadge()`'s lookup, not currently
+  reachable since `status` is a real Postgres `ENUM`; two separate `GET /projects` calls per page
+  view, a genuine shape mismatch with the header switcher's own bundled fetch; and two `@webdesk/ui`
+  `FiltersBar`-reuse/style-duplication cleanup items). Added 2 new regression tests (33/33
+  `dashboard-web` unit tests). A separate `security-review` skill run found no findings above the
+  reporting threshold — every untrusted input (search/status/sortBy/sortOrder/offset) validates
+  against closed enums or numeric bounds with safe fallbacks, no `dangerouslySetInnerHTML`, no
+  open-redirect surface. All 14 CI checks passing on commit `cda53bf`. A review packet (published
+  as a Claude artifact — code review + security review findings, fixes, and validation evidence)
+  was prepared for the required second-role human review, since the implementing agent cannot also
+  be its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
+  `docs/project-state/dashboard-web-projects-list-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-16]` **The gate (G4-projects-list) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit
+  `e14db588abca2dc89afc02f418677112c39f4045` on branch `dashboard-web-projects-list` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-projects-list`) and
+  `docs/project-state/dashboard-web-projects-list-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #26 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

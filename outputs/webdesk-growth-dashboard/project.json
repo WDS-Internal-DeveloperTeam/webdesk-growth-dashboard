@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-project-switcher",
+    "current_gate": "G4-projects-list",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -189,6 +189,18 @@
       "decided_at": "2026-08-16T00:00:00Z",
       "decision": "CONFIRM",
       "notes": "The dashboard-web header Project Switcher (D7's deferred follow-up from module-projects-foundation, and phase-1f-application-shell.md §2's same deferral) — a small, additive UI-only slice with no new mutation surface, reusing the already-reviewed, already-gated GET /projects. Adds ProjectSummary to packages/shared-types (the header's own 'no business-module types until authorized and implemented' condition now true for Projects), loads GET /projects alongside /me and /me/navigation in getServerSession(), and renders a native <select> switcher in AppShell's header. Selection persists to a client-side cookie only — no downstream module reads it yet, unchanged undesigned scope per D7. Independent code review (medium effort) surfaced 6 findings (4 CONFIRMED, 2 PLAUSIBLE) — all 4 CONFIRMED fixed: a /projects network-level failure no longer crashes the whole session (Promise.all isolation), both /projects failure modes now log (closing the same blind-spot class behind the 2026-08-12 production incident), GET /projects now requests ?limit=200 instead of an unbounded call (was silently capped at 50), and stale Home-page copy contradicting the new switcher was corrected. The 2 PLAUSIBLE findings (switcher selection not re-syncing post-mount — currently unobservable; and the /projects fetch being bundled into the session-resolution function — a documented, deliberate tradeoff) were left as tracked, non-blocking. Security review (run separately) found 0 findings above the reporting threshold — the new wds_current_project cookie carries zero authorization weight and its value is always a server-generated UUID. 16/16 dashboard-web unit tests (8 new), 6/6 unauthenticated Playwright smoke tests, typecheck/lint/next build all clean, CI 14/14 checks green. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes raised) was already complete before this gate was requested — see docs/project-state/dashboard-web-project-switcher-approval-checklist.md and its 'Sign-off' section. Approved commit 134b7fa2015fe3a58630f9718f560b865ace0794 on branch dashboard-web-project-switcher — this branch (PR #25) is NOT YET MERGED to main, same standing 'no auto-merge' rule as every prior gate: merging remains its own separate, not-yet-requested authorization. Does not itself authorize merging PR #25, a production deployment, or any downstream 'current project' context wiring (still separate, undesigned scope per D7).",
+      "merge_resolution_note": null
+    },
+    {
+      "id": "G4-projects-list",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-projects-list",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-16T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "The dashboard-web Projects list page (/projects) — a single new read-only list page + lib helpers + a new shared Project type, no new mutation surface, reusing the already-reviewed, already-gated GET /projects. No approved wireframe or spec exists for this screen (confirmed against 07_Low_Fidelity_Wireframes.md and 03_Detailed_Module_Specifications.md); renders exactly what GET /projects actually returns and supports — name, status, public ID, updated-at, search, status filter, column sort, offset pagination — deliberately omitting the unsourced 'active phase'/'owner' columns from module-projects-foundation.md §8's own unapproved proposal, since those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no client component. Independent code review (medium effort) surfaced 7 findings (6 CONFIRMED, 1 PLAUSIBLE) — the 2 highest-severity CONFIRMED findings fixed: a pagination dead-end on exact page-size multiples (the old has-next-page heuristic offered a phantom 'Next' link into a guaranteed-empty page with no way back; fixed by requesting one row past the display page size to derive hasNextPage accurately, plus a new 'past the last page' empty-state branch with a real Previous link), and an overlong pasted search term crashing the whole app shell (a 400 from the backend's own max(255) validation propagated as an uncaught error to the root error.tsx; fixed with maxLength={255} on the input and a matching server-side clamp). The remaining 5 findings were left as tracked, non-blocking debt (an unbounded offset that can serialize as exponential notation on a hand-edited URL; a defensive gap in the status-badge lookup, not currently reachable since status is a real Postgres ENUM; two separate GET /projects calls per page view; and two @webdesk/ui FiltersBar-reuse/style-duplication cleanup items). 33/33 dashboard-web unit tests (4 new), 7/7 unauthenticated Playwright smoke tests, typecheck/lint/next build all clean, CI 14/14 checks green. Security review (run separately) found 0 findings above the reporting threshold — every untrusted input validates against closed enums or numeric bounds with safe fallbacks, no dangerouslySetInnerHTML, no open-redirect surface. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes raised) was already complete before this gate was requested — see docs/project-state/dashboard-web-projects-list-approval-checklist.md and its 'Sign-off' section. Approved commit e14db588abca2dc89afc02f418677112c39f4045 on branch dashboard-web-projects-list — this branch (PR #26) is NOT YET MERGED to main, same standing 'no auto-merge' rule as every prior gate: merging remains its own separate, not-yet-requested authorization. Does not itself authorize merging PR #26 or a production deployment.",
       "merge_resolution_note": null
     }
   ],
@@ -642,6 +654,39 @@
       },
       "project_version_before": 23,
       "project_version_after": 24
+    },
+    {
+      "timestamp": "2026-08-16T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "completed required second-role human review of dashboard-web-projects-list (PR #26) — decision: Approved",
+      "details": {
+        "branch": "dashboard-web-projects-list",
+        "pr": 26,
+        "scope_reviewed": "Independent code-review disposition (7 findings: 6 CONFIRMED — 2 highest-severity fixed, 5 tracked as debt — and 1 PLAUSIBLE) and independent security-review disposition (0 findings above threshold), via a published review packet (Claude artifact)",
+        "record": "docs/project-state/dashboard-web-projects-list-approval-checklist.md and this entry",
+        "disputes_raised": "None recorded",
+        "not_yet_done": "A gate decision and merge authorization remain separate, not-yet-requested next steps at the time of this review, per this project's standing 'no auto-merge' discipline."
+      },
+      "project_version_before": 24,
+      "project_version_after": 25
+    },
+    {
+      "timestamp": "2026-08-16T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-projects-list for dashboard-web-projects-list (PR #26) — decision: CONFIRM",
+      "details": {
+        "gate": "G4-projects-list",
+        "scope": "dashboard-web-projects-list",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-16, decision 'Approved', no disputes) was already complete before this gate was requested — same pattern as every prior gate in this project's history.",
+        "approved_commit": "e14db588abca2dc89afc02f418677112c39f4045",
+        "record": "docs/project-state/dashboard-web-projects-list-approval-checklist.md and this entry's sibling in project.json's gates[]",
+        "not_yet_done": "This gate approval does not itself authorize merging PR #26 or a production deployment — merge remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+      },
+      "project_version_before": 25,
+      "project_version_after": 26
     }
   ]
 }
