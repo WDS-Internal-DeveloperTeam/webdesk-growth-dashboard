@@ -289,18 +289,24 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == 598f4d11c7b37626925de2d818c09cdb4948001b`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Project Switcher is now genuinely live in production.**
-9. **`dashboard-web` Projects list page (`/projects`) — built, validated, pushed as its own branch,
-   not yet reviewed/merged (2026-08-16).** `docs/implementation/dashboard-web-projects-list.md`
-   records the full account. Not started automatically — built directly on the explicit "build the
-   Projects list page UI" instruction. No approved wireframe or spec exists for this screen
-   (confirmed against `07_Low_Fidelity_Wireframes.md` and `03_Detailed_Module_Specifications.md`);
-   renders exactly what `GET /projects` actually returns and supports — name, status, public ID,
-   updated-at, search, status filter, column sort, offset pagination — deliberately omitting
-   "active phase"/"owner" columns from `module-projects-foundation.md`'s own unapproved proposal,
-   since those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no
-   client component. Independent code review, security review, second-role human review, a gate
-   decision, and merge authorization remain separate, not-yet-requested next steps, same as every
-   other slice.
+9. **`dashboard-web` Projects list page (`/projects`) — built, code-reviewed, security-reviewed,
+   second-role human reviewed, not yet gated or merged (2026-08-16).**
+   `docs/implementation/dashboard-web-projects-list.md` records the full account;
+   `docs/project-state/dashboard-web-projects-list-approval-checklist.md` records the review
+   sign-off. Not started automatically — built directly on the explicit "build the Projects list
+   page UI" instruction. No approved wireframe or spec exists for this screen (confirmed against
+   `07_Low_Fidelity_Wireframes.md` and `03_Detailed_Module_Specifications.md`); renders exactly
+   what `GET /projects` actually returns and supports — name, status, public ID, updated-at,
+   search, status filter, column sort, offset pagination — deliberately omitting "active
+   phase"/"owner" columns from `module-projects-foundation.md`'s own unapproved proposal, since
+   those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no client
+   component. Independent code review (medium effort — 7 findings, 6 CONFIRMED, the 2 highest-
+   severity fixed) and a separate security review (0 findings above threshold) both ran on
+   [PR #26](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/26); a
+   review packet was published as a Claude artifact for the required second-role human review,
+   since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it
+   and returned "Approved."** A gate decision and merge authorization remain separate, not-yet-
+   requested next steps, same as every other slice.
 
 ## Recent decisions
 
@@ -1247,6 +1253,33 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   merged** — pushed as its own branch (`dashboard-web-projects-list`); code review, security
   review, second-role human review, a gate decision, and merge authorization are each their own
   separate, not-yet-requested next step, unchanged from this project's standing discipline.
+- `[2026-08-16]` **Independent code review run on `dashboard-web-projects-list` (PR #26), medium
+  effort — a single new read-only list page + lib helpers + a new shared type, no new mutation
+  surface (reuses the already-reviewed, already-gated `GET /projects`).** 7 findings surfaced (6
+  CONFIRMED, 1 PLAUSIBLE). The 2 highest-severity CONFIRMED findings fixed (commit `cda53bf`): (1)
+  pagination dead-ended whenever the total project count was an exact multiple of the page size —
+  the old "has next page" heuristic (`items.length === PROJECTS_PAGE_SIZE`) offered a phantom
+  "Next" link into a guaranteed-empty page with no way back (no "Previous", no "Clear filters");
+  fixed by requesting one row past the display page size and deriving `hasNextPage` from whether
+  that extra row actually came back, plus a new "past the last page" empty-state branch with a
+  real Previous link; (2) an overlong pasted search term crashed the whole app shell (a 400 from
+  the backend's own `max(255)` validation propagated as an uncaught error to the root
+  `error.tsx`) — fixed with `maxLength={255}` on the input and a matching `.slice(0, 255)` clamp in
+  `parseProjectsSearchParams()` as the real defense-in-depth fix. The remaining 5 findings were
+  left as tracked, non-blocking debt (an unbounded offset that can serialize as exponential
+  notation on a hand-edited URL; a defensive gap in `projectStatusBadge()`'s lookup, not currently
+  reachable since `status` is a real Postgres `ENUM`; two separate `GET /projects` calls per page
+  view, a genuine shape mismatch with the header switcher's own bundled fetch; and two `@webdesk/ui`
+  `FiltersBar`-reuse/style-duplication cleanup items). Added 2 new regression tests (33/33
+  `dashboard-web` unit tests). A separate `security-review` skill run found no findings above the
+  reporting threshold — every untrusted input (search/status/sortBy/sortOrder/offset) validates
+  against closed enums or numeric bounds with safe fallbacks, no `dangerouslySetInnerHTML`, no
+  open-redirect surface. All 14 CI checks passing on commit `cda53bf`. A review packet (published
+  as a Claude artifact — code review + security review findings, fixes, and validation evidence)
+  was prepared for the required second-role human review, since the implementing agent cannot also
+  be its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
+  `docs/project-state/dashboard-web-projects-list-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
