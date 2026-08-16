@@ -331,11 +331,12 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     both pages use the same one. Independent code review (medium effort — 7 findings, 4 CONFIRMED,
     all fixed) ran on
     [PR #27](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/27), then
-    a separate security review found 1 CONFIRMED finding (a stored-XSS path via an unrestricted
-    URL scheme on a rendered environment link) — also fixed — see this date's "Recent decisions"
-    entries for the fix details. Second-role human review, a gate decision, and merge authorization
-    remain separate, not-yet-requested next steps,
-    same as every other slice.
+    a separate security review found 1 HIGH CONFIRMED finding (a stored-XSS path via an
+    unrestricted URL scheme on a rendered environment link) — also fixed. A review packet was
+    published as a Claude artifact for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
+    returned "Approved."** A gate decision and merge authorization remain separate, not-yet-
+    requested next steps, same as every other slice.
 
 ## Recent decisions
 
@@ -1421,6 +1422,13 @@ b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is
   `docs/implementation/dashboard-web-project-detail.md`'s "3c. Security review" section for the
   full account. Second-role human review, a gate decision, and merge authorization remain
   separate, not-yet-requested next steps.
+- `[2026-08-16]` **Required second-role human review complete for `dashboard-web-project-detail`
+  (PR #27).** A review packet (published as a Claude artifact — code review + security review
+  findings, fixes, and validation evidence) was prepared for the required second-role human
+  review, since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D
+  reviewed it and returned "Approved."** See
+  `docs/project-state/dashboard-web-project-detail-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 

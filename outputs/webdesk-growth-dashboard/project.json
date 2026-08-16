@@ -700,6 +700,22 @@
       },
       "project_version_before": 26,
       "project_version_after": 27
+    },
+    {
+      "timestamp": "2026-08-16T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "completed required second-role human review of dashboard-web-project-detail (PR #27) — decision: Approved",
+      "details": {
+        "branch": "dashboard-web-project-detail",
+        "pr": 27,
+        "scope_reviewed": "Independent code-review disposition (7 findings: 4 CONFIRMED fixed, 3 PLAUSIBLE tracked) and independent security-review disposition (1 HIGH CONFIRMED finding — stored XSS via unrestricted URL scheme on a rendered environment link — fixed), via a published review packet (Claude artifact)",
+        "record": "docs/project-state/dashboard-web-project-detail-approval-checklist.md and this entry",
+        "disputes_raised": "None recorded",
+        "not_yet_done": "A gate decision (none requested yet for this slice) and merge authorization remain separate, not-yet-requested next steps, per this project's standing 'no auto-merge' discipline."
+      },
+      "project_version_before": 27,
+      "project_version_after": 28
     }
   ]
 }
