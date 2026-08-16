@@ -284,8 +284,12 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    review packet was published as a Claude artifact for the required second-role human review,
    since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it
    and returned "Approved."** **The gate (G4-project-switcher) was then separately requested and
-   approved** — WebDesk Solution, decision CONFIRM. Merge authorization remains separate,
-   not-yet-requested, same as every other slice.
+   approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #25" was then separately requested
+   and executed** — merge commit `598f4d11c7b37626925de2d818c09cdb4948001b`, both Vercel projects
+   auto-deployed and were verified live directly: `dashboard-api`'s `/health` returned
+   `build.commitSha == 598f4d11c7b37626925de2d818c09cdb4948001b`, and `dashboard-web`'s `/` resolves
+   (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
+   Project Switcher is now genuinely live in production.**
 
 ## Recent decisions
 
@@ -1191,6 +1195,17 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   downstream "current project" context wiring** — merge remains its own separate, not-yet-requested
   authorization, per this project's standing "no auto-merge" rule (same pattern as every prior
   gate).
+- `[2026-08-16]` **"Merge PR #25" was separately requested and executed.** Merged with a real merge
+  commit (not squash/rebase), matching every prior merge in this project's history — merge commit
+  `598f4d11c7b37626925de2d818c09cdb4948001b`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+598f4d11c7b37626925de2d818c09cdb4948001b`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The `dashboard-web` header
+  Project Switcher is now genuinely live in production**, closing out this slice's full
+  build-to-production arc. No downstream module reads the selected-project cookie yet — wiring a
+  real "current project" context remains separate, undesigned scope, unchanged from D7.
 
 ## Open client blockers
 
@@ -1365,10 +1380,12 @@ genuinely live in production** — no `dashboard-web` UI existed yet as of that 
 
 **2026-08-16 update**: the `dashboard-web` header Project Switcher (branch
 `dashboard-web-project-switcher`, [PR #25](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/25))
-is built, validated, independently code-reviewed (4 CONFIRMED findings fixed), security-reviewed
-(0 findings), and has completed its required second-role human review — Jitesh D, "Approved". See
-this date's "Recent decisions" entries,
-`docs/implementation/dashboard-web-project-switcher.md`, and
+went through the full build-to-production arc in a single day — built, validated, independently
+code-reviewed (4 CONFIRMED findings fixed), security-reviewed (0 findings), second-role human
+reviewed (Jitesh D, "Approved"), gated (G4-project-switcher, WebDesk Solution, CONFIRM), merged
+(`598f4d11c7b37626925de2d818c09cdb4948001b`), and verified live in production. See this date's
+"Recent decisions" entries, `docs/implementation/dashboard-web-project-switcher.md`, and
 `docs/project-state/dashboard-web-project-switcher-approval-checklist.md`'s "Sign-off" section.
 Genuinely undesigned scope (D7), built to the smallest honest reading of the one wireframe label
-that named it. A gate decision and merge remain separate, not-yet-requested next steps.
+that named it. No downstream module reads the selected-project cookie yet — wiring a real "current
+project" context remains separate, undesigned scope.

@@ -1,10 +1,10 @@
 # dashboard-web Project Switcher — Approval Checklist
 
 **Status:** Required second-role human review complete (2026-08-16, Jitesh D, **Approved**). **The
-gate (G4-project-switcher) is now approved** — WebDesk Solution, decision CONFIRM, 2026-08-16. See
-"Sign-off" below and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **Branch
-`dashboard-web-project-switcher` (PR #25) is not yet merged to `main`** — merging remains its own
-separate, not-yet-requested authorization.
+gate (G4-project-switcher) is approved** — WebDesk Solution, decision CONFIRM, 2026-08-16. **PR #25
+merged to `main`** (merge commit `598f4d11c7b37626925de2d818c09cdb4948001b`) under explicit "merge
+PR #25" authorization; both Vercel projects auto-deployed and were verified live directly. See
+"Sign-off" below and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`/`audit_log`.
 
 ## Completion condition
 
@@ -64,7 +64,7 @@ already recorded as complete.
 | Gate date                | 2026-08-16                                                                                                                                                                  |
 | Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                           |
 | Approved commit          | `134b7fa2015fe3a58630f9718f560b865ace0794` on branch `dashboard-web-project-switcher` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
-| Scope                    | `dashboard-web` Project Switcher only. **Branch/PR #25 is not yet merged to `main`** — merging remains its own separate, not-yet-requested authorization.                   |
+| Scope                    | `dashboard-web` Project Switcher only. **PR #25 merged to `main`** under a separate "merge PR #25" authorization — merge commit `598f4d11c7b37626925de2d818c09cdb4948001b`. |
 
 | Role                          | Name             | Decision   | Date       |
 | ----------------------------- | ---------------- | ---------- | ---------- |

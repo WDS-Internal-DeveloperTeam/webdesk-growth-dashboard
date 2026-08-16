@@ -629,6 +629,19 @@
       },
       "project_version_before": 22,
       "project_version_after": 23
+    },
+    {
+      "timestamp": "2026-08-16T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "merged PR #25 (dashboard-web-project-switcher) into main under explicit 'merge PR #25' authorization",
+      "details": {
+        "merge": "Merged with a real merge commit (not squash/rebase), matching every prior merge in this project's history. Merge commit 598f4d11c7b37626925de2d818c09cdb4948001b.",
+        "deployment_verification": "Both Vercel projects auto-deployed on push to main and were verified live directly, not just via CI's own Vercel status check — dashboard-api's /health returned build.commitSha == 598f4d11c7b37626925de2d818c09cdb4948001b, confirming the exact merged commit is what's serving; dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor, confirming the session gate is intact.",
+        "result": "The dashboard-web header Project Switcher is now genuinely live in production, closing out this slice's full build-to-production arc in a single day. No downstream module reads the selected-project cookie yet — wiring a real 'current project' context remains separate, undesigned scope (D7)."
+      },
+      "project_version_before": 23,
+      "project_version_after": 24
     }
   ]
 }
