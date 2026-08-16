@@ -5,6 +5,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import { cookies } from "next/headers";
+import type { Project } from "@webdesk/shared-types";
 import {
   buildProjectsHref,
   getProjects,
@@ -68,6 +69,11 @@ describe("parseProjectsSearchParams", () => {
 
   it("takes the first value when a param is duplicated in the URL", () => {
     expect(parseProjectsSearchParams({ search: ["first", "second"] }).search).toBe("first");
+  });
+
+  it("clamps an over-length search term instead of sending it through to GET /projects", () => {
+    const search = parseProjectsSearchParams({ search: "a".repeat(300) }).search;
+    expect(search).toHaveLength(255);
   });
 });
 
@@ -142,7 +148,7 @@ describe("getProjects", () => {
     ).rejects.toThrow(/Failed to load projects/);
   });
 
-  it("sends the expected query params to GET /projects", async () => {
+  it("requests one row past the display page size, to detect a real next page", async () => {
     const requestedUrls: string[] = [];
     global.fetch = vi.fn((url: string) => {
       requestedUrls.push(url);
@@ -161,7 +167,58 @@ describe("getProjects", () => {
     });
 
     expect(requestedUrls[0]).toBe(
-      "https://api.example.com/projects?search=acme&status=active&sortBy=name&sortOrder=ASC&limit=25&offset=25",
+      "https://api.example.com/projects?search=acme&status=active&sortBy=name&sortOrder=ASC&limit=26&offset=25",
     );
+  });
+
+  function projectFixture(id: string): Project {
+    return {
+      id,
+      publicId: id,
+      name: id,
+      description: null,
+      status: "active",
+      confidentiality: "internal",
+      createdAt: "2026-08-16T00:00:00.000Z",
+      updatedAt: "2026-08-16T00:00:00.000Z",
+    };
+  }
+
+  it("reports hasNextPage: false and returns every row when the backend returns a full page or fewer", async () => {
+    const items = Array.from({ length: 25 }, (_, i) => projectFixture(`p${i}`));
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: items, correlationId: "test" }),
+    } as Response);
+
+    const result = await getProjects({
+      search: null,
+      status: null,
+      sortBy: "updatedAt",
+      sortOrder: "DESC",
+      offset: 0,
+    });
+
+    expect(result.items).toHaveLength(25);
+    expect(result.hasNextPage).toBe(false);
+  });
+
+  it("reports hasNextPage: true and trims the extra row when the backend returns one more than the page size", async () => {
+    const items = Array.from({ length: 26 }, (_, i) => projectFixture(`p${i}`));
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: items, correlationId: "test" }),
+    } as Response);
+
+    const result = await getProjects({
+      search: null,
+      status: null,
+      sortBy: "updatedAt",
+      sortOrder: "DESC",
+      offset: 0,
+    });
+
+    expect(result.items).toHaveLength(25);
+    expect(result.hasNextPage).toBe(true);
   });
 });

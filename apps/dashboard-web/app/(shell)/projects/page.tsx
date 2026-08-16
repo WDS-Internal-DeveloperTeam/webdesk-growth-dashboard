@@ -41,8 +41,13 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   }
 
   const query = parseProjectsSearchParams(await searchParams);
-  const projects = await getProjects(query);
+  const { items: projects, hasNextPage } = await getProjects(query);
   const hasFilters = query.search !== null || query.status !== null;
+  // Distinct from "no projects exist at all" — reachable via a stale/hand-edited offset now that
+  // hasNextPage is computed correctly, but kept as defense-in-depth since offset comes from an
+  // untrusted URL. Must always offer a way back (never just "No projects yet" with nothing to
+  // click), unlike before this fix.
+  const isPastLastPage = projects.length === 0 && query.offset > 0;
 
   return (
     <ContentContainer>
@@ -68,6 +73,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             name="search"
             defaultValue={query.search ?? ""}
             placeholder="Project name"
+            maxLength={255}
             style={{
               padding: "0.4rem 0.6rem",
               border: "1px solid var(--webdesk-dashboard-color-border)",
@@ -128,14 +134,31 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       {projects.length === 0 ? (
         <EmptyState
-          title={hasFilters ? "No projects match your filters" : "No projects yet"}
+          title={
+            isPastLastPage
+              ? "No more projects"
+              : hasFilters
+                ? "No projects match your filters"
+                : "No projects yet"
+          }
           description={
-            hasFilters
-              ? "Try a different search term or status."
-              : "Projects created for this organization will appear here."
+            isPastLastPage
+              ? "You've gone past the last page of results."
+              : hasFilters
+                ? "Try a different search term or status."
+                : "Projects created for this organization will appear here."
           }
           action={
-            hasFilters ? (
+            isPastLastPage ? (
+              <Link
+                href={buildProjectsHref(query, {
+                  offset: Math.max(0, query.offset - PROJECTS_PAGE_SIZE),
+                })}
+                style={{ fontSize: "0.875rem" }}
+              >
+                Previous
+              </Link>
+            ) : hasFilters ? (
               <Link href="/projects" style={{ fontSize: "0.875rem" }}>
                 Clear filters
               </Link>
@@ -185,7 +208,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                   Previous
                 </Link>
               ) : null}
-              {projects.length === PROJECTS_PAGE_SIZE ? (
+              {hasNextPage ? (
                 <Link
                   href={buildProjectsHref(query, { offset: query.offset + PROJECTS_PAGE_SIZE })}
                 >

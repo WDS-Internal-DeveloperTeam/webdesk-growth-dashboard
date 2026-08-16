@@ -69,6 +69,44 @@ method="get">` submissions and `<a>`/`next/link` hrefs built from the current qu
     live during Playwright verification: a real `ECONNREFUSED` error logged server-side, discarded
     either way once the layout's redirect won the race). Same pattern `home/page.tsx` already uses.
 
+## 2b. Code review — 2 CONFIRMED findings fixed
+
+This project's own `code-review` skill ran (medium effort) against the branch and surfaced 7
+findings — 6 CONFIRMED, 1 PLAUSIBLE. The 2 highest-severity CONFIRMED findings were fixed:
+
+- **Pagination dead-ended whenever the total project count was an exact multiple of the page size
+  (25, 50, ...).** The old "has next page" heuristic (`items.length === PROJECTS_PAGE_SIZE`)
+  offered a "Next" link on the last full page even when no further rows existed, and clicking it
+  landed on a guaranteed-empty page with `hasFilters` false and no pagination footer at all — no
+  "Previous", no "Clear filters", nothing to click back to page 1. Fixed by requesting one row past
+  the display page size (`limit=PROJECTS_PAGE_SIZE + 1`) and deriving `hasNextPage` from whether
+  that extra row actually came back, rather than guessing from an exact count match. As
+  defense-in-depth (since `offset` is still parsed from an untrusted URL), the empty-state branch
+  now also distinguishes "past the last page" (offers a real "Previous" link) from "no projects
+  yet" and "no projects match your filters" — every empty state now has a way back.
+- **An overlong pasted search term crashed the entire shell.** The search `<input>` had no
+  `maxLength`, and `getProjects()` had no cap matching the backend's own `max(255)` validation, so
+  a 400 response propagated as an uncaught error to the root `error.tsx` — replacing the whole app,
+  not just the search results. Fixed with `maxLength={255}` on the input (UX) and a matching
+  `.slice(0, 255)` clamp in `parseProjectsSearchParams()` (defense-in-depth — the real fix, since
+  `maxLength` alone doesn't protect a request built any other way than typing/pasting into that
+  specific input).
+
+The 5 remaining findings were left as tracked, non-blocking: an unbounded `offset` that can
+serialize as exponential notation on a hand-edited URL (cosmetic only, not reachable via any
+in-app control); a defensive gap in `projectStatusBadge()`'s lookup for a status value outside the
+current three-value set (not currently reachable — `status` is a real Postgres `ENUM` column); the
+page issuing two separate `GET /projects` calls per view (the header switcher's `limit=200` fetch
+and this page's own filtered/paginated fetch have genuinely incompatible shapes — a real fix would
+mean restructuring what `getServerSession()` bundles, out of scope here); and two cleanup items
+(the filter row hand-rolling its own container instead of `@webdesk/ui`'s existing `FiltersBar`,
+and some duplicated inline style objects in that same filter row).
+
+Regression tests added: `parseProjectsSearchParams()` clamping an over-length search term, and two
+new `getProjects()` tests covering `hasNextPage` in both directions (a full-or-under page vs. a
+page with a real next page). Full re-validation: typecheck/lint/`next build` clean, 33/33
+`dashboard-web` unit tests (4 new), 7/7 Playwright smoke tests.
+
 ## 3. What was deliberately not built
 
 - **Project detail page** (`/projects/:id`) — separate, larger, unrequested scope.

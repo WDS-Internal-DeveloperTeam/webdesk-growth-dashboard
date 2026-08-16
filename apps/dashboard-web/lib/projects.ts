@@ -40,10 +40,16 @@ function firstValue(value: string | string[] | undefined): string | undefined {
  * passed through raw, so a garbled URL degrades to the default query instead of round-tripping an
  * invalid value to the backend.
  */
+// Matches apps/dashboard-api/src/projects/projects.dto.ts's listProjectsQuerySchema:
+// search: z.string().min(1).max(255). Clamped here, not just via the <input>'s maxLength — a
+// request built any other way (a hand-constructed URL, not just paste-then-submit) must not be
+// able to send an over-length value and get an uncaught 400 back from getProjects().
+const MAX_SEARCH_LENGTH = 255;
+
 export function parseProjectsSearchParams(
   raw: Record<string, string | string[] | undefined>,
 ): ProjectsQuery {
-  const search = firstValue(raw.search)?.trim();
+  const search = firstValue(raw.search)?.trim().slice(0, MAX_SEARCH_LENGTH);
   const status = firstValue(raw.status);
   const sortBy = firstValue(raw.sortBy);
   const sortOrder = firstValue(raw.sortOrder);
@@ -106,10 +112,23 @@ export function projectStatusBadge(status: ProjectStatusFilter): {
   return STATUS_BADGE[status];
 }
 
+export interface ProjectsPageResult {
+  readonly items: readonly Project[];
+  /** Whether a real next page exists — determined by actually requesting one row past the
+   *  display page size (below), not by checking `items.length === PROJECTS_PAGE_SIZE`. That
+   *  exact-count heuristic offered a "Next" link on every page whose result count was a multiple
+   *  of the page size, which led to a real dead end: the page it linked to was guaranteed empty,
+   *  with no filters active to explain it and no pagination controls to get back (the whole
+   *  footer, including "Previous", only rendered in the non-empty branch). `GET /projects`
+   *  doesn't return a total count to check against, so requesting one extra row is the only way
+   *  to know "is there more" without guessing. */
+  readonly hasNextPage: boolean;
+}
+
 /** Never degrades silently — unlike the header switcher's `fetchProjectSummaries()`, this page's
  *  entire content IS the project list, so a fetch failure must surface as a real error state
  *  (propagates to the nearest `error.tsx`), not an empty-looking page. */
-export async function getProjects(query: ProjectsQuery): Promise<readonly Project[]> {
+export async function getProjects(query: ProjectsQuery): Promise<ProjectsPageResult> {
   const apiBaseUrl = getApiBaseUrl();
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
@@ -119,7 +138,8 @@ export async function getProjects(query: ProjectsQuery): Promise<readonly Projec
   if (query.status) params.set("status", query.status);
   params.set("sortBy", query.sortBy);
   params.set("sortOrder", query.sortOrder);
-  params.set("limit", String(PROJECTS_PAGE_SIZE));
+  // One row past the display page size — see ProjectsPageResult.hasNextPage's own doc comment.
+  params.set("limit", String(PROJECTS_PAGE_SIZE + 1));
   params.set("offset", String(query.offset));
 
   const response = await fetch(`${apiBaseUrl}/projects?${params.toString()}`, {
@@ -130,5 +150,8 @@ export async function getProjects(query: ProjectsQuery): Promise<readonly Projec
     throw new Error(`Failed to load projects (status ${response.status})`);
   }
   const body = (await response.json()) as ApiSuccessResponse<readonly Project[]>;
-  return body.data;
+  return {
+    items: body.data.slice(0, PROJECTS_PAGE_SIZE),
+    hasNextPage: body.data.length > PROJECTS_PAGE_SIZE,
+  };
 }
