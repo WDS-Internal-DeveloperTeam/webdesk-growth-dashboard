@@ -272,9 +272,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    genuinely live in production.** No full UI yet (dashboard-web) — the header Project Switcher
    itself is now built (2026-08-16, see item 8 and "Recent decisions" below), but wiring a real
    downstream "current project" context other modules read remains separate, undesigned scope.
-8. **`dashboard-web` Project Switcher — built, code-reviewed, security-reviewed, second-role human
-   reviewed, not yet gated or merged (2026-08-16).**
-   `docs/implementation/dashboard-web-project-switcher.md` records the full account;
+8. **`dashboard-web` Project Switcher — built, reviewed, gated, merged, and live in production
+   (2026-08-16).** `docs/implementation/dashboard-web-project-switcher.md` records the full account;
    `docs/project-state/dashboard-web-project-switcher-approval-checklist.md` records the review
    sign-off. Not started automatically — built directly on the explicit "build the dashboard-web
    Project Switcher UI" instruction, since D7 already named this as the specific next follow-up
@@ -290,6 +289,18 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == 598f4d11c7b37626925de2d818c09cdb4948001b`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Project Switcher is now genuinely live in production.**
+9. **`dashboard-web` Projects list page (`/projects`) — built, validated, pushed as its own branch,
+   not yet reviewed/merged (2026-08-16).** `docs/implementation/dashboard-web-projects-list.md`
+   records the full account. Not started automatically — built directly on the explicit "build the
+   Projects list page UI" instruction. No approved wireframe or spec exists for this screen
+   (confirmed against `07_Low_Fidelity_Wireframes.md` and `03_Detailed_Module_Specifications.md`);
+   renders exactly what `GET /projects` actually returns and supports — name, status, public ID,
+   updated-at, search, status filter, column sort, offset pagination — deliberately omitting
+   "active phase"/"owner" columns from `module-projects-foundation.md`'s own unapproved proposal,
+   since those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no
+   client component. Independent code review, security review, second-role human review, a gate
+   decision, and merge authorization remain separate, not-yet-requested next steps, same as every
+   other slice.
 
 ## Recent decisions
 
@@ -1206,6 +1217,36 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   Project Switcher is now genuinely live in production**, closing out this slice's full
   build-to-production arc. No downstream module reads the selected-project cookie yet — wiring a
   real "current project" context remains separate, undesigned scope, unchanged from D7.
+- `[2026-08-16]` **Built the `dashboard-web` Projects list page** (`/projects`), under the explicit
+  "build the Projects list page UI" instruction. Checked for a sourced design before writing any
+  code: `07_Low_Fidelity_Wireframes.md` has 11 numbered screens and none is "Projects" (only the
+  sidebar nav item and header "Project Switcher" label); `03_Detailed_Module_Specifications.md` §2
+  names records/actions only, no screens or columns; the only prior description of a list screen
+  is `module-projects-foundation.md` §8's own unapproved proposal, explicitly flagged in that
+  document as "not sourced, should be confirmed or corrected." Built the smallest honest reading:
+  renders exactly what `GET /projects` already returns and supports — name, status, public ID,
+  updated-at, a search box, a status filter, sortable columns, and offset pagination — all via
+  plain `<form method="get">` submissions and links (no client component, no JS required). Added
+  `Project` to `packages/shared-types` as a second, wider projection of `ProjectEntity` alongside
+  the header switcher's existing narrower `ProjectSummary` (not a replacement for it). Deliberately
+  omitted "active phase" and "owner" columns from the unapproved proposal — `activePhaseId`/
+  `ownerUserId` are bare foreign keys with no name-resolution endpoint, so showing them would mean
+  either a raw UUID or a fabricated display name, both worse than omitting the column. A live
+  dev-server check (no real backend available in this environment) surfaced a real ordering bug:
+  an unauthenticated visit to `/projects` still fired the page's own `getProjects()` fetch in
+  parallel with the `(shell)` layout's redirect check, logging a real (if harmless) server-side
+  `ECONNREFUSED` error before the redirect won the race — fixed by adding the same defensive
+  `getServerSession()` guard `home/page.tsx` already uses, confirmed clean on re-check (zero
+  console/server errors). Full validation: 14 new unit tests (`parseProjectsSearchParams`,
+  `buildProjectsHref`, `projectStatusBadge`, `getProjects` — 30/30 `dashboard-web` unit tests
+  overall), 1 new Playwright smoke test (`/projects` redirects unauthenticated visitors, 7/7
+  overall), typecheck/lint/`next build` all clean. See
+  `docs/implementation/dashboard-web-projects-list.md` for the full as-built record, including what
+  was deliberately not built (a project-detail page, a create/edit form, and a reusable `<Table>`
+  component in `packages/ui` — judged premature for a single consumer). **Not yet reviewed or
+  merged** — pushed as its own branch (`dashboard-web-projects-list`); code review, security
+  review, second-role human review, a gate decision, and merge authorization are each their own
+  separate, not-yet-requested next step, unchanged from this project's standing discipline.
 
 ## Open client blockers
 
