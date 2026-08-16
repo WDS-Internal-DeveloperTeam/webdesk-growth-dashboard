@@ -342,6 +342,27 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     returned `build.commitSha == af23ba1c0172c834d2d1311666a2811397598b14`, and `dashboard-web`'s
     `/` resolves to `/auth/sign-in` for an unauthenticated visitor. **The Project Detail page is
     now genuinely live in production.**
+11. **`dashboard-web` Create/Edit Project form — built, validated, pushed as its own branch, not
+    yet reviewed/merged (2026-08-16).** `docs/implementation/dashboard-web-project-form.md` records
+    the full account. Not started automatically — built directly on the explicit "build the
+    create/edit project form" instruction. The only prior description of this screen is
+    `module-projects-foundation.md` §8's own unapproved proposal ("form (name, description);
+    status/archival handled via the dedicated transition action, not this form"); built to that
+    scope plus `confidentiality` (a real field with no separate transition endpoint of its own).
+    `publicId` is create-only and shown read-only in the edit form, matching `updateProjectSchema`'s
+    own contract (never regenerated once assigned). Deliberately excludes `ownerUserId` as a form
+    field — no user-lookup/picker capability exists anywhere in this app yet, the same constraint
+    already shaping the list and detail pages. The first real mutation UI in `dashboard-web`: a
+    `"use client"` component submitting via a direct browser `fetch()` with `credentials: "include"`,
+    following the one existing real-mutation precedent (`app/auth/emergency/page.tsx`) so
+    `dashboard-api`'s `OriginCheckGuard` (Origin-header check, no CSRF token in this app) is
+    satisfied automatically. The list and detail pages each gained a "New project"/"Edit" action
+    link. 56/56 `dashboard-web` unit tests (6 new) and 13/13 e2e tests (2 new) passing; typecheck,
+    lint, and `next build` all clean; a live dev-server check confirmed both new routes redirect an
+    unauthenticated visitor cleanly with zero console/server errors. Not yet reviewed or merged —
+    code review, security review, second-role human review, a gate decision, and merge
+    authorization are each their own separate, not-yet-requested next step, unchanged from this
+    project's standing discipline.
 
 ## Recent decisions
 
