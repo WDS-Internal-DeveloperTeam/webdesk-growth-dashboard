@@ -15,6 +15,11 @@ test.describe("Phase 1F application-shell smoke test", () => {
     await expect(page).toHaveURL(/\/auth\/sign-in$/);
   });
 
+  test("an unauthenticated visit to /projects also redirects to sign-in", async ({ page }) => {
+    await page.goto("/projects");
+    await expect(page).toHaveURL(/\/auth\/sign-in$/);
+  });
+
   test("health page shows ok status", async ({ page }) => {
     await page.goto("/health");
     await expect(page.getByRole("heading", { name: "Service Health" })).toBeVisible();

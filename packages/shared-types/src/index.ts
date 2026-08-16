@@ -229,3 +229,23 @@ export interface ProjectSummary {
   readonly name: string;
   readonly status: "active" | "paused" | "archived";
 }
+
+/**
+ * The Projects list page's own row shape — a second, wider projection of `ProjectEntity` alongside
+ * `ProjectSummary` above, not a replacement for it (the switcher stays on the narrower type it
+ * already validated against). Deliberately still not the full backend entity: `activePhaseId` and
+ * `ownerUserId` are bare foreign keys with no name-resolution endpoint yet, so showing them as
+ * columns would mean either a raw UUID (useless to a reader) or a fabricated label — both worse
+ * than omitting the column until a real "resolve to a display name" capability exists.
+ * `retentionCategory`/`createdBy`/`updatedBy` are operational metadata, not list-page content.
+ */
+export interface Project {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly status: "active" | "paused" | "archived";
+  readonly confidentiality: "public" | "internal" | "confidential" | "restricted";
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
