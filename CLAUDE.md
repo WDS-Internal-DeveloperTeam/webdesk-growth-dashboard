@@ -289,24 +289,28 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == 598f4d11c7b37626925de2d818c09cdb4948001b`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Project Switcher is now genuinely live in production.**
-9. **`dashboard-web` Projects list page (`/projects`) — built, reviewed, gated, not yet merged
-   (2026-08-16).** `docs/implementation/dashboard-web-projects-list.md` records the full account;
-   `docs/project-state/dashboard-web-projects-list-approval-checklist.md` records the review
-   sign-off. Not started automatically — built directly on the explicit "build the Projects list
-   page UI" instruction. No approved wireframe or spec exists for this screen (confirmed against
-   `07_Low_Fidelity_Wireframes.md` and `03_Detailed_Module_Specifications.md`); renders exactly
-   what `GET /projects` actually returns and supports — name, status, public ID, updated-at,
-   search, status filter, column sort, offset pagination — deliberately omitting "active
-   phase"/"owner" columns from `module-projects-foundation.md`'s own unapproved proposal, since
-   those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no client
-   component. Independent code review (medium effort — 7 findings, 6 CONFIRMED, the 2 highest-
-   severity fixed) and a separate security review (0 findings above threshold) both ran on
+9. **`dashboard-web` Projects list page (`/projects`) — built, reviewed, gated, merged, and live in
+   production (2026-08-16).** `docs/implementation/dashboard-web-projects-list.md` records the full
+   account; `docs/project-state/dashboard-web-projects-list-approval-checklist.md` records the
+   review sign-off. Not started automatically — built directly on the explicit "build the Projects
+   list page UI" instruction. No approved wireframe or spec exists for this screen (confirmed
+   against `07_Low_Fidelity_Wireframes.md` and `03_Detailed_Module_Specifications.md`); renders
+   exactly what `GET /projects` actually returns and supports — name, status, public ID,
+   updated-at, search, status filter, column sort, offset pagination — deliberately omitting
+   "active phase"/"owner" columns from `module-projects-foundation.md`'s own unapproved proposal,
+   since those are bare foreign keys with no name-resolution endpoint. Fully server-rendered, no
+   client component. Independent code review (medium effort — 7 findings, 6 CONFIRMED, the 2
+   highest-severity fixed) and a separate security review (0 findings above threshold) both ran on
    [PR #26](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/26); a
    review packet was published as a Claude artifact for the required second-role human review,
    since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it
    and returned "Approved."** **The gate (G4-projects-list) was then separately requested and
-   approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #26" has not been requested** —
-   merge authorization remains a separate, not-yet-requested next step, same as every other slice.
+   approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #26" was then separately requested
+   and executed** — merge commit `b6d0b601db1025d6c175afae4309aa406281ff39`, both Vercel projects
+   auto-deployed and were verified live directly: `dashboard-api`'s `/health` returned
+   `build.commitSha == b6d0b601db1025d6c175afae4309aa406281ff39`, and `dashboard-web`'s `/` resolves
+   (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
+   Projects list page is now genuinely live in production.**
 
 ## Recent decisions
 
@@ -1290,6 +1294,17 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   **This gate approval does not itself authorize merging PR #26 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-16]` **"Merge PR #26" was separately requested and executed.** Merged with a real merge
+  commit (not squash/rebase), matching every prior merge in this project's history — merge commit
+  `b6d0b601db1025d6c175afae4309aa406281ff39`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The `dashboard-web` Projects
+  list page is now genuinely live in production**, closing out this slice's full build-to-
+  production arc. Backend, header switcher, and now the list page are all live — no project-detail
+  page or create/edit form exists yet, both separate, not-yet-requested next steps.
 
 ## Open client blockers
 
@@ -1473,3 +1488,15 @@ reviewed (Jitesh D, "Approved"), gated (G4-project-switcher, WebDesk Solution, C
 Genuinely undesigned scope (D7), built to the smallest honest reading of the one wireframe label
 that named it. No downstream module reads the selected-project cookie yet — wiring a real "current
 project" context remains separate, undesigned scope.
+
+**Same-day update**: the `dashboard-web` Projects list page (`/projects`, branch
+`dashboard-web-projects-list`, [PR #26](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/26))
+also went through the full build-to-production arc — built (no approved wireframe/spec exists,
+confirmed before building; renders exactly what `GET /projects` returns and supports), independently
+code-reviewed (medium effort — 7 findings, the 2 highest-severity CONFIRMED fixed, 5 tracked as
+debt), security-reviewed (0 findings above threshold), second-role human reviewed (Jitesh D,
+"Approved"), gated (G4-projects-list, WebDesk Solution, CONFIRM), merged
+(`b6d0b601db1025d6c175afae4309aa406281ff39`), and verified live in production. See this date's
+"Recent decisions" entries, `docs/implementation/dashboard-web-projects-list.md`, and
+`docs/project-state/dashboard-web-projects-list-approval-checklist.md`'s "Sign-off" section. No
+project-detail page or create/edit form exists yet — both separate, not-yet-requested next steps.
