@@ -3,13 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { APPROVED_NAVIGATION_GROUPS, type ModuleRegistrySummary } from "@webdesk/shared-types";
+import {
+  APPROVED_NAVIGATION_GROUPS,
+  type ModuleRegistrySummary,
+  type ProjectSummary,
+} from "@webdesk/shared-types";
 import type { ServerSessionProfile } from "@/lib/server-session";
+import { ProjectSwitcher } from "./project-switcher";
 import styles from "./app-shell.module.css";
 
 export interface AppShellProps {
   readonly me: ServerSessionProfile;
   readonly navigation: readonly ModuleRegistrySummary[];
+  readonly projects: readonly ProjectSummary[];
+  readonly initialProjectId: string | null;
   readonly children: ReactNode;
 }
 
@@ -56,13 +63,20 @@ function groupNavigation(
 
 /**
  * The authenticated application frame (Phase 1F brief §8): global header
- * with user/account area, registry-driven permission-aware sidebar
+ * with the Project Switcher (`07_Low_Fidelity_Wireframes.md` §1) and
+ * user/account area, registry-driven permission-aware sidebar
  * navigation (brief §9/§10 — server already filtered `navigation` to what
  * the caller may view; this component never re-derives that decision),
  * skip link, and the main content slot. Backend route authorization
  * remains authoritative regardless of what this sidebar shows.
  */
-export function AppShell({ me, navigation, children }: AppShellProps): ReactNode {
+export function AppShell({
+  me,
+  navigation,
+  projects,
+  initialProjectId,
+  children,
+}: AppShellProps): ReactNode {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const groupedNavigation = groupNavigation(navigation);
@@ -88,6 +102,7 @@ export function AppShell({ me, navigation, children }: AppShellProps): ReactNode
           <Link href="/home" className={styles.brand}>
             WebDesk Growth Dashboard
           </Link>
+          <ProjectSwitcher projects={projects} initialProjectId={initialProjectId} />
         </div>
         <div className={styles.headerActions}>
           <div className={styles.userArea}>

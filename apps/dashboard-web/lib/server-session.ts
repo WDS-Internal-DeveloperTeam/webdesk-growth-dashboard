@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
-import type { ApiSuccessResponse, ModuleRegistrySummary } from "@webdesk/shared-types";
+import type {
+  ApiSuccessResponse,
+  ModuleRegistrySummary,
+  ProjectSummary,
+} from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
 
 /**
@@ -20,6 +24,7 @@ export interface ServerSessionProfile {
 export interface ServerSession {
   readonly me: ServerSessionProfile;
   readonly navigation: readonly ModuleRegistrySummary[];
+  readonly projects: readonly ProjectSummary[];
 }
 
 /**
@@ -52,10 +57,16 @@ function tryGetApiBaseUrl(): string | null {
  *
  * Wrapped in React's `cache()` so the `(shell)` layout and a page under it
  * (e.g. `home/page.tsx`) both calling this for the same request share one
- * real pair of `dashboard-api` calls — Next.js's fetch memoization already
+ * real set of `dashboard-api` calls — Next.js's fetch memoization already
  * happens to dedupe this implicitly today, but that's an incidental
  * property of identical fetch args during a render pass, not a guarantee;
  * `cache()` makes the dedup explicit and robust against future refactors.
+ *
+ * Also loads `GET /projects` for the header Project Switcher (every real role holds
+ * `project_configuration:view` per `06_Roles_and_Permissions.md §3`, so this should never 401 for
+ * an authenticated caller in practice) — bundled here rather than fetched separately by the
+ * switcher component so it's one server-rendered set of session data, not a client-side loading
+ * flash on every page.
  */
 export const getServerSession = cache(async (): Promise<ServerSession | null> => {
   const apiBaseUrl = tryGetApiBaseUrl();
@@ -70,9 +81,10 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
   }
 
   const headers = { cookie: cookieHeader };
-  const [meResponse, navigationResponse] = await Promise.all([
+  const [meResponse, navigationResponse, projectsResponse] = await Promise.all([
     fetch(`${apiBaseUrl}/me`, { headers, cache: "no-store" }),
     fetch(`${apiBaseUrl}/me/navigation`, { headers, cache: "no-store" }),
+    fetch(`${apiBaseUrl}/projects`, { headers, cache: "no-store" }),
   ]);
 
   if (meResponse.status === 401 || navigationResponse.status === 401) {
@@ -88,6 +100,12 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
   const navigationBody = (await navigationResponse.json()) as ApiSuccessResponse<
     readonly ModuleRegistrySummary[]
   >;
+  // Unlike `me`/`navigation`, a caller who genuinely lacks `project_configuration:view` (none of
+  // the seeded roles today, but the guard is real) sees an empty switcher, not a broken shell —
+  // the Project Switcher is header chrome, not an authentication gate.
+  const projects = projectsResponse.ok
+    ? ((await projectsResponse.json()) as ApiSuccessResponse<readonly ProjectSummary[]>).data
+    : [];
 
-  return { me: meBody.data, navigation: navigationBody.data };
+  return { me: meBody.data, navigation: navigationBody.data, projects };
 });

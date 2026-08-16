@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
+import { CURRENT_PROJECT_COOKIE } from "@/lib/current-project";
 import { getServerSession } from "@/lib/server-session";
 
 /**
@@ -22,8 +24,16 @@ export default async function ShellLayout({ children }: { children: ReactNode })
     redirect("/auth/sign-in");
   }
 
+  const cookieStore = await cookies();
+  const initialProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+
   return (
-    <AppShell me={session.me} navigation={session.navigation}>
+    <AppShell
+      me={session.me}
+      navigation={session.navigation}
+      projects={session.projects}
+      initialProjectId={initialProjectId}
+    >
       {children}
     </AppShell>
   );

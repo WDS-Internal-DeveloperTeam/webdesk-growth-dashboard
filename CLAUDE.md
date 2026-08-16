@@ -269,8 +269,18 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    independently confirmed via a separate `migrate:status` check (44 executed, 0 pending). See
    `docs/project-state/module-projects-foundation-approval-checklist.md`'s "Sign-off" section and
    `project.json`'s `gates[]`/`audit_log` for the full record. **The Projects module backend is now
-   genuinely live in production.** No UI yet (dashboard-web) — D7's Project Switcher wiring remains
-   separate, undesigned scope.
+   genuinely live in production.** No full UI yet (dashboard-web) — the header Project Switcher
+   itself is now built (2026-08-16, see item 8 and "Recent decisions" below), but wiring a real
+   downstream "current project" context other modules read remains separate, undesigned scope.
+8. **`dashboard-web` Project Switcher — built, validated, pushed as its own branch, not yet
+   reviewed/merged (2026-08-16).** `docs/implementation/dashboard-web-project-switcher.md` records
+   the full account. Not started automatically — built directly on the explicit "build the
+   dashboard-web Project Switcher UI" instruction, since D7 already named this as the specific
+   next follow-up once the Projects module backend landed. Independent code review, security
+   review (this branch adds no new mutation surface — it only reads the already-reviewed,
+   already-gated `GET /projects`, but the project's standing review discipline still applies),
+   second-role human review, a gate decision, and merge authorization remain separate,
+   not-yet-requested next steps, same as every other slice.
 
 ## Recent decisions
 
@@ -1107,6 +1117,37 @@ project.json`'s `gates[]` and the approval checklist's "Sign-off" section. Final
   independently verified, closing out this module's full build-to-production arc in a single
   session. Remaining: no `dashboard-web` UI exists yet (D7's Project Switcher wiring remains
   separate, undesigned scope).
+- `[2026-08-16]` **Built the `dashboard-web` header Project Switcher**, under the explicit "build
+  the dashboard-web Project Switcher UI" instruction. Genuinely undesigned scope going in — D7
+  (`docs/task-packages/module-projects-foundation.md`) and `phase-1f-application-shell.md` §2 both
+  explicitly deferred it, and the only design reference anywhere in the canonical docs is a single
+  wireframe label (`07_Low_Fidelity_Wireframes.md` §1: `Project Switcher`, no interaction spec).
+  Built the smallest honest reading of that label: `packages/shared-types` gained `ProjectSummary`
+  (this file's own header rule — "no business-module types until their owning module is actually
+  authorized and implemented" — now true for Projects); `getServerSession()` now also loads
+  `GET /projects` in parallel with `/me`/`/me/navigation` (degrading to an empty list on failure,
+  not throwing — the switcher is header chrome, not an auth gate, unlike the other two calls);
+  a new `ProjectSwitcher` client component (native `<select>`, no bespoke design — same "neutral
+  foundations" precedent Phase 1F set) renders in `AppShell`'s header between the brand link and
+  the header actions, matching the wireframe's left-to-right order. Selecting a project persists
+  only to a new `CURRENT_PROJECT_COOKIE` (`apps/dashboard-web/lib/current-project.ts`) — no
+  downstream module reads it yet; wiring a real "current project" context other modules filter by
+  remains separate, undesigned scope, exactly as D7 already framed it. A real gap surfaced and was
+  fixed along the way: `apps/dashboard-web/vitest.config.mts` had no `resolve.alias` for `@/*`
+  (unlike `tsconfig.json`'s matching `paths` entry) — never exercised before because every prior
+  `@/lib/...` import in a component was type-only and erased before Vite ever saw it; this
+  component's `CURRENT_PROJECT_COOKIE` import is the first real (value) one, so the alias was added
+  to `vitest.config.mts` to match. Full validation on branch `dashboard-web-project-switcher` (off
+  `main` at `03787e4`): 12/12 `dashboard-web` unit tests (5 new, covering the empty state, option
+  rendering with status suffixes, honoring/falling back on `initialProjectId`, and live selection),
+  typecheck/lint/`next build` all clean, and the existing unauthenticated Playwright smoke suite
+  (6/6) still passes. See `docs/implementation/dashboard-web-project-switcher.md` for the full
+  as-built record, including what was deliberately not built (any downstream consumption of the
+  selection, navigation on selection — no per-project pages exist yet, a bespoke visual design, or
+  a server-side cookie write). **Not yet reviewed or merged** — pushed as its own branch; code
+  review, security review, second-role human review, a gate decision, and merge authorization are
+  each their own separate, not-yet-requested next step, unchanged from this project's standing
+  discipline for every prior slice.
 
 ## Open client blockers
 
@@ -1271,8 +1312,16 @@ real background-worker/queue wiring, or a module-implementation wave off the roa
 requiring its own explicit authorization.)
 
 **2026-08-15 update**: the Projects module backend (branch `module-projects-foundation`, PR #24)
-went through this project's own independent code review — 9 CONFIRMED findings (most severe an
-IDOR in the sub-resource repositories), all fixed and fully re-validated. See this date's "Recent
-decisions" entry for the complete account. Still not merged, not deployed, no production
-migration run — security review, second-role human review, gate decision, and merge authorization
-remain separate, not-yet-requested next steps.
+went through this project's own independent code review (9 CONFIRMED findings, most severe an
+IDOR in the sub-resource repositories) and security review (2 CONFIRMED findings, most severe a
+privilege-escalation path in the project-approver endpoint), all fixed and fully re-validated,
+then the required second-role human review (Jitesh D, "Approved"), the gate (G4-projects,
+CONFIRM), the merge (`9ee540e...`), and the production migration all completed the same day. See
+that date's "Recent decisions" entries for the complete account. **The Projects module backend is
+genuinely live in production** — no `dashboard-web` UI existed yet as of that entry.
+
+**2026-08-16 update**: the `dashboard-web` header Project Switcher (branch
+`dashboard-web-project-switcher`) is now built and validated — see this date's "Recent decisions"
+entry and `docs/implementation/dashboard-web-project-switcher.md`. Genuinely undesigned scope
+(D7), built to the smallest honest reading of the one wireframe label that named it. Not yet
+reviewed or merged.

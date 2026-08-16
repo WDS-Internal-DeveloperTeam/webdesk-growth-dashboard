@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { ModuleRegistrySummary } from "@webdesk/shared-types";
+import type { ModuleRegistrySummary, ProjectSummary } from "@webdesk/shared-types";
 import { AppShell } from "../../components/app-shell.js";
 
 vi.mock("next/navigation", () => ({
@@ -37,6 +37,10 @@ function navEntry(
   return { ...base, ...overrides, key: overrides.key };
 }
 
+function projectSummary(overrides: Partial<ProjectSummary> & { id: string }): ProjectSummary {
+  return { publicId: overrides.id, name: overrides.id, status: "active", ...overrides };
+}
+
 describe("AppShell", () => {
   const navigation: ModuleRegistrySummary[] = [
     navEntry({ key: "home", displayName: "Home", route: "/home", navigationGroup: "home" }),
@@ -53,6 +57,8 @@ describe("AppShell", () => {
       <AppShell
         me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
         navigation={navigation}
+        projects={[]}
+        initialProjectId={null}
       >
         <p>Page content</p>
       </AppShell>,
@@ -66,6 +72,8 @@ describe("AppShell", () => {
       <AppShell
         me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
         navigation={navigation}
+        projects={[]}
+        initialProjectId={null}
       >
         <p>Page content</p>
       </AppShell>,
@@ -84,6 +92,8 @@ describe("AppShell", () => {
       <AppShell
         me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
         navigation={navigation}
+        projects={[]}
+        initialProjectId={null}
       >
         <p>Page content</p>
       </AppShell>,
@@ -99,6 +109,8 @@ describe("AppShell", () => {
       <AppShell
         me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
         navigation={navigation}
+        projects={[]}
+        initialProjectId={null}
       >
         <p>Page content</p>
       </AppShell>,
@@ -115,6 +127,8 @@ describe("AppShell", () => {
       <AppShell
         me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
         navigation={navigation}
+        projects={[]}
+        initialProjectId={null}
       >
         <p>Page content</p>
       </AppShell>,
@@ -136,6 +150,8 @@ describe("AppShell", () => {
       <AppShell
         me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
         navigation={outOfOrder}
+        projects={[]}
+        initialProjectId={null}
       >
         <p>Page content</p>
       </AppShell>,
@@ -154,10 +170,108 @@ describe("AppShell", () => {
       <AppShell
         me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
         navigation={[]}
+        projects={[]}
+        initialProjectId={null}
       >
         <p>Page content</p>
       </AppShell>,
     );
     expect(screen.getByRole("navigation", { name: "Primary" })).toBeEmptyDOMElement();
+  });
+
+  describe("Project Switcher", () => {
+    it("renders a disabled 'No projects yet' control when the caller has no visible projects", () => {
+      render(
+        <AppShell
+          me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
+          navigation={navigation}
+          projects={[]}
+          initialProjectId={null}
+        >
+          <p>Page content</p>
+        </AppShell>,
+      );
+      const select = screen.getByLabelText("Project");
+      expect(select).toBeDisabled();
+      expect(screen.getByText("No projects yet")).toBeInTheDocument();
+    });
+
+    it("lists real projects plus an 'All projects' option, defaulting to 'All projects'", () => {
+      const projects = [
+        projectSummary({ id: "p1", name: "Acme Website" }),
+        projectSummary({ id: "p2", name: "Beta Portal", status: "paused" }),
+      ];
+      render(
+        <AppShell
+          me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
+          navigation={navigation}
+          projects={projects}
+          initialProjectId={null}
+        >
+          <p>Page content</p>
+        </AppShell>,
+      );
+      const select = screen.getByLabelText("Project") as HTMLSelectElement;
+      expect(select).not.toBeDisabled();
+      expect(select.value).toBe("");
+      expect(screen.getByRole("option", { name: "All projects" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Acme Website" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Beta Portal (paused)" })).toBeInTheDocument();
+    });
+
+    it("pre-selects the project named by initialProjectId when it's still visible", () => {
+      const projects = [
+        projectSummary({ id: "p1", name: "Acme Website" }),
+        projectSummary({ id: "p2", name: "Beta Portal" }),
+      ];
+      render(
+        <AppShell
+          me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
+          navigation={navigation}
+          projects={projects}
+          initialProjectId="p2"
+        >
+          <p>Page content</p>
+        </AppShell>,
+      );
+      const select = screen.getByLabelText("Project") as HTMLSelectElement;
+      expect(select.value).toBe("p2");
+    });
+
+    it("falls back to 'All projects' when initialProjectId names a project no longer visible", () => {
+      const projects = [projectSummary({ id: "p1", name: "Acme Website" })];
+      render(
+        <AppShell
+          me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
+          navigation={navigation}
+          projects={projects}
+          initialProjectId="stale-id"
+        >
+          <p>Page content</p>
+        </AppShell>,
+      );
+      const select = screen.getByLabelText("Project") as HTMLSelectElement;
+      expect(select.value).toBe("");
+    });
+
+    it("updates the selection when the caller picks a different project", () => {
+      const projects = [
+        projectSummary({ id: "p1", name: "Acme Website" }),
+        projectSummary({ id: "p2", name: "Beta Portal" }),
+      ];
+      render(
+        <AppShell
+          me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
+          navigation={navigation}
+          projects={projects}
+          initialProjectId={null}
+        >
+          <p>Page content</p>
+        </AppShell>,
+      );
+      const select = screen.getByLabelText("Project") as HTMLSelectElement;
+      fireEvent.change(select, { target: { value: "p2" } });
+      expect(select.value).toBe("p2");
+    });
   });
 });
