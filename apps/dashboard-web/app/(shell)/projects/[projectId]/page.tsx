@@ -7,6 +7,7 @@ import { getServerSession } from "@/lib/server-session";
 import {
   formatTimestamp,
   getProjectDetail,
+  isSafeHttpUrl,
   objectiveStatusBadge,
   projectStatusBadge,
   roadmapItemStatusBadge,
@@ -132,9 +133,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
               <li key={environment.id} style={listItemStyle}>
                 <span style={itemLabelStyle}>{environment.name}</span>
                 {environment.url ? (
-                  <a href={environment.url} target="_blank" rel="noopener noreferrer">
-                    {environment.url}
-                  </a>
+                  isSafeHttpUrl(environment.url) ? (
+                    <a href={environment.url} target="_blank" rel="noopener noreferrer">
+                      {environment.url}
+                    </a>
+                  ) : (
+                    <span style={mutedInlineStyle}>{environment.url}</span>
+                  )
                 ) : (
                   <span style={mutedInlineStyle}>No URL set</span>
                 )}

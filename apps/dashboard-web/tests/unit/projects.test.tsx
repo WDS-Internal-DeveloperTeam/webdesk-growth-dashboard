@@ -11,6 +11,7 @@ import {
   formatTimestamp,
   getProjectDetail,
   getProjects,
+  isSafeHttpUrl,
   objectiveStatusBadge,
   parseProjectsSearchParams,
   projectStatusBadge,
@@ -249,6 +250,22 @@ describe("objectiveStatusBadge", () => {
   it("maps each objective status to a distinct label", () => {
     expect(objectiveStatusBadge("open")).toEqual({ token: "unknown", label: "Open" });
     expect(objectiveStatusBadge("complete")).toEqual({ token: "healthy", label: "Complete" });
+  });
+});
+
+describe("isSafeHttpUrl", () => {
+  it("accepts http and https URLs", () => {
+    expect(isSafeHttpUrl("http://staging.example.com")).toBe(true);
+    expect(isSafeHttpUrl("https://staging.example.com/path?query=1")).toBe(true);
+  });
+
+  it("rejects a javascript: URL — the backend's z.string().url() check passes it through unsanitized", () => {
+    expect(isSafeHttpUrl("javascript:alert(document.cookie)")).toBe(false);
+  });
+
+  it("rejects other non-http(s) schemes and unparseable strings", () => {
+    expect(isSafeHttpUrl("data:text/html,<script>alert(1)</script>")).toBe(false);
+    expect(isSafeHttpUrl("not a url")).toBe(false);
   });
 });
 

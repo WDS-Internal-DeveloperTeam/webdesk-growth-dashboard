@@ -311,8 +311,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == b6d0b601db1025d6c175afae4309aa406281ff39`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Projects list page is now genuinely live in production.**
-10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, code-reviewed, not yet
-    security-reviewed/merged (2026-08-16).**
+10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, code-reviewed,
+    security-reviewed, not yet merged (2026-08-16).**
     `docs/implementation/dashboard-web-project-detail.md` records the full account. Not started
     automatically — built directly on the explicit "build the project detail page UI" instruction.
     No approved wireframe exists for this screen; the only prior description is
@@ -330,9 +330,11 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     to this page, and its own `formatTimestamp()` was promoted into the shared `lib/projects.ts` so
     both pages use the same one. Independent code review (medium effort — 7 findings, 4 CONFIRMED,
     all fixed) ran on
-    [PR #27](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/27) — see
-    this date's "Recent decisions" entry for the fix details. Security review, second-role human
-    review, a gate decision, and merge authorization remain separate, not-yet-requested next steps,
+    [PR #27](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/27), then
+    a separate security review found 1 CONFIRMED finding (a stored-XSS path via an unrestricted
+    URL scheme on a rendered environment link) — also fixed — see this date's "Recent decisions"
+    entries for the fix details. Second-role human review, a gate decision, and merge authorization
+    remain separate, not-yet-requested next steps,
     same as every other slice.
 
 ## Recent decisions
@@ -1396,6 +1398,29 @@ b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is
   11/11 Playwright tests. See `docs/implementation/dashboard-web-project-detail.md`'s "3b. Code
   review" section for the full account. Security review, second-role human review, a gate decision,
   and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-16]` **Security review run on `dashboard-web-project-detail` (PR #27), separately from
+  the code review.** 1 finding surfaced and confirmed at 9/10 confidence: the Environments section
+  rendered each environment's stored `url` directly as a clickable `<a href>` with no scheme
+  check. The backend's only validation, `z.string().url()` in
+  `apps/dashboard-api/src/projects/projects.dto.ts`, confirms a value parses as _some_ URL but
+  doesn't restrict scheme — a `javascript:` URL passes and is persisted unsanitized. This page is
+  the first place in the codebase that renders this stored field as a link, turning previously-
+  inert data into an executable sink; per the seeded RBAC matrix, `owner_growth_approver` (not the
+  most trusted role) holds `project_configuration:edit` while five other roles are view-only,
+  giving a genuine cross-privilege attack path — a lower/differently-trusted writer plants a
+  payload a different viewer later clicks, executing in the viewer's own authenticated session.
+  Fixed with a new `isSafeHttpUrl()` guard in `apps/dashboard-web/lib/projects.ts`: a stored URL
+  now renders as a clickable link only if its parsed protocol is `http:`/`https:`; anything else
+  renders as inert text. This closes the vulnerability at its actual sink regardless of what the
+  backend already allows. The backend schema itself (`z.string().url()` accepting any scheme) is a
+  separate, real hardening opportunity, but tightening it means editing the already-reviewed-and-
+  merged Projects module backend — out of scope for a `dashboard-web` branch, so it was flagged as
+  a standalone follow-up task rather than folded into this PR. 3 new regression tests for
+  `isSafeHttpUrl()`. Full re-validation: typecheck/lint/`next build` clean, 44/44 `dashboard-web`
+  unit tests (3 new), 11/11 Playwright tests. See
+  `docs/implementation/dashboard-web-project-detail.md`'s "3c. Security review" section for the
+  full account. Second-role human review, a gate decision, and merge authorization remain
+  separate, not-yet-requested next steps.
 
 ## Open client blockers
 

@@ -171,6 +171,23 @@ export function formatTimestamp(iso: string): string {
   return `${iso.slice(0, 16).replace("T", " ")} UTC`;
 }
 
+/**
+ * Guards a stored URL before it's ever rendered as a clickable `<a href>`. The backend's own
+ * validation (`z.string().url()` on `ProjectEnvironment.url`) only confirms the value parses as
+ * *some* URL — a `javascript:` URI parses successfully and passes it, so it can reach this page
+ * unsanitized. Rendering an unchecked value as an `href` would execute it as script on click, in
+ * the viewer's own authenticated session. `http:`/`https:` are the only schemes this app ever
+ * intends to link to, so anything else is rendered as inert text instead (see the detail page).
+ */
+export function isSafeHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const ROADMAP_ITEM_STATUS_BADGE: Readonly<
   Record<RoadmapItem["status"], { token: StatusToken; label: string }>
 > = {

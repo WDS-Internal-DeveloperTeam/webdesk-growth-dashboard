@@ -149,15 +149,51 @@ from placeholder ID strings (`"some-id"`, `"missing-id"`) to real UUID-shaped fi
 function validates format up front. Full re-validation: typecheck/lint/`next build` clean, 41/41
 `dashboard-web` unit tests (1 new), 11/11 Playwright tests.
 
+## 3c. Security review — 1 CONFIRMED finding fixed
+
+This project's own `security-review` skill ran separately from the code review — 1 finding
+surfaced and confirmed at 9/10 confidence:
+
+- **Stored XSS via an unrestricted URL scheme in `ProjectEnvironment.url` rendered as a clickable
+  link.** The Environments section renders each environment's stored `url` directly as an `<a
+href>`. The backend's only validation, `z.string().url()` in
+  `apps/dashboard-api/src/projects/projects.dto.ts`, confirms a value parses as _some_ URL but
+  does not restrict scheme — `new URL("javascript:...")` parses successfully, so a `javascript:`
+  URL passes validation and is persisted unsanitized. This page is the first place in the
+  codebase that renders this stored field as a link (the `project-environments` endpoints existed
+  since `module-projects-foundation`, but had no `dashboard-web` consumer until now), so this PR
+  is what turns previously-inert stored data into an executable sink. Per the seeded RBAC matrix,
+  `owner_growth_approver` holds `project_configuration:edit` while `marketing_editor`,
+  `designer_creative_reviewer`, `developer`, `qa_security_reviewer`, and `read_only` are all
+  view-only — a real cross-privilege path where a differently-trusted writer plants a payload a
+  different viewer later clicks, executing in the viewer's own authenticated session.
+
+  Fixed with a new `isSafeHttpUrl()` guard in `apps/dashboard-web/lib/projects.ts`: before
+  rendering `environment.url` as a clickable `<a href>`, its parsed `protocol` must be `http:` or
+  `https:`; anything else (including a malformed/unparseable string) renders as inert text
+  instead, matching the same visual treatment as "no URL set." This closes the vulnerability at
+  its actual sink in this branch's own scope — the fix doesn't depend on the backend's own
+  validation, so it holds even if a bad value somehow already exists in the database. The backend
+  schema itself (`z.string().url()` accepting any scheme) is a separate, real hardening
+  opportunity, but tightening it means editing `apps/dashboard-api/src/projects/projects.dto.ts`
+  in the already-reviewed-and-merged Projects module backend — out of scope for a `dashboard-web`
+  branch, so it was flagged as a standalone follow-up task instead of folded into this PR.
+
+  Regression tests added: `isSafeHttpUrl()` accepts `http`/`https`, rejects `javascript:`,
+  `data:`, and unparseable strings. Full re-validation: typecheck/lint/`next build` clean, 44/44
+  `dashboard-web` unit tests (3 new), 11/11 Playwright tests.
+
 ## 4. Testing
 
-- `apps/dashboard-web/tests/unit/projects.test.tsx` — 25 tests total (11 new across the initial
-  build and the code-review fix round): `formatTimestamp()`, `roadmapItemStatusBadge()`/
-  `objectiveStatusBadge()` (every status value), and `getProjectDetail()` (a malformed `projectId`
-  → `null` without calling `fetch` at all; a real 404 → `null`, with all 6 requests still fired
-  concurrently and discarded; non-OK/non-404 primary response → throws; a sub-resource failure
-  after a successful primary fetch → throws; the success path, asserting every one of the six
-  expected URLs was requested and the team headcount is derived from the raw array length).
+- `apps/dashboard-web/tests/unit/projects.test.tsx` — 28 tests total (14 new across the initial
+  build, the code-review fix round, and the security-review fix round): `formatTimestamp()`,
+  `roadmapItemStatusBadge()`/`objectiveStatusBadge()` (every status value), `isSafeHttpUrl()`
+  (accepts `http`/`https`, rejects `javascript:`/`data:`/unparseable strings), and
+  `getProjectDetail()` (a malformed `projectId` → `null` without calling `fetch` at all; a real
+  404 → `null`, with all 6 requests still fired concurrently and discarded; non-OK/non-404 primary
+  response → throws; a sub-resource failure after a successful primary fetch → throws; the
+  success path, asserting every one of the six expected URLs was requested and the team headcount
+  is derived from the raw array length).
 - `apps/dashboard-web/tests/e2e/smoke.spec.ts` — 1 new test: an unauthenticated visit to
   `/projects/{a well-formed id}` redirects to sign-in, mirroring the existing `/projects` coverage.
   Also live-verified against the dev server (no real backend available in this sandboxed
