@@ -5,12 +5,16 @@ vi.mock("next/headers", () => ({
 }));
 
 import { cookies } from "next/headers";
-import type { Project } from "@webdesk/shared-types";
+import type { Project, ProjectDetail } from "@webdesk/shared-types";
 import {
   buildProjectsHref,
+  formatTimestamp,
+  getProjectDetail,
   getProjects,
+  objectiveStatusBadge,
   parseProjectsSearchParams,
   projectStatusBadge,
+  roadmapItemStatusBadge,
 } from "../../lib/projects.js";
 
 describe("parseProjectsSearchParams", () => {
@@ -220,5 +224,140 @@ describe("getProjects", () => {
 
     expect(result.items).toHaveLength(25);
     expect(result.hasNextPage).toBe(true);
+  });
+});
+
+describe("formatTimestamp", () => {
+  it("formats an ISO timestamp as a UTC-labeled string, truncated to the minute", () => {
+    expect(formatTimestamp("2026-08-16T13:05:42.123Z")).toBe("2026-08-16 13:05 UTC");
+  });
+});
+
+describe("roadmapItemStatusBadge", () => {
+  it("maps each roadmap-item status to a distinct label, sharing the healthy token for active/complete", () => {
+    expect(roadmapItemStatusBadge("not_started")).toEqual({
+      token: "unknown",
+      label: "Not started",
+    });
+    expect(roadmapItemStatusBadge("active")).toEqual({ token: "healthy", label: "Active" });
+    expect(roadmapItemStatusBadge("complete")).toEqual({ token: "healthy", label: "Complete" });
+    expect(roadmapItemStatusBadge("skipped")).toEqual({ token: "notConfigured", label: "Skipped" });
+  });
+});
+
+describe("objectiveStatusBadge", () => {
+  it("maps each objective status to a distinct label", () => {
+    expect(objectiveStatusBadge("open")).toEqual({ token: "unknown", label: "Open" });
+    expect(objectiveStatusBadge("complete")).toEqual({ token: "healthy", label: "Complete" });
+  });
+});
+
+describe("getProjectDetail", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.example.com";
+    vi.mocked(cookies).mockResolvedValue({ toString: () => "sid=abc" } as never);
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  function projectDetailFixture(): ProjectDetail {
+    return {
+      id: "11111111-1111-1111-1111-111111111111",
+      publicId: "proj-1",
+      name: "Acme Website",
+      description: "The Acme website growth engagement.",
+      status: "active",
+      confidentiality: "internal",
+      activePhaseId: "22222222-2222-2222-2222-222222222222",
+      ownerUserId: "33333333-3333-3333-3333-333333333333",
+      createdAt: "2026-08-16T00:00:00.000Z",
+      updatedAt: "2026-08-16T00:00:00.000Z",
+    };
+  }
+
+  function okJson(data: unknown): Response {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data, correlationId: "test" }),
+    } as Response;
+  }
+
+  it("returns null when GET /projects/:projectId responds 404, without fetching any sub-resource", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response);
+    global.fetch = fetchMock as typeof fetch;
+
+    const result = await getProjectDetail("missing-id");
+
+    expect(result).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws on a non-OK, non-404 primary response instead of treating it as missing", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 } as Response);
+
+    await expect(getProjectDetail("some-id")).rejects.toThrow(/Failed to load project/);
+  });
+
+  it("throws if a sub-resource fetch fails after the project itself loads successfully", async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (url.endsWith("/projects/some-id")) {
+        return Promise.resolve(okJson(projectDetailFixture()));
+      }
+      return Promise.resolve({ ok: false, status: 500 } as Response);
+    }) as typeof fetch;
+
+    await expect(getProjectDetail("some-id")).rejects.toThrow(/Failed to load project/);
+  });
+
+  it("fetches the project and every sub-resource, returning a real team headcount", async () => {
+    const project = projectDetailFixture();
+    const requestedUrls: string[] = [];
+    global.fetch = vi.fn((url: string) => {
+      requestedUrls.push(url);
+      if (url.endsWith("/projects/some-id")) {
+        return Promise.resolve(okJson(project));
+      }
+      if (url.endsWith("/roadmap-items")) {
+        return Promise.resolve(
+          okJson([{ id: project.activePhaseId, name: "Phase 1", sequence: 1, status: "active" }]),
+        );
+      }
+      if (url.endsWith("/objectives")) {
+        return Promise.resolve(okJson([]));
+      }
+      if (url.endsWith("/environments")) {
+        return Promise.resolve(okJson([]));
+      }
+      if (url.endsWith("/repositories")) {
+        return Promise.resolve(okJson([]));
+      }
+      if (url.endsWith("/team")) {
+        return Promise.resolve(okJson([{ id: "a" }, { id: "b" }, { id: "c" }]));
+      }
+      throw new Error(`Unexpected URL in test: ${url}`);
+    }) as typeof fetch;
+
+    const result = await getProjectDetail("some-id");
+
+    expect(result).not.toBeNull();
+    expect(result?.project).toEqual(project);
+    expect(result?.roadmapItems).toHaveLength(1);
+    expect(result?.teamCount).toBe(3);
+    expect(requestedUrls).toEqual(
+      expect.arrayContaining([
+        "https://api.example.com/projects/some-id",
+        "https://api.example.com/projects/some-id/roadmap-items",
+        "https://api.example.com/projects/some-id/objectives",
+        "https://api.example.com/projects/some-id/environments",
+        "https://api.example.com/projects/some-id/repositories",
+        "https://api.example.com/projects/some-id/team",
+      ]),
+    );
   });
 });

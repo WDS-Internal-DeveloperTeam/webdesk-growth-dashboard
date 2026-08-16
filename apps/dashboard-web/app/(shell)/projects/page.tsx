@@ -4,6 +4,7 @@ import { ContentContainer, EmptyState, PageHeader, StatusBadge } from "@webdesk/
 import { getServerSession } from "@/lib/server-session";
 import {
   buildProjectsHref,
+  formatTimestamp,
   getProjects,
   parseProjectsSearchParams,
   PROJECTS_PAGE_SIZE,
@@ -262,17 +263,13 @@ function SortableHeader({
   );
 }
 
-function formatTimestamp(iso: string): string {
-  // Displayed as the raw stored UTC timestamp, not localized — real timezone confirmation is
-  // still an open item (CLAUDE.md's "Open client blockers"), so this doesn't invent a conversion.
-  return `${iso.slice(0, 16).replace("T", " ")} UTC`;
-}
-
 function ProjectRow({ project }: { readonly project: Project }) {
   const badge = projectStatusBadge(project.status);
   return (
     <tr>
-      <td style={tdStyle}>{project.name}</td>
+      <td style={tdStyle}>
+        <Link href={`/projects/${project.id}`}>{project.name}</Link>
+      </td>
       <td style={tdStyle}>
         <StatusBadge status={badge.token} label={badge.label} />
       </td>

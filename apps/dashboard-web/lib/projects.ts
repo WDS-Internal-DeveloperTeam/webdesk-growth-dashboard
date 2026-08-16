@@ -1,5 +1,14 @@
 import { cookies } from "next/headers";
-import type { ApiSuccessResponse, Project } from "@webdesk/shared-types";
+import type {
+  ApiSuccessResponse,
+  Project,
+  ProjectDetail,
+  ProjectEnvironment,
+  ProjectObjective,
+  ProjectRepository,
+  ProjectTeamEntry,
+  RoadmapItem,
+} from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
 import { getApiBaseUrl } from "./auth";
 
@@ -153,5 +162,118 @@ export async function getProjects(query: ProjectsQuery): Promise<ProjectsPageRes
   return {
     items: body.data.slice(0, PROJECTS_PAGE_SIZE),
     hasNextPage: body.data.length > PROJECTS_PAGE_SIZE,
+  };
+}
+
+/** Shared by the list and detail pages — displayed as the raw stored UTC timestamp, not localized;
+ *  see the detail page's own note on why (real timezone confirmation is still an open item). */
+export function formatTimestamp(iso: string): string {
+  return `${iso.slice(0, 16).replace("T", " ")} UTC`;
+}
+
+const ROADMAP_ITEM_STATUS_BADGE: Readonly<
+  Record<RoadmapItem["status"], { token: StatusToken; label: string }>
+> = {
+  not_started: { token: "unknown", label: "Not started" },
+  active: { token: "healthy", label: "Active" },
+  complete: { token: "healthy", label: "Complete" },
+  skipped: { token: "notConfigured", label: "Skipped" },
+};
+
+/** `active`/`complete` share the `healthy` token — both are non-problem states and the label text
+ *  (not color alone) disambiguates them, same reasoning `projectStatusBadge` already establishes. */
+export function roadmapItemStatusBadge(status: RoadmapItem["status"]): {
+  readonly token: StatusToken;
+  readonly label: string;
+} {
+  return ROADMAP_ITEM_STATUS_BADGE[status];
+}
+
+const OBJECTIVE_STATUS_BADGE: Readonly<
+  Record<ProjectObjective["status"], { token: StatusToken; label: string }>
+> = {
+  open: { token: "unknown", label: "Open" },
+  complete: { token: "healthy", label: "Complete" },
+};
+
+export function objectiveStatusBadge(status: ProjectObjective["status"]): {
+  readonly token: StatusToken;
+  readonly label: string;
+} {
+  return OBJECTIVE_STATUS_BADGE[status];
+}
+
+export interface ProjectDetailData {
+  readonly project: ProjectDetail;
+  readonly roadmapItems: readonly RoadmapItem[];
+  readonly objectives: readonly ProjectObjective[];
+  readonly environments: readonly ProjectEnvironment[];
+  readonly repositories: readonly ProjectRepository[];
+  /** A real, non-fabricated headcount only — see `ProjectTeamEntry`'s own doc comment for why
+   *  individual team-roster identities aren't fetched or shown. */
+  readonly teamCount: number;
+}
+
+async function fetchProjectSubResource<T>(
+  apiBaseUrl: string,
+  projectId: string,
+  resource: string,
+  headers: HeadersInit,
+): Promise<readonly T[]> {
+  const response = await fetch(`${apiBaseUrl}/projects/${projectId}/${resource}`, {
+    headers,
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load project ${resource} (status ${response.status})`);
+  }
+  return ((await response.json()) as ApiSuccessResponse<readonly T[]>).data;
+}
+
+/**
+ * Fetches a single project and its owned sub-resources for the detail page. Returns `null` on a
+ * 404 from `GET /projects/:projectId` specifically — the caller renders Next.js's `notFound()` for
+ * that case — and throws on any other non-OK status (403, 5xx, ...), same as `getProjects()`
+ * above: an authorization or server failure must surface as a real error, not a misleading "this
+ * project doesn't exist."
+ *
+ * The sub-resource fetches only run once the project itself is confirmed to exist, in parallel —
+ * `GET /projects/:projectId/*` list endpoints don't themselves validate the parent project's
+ * existence (a bogus `projectId` returns an empty array, not a 404), so gating on the primary fetch
+ * first is the only way to detect a genuinely missing project.
+ */
+export async function getProjectDetail(projectId: string): Promise<ProjectDetailData | null> {
+  const apiBaseUrl = getApiBaseUrl();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+  const headers = { cookie: cookieHeader };
+
+  const projectResponse = await fetch(`${apiBaseUrl}/projects/${projectId}`, {
+    headers,
+    cache: "no-store",
+  });
+  if (projectResponse.status === 404) {
+    return null;
+  }
+  if (!projectResponse.ok) {
+    throw new Error(`Failed to load project (status ${projectResponse.status})`);
+  }
+  const project = ((await projectResponse.json()) as ApiSuccessResponse<ProjectDetail>).data;
+
+  const [roadmapItems, objectives, environments, repositories, team] = await Promise.all([
+    fetchProjectSubResource<RoadmapItem>(apiBaseUrl, projectId, "roadmap-items", headers),
+    fetchProjectSubResource<ProjectObjective>(apiBaseUrl, projectId, "objectives", headers),
+    fetchProjectSubResource<ProjectEnvironment>(apiBaseUrl, projectId, "environments", headers),
+    fetchProjectSubResource<ProjectRepository>(apiBaseUrl, projectId, "repositories", headers),
+    fetchProjectSubResource<ProjectTeamEntry>(apiBaseUrl, projectId, "team", headers),
+  ]);
+
+  return {
+    project,
+    roadmapItems,
+    objectives,
+    environments,
+    repositories,
+    teamCount: team.length,
   };
 }

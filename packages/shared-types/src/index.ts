@@ -249,3 +249,65 @@ export interface Project {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * The Projects detail page's own shape — unlike `Project` above, this legitimately carries
+ * `activePhaseId`/`ownerUserId` again: the detail page also fetches the project's own roadmap
+ * items in the same request pass, so `activePhaseId` can be resolved to a real name by
+ * cross-referencing that array (no fabrication, no raw UUID shown). `ownerUserId`'s raw value is
+ * used only to render a boolean "assigned"/"not assigned" state — its value is never displayed as
+ * an identity, since no user-lookup endpoint exists yet (the same constraint `Project` above
+ * already documents). `retentionCategory`/`createdBy`/`updatedBy` remain operational metadata, out
+ * of scope for either shape.
+ */
+export interface ProjectDetail extends Project {
+  readonly activePhaseId: string | null;
+  readonly ownerUserId: string | null;
+}
+
+/** A project's roadmap "phase" (`RoadmapItemEntity`) — `createdBy`/`updatedBy` omitted as operational metadata, matching `Project`'s own precedent. */
+export interface RoadmapItem {
+  readonly id: string;
+  readonly name: string;
+  readonly sequence: number;
+  readonly status: "not_started" | "active" | "complete" | "skipped";
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ProjectObjective {
+  readonly id: string;
+  readonly description: string;
+  readonly status: "open" | "complete";
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ProjectEnvironment {
+  readonly id: string;
+  readonly name: string;
+  readonly url: string | null;
+  readonly notes: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ProjectRepository {
+  readonly id: string;
+  readonly repoOwner: string;
+  readonly repoName: string;
+  readonly defaultBranch: string;
+  readonly notes: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * The project team roster's own entry — carries only `id`, since no user-lookup endpoint exists to
+ * resolve `userId` to a name yet (same constraint as `ProjectDetail.ownerUserId`). The detail page
+ * uses this array's `.length` only, as a real, non-fabricated headcount — never renders an entry's
+ * identity.
+ */
+export interface ProjectTeamEntry {
+  readonly id: string;
+}
