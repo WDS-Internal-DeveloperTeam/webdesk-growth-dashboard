@@ -311,6 +311,34 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
    `build.commitSha == b6d0b601db1025d6c175afae4309aa406281ff39`, and `dashboard-web`'s `/` resolves
    (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
    Projects list page is now genuinely live in production.**
+10. **`dashboard-web` Project Detail page (`/projects/:projectId`) — built, reviewed, gated, not
+    yet merged (2026-08-16).**
+    `docs/implementation/dashboard-web-project-detail.md` records the full account. Not started
+    automatically — built directly on the explicit "build the project detail page UI" instruction.
+    No approved wireframe exists for this screen; the only prior description is
+    `module-projects-foundation.md` §8's own unapproved proposal (header + Overview/Team/
+    Environments/Repositories/Roadmap tabs), explicitly flagged there as "not sourced... should be
+    confirmed or corrected." Renders the same content grouping as sections instead of client-side
+    tabs (keeps the page fully server-rendered, zero client JS, consistent with the rest of the
+    app) — Overview (public ID, confidentiality, active phase resolved by cross-referencing the
+    project's own roadmap items, owner assigned/not-assigned, team headcount, timestamps,
+    description), Roadmap, Objectives, Environments, and Repositories (linking out to GitHub).
+    Deliberately does not build the header's proposed pause/archive/edit actions (matching the list
+    page's own no-mutation-UI precedent) or any team-member identity list (no user-lookup endpoint
+    exists to resolve a `userId` to a name — only a real headcount is shown, the same constraint
+    that already shaped the list page's own "owner" column omission). The list page's rows now link
+    to this page, and its own `formatTimestamp()` was promoted into the shared `lib/projects.ts` so
+    both pages use the same one. Independent code review (medium effort — 7 findings, 4 CONFIRMED,
+    all fixed) ran on
+    [PR #27](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/27), then
+    a separate security review found 1 HIGH CONFIRMED finding (a stored-XSS path via an
+    unrestricted URL scheme on a rendered environment link) — also fixed. A review packet was
+    published as a Claude artifact for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
+    returned "Approved."** **The gate (G4-project-detail) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM. **"Merge PR #27" has not been requested** —
+    merge authorization remains a separate, not-yet-requested next step, same as every other
+    slice.
 
 ## Recent decisions
 
@@ -1305,6 +1333,114 @@ b6d0b601db1025d6c175afae4309aa406281ff39`, confirming the exact merged commit is
   list page is now genuinely live in production**, closing out this slice's full build-to-
   production arc. Backend, header switcher, and now the list page are all live — no project-detail
   page or create/edit form exists yet, both separate, not-yet-requested next steps.
+- `[2026-08-16]` **Built the `dashboard-web` Project Detail page** (`/projects/:projectId`), under
+  the explicit "build the project detail page UI" instruction. No approved wireframe exists; the
+  only prior description is `module-projects-foundation.md` §8's own unapproved proposal (header +
+  Overview/Team/Environments/Repositories/Roadmap tabs), explicitly flagged as "not sourced...
+  should be confirmed or corrected." Built the same content grouping as sections rather than
+  client-side tabs — a deliberate simplification keeping the page fully server-rendered, zero
+  client JS, consistent with every other page in this app. `packages/shared-types` gained
+  `ProjectDetail` (extends `Project` with `activePhaseId`/`ownerUserId` — legitimate here, unlike
+  the list page's `Project`, since the detail page also fetches the project's own roadmap items in
+  the same pass, so `activePhaseId` resolves to a real name by cross-reference, no fabrication),
+  `RoadmapItem`, `ProjectObjective`, `ProjectEnvironment`, `ProjectRepository`, and
+  `ProjectTeamEntry` (carries only `id` — used solely for a real, non-fabricated headcount, never
+  an identity, since no user-lookup endpoint exists yet). `lib/projects.ts` gained
+  `getProjectDetail()` — fetches `GET /projects/:projectId` first and gates on it (returns `null`
+  specifically on a 404 for the page to call `notFound()`; throws on any other non-OK status, e.g.
+  403/5xx, since none of the five sub-resource list endpoints themselves validate the parent
+  project's existence — a bogus `projectId` returns an empty array, not a 404, so the primary fetch
+  is the only way to detect a genuinely missing project) — then fans out to
+  `roadmap-items`/`objectives`/`environments`/`repositories`/`team` in parallel once the project is
+  confirmed to exist. Also promoted `formatTimestamp()` out of the list page's own file into the
+  shared `lib/projects.ts` (both pages now use the identical one) and added
+  `roadmapItemStatusBadge()`/`objectiveStatusBadge()`, following `projectStatusBadge()`'s own
+  pattern (`active`/`complete` roadmap-item statuses deliberately share the `healthy` token — both
+  are non-problem states, disambiguated by label text, not color, since the token palette has no
+  distinct "success" concept). The list page's rows now link to `/projects/{id}` — a necessary,
+  minimal follow-on now that a destination exists (previously plain, unlinked text). Deliberately
+  not built: the header's proposed pause/archive/edit actions (matching the list page's own
+  no-mutation-UI precedent) and any team-member identity list (same no-user-lookup constraint
+  already shaping the list page's "owner" column omission). Full validation: 24/24
+  `dashboard-web` unit tests (10 new), 11/11 Playwright tests (1 new — an unauthenticated visit to
+  a detail URL redirects to sign-in), typecheck (after rebuilding `packages/shared-types`, whose
+  compiled `dist/` is what `dashboard-web` actually resolves against)/lint/`next build` all clean,
+  and a live dev-server check confirmed zero server-side or console errors on the unauthenticated
+  redirect path. See `docs/implementation/dashboard-web-project-detail.md` for the full as-built
+  record. **Not yet reviewed or merged** — pushed as its own branch
+  (`dashboard-web-project-detail`); code review, security review, second-role human review, a gate
+  decision, and merge authorization are each their own separate, not-yet-requested next step,
+  unchanged from this project's standing discipline.
+- `[2026-08-16]` **Independent code review run on `dashboard-web-project-detail` (PR #27), medium
+  effort — a single new read-only detail page + lib helpers + new shared types, no new mutation
+  surface (reuses the already-reviewed, already-gated `GET /projects/:projectId` and its
+  sub-resource endpoints).** 7 findings surfaced (4 CONFIRMED, 3 PLAUSIBLE). All 4 CONFIRMED fixed
+  (commit pending): (1) a malformed `projectId` in the URL produced a raw 500 instead of a clean
+  404 — this page is the first place in the app where an arbitrary URL segment reaches
+  `GET /projects/:projectId` with no format validation anywhere in `dashboard-api`'s stack — fixed
+  with a `UUID_PATTERN` check in `getProjectDetail()` that rejects a malformed ID as "not found"
+  before any network call; (2) the 5 sub-resource fetches waited on the primary project fetch even
+  though they have no genuine data dependency on it, adding an unnecessary sequential round trip to
+  every normal page view — fixed by firing all 6 requests concurrently, with a `tolerateDiscard()`
+  helper to keep an abandoned sub-resource promise's rejection (on the 404 path) from surfacing as
+  an unhandled-rejection warning; (3) the list page's own doc comment claimed "no links to a
+  project-detail page that doesn't exist yet," which this same PR makes false — reworded; (4) the
+  monospace font stack was hardcoded three times (twice new, once pre-existing in the list page)
+  instead of using `typographyTokens.fontFamilyMono` from `@webdesk/ui`, already the pattern
+  `packages/ui`'s own components follow — all three call sites now use the shared token. The 3
+  PLAUSIBLE findings were left as tracked, non-blocking debt: the roadmap-item/objective status
+  badge lookups have no fallback for an enum value outside the current union (an existing risk
+  shape from `projectStatusBadge`, extended here, only reachable via a genuine deploy-skew window);
+  the new `ProjectRepository` shared type collides in name with the pre-existing `ProjectRepository`
+  DAO class in `@webdesk/database` (no active conflict today); and the five empty-state messages
+  don't reuse the shared `EmptyState` component (a defensible call given that component's heavier,
+  page-replacing visual weight). Regression tests updated: a new test asserts a malformed
+  `projectId` never calls `fetch`; the 404 test now expects 6 concurrent fetch calls instead of 1;
+  all `getProjectDetail()` tests switched from placeholder ID strings to real UUID-shaped fixtures.
+  Full re-validation: typecheck/lint/`next build` clean, 41/41 `dashboard-web` unit tests (1 new),
+  11/11 Playwright tests. See `docs/implementation/dashboard-web-project-detail.md`'s "3b. Code
+  review" section for the full account. Security review, second-role human review, a gate decision,
+  and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-16]` **Security review run on `dashboard-web-project-detail` (PR #27), separately from
+  the code review.** 1 finding surfaced and confirmed at 9/10 confidence: the Environments section
+  rendered each environment's stored `url` directly as a clickable `<a href>` with no scheme
+  check. The backend's only validation, `z.string().url()` in
+  `apps/dashboard-api/src/projects/projects.dto.ts`, confirms a value parses as _some_ URL but
+  doesn't restrict scheme — a `javascript:` URL passes and is persisted unsanitized. This page is
+  the first place in the codebase that renders this stored field as a link, turning previously-
+  inert data into an executable sink; per the seeded RBAC matrix, `owner_growth_approver` (not the
+  most trusted role) holds `project_configuration:edit` while five other roles are view-only,
+  giving a genuine cross-privilege attack path — a lower/differently-trusted writer plants a
+  payload a different viewer later clicks, executing in the viewer's own authenticated session.
+  Fixed with a new `isSafeHttpUrl()` guard in `apps/dashboard-web/lib/projects.ts`: a stored URL
+  now renders as a clickable link only if its parsed protocol is `http:`/`https:`; anything else
+  renders as inert text. This closes the vulnerability at its actual sink regardless of what the
+  backend already allows. The backend schema itself (`z.string().url()` accepting any scheme) is a
+  separate, real hardening opportunity, but tightening it means editing the already-reviewed-and-
+  merged Projects module backend — out of scope for a `dashboard-web` branch, so it was flagged as
+  a standalone follow-up task rather than folded into this PR. 3 new regression tests for
+  `isSafeHttpUrl()`. Full re-validation: typecheck/lint/`next build` clean, 44/44 `dashboard-web`
+  unit tests (3 new), 11/11 Playwright tests. See
+  `docs/implementation/dashboard-web-project-detail.md`'s "3c. Security review" section for the
+  full account. Second-role human review, a gate decision, and merge authorization remain
+  separate, not-yet-requested next steps.
+- `[2026-08-16]` **Required second-role human review complete for `dashboard-web-project-detail`
+  (PR #27).** A review packet (published as a Claude artifact — code review + security review
+  findings, fixes, and validation evidence) was prepared for the required second-role human
+  review, since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D
+  reviewed it and returned "Approved."** See
+  `docs/project-state/dashboard-web-project-detail-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-16]` **The gate (G4-project-detail) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit
+  `9203bb95cc7b8bdedc2393e501f7c900c5343209` on branch `dashboard-web-project-detail` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-project-detail`) and
+  `docs/project-state/dashboard-web-project-detail-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #27 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

@@ -1,5 +1,14 @@
 import { cookies } from "next/headers";
-import type { ApiSuccessResponse, Project } from "@webdesk/shared-types";
+import type {
+  ApiSuccessResponse,
+  Project,
+  ProjectDetail,
+  ProjectEnvironment,
+  ProjectObjective,
+  ProjectRepository,
+  ProjectTeamEntry,
+  RoadmapItem,
+} from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
 import { getApiBaseUrl } from "./auth";
 
@@ -153,5 +162,183 @@ export async function getProjects(query: ProjectsQuery): Promise<ProjectsPageRes
   return {
     items: body.data.slice(0, PROJECTS_PAGE_SIZE),
     hasNextPage: body.data.length > PROJECTS_PAGE_SIZE,
+  };
+}
+
+/** Shared by the list and detail pages — displayed as the raw stored UTC timestamp, not localized;
+ *  see the detail page's own note on why (real timezone confirmation is still an open item). */
+export function formatTimestamp(iso: string): string {
+  return `${iso.slice(0, 16).replace("T", " ")} UTC`;
+}
+
+/**
+ * Guards a stored URL before it's ever rendered as a clickable `<a href>`. The backend's own
+ * validation (`z.string().url()` on `ProjectEnvironment.url`) only confirms the value parses as
+ * *some* URL — a `javascript:` URI parses successfully and passes it, so it can reach this page
+ * unsanitized. Rendering an unchecked value as an `href` would execute it as script on click, in
+ * the viewer's own authenticated session. `http:`/`https:` are the only schemes this app ever
+ * intends to link to, so anything else is rendered as inert text instead (see the detail page).
+ */
+export function isSafeHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+const ROADMAP_ITEM_STATUS_BADGE: Readonly<
+  Record<RoadmapItem["status"], { token: StatusToken; label: string }>
+> = {
+  not_started: { token: "unknown", label: "Not started" },
+  active: { token: "healthy", label: "Active" },
+  complete: { token: "healthy", label: "Complete" },
+  skipped: { token: "notConfigured", label: "Skipped" },
+};
+
+/** `active`/`complete` share the `healthy` token — both are non-problem states and the label text
+ *  (not color alone) disambiguates them, same reasoning `projectStatusBadge` already establishes. */
+export function roadmapItemStatusBadge(status: RoadmapItem["status"]): {
+  readonly token: StatusToken;
+  readonly label: string;
+} {
+  return ROADMAP_ITEM_STATUS_BADGE[status];
+}
+
+const OBJECTIVE_STATUS_BADGE: Readonly<
+  Record<ProjectObjective["status"], { token: StatusToken; label: string }>
+> = {
+  open: { token: "unknown", label: "Open" },
+  complete: { token: "healthy", label: "Complete" },
+};
+
+export function objectiveStatusBadge(status: ProjectObjective["status"]): {
+  readonly token: StatusToken;
+  readonly label: string;
+} {
+  return OBJECTIVE_STATUS_BADGE[status];
+}
+
+export interface ProjectDetailData {
+  readonly project: ProjectDetail;
+  readonly roadmapItems: readonly RoadmapItem[];
+  readonly objectives: readonly ProjectObjective[];
+  readonly environments: readonly ProjectEnvironment[];
+  readonly repositories: readonly ProjectRepository[];
+  /** A real, non-fabricated headcount only — see `ProjectTeamEntry`'s own doc comment for why
+   *  individual team-roster identities aren't fetched or shown. */
+  readonly teamCount: number;
+}
+
+async function fetchProjectSubResource<T>(
+  apiBaseUrl: string,
+  projectId: string,
+  resource: string,
+  headers: HeadersInit,
+): Promise<readonly T[]> {
+  const response = await fetch(`${apiBaseUrl}/projects/${projectId}/${resource}`, {
+    headers,
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load project ${resource} (status ${response.status})`);
+  }
+  return ((await response.json()) as ApiSuccessResponse<readonly T[]>).data;
+}
+
+/**
+ * A promise started for its side effect (an in-flight fetch) that may end up discarded without
+ * ever being awaited — e.g. when `getProjectDetail()` below returns early on a 404 while the
+ * sub-resource fetches it fired concurrently are still in flight. Node/Next.js logs an
+ * "unhandled rejection" warning for a promise that rejects with no handler ever attached to it,
+ * even if the caller never intended to look at the result — this attaches a no-op catch so a
+ * discarded rejection stays silent, while the original `promise` (returned unchanged) still
+ * rejects normally for any caller that does await it.
+ */
+function tolerateDiscard<T>(promise: Promise<T>): Promise<T> {
+  promise.catch(() => {});
+  return promise;
+}
+
+/** Matches the `id`/`publicId` shape every `projects`-table UUID column uses — Postgres accepts
+ *  either case, so this isn't anchored to a specific UUID version. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Fetches a single project and its owned sub-resources for the detail page. Returns `null` on a
+ * 404 from `GET /projects/:projectId` specifically — the caller renders Next.js's `notFound()` for
+ * that case — and throws on any other non-OK status (403, 5xx, ...), same as `getProjects()`
+ * above: an authorization or server failure must surface as a real error, not a misleading "this
+ * project doesn't exist."
+ *
+ * `projectId` is untrusted (a reader can type anything into the URL), and this is the first place
+ * in the app where an arbitrary URL segment reaches `GET /projects/:projectId` — unlike the list
+ * page, nothing upstream already validated it. `dashboard-api` has no route-level UUID validation,
+ * so a malformed value (a typo, a stale bookmark, a bot probing the route) would otherwise reach
+ * Postgres and come back as a raw 500, not a clean 404. Rejecting an obviously-malformed ID
+ * up front, before any network call, treats it the same as "not found" — the honest read of a
+ * garbled URL — instead of surfacing the generic error boundary.
+ *
+ * The sub-resource fetches are started concurrently with the primary fetch, not gated behind it —
+ * `GET /projects/:projectId/*` list endpoints don't themselves validate the parent project's
+ * existence (a bogus `projectId` returns an empty array, not a 404), so none of them has a genuine
+ * data dependency on the primary response. Only the *decision* of whether to keep or discard their
+ * results waits on the primary fetch's status, not the fetches themselves — avoiding an extra
+ * sequential round trip on every normal (project-exists) page view.
+ */
+export async function getProjectDetail(projectId: string): Promise<ProjectDetailData | null> {
+  if (!UUID_PATTERN.test(projectId)) {
+    return null;
+  }
+
+  const apiBaseUrl = getApiBaseUrl();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+  const headers = { cookie: cookieHeader };
+
+  const roadmapItemsPromise = tolerateDiscard(
+    fetchProjectSubResource<RoadmapItem>(apiBaseUrl, projectId, "roadmap-items", headers),
+  );
+  const objectivesPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectObjective>(apiBaseUrl, projectId, "objectives", headers),
+  );
+  const environmentsPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectEnvironment>(apiBaseUrl, projectId, "environments", headers),
+  );
+  const repositoriesPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectRepository>(apiBaseUrl, projectId, "repositories", headers),
+  );
+  const teamPromise = tolerateDiscard(
+    fetchProjectSubResource<ProjectTeamEntry>(apiBaseUrl, projectId, "team", headers),
+  );
+
+  const projectResponse = await fetch(`${apiBaseUrl}/projects/${projectId}`, {
+    headers,
+    cache: "no-store",
+  });
+  if (projectResponse.status === 404) {
+    return null;
+  }
+  if (!projectResponse.ok) {
+    throw new Error(`Failed to load project (status ${projectResponse.status})`);
+  }
+  const project = ((await projectResponse.json()) as ApiSuccessResponse<ProjectDetail>).data;
+
+  const [roadmapItems, objectives, environments, repositories, team] = await Promise.all([
+    roadmapItemsPromise,
+    objectivesPromise,
+    environmentsPromise,
+    repositoriesPromise,
+    teamPromise,
+  ]);
+
+  return {
+    project,
+    roadmapItems,
+    objectives,
+    environments,
+    repositories,
+    teamCount: team.length,
   };
 }

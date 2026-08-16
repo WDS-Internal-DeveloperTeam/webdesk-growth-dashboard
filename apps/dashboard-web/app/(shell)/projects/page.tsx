@@ -1,9 +1,16 @@
 import Link from "next/link";
 import type { Project } from "@webdesk/shared-types";
-import { ContentContainer, EmptyState, PageHeader, StatusBadge } from "@webdesk/ui";
+import {
+  ContentContainer,
+  EmptyState,
+  PageHeader,
+  StatusBadge,
+  typographyTokens,
+} from "@webdesk/ui";
 import { getServerSession } from "@/lib/server-session";
 import {
   buildProjectsHref,
+  formatTimestamp,
   getProjects,
   parseProjectsSearchParams,
   PROJECTS_PAGE_SIZE,
@@ -28,8 +35,8 @@ const COLUMN_LABELS: Readonly<Record<ProjectSortBy, string>> = {
 /** No approved wireframe exists for a Projects list screen (only the shell nav item and header
  *  Project Switcher are sourced — see `docs/task-packages/module-projects-foundation.md` §8's own
  *  "not sourced, confirm or correct" note). This renders exactly what `GET /projects` actually
- *  returns and supports (name/status/search/sort/pagination) — no invented columns, no links to
- *  a project-detail page that doesn't exist yet. */
+ *  returns and supports (name/status/search/sort/pagination) — no invented columns; each row's
+ *  name links to `/projects/:id`, the real detail page. */
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
   // The (shell) layout already redirects unauthenticated callers to sign-in before this page
   // renders — this is a defensive fallback (same pattern as home/page.tsx), not the real guard.
@@ -262,25 +269,20 @@ function SortableHeader({
   );
 }
 
-function formatTimestamp(iso: string): string {
-  // Displayed as the raw stored UTC timestamp, not localized — real timezone confirmation is
-  // still an open item (CLAUDE.md's "Open client blockers"), so this doesn't invent a conversion.
-  return `${iso.slice(0, 16).replace("T", " ")} UTC`;
-}
-
 function ProjectRow({ project }: { readonly project: Project }) {
   const badge = projectStatusBadge(project.status);
   return (
     <tr>
-      <td style={tdStyle}>{project.name}</td>
+      <td style={tdStyle}>
+        <Link href={`/projects/${project.id}`}>{project.name}</Link>
+      </td>
       <td style={tdStyle}>
         <StatusBadge status={badge.token} label={badge.label} />
       </td>
       <td
         style={{
           ...tdStyle,
-          fontFamily:
-            "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+          fontFamily: typographyTokens.fontFamilyMono,
           color: "var(--webdesk-dashboard-color-foreground-muted)",
         }}
       >
