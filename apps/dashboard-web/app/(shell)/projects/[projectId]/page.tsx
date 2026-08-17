@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import type { ProjectDetail } from "@webdesk/shared-types";
 import { ContentContainer, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
-import { getServerSession } from "@/lib/server-session";
+import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
 import {
   formatTimestamp,
   getProjectDetail,
@@ -12,19 +12,13 @@ import {
   projectStatusBadge,
   roadmapItemStatusBadge,
 } from "@/lib/projects";
+import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
 
 interface ProjectDetailPageProps {
   readonly params: Promise<{ projectId: string }>;
 }
-
-const CONFIDENTIALITY_LABEL: Readonly<Record<ProjectDetail["confidentiality"], string>> = {
-  public: "Public",
-  internal: "Internal",
-  confidential: "Confidential",
-  restricted: "Restricted",
-};
 
 /** No approved wireframe exists for a Project Detail screen — the only design reference is
  *  `module-projects-foundation.md` §8's own proposal (header + Overview/Team/Environments/
@@ -34,9 +28,11 @@ const CONFIDENTIALITY_LABEL: Readonly<Record<ProjectDetail["confidentiality"], s
  *  (no client component, no JS required) — a deliberate simplification, not a client-side gap.
  *  "Team" has no member-identity list (§8's proposal implies one) since no user-lookup endpoint
  *  exists yet to resolve a `userId` to a name; only the real, non-fabricated headcount is shown,
- *  same reasoning already established for `ownerUserId`/`activePhaseId` on the list page. The
- *  header's proposed pause/archive/edit actions are deliberately not built — this page is read-only,
- *  matching the list page's own precedent of shipping display-only UI before any mutation UI. */
+ *  same reasoning already established for `ownerUserId`/`activePhaseId` on the list page. An
+ *  "Edit" action now links to `/projects/:id/edit` (name/description/confidentiality only); the
+ *  header's proposed pause/archive actions are still deliberately not built — status transitions
+ *  are their own separate, dedicated action per `module-projects-foundation.md` §8, not this
+ *  form. */
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const session = await getServerSession();
   if (!session) {
@@ -62,6 +58,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         breadcrumbs={[{ label: "Projects", href: "/projects" }, { label: project.name }]}
         linkComponent={Link}
         statusBadge={<StatusBadge status={badge.token} label={badge.label} />}
+        contextActions={
+          <Link href={`/projects/${project.id}/edit`} style={primaryActionLinkStyle}>
+            Edit
+          </Link>
+        }
       />
 
       <section style={sectionStyle}>

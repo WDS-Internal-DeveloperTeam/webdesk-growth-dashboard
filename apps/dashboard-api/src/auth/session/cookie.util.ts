@@ -2,10 +2,21 @@ import type { Request, Response } from "express";
 import type { AuthEnv } from "../config/auth-env.js";
 
 /**
- * The dashboard-issued session cookie. SameSite=Strict is correct here
- * (unlike the OIDC transaction cookie, ../google/oidc-transaction.ts) — it
- * is only ever read on same-site navigations/API calls made after login,
- * never on a cross-site top-level redirect.
+ * The dashboard-issued session cookie. **Must be SameSite=None, not Strict** — `dashboard-web` and
+ * `dashboard-api` are deployed as two separate `*.vercel.app` projects, and `vercel.app` is on the
+ * Public Suffix List specifically so each project's own subdomain is its own "site" for
+ * cookie/security purposes (the same reason `webdesk-growth-dashboard-theta.vercel.app` and
+ * `webdesk-growth-dashboard-7v1u-beta.vercel.app` are isolated from each other by design). Every
+ * real API call `dashboard-web` makes to `dashboard-api` — server-side cookie forwarding in
+ * `lib/server-session.ts`/`lib/projects.ts`, and the browser's own `credentials: "include"` fetch()
+ * in mutation UIs like `components/project-form.tsx` — is therefore genuinely cross-site, and a
+ * `SameSite=Strict` cookie is never attached to a cross-site request at all, regardless of
+ * `credentials`. `SameSite=None` requires `Secure` (already true by default,
+ * `SESSION_COOKIE_SECURE`); CSRF defense for every session-cookie-authenticated mutating route
+ * already comes from `OriginCheckGuard` (`@UseGuards(OriginCheckGuard, ...)` on every one of them),
+ * not from `SameSite` — matching the OIDC transaction cookie's own precedent
+ * (`../google/oidc-transaction.ts`) of choosing `SameSite` based on the traffic pattern actually
+ * needed, not defaulting to the strictest option.
  *
  * The same cookie carries both the emergency-admin pending-MFA session and
  * the final elevated one — the underlying session row (and its token) is
@@ -25,7 +36,7 @@ export function setSessionCookie(
   res.cookie(env.SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: env.SESSION_COOKIE_SECURE,
-    sameSite: "strict",
+    sameSite: "none",
     maxAge: maxAgeSeconds * 1000,
     path: "/",
   });

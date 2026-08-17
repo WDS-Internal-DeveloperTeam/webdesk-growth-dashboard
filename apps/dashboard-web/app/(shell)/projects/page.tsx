@@ -7,6 +7,7 @@ import {
   StatusBadge,
   typographyTokens,
 } from "@webdesk/ui";
+import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { getServerSession } from "@/lib/server-session";
 import {
   buildProjectsHref,
@@ -58,7 +59,14 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   return (
     <ContentContainer>
-      <PageHeader title="Projects" />
+      <PageHeader
+        title="Projects"
+        contextActions={
+          <Link href="/projects/new" style={primaryActionLinkStyle}>
+            New project
+          </Link>
+        }
+      />
 
       <form
         method="get"

@@ -342,6 +342,38 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     returned `build.commitSha == af23ba1c0172c834d2d1311666a2811397598b14`, and `dashboard-web`'s
     `/` resolves to `/auth/sign-in` for an unauthenticated visitor. **The Project Detail page is
     now genuinely live in production.**
+11. **`dashboard-web` Create/Edit Project form — built, reviewed, gated, not yet merged
+    (2026-08-17).** `docs/implementation/dashboard-web-project-form.md` records the full account.
+    Not started automatically — built directly on the explicit "build the create/edit project form"
+    instruction. The only prior description of this screen is `module-projects-foundation.md` §8's
+    own unapproved proposal ("form (name, description); status/archival handled via the dedicated
+    transition action, not this form"); built to that scope plus `confidentiality` (a real field
+    with no separate transition endpoint of its own). `publicId` is create-only and shown read-only
+    in the edit form, matching `updateProjectSchema`'s own contract (never regenerated once
+    assigned). Deliberately excludes `ownerUserId` as a form field — no user-lookup/picker
+    capability exists anywhere in this app yet, the same constraint already shaping the list and
+    detail pages. The first real mutation UI in `dashboard-web`: a `"use client"` component
+    submitting via a direct browser `fetch()` with `credentials: "include"`, following the one
+    existing real-mutation precedent (`app/auth/emergency/page.tsx`) so `dashboard-api`'s
+    `OriginCheckGuard` (Origin-header check, no CSRF token in this app) is satisfied automatically.
+    The list and detail pages each gained a "New project"/"Edit" action link. Independent code
+    review (8-angle finder pass, medium effort) surfaced 7 findings, all CONFIRMED — most severe:
+    the session cookie's `SameSite=Strict` setting meant the browser would never attach it to this
+    form's cross-site `fetch()` (`dashboard-web`/`dashboard-api` are separate `*.vercel.app`
+    deployments, isolated as distinct "sites" since `vercel.app` is on the Public Suffix List), so
+    every real submit would have 401'd in production — all 7 fixed, including that one, changing
+    the cookie to `SameSite=None` under explicit separate user authorization (this session's own
+    rules require the user to decide any security-setting change directly; `OriginCheckGuard` was
+    verified applied to every mutating route across the whole API first, confirming CSRF defense
+    doesn't depend on `SameSite`). A separate security review found 0 findings above threshold — the
+    `SameSite=None` change and a new error-message allowlist (`lib/api-errors.ts`, limiting which
+    backend exception messages reach the user) were both scrutinized directly and held up. Final
+    numbers: 57/57 `dashboard-web` unit tests, 317/317 `dashboard-api` unit tests, 13/13 e2e tests,
+    14/14 CI checks, all passing. A review packet was published as a Claude artifact for the
+    required second-role human review, since the implementing agent cannot also be its own reviewer
+    (ADR-0010). **Jitesh D reviewed it and returned "Approved."** **The gate (G4-project-form) was
+    then separately requested and approved** — WebDesk Solution, decision CONFIRM. Merge
+    authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -1455,6 +1487,71 @@ af23ba1c0172c834d2d1311666a2811397598b14`, confirming the exact merged commit is
   production**, closing out this slice's full build-to-production arc. Backend, header switcher,
   list page, and now the detail page are all live for the Projects module — no create/edit form or
   pause/archive/edit actions exist yet, both separate, not-yet-requested next steps.
+- `[2026-08-16]` **Built the `dashboard-web` Create/Edit Project form** (`/projects/new`,
+  `/projects/:id/edit`), under the explicit "build the create/edit project form" instruction — the
+  first real mutation UI in `dashboard-web`. Scoped to `module-projects-foundation.md` §8's own
+  unapproved proposal (name/description; status handled by a separate action) plus
+  `confidentiality`; `publicId` create-only and read-only on edit; `ownerUserId` deliberately
+  omitted (no user-lookup capability exists). Submits via a direct browser `fetch()` with
+  `credentials: "include"`, following the `app/auth/emergency/page.tsx` precedent so
+  `OriginCheckGuard` is satisfied. Pushed as branch `dashboard-web-project-form`, opened as
+  [PR #28](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/28). See
+  `docs/implementation/dashboard-web-project-form.md`.
+- `[2026-08-17]` **Independent code review run on `dashboard-web-project-form` (PR #28), medium
+  effort — 8-angle finder pass.** 7 findings surfaced, all CONFIRMED. Most severe: the session
+  cookie's `SameSite=Strict` setting meant the browser would never attach it to this form's
+  cross-site `fetch()` — `dashboard-web` and `dashboard-api` are separate `*.vercel.app`
+  deployments, isolated as distinct "sites" since `vercel.app` is on the Public Suffix List, so
+  every real form submission would have 401'd in production. The other 6: a generic "Validation
+  failed" message hid real per-field detail the backend had already computed but
+  `AllExceptionsFilter` silently stripped before it reached the client; editing any field while
+  leaving a stored empty-string description untouched silently overwrote it to `null`; the new
+  `lib/project-confidentiality.ts`'s own doc comment claimed the detail page had been migrated to
+  use it, but the detail page still kept its own separate, unmigrated copy; the edit page fetched 5
+  unrelated sub-resource lists via `getProjectDetail()` just to populate a 4-field form; three
+  independently-defined "primary action button" styles had already drifted from each other in
+  font-weight and padding; and the form showed the backend's raw `HttpException.message` verbatim
+  for any error, not just the two cases it was designed for. All 7 fixed: `AllExceptionsFilter` now
+  surfaces Zod's `issues` array (a new optional field on `ApiErrorResponse`); the form no longer
+  coerces an empty description to `null`; the detail page now actually imports the shared
+  confidentiality-label file; a new lightweight `getProject()` fetches only the primary resource for
+  the edit page; the three button styles were consolidated into one shared, token-derived
+  `lib/action-link-style.ts`; a new `lib/api-errors.ts` allowlists which backend error codes may be
+  shown verbatim (`BadRequestException`/`NotFoundException` only, everything else falls back to a
+  generic message). The `SameSite` fix was held back from the rest — changing a production
+  session-cookie security setting is outside what this session can apply unilaterally — and
+  surfaced directly instead. **Asked directly how to proceed; the user chose to apply the
+  recommended fix** (`SameSite=None`, keeping `Secure`, since `OriginCheckGuard` — verified applied
+  to every mutating route across the entire API — is already the real CSRF defense, not
+  `SameSite`), matching the existing OIDC transaction cookie's own precedent of choosing `SameSite`
+  by actual traffic pattern rather than defaulting to the strictest option. Full re-validation
+  after both fix rounds: 57/57 `dashboard-web` unit tests, 317/317 `dashboard-api` unit tests,
+  13/13 e2e tests, typecheck/lint/build clean on both apps, all 14 CI checks green.
+- `[2026-08-17]` **Security review run on `dashboard-web-project-form` (PR #28), separately from the
+  code review.** 0 findings above threshold. The two security-relevant changes from the fix round —
+  the `SameSite=None` cookie change and the new `lib/api-errors.ts` error-message allowlist — were
+  both scrutinized directly: confirmed every mutating route across the API carries `OriginCheckGuard`
+  (fails closed on a missing Origin/Referer, compares against the parsed `WEB_APP_ORIGIN`, not the
+  request's own Host header) and CORS is an exact-origin allowlist with no wildcard, so no cross-site
+  page can read a response even with the cookie attached; confirmed the Zod `issues` surface carries
+  only schema-violation text (no submitted values, no internal state) and the two allowlisted error
+  codes only ever carry the two benign, already-user-facing messages this form was designed to show.
+  A review packet (published as a Claude artifact — code review + security review findings, fixes,
+  and validation evidence) was prepared for the required second-role human review, since the
+  implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and returned
+  "Approved."** See `docs/project-state/dashboard-web-project-form-approval-checklist.md`'s
+  "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
+  next steps.
+- `[2026-08-17]` **The gate (G4-project-form) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit
+  `3ecd3996bc99c87522d8a1a4aab58edc5d048727` on branch `dashboard-web-project-form` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-project-form`) and
+  `docs/project-state/dashboard-web-project-form-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #28 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
