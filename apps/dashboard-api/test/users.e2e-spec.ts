@@ -182,6 +182,11 @@ describe("Users lookup endpoints (e2e, real disposable database)", () => {
       .expect(404);
   });
 
+  it("returns a clean 404 (not a raw driver-error 500) for a malformed, non-UUID user id", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    await request(app.getHttpServer()).get("/users/not-a-uuid").set("Cookie", cookie).expect(404);
+  });
+
   it("denies GET /users with 403 for a read_only session (no users_roles grant at all)", async () => {
     const cookie = await cookieForNewSession(readOnlyUserId);
     await request(app.getHttpServer()).get("/users").set("Cookie", cookie).expect(403);

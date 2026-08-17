@@ -21,6 +21,12 @@ export interface ProjectFormInitialValues {
    *  "the assigned owner id no longer resolves" (disabled/removed) identically; either way, the
    *  picker starts empty rather than showing a raw, meaningless UUID. */
   readonly owner: UserSummary | null;
+  /** The project's raw, un-resolved owner id (or `null` if none is assigned) — distinct from
+   *  `owner` above, which is `null` in BOTH the "no owner" and "owner set but unresolvable" cases.
+   *  Kept separately so the submit payload can preserve an unresolvable owner assignment untouched
+   *  (rather than silently clearing it) when the picker itself was never interacted with — see the
+   *  `ownerTouched` logic in the submit handler below. */
+  readonly ownerUserId: string | null;
 }
 
 export type ProjectFormProps =
@@ -66,8 +72,18 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
     initial?.confidentiality ?? "internal",
   );
   const [owner, setOwner] = useState<UserSummary | null>(initial?.owner ?? null);
+  // Tracks whether the user has actually interacted with the owner picker (selected someone, or
+  // clicked Remove) — as opposed to `owner` simply being `null` because the initial owner id
+  // couldn't be resolved to a display summary (disabled/removed account). Only an explicit
+  // interaction should ever change what gets submitted for ownerUserId; see handleOwnerChange.
+  const [ownerTouched, setOwnerTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  function handleOwnerChange(next: UserSummary | null): void {
+    setOwner(next);
+    setOwnerTouched(true);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -80,6 +96,12 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
       // with null on any edit that left this field untouched (both render identically either way,
       // so there's no display reason to prefer one over the other).
       const trimmedDescription = description.trim();
+      // If the owner picker was never touched, preserve the project's existing ownerUserId exactly
+      // as-is — including an unresolvable one (a disabled/removed account) — rather than collapsing
+      // it to null just because `owner` (the resolved display summary) happens to be null. Only an
+      // explicit picker interaction (selecting someone new, or clicking Remove) should ever change
+      // this value; otherwise saving an unrelated field edit would silently clear the assignment.
+      const ownerUserId = ownerTouched ? (owner?.id ?? null) : (initial?.ownerUserId ?? null);
       const payload =
         props.mode === "create"
           ? {
@@ -87,13 +109,13 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
               name: trimmedName,
               description: trimmedDescription,
               confidentiality,
-              ownerUserId: owner?.id ?? null,
+              ownerUserId,
             }
           : {
               name: trimmedName,
               description: trimmedDescription,
               confidentiality,
-              ownerUserId: owner?.id ?? null,
+              ownerUserId,
             };
       const url =
         props.mode === "create"
@@ -182,8 +204,12 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
         id="owner"
         label="Owner"
         value={owner}
-        onChange={setOwner}
-        helperText="Search by name or email. Leave unset for no assigned owner."
+        onChange={handleOwnerChange}
+        helperText={
+          props.mode === "edit" && !ownerTouched && !owner && initial?.ownerUserId
+            ? "This project has an assigned owner that could not be resolved (the account may be disabled or removed). The existing assignment will be kept as-is unless you search and select someone new."
+            : "Search by name or email. Leave unset for no assigned owner."
+        }
       />
 
       <div className={styles.field}>

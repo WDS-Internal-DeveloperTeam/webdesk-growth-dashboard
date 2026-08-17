@@ -3,9 +3,12 @@ import { NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UsersService } from "./users.service.js";
 
+const VALID_USER_ID = "11111111-1111-1111-1111-111111111111";
+const WELL_FORMED_NONEXISTENT_ID = "99999999-9999-9999-9999-999999999999";
+
 function userFixture(overrides: Partial<UserEntity> = {}): UserEntity {
   return {
-    id: "user-1",
+    id: VALID_USER_ID,
     email: "jane@example.com",
     displayName: "Jane Doe",
     accountStatus: "active",
@@ -32,7 +35,7 @@ describe("UsersService", () => {
       const result = await service.search({ search: "jane" });
 
       expect(result).toEqual([
-        { id: "user-1", displayName: "Jane Doe", email: "jane@example.com" },
+        { id: VALID_USER_ID, displayName: "Jane Doe", email: "jane@example.com" },
       ]);
       expect(users.search).toHaveBeenCalledWith({
         search: "jane",
@@ -46,21 +49,26 @@ describe("UsersService", () => {
     it("returns the narrowed summary for an active user", async () => {
       users.findById.mockResolvedValue(userFixture());
 
-      expect(await service.findById("user-1")).toEqual({
-        id: "user-1",
+      expect(await service.findById(VALID_USER_ID)).toEqual({
+        id: VALID_USER_ID,
         displayName: "Jane Doe",
         email: "jane@example.com",
       });
     });
 
-    it("throws NotFoundException for a nonexistent user", async () => {
+    it("throws NotFoundException for a well-formed but nonexistent user id", async () => {
       users.findById.mockResolvedValue(null);
-      await expect(service.findById("missing")).rejects.toThrow(NotFoundException);
+      await expect(service.findById(WELL_FORMED_NONEXISTENT_ID)).rejects.toThrow(NotFoundException);
     });
 
     it("throws NotFoundException for a disabled user — same as nonexistent, per the picker's own contract", async () => {
       users.findById.mockResolvedValue(userFixture({ accountStatus: "disabled" }));
-      await expect(service.findById("user-1")).rejects.toThrow(NotFoundException);
+      await expect(service.findById(VALID_USER_ID)).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws NotFoundException for a malformed (non-UUID) id, without ever calling the repository", async () => {
+      await expect(service.findById("not-a-uuid")).rejects.toThrow(NotFoundException);
+      expect(users.findById).not.toHaveBeenCalled();
     });
   });
 });

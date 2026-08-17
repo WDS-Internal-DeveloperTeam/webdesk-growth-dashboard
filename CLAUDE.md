@@ -444,8 +444,8 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     dashboard design prompt to address these at a later time — none of this is started or
     authorized; each remains its own separate, not-yet-requested next step. **Update
     (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.**
-14. **User lookup capability + Project owner assignment — built, validated, pushed as its own
-    branch, not yet reviewed/merged (2026-08-17).**
+14. **User lookup capability + Project owner assignment — built, validated, code-reviewed and
+    fixed, pushed as its own branch, not yet security-reviewed/merged (2026-08-17).**
     `docs/implementation/user-lookup-and-owner-assignment.md` records the full account. Not
     started automatically — built directly on the explicit "start with the blockers" instruction
     following item 13's gap analysis. Scope was confirmed with the user first (`AskUserQuestion`),
@@ -457,14 +457,27 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     narrowed `UserSummary` (`id`/`displayName`/`email` only). New frontend: a reusable
     `UserPicker` component (debounced search, built generic enough for team/approver assignment
     later) wired into the create/edit project form's new `owner` field — the backend schema
-    already accepted `ownerUserId`; this is what finally lets a person set it. 81/81
-    `dashboard-web` unit tests (13 new), 321/321 `dashboard-api` unit tests (4 new), 121/121
-    `packages/database` integration tests (4 new), 92/92 `dashboard-api` e2e tests (5 new,
-    including a real RBAC-denial check) all passing; typecheck/lint/build clean across all
-    touched packages. Team management and approver-assignment UI remain separate, not-yet-built
-    next steps (their backends already existed before this branch). Not yet reviewed or merged —
-    code review, security review, second-role human review, a gate decision, and merge
-    authorization are each their own separate, not-yet-requested next step.
+    already accepted `ownerUserId`; this is what finally lets a person set it. Team management and
+    approver-assignment UI remain separate, not-yet-built next steps (their backends already
+    existed before this branch, unaffected by the user-lookup capability change described here —
+    both gaps 2/3 from item 13 still need their own frontend work, not just this shared blocker).
+    **Independent code review then ran** (8-angle, medium effort) on PR #30 — 10 CONFIRMED
+    findings, most severe a real data-loss bug (editing a project with a since-disabled owner
+    silently cleared the owner assignment on any unrelated save) and an uncaught-throw path that
+    could crash the whole edit page on a transient backend failure. 9 of 10 fixed outright
+    (including a `GET /users/:userId` malformed-id 500→404 bug, an unescaped-`ILIKE`-wildcard
+    match-correctness bug, a stale-search-error UI bug, a request-race condition in `UserPicker`,
+    stale doc comments in `packages/shared-types`, a duplicate `UserSummary` type/mapping, and
+    duplicated form CSS); the 10th (`users_roles:view` now also gating this PR's directory-search
+    capability, not just role-assignment reads) was recorded as accepted, tracked debt — not
+    currently exploitable (both map to the identical two-role set today), and the deeper fix means
+    a new RBAC migration, its own separate authorization per this project's standing discipline.
+    Final numbers: 85/85 `dashboard-web` unit tests (7 new on top of the original 13), 322/322
+    `dashboard-api` unit tests (1 new), 122/122 `packages/database` integration tests (1 new),
+    93/93 `dashboard-api` e2e/integration tests (1 new) all passing; typecheck/lint/`next
+build`/`nest build` clean; `pnpm exec prettier --check` clean. Not yet security-reviewed,
+    second-role human reviewed, gated, or merged — each its own separate, not-yet-requested next
+    step.
 
 ## Recent decisions
 
@@ -1766,6 +1779,43 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, confirming the exact merged commit is
   Pushed as branch `user-lookup-owner-assignment`. Not yet reviewed or merged — team management
   and approver-assignment UI remain separate, not-yet-built next steps (their backends already
   existed before this branch).
+- `[2026-08-17]` **Independent code review run on `user-lookup-owner-assignment` (PR #30), medium
+  effort — 8-angle finder pass.** 10 CONFIRMED findings after deduplication. Most severe: editing
+  a project whose owner had since become disabled/removed and saving any unrelated field change
+  (e.g. the name) silently cleared the owner assignment — `ProjectForm` had no way to distinguish
+  "no owner" from "owner set but unresolvable," since both collapsed to the same `null` display
+  state. Also found: `getUser()`'s uncaught throw on a non-404 failure meant a transient backend
+  error on `GET /users/:userId` could crash the whole edit page (its primary content doesn't
+  depend on owner resolution at all); `UserPicker`'s debounced search had no guard against an
+  out-of-order response overwriting fresher results; `GET /users/:userId` 500'd on a malformed
+  (non-UUID) id instead of a clean 404 (a raw Postgres driver error reaching the generic exception
+  filter); `UserRepository.search()`'s `ILIKE` pattern didn't escape `%`/`_`, so a literal
+  underscore in a search term was reinterpreted as a wildcard; a failed search's error message
+  could resurface after the query was cleared or a selection removed; stale doc comments in
+  `packages/shared-types` still claimed "no user-lookup endpoint exists yet," contradicted by this
+  same PR; a duplicate local `UserSummary` interface and duplicated entity-mapping logic in
+  `users.service.ts` (the type already existed in `packages/shared-types`); and duplicated
+  form-field CSS plus a missing danger-styling composition for the picker's error state. 9 of 10
+  fixed: `ProjectForm` now tracks the raw `ownerUserId` separately from the resolved `owner`
+  summary and only overwrites it on an explicit picker interaction, preserving an unresolvable
+  assignment untouched; the edit page wraps `getUser()` in try/catch; `UserPicker` gained a
+  request-id guard invalidating stale responses and now clears `error` on every path that resets
+  the query/selection; `UsersService.findById()` rejects a malformed id before ever reaching the
+  repository; `UserRepository.search()` gained an `escapeLikePattern()` helper; the stale doc
+  comments were reworded to record that the endpoint now exists; `users.service.ts` now imports
+  the shared `UserSummary` type and both methods call one `toUserSummary()` helper;
+  `user-picker.module.css` now composes from `project-form.module.css` and the shared
+  `error-message.module.css`. The 10th finding — `users_roles:view` now also gating this PR's
+  directory-search capability, not just role-assignment reads, a real but not-currently-exploitable
+  semantic-drift concern (both map to the identical two-role set today) whose deeper fix (a
+  dedicated permission action) means a new RBAC migration — was recorded as **accepted, tracked
+  debt** directly in `users.controller.ts`'s own doc comment, per this project's standing "RBAC
+  schema changes are their own separate authorization" discipline. Re-validated: 85/85
+  `dashboard-web` unit tests (7 new), 322/322 `dashboard-api` unit tests (1 new), 122/122
+  `packages/database` integration tests (1 new), 93/93 `dashboard-api` e2e/integration tests (1
+  new), all against a fresh local disposable database; typecheck/lint/`next build`/`nest build`
+  clean; `pnpm exec prettier --check` clean. Not yet security-reviewed, second-role human
+  reviewed, gated, or merged.
 
 ## Open client blockers
 

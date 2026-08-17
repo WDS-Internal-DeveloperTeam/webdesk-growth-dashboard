@@ -5,6 +5,14 @@ import type { UserEntity } from "./entities.js";
 const DEFAULT_SEARCH_LIMIT = 20;
 const MAX_SEARCH_LIMIT = 200;
 
+/** Escapes `%`, `_`, and the escape character itself so a literal substring search (e.g. an email
+ *  fragment containing a real underscore) isn't reinterpreted by Postgres as a partial ILIKE
+ *  wildcard pattern — this is a match-correctness fix, not a SQL-injection concern (Sequelize
+ *  already parameterizes the value). */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
 function toEntity(instance: Model): UserEntity {
   const json = instance.toJSON() as Record<string, unknown>;
   return {
@@ -72,12 +80,15 @@ export class UserRepository {
       where: {
         accountStatus: "active",
         ...(filter.search
-          ? {
-              [Op.or]: [
-                { email: { [Op.iLike]: `%${filter.search}%` } },
-                { displayName: { [Op.iLike]: `%${filter.search}%` } },
-              ],
-            }
+          ? (() => {
+              const pattern = `%${escapeLikePattern(filter.search)}%`;
+              return {
+                [Op.or]: [
+                  { email: { [Op.iLike]: pattern } },
+                  { displayName: { [Op.iLike]: pattern } },
+                ],
+              };
+            })()
           : {}),
       },
       order: [["displayName", "ASC"]],

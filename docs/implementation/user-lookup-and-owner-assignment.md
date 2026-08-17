@@ -102,9 +102,66 @@ This is deliberately **not**:
 - Typecheck, lint, `next build`, and `nest build` all clean on both apps; `pnpm exec prettier
 --check` clean across the whole repo.
 
-## 4. Not yet reviewed or merged
+## 4. Code review (PR #30)
 
-Pushed as its own branch (`user-lookup-owner-assignment`). Code review, security review,
-second-role human review, a gate decision, and merge authorization are each their own separate,
-not-yet-requested next step, unchanged from this project's standing discipline for every prior
-slice.
+This project's own `code-review` skill ran (8 finder angles, medium effort — 10 deduped candidates
+after Reuse/Simplification/Altitude/Conventions surfaced additional cleanup items on top of the
+Efficiency/removed-behavior findings already discussed inline). All 10 were verified CONFIRMED and
+fixed:
+
+1. **Editing a project with an unresolvable owner silently cleared the assignment** — `owner` (the
+   resolved display summary) and "no owner assigned" both collapsed to `null`, so saving any
+   unrelated field edit sent `ownerUserId: null`, clearing a disabled/removed owner's assignment
+   with no warning. Fixed: `ProjectFormInitialValues` now carries the raw `ownerUserId` separately
+   from the resolved `owner`; the form tracks whether the picker was actually touched
+   (`ownerTouched`) and only overwrites `ownerUserId` on an explicit interaction, preserving an
+   unresolvable assignment untouched otherwise. A helper note now explains the unresolved state to
+   the user instead of the field silently appearing empty.
+2. **`getUser()`'s uncaught throw could crash the whole edit page** — a transient backend failure
+   or `PermissionGuard` misconfiguration on `GET /users/:userId` propagated past the edit page's
+   primary content (name/description/confidentiality, none of which depend on owner resolution).
+   Fixed: the edit page now wraps the call in try/catch, logging via `console.error` and degrading
+   to "owner unresolved" rather than crashing.
+3. **`UserPicker`'s debounced search had no guard against out-of-order responses** — a slower,
+   earlier request's response could overwrite a faster, later one's results. Fixed: a request-id
+   ref invalidates any response that isn't the most recent request.
+4. **`GET /users/:userId` 500'd on a malformed (non-UUID) id** instead of a clean 404 — Postgres's
+   `uuid` column type rejected it with a raw driver error the exception filter turned into a
+   generic 500. Fixed: `UsersService.findById()` now rejects a malformed id before ever reaching
+   the repository, mirroring the frontend's own `UUID_PATTERN` short-circuit.
+5. **`UserRepository.search()`'s `ILIKE` pattern didn't escape `%`/`_`** — a literal underscore in
+   a search term was reinterpreted as a wildcard, over-matching. Fixed: a new `escapeLikePattern()`
+   helper escapes `%`, `_`, and the escape character itself before building the pattern.
+6. **A failed search's error message could resurface after the query was cleared or a selection
+   removed** — `error` was only ever cleared at the start of a new search. Fixed: cleared in the
+   empty-query early-return branch, `handleSelect`, and `handleRemove`.
+7. **Stale doc comments** in `packages/shared-types` (`Project`/`ProjectDetail`/`ProjectTeamEntry`)
+   still asserted "no user-lookup endpoint exists yet", contradicted by this same PR. Fixed:
+   reworded to record that the endpoint now exists and that consuming it in those read-only
+   surfaces remains separate, not-yet-done scope.
+8. **A duplicate local `UserSummary` interface and duplicated entity→summary mapping** in
+   `users.service.ts` — the type already existed in `packages/shared-types`. Fixed: imports the
+   shared type; both `search()`/`findById()` now call one `toUserSummary()` helper.
+9. **CSS duplication** — `user-picker.module.css`'s `.field`/`.label`/`.helperText`/`.input`
+   duplicated `project-form.module.css`, and the error status had no danger styling (looked
+   identical to a benign "Searching…"). Fixed: composes from `project-form.module.css` and the
+   shared `error-message.module.css`, via a new `.dropdownStatusError` class.
+10. **`users_roles:view` gates both role-assignment reads and this PR's new directory-search
+    capability** — a real, forward-looking design concern (a future role needing one without the
+    other would force an awkward split), but not currently exploitable (both map to the identical
+    two-role set today) and the deeper fix (a dedicated permission action) means a new RBAC
+    migration — out of proportion for a review-fix pass, and this project's own standing discipline
+    treats RBAC schema changes as their own, separate authorization. **Accepted as tracked debt**,
+    recorded directly in `users.controller.ts`'s own doc comment; revisit if/when a role actually
+    needs the split.
+
+Re-validated after all fixes: 85/85 `dashboard-web` unit tests (7 new), 322/322 `dashboard-api`
+unit tests (1 new), 93/93 `dashboard-api` e2e/integration tests (1 new), 122/122
+`packages/database` integration tests (1 new) — all against a fresh local disposable database.
+Typecheck/lint/`next build`/`nest build` all clean; `pnpm exec prettier --check` clean.
+
+## 5. Not yet reviewed or merged
+
+Pushed as its own branch (`user-lookup-owner-assignment`). Security review, second-role human
+review, a gate decision, and merge authorization are each their own separate, not-yet-requested
+next step, unchanged from this project's standing discipline for every prior slice.

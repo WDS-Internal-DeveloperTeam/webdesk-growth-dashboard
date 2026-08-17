@@ -1,18 +1,16 @@
+/* .field/.label/.helperText/.input compose from project-form.module.css rather than redeclaring
+ * the same rules — this component is used inside that same form (and, once built, other mutation
+ * forms in this app), so the two should never drift. */
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--webdesk-dashboard-space-xs);
+  composes: field from "./project-form.module.css";
 }
 
 .label {
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  font-weight: var(--webdesk-dashboard-font-weight-medium);
-  color: var(--webdesk-dashboard-color-foreground);
+  composes: label from "./project-form.module.css";
 }
 
 .helperText {
-  font-size: var(--webdesk-dashboard-font-size-xs);
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  composes: helperText from "./project-form.module.css";
 }
 
 .searchWrapper {
@@ -20,21 +18,9 @@
 }
 
 .input {
+  composes: input from "./project-form.module.css";
   width: 100%;
-  font-size: var(--webdesk-dashboard-font-size-md);
-  font-family: inherit;
-  color: var(--webdesk-dashboard-color-foreground);
-  background: var(--webdesk-dashboard-color-surface);
-  border: 1px solid var(--webdesk-dashboard-color-border);
-  border-radius: var(--webdesk-dashboard-radius-sm);
-  padding: var(--webdesk-dashboard-space-sm);
-  height: 2.25rem;
   box-sizing: border-box;
-}
-
-.input:focus-visible {
-  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
-  outline-offset: 2px;
 }
 
 .dropdown {
@@ -58,6 +44,14 @@
   padding: var(--webdesk-dashboard-space-sm);
   font-size: var(--webdesk-dashboard-font-size-sm);
   color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+/* The error variant of .dropdownStatus — composes the same shared danger styling
+ * project-form.module.css and project-status-actions.module.css already use, so a real fetch
+ * error no longer looks visually identical to a benign "Searching…"/"No matches." status. */
+.dropdownStatusError {
+  composes: dropdownStatus;
+  composes: error from "./error-message.module.css";
 }
 
 .dropdownItem {

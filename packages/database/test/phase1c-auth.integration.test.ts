@@ -114,6 +114,20 @@ describe("Phase 1C auth repositories (real disposable database)", () => {
         const page = await users.search({ search: "Paged User", limit: 2, offset: 1 });
         expect(page).toHaveLength(2);
       });
+
+      it("treats a literal underscore in the search term as a literal character, not a wildcard", async () => {
+        await users.create({
+          email: "john_doe@webdesksolution.com",
+          displayName: "John Underscore",
+        });
+        await users.create({
+          email: "johnxdoe@webdesksolution.com",
+          displayName: "John Wildcard Collision",
+        });
+
+        const results = await users.search({ search: "john_doe" });
+        expect(results.map((u) => u.email)).toEqual(["john_doe@webdesksolution.com"]);
+      });
     });
   });
 

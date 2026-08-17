@@ -107,6 +107,7 @@ describe("ProjectForm", () => {
           description: "Existing description",
           confidentiality: "confidential",
           owner: null,
+          ownerUserId: null,
         }}
       />,
     );
@@ -132,6 +133,7 @@ describe("ProjectForm", () => {
           description: null,
           confidentiality: "internal",
           owner: null,
+          ownerUserId: null,
         }}
       />,
     );
@@ -167,6 +169,7 @@ describe("ProjectForm", () => {
           description: "",
           confidentiality: "internal",
           owner: null,
+          ownerUserId: null,
         }}
       />,
     );
@@ -319,6 +322,7 @@ describe("ProjectForm", () => {
             displayName: "Jane Doe",
             email: "jane@example.com",
           },
+          ownerUserId: "33333333-3333-3333-3333-333333333333",
         }}
       />,
     );
@@ -338,6 +342,50 @@ describe("ProjectForm", () => {
             description: "",
             confidentiality: "internal",
             ownerUserId: null,
+          }),
+        }),
+      ),
+    );
+  });
+
+  it("edit mode: preserves an unresolvable owner's id on save when the picker was never touched", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+    const UNRESOLVABLE_OWNER_ID = "44444444-4444-4444-4444-444444444444";
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: null,
+          confidentiality: "internal",
+          // owner resolution failed (e.g. a disabled account) — owner is null even though the
+          // project genuinely has an assigned, just-unresolvable owner.
+          owner: null,
+          ownerUserId: UNRESOLVABLE_OWNER_ID,
+        }}
+      />,
+    );
+
+    // The picker itself shows as empty (no resolvable display summary) — but a note explains why.
+    expect(screen.queryByText(/could not be resolved/)).toBeInTheDocument();
+
+    // Editing an unrelated field and saving must NOT silently clear the owner assignment.
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Acme Renamed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `https://api.example.com/projects/${PROJECT_ID}/update`,
+        expect.objectContaining({
+          body: JSON.stringify({
+            name: "Acme Renamed",
+            description: "",
+            confidentiality: "internal",
+            ownerUserId: UNRESOLVABLE_OWNER_ID,
           }),
         }),
       ),

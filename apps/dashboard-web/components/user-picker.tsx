@@ -31,6 +31,10 @@ export function UserPicker({ id, label, value, onChange, helperText }: UserPicke
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped on every new search; a response only gets applied if it's still the most recent one —
+  // guards against an earlier, slower request's response arriving after a later, faster one's and
+  // overwriting fresher results/errors/loading state with stale ones.
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (debounceRef.current) {
@@ -38,8 +42,10 @@ export function UserPicker({ id, label, value, onChange, helperText }: UserPicke
     }
     const trimmed = query.trim();
     if (!trimmed) {
+      requestIdRef.current += 1; // invalidate any in-flight search — this query is no longer live
       setResults([]);
       setLoading(false);
+      setError(null);
       return;
     }
     setLoading(true);
@@ -54,6 +60,7 @@ export function UserPicker({ id, label, value, onChange, helperText }: UserPicke
   }, [query]);
 
   async function runSearch(search: string): Promise<void> {
+    const requestId = (requestIdRef.current += 1);
     setError(null);
     try {
       const params = new URLSearchParams({ search });
@@ -61,17 +68,23 @@ export function UserPicker({ id, label, value, onChange, helperText }: UserPicke
         credentials: "include",
       });
       if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
+        const message = await parseApiErrorMessage(response);
+        if (requestId !== requestIdRef.current) return; // superseded by a newer search
+        setError(message);
         setResults([]);
         return;
       }
       const body = (await response.json()) as ApiSuccessResponse<readonly UserSummary[]>;
+      if (requestId !== requestIdRef.current) return; // superseded by a newer search
       setResults(body.data);
     } catch {
+      if (requestId !== requestIdRef.current) return; // superseded by a newer search
       setError("Something went wrong. Please try again.");
       setResults([]);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }
 
@@ -79,6 +92,7 @@ export function UserPicker({ id, label, value, onChange, helperText }: UserPicke
     onChange(user);
     setQuery("");
     setResults([]);
+    setError(null);
     setOpen(false);
   }
 
@@ -86,6 +100,7 @@ export function UserPicker({ id, label, value, onChange, helperText }: UserPicke
     onChange(null);
     setQuery("");
     setResults([]);
+    setError(null);
   }
 
   const showDropdown = open && (loading || error !== null || results.length > 0 || query.trim());
@@ -130,7 +145,7 @@ export function UserPicker({ id, label, value, onChange, helperText }: UserPicke
             <ul id={`${id}-listbox`} className={styles.dropdown} role="listbox">
               {loading ? <li className={styles.dropdownStatus}>Searching…</li> : null}
               {error ? (
-                <li className={styles.dropdownStatus} role="alert">
+                <li className={styles.dropdownStatusError} role="alert">
                   {error}
                 </li>
               ) : null}
