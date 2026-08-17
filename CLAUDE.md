@@ -2121,6 +2121,30 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is
   **The approved dashboard UI/UX design-system package is now on `main`.** Building the Dashboard
   UI Foundation Alignment task package (design prompt §34) remains a separate, not-yet-requested
   next step.
+- `[2026-08-17]` **Scoped (not authorized to build) the Dashboard UI Foundation Alignment task
+  package** — `docs/task-packages/dashboard-ui-foundation-alignment.md`, per design prompt §34's
+  own next-step naming. Grounded entirely in the 18 approved design documents plus direct
+  verification against live code, surfacing two concrete blockers rather than assuming the header
+  could be fully wired up: (1) header "global search" can only honestly be module-navigation
+  search for now — no cross-record search backend exists for any business module yet; (2) header
+  "notifications" can ship as UI only — `GET /notifications` is gated on a **zero-seeded**
+  `system_settings:notifications_view` action (no role currently holds it, so even Super Admin
+  would get a real `403` today) and isn't scoped to "the current user's own notifications" in the
+  first place, so a real per-user drawer needs a new self-service endpoint and an RBAC seed
+  decision — both their own, separate, not-yet-requested authorizations. Scope: ~30 new
+  `packages/ui` components, wiring the already-defined-but-unused breakpoint/motion/control-size
+  tokens into real CSS, a new calmer `statusBadgeTokens` palette (flagged as needing real
+  contrast-tool verification, not assumed), the 5-cluster library sub-grouping and desktop sidebar
+  collapse from the approved navigation spec, and re-skinning the 6 pre-`packages/ui` auth pages
+  (closing a confirmed `#b00020`-vs-`colorTokens.danger` color drift). Explicitly out of scope: any
+  of the 43 modules' business functionality, dark mode (still not V1), and any RBAC/workflow-state/
+  module-registry schema change. One item flagged for extra scrutiny when this work is eventually
+  reviewed: closing the accessibility test-coverage gap requires a test-only session-establishment
+  path for Playwright, which touches authentication-adjacent code and should get the same security
+  attention as real auth code, not be treated as routine test scaffolding. **Writing this package
+  is scoping only — a separate, explicit "begin this work" instruction is still required before
+  any branch is created or any code is touched**, matching this project's discipline for every
+  prior phase.
 
 ## Open client blockers
 
