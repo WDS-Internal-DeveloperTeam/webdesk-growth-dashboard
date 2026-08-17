@@ -1,0 +1,13 @@
+/* Shared base for the small inline error banner every mutation component in this app renders on a
+ * failed submit — project-form.tsx and project-status-actions.tsx both compose from this rather
+ * than each defining their own near-identical `.error` class. Each consumer still owns its own
+ * padding (and any other layout-specific property, e.g. `width: 100%`), since those genuinely
+ * differ per component; only the shared visual treatment (danger color/background, radius, type
+ * size) lives here. */
+.error {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-danger);
+  background: var(--webdesk-dashboard-color-danger-surface);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  margin: 0;
+}

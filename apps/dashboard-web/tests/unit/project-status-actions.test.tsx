@@ -126,4 +126,43 @@ describe("ProjectStatusActions", () => {
       "Something went wrong. Please try again.",
     );
   });
+
+  it("logs the real error to the console on a network failure", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const networkError = new Error("network down");
+    global.fetch = vi.fn().mockRejectedValue(networkError) as typeof fetch;
+
+    render(<ProjectStatusActions projectId={PROJECT_ID} status="active" />);
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+
+    await screen.findByRole("alert");
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to change project status", networkError);
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("renders the new status's buttons immediately on success, without waiting on refresh", async () => {
+    // router.refresh() is a synchronous no-op mock here — this test's real assertion is that the
+    // component updates its own button set from the confirmed transition (not from a `status`
+    // prop that only a real Next.js refresh would ever change), closing the race window where
+    // buttons could re-enable against a still-stale status before a real refresh had landed.
+    window.confirm = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true } as Response) as typeof fetch;
+
+    render(<ProjectStatusActions projectId={PROJECT_ID} status="active" />);
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pause" })).not.toBeInTheDocument();
+  });
+
+  it("renders nothing for a status outside the known union, instead of throwing", () => {
+    const unknownStatus = "on_hold" as unknown as Parameters<
+      typeof ProjectStatusActions
+    >[0]["status"];
+    const { container } = render(
+      <ProjectStatusActions projectId={PROJECT_ID} status={unknownStatus} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
 });

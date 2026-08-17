@@ -2,22 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import type { Project } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import type { ProjectStatusFilter } from "@/lib/projects";
 import styles from "./project-status-actions.module.css";
-
-type ProjectStatus = Project["status"];
 
 export interface ProjectStatusActionsProps {
   readonly projectId: string;
-  readonly status: ProjectStatus;
+  readonly status: ProjectStatusFilter;
 }
 
 /** Mirrors `ALLOWED_TRANSITIONS` in apps/dashboard-api/src/projects/project.service.ts (D2) — kept
  *  in sync by hand, same approach every other client-side mirror of a backend contract in this app
  *  already uses. `archived` is terminal: once set, this component renders no actions at all. */
-const ALLOWED_TRANSITIONS: Readonly<Record<ProjectStatus, readonly ProjectStatus[]>> = {
+const ALLOWED_TRANSITIONS: Readonly<Record<ProjectStatusFilter, readonly ProjectStatusFilter[]>> = {
   active: ["paused", "archived"],
   paused: ["active", "archived"],
   archived: [],
@@ -25,7 +23,7 @@ const ALLOWED_TRANSITIONS: Readonly<Record<ProjectStatus, readonly ProjectStatus
 
 /** Labels the action that REACHES the given status, not the status itself — e.g. the button that
  *  moves a project to "paused" reads "Pause", not "Set to paused". */
-const ACTION_LABEL: Readonly<Record<ProjectStatus, string>> = {
+const ACTION_LABEL: Readonly<Record<ProjectStatusFilter, string>> = {
   active: "Resume",
   paused: "Pause",
   archived: "Archive",
@@ -33,7 +31,7 @@ const ACTION_LABEL: Readonly<Record<ProjectStatus, string>> = {
 
 /** Only the archive transition is confirmed — it's the one transition this state machine can never
  *  reverse (`ALLOWED_TRANSITIONS.archived` is empty), unlike pause/resume which freely toggle. */
-const CONFIRM_MESSAGE: Partial<Record<ProjectStatus, string>> = {
+const CONFIRM_MESSAGE: Partial<Record<ProjectStatusFilter, string>> = {
   archived: "Archive this project? Archived projects can't be reactivated.",
 };
 
@@ -50,17 +48,24 @@ const CONFIRM_MESSAGE: Partial<Record<ProjectStatus, string>> = {
  * `router.refresh()` rather than navigating away, since the user is already looking at the one
  * page a status change is relevant to.
  */
-export function ProjectStatusActions({ projectId, status }: ProjectStatusActionsProps): ReactNode {
+export function ProjectStatusActions({
+  projectId,
+  status: initialStatus,
+}: ProjectStatusActionsProps): ReactNode {
   const router = useRouter();
+  const [status, setStatus] = useState(initialStatus);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<ProjectStatus | null>(null);
+  const [pending, setPending] = useState<ProjectStatusFilter | null>(null);
 
-  const targets = ALLOWED_TRANSITIONS[status];
+  // Falls back to "no transitions" for a status value outside the known union (e.g. a future
+  // backend enum addition reaching this component during a deploy-skew window), rather than
+  // crashing on an unguarded lookup.
+  const targets = ALLOWED_TRANSITIONS[status] ?? [];
   if (targets.length === 0) {
     return null;
   }
 
-  async function handleTransition(nextStatus: ProjectStatus): Promise<void> {
+  async function handleTransition(nextStatus: ProjectStatusFilter): Promise<void> {
     const confirmMessage = CONFIRM_MESSAGE[nextStatus];
     if (confirmMessage && !window.confirm(confirmMessage)) {
       return;
@@ -78,8 +83,16 @@ export function ProjectStatusActions({ projectId, status }: ProjectStatusActions
         setError(await parseApiErrorMessage(response));
         return;
       }
+      // Updates the rendered button set from the just-confirmed transition immediately — React
+      // batches this with the `finally` block's setPending(null) below into a single re-render,
+      // so buttons never re-enable against the stale pre-transition status. `router.refresh()`
+      // still runs to reconcile everything else this page renders server-side (the header's
+      // status badge, in particular), but this component no longer depends on that refresh
+      // completing to show the right buttons itself.
+      setStatus(nextStatus);
       router.refresh();
-    } catch {
+    } catch (err) {
+      console.error("Failed to change project status", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setPending(null);
