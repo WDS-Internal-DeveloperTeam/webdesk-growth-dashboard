@@ -381,6 +381,26 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     for an unauthenticated visitor. **The Create/Edit Project form is now genuinely live in
     production.** Backend, header switcher, list page, detail page, and now the create/edit form are
     all live for the Projects module.
+12. **`dashboard-web` Project Status Change / Archive actions — built, validated, pushed as its own
+    branch, not yet reviewed/merged (2026-08-17).**
+    `docs/implementation/dashboard-web-project-status-actions.md` records the full account. Not
+    started automatically — built directly on the explicit "build the status change and archive
+    UI" instruction, closing the last named UI gap against `POST /projects/:projectId/status`
+    (live on the backend since the Projects module's original build, never called from any UI
+    until now). A new client island, `ProjectStatusActions`, renders inside the Project Detail
+    page's header alongside the existing "Edit" link, mirroring D2's own state machine
+    (`active`⇄`paused`, either → `archived` terminal) by hand — only the transitions actually valid
+    from the project's current status are ever rendered, and `archived` renders no actions at all.
+    Only the archive transition prompts a confirmation (`window.confirm()`) — the one transition
+    the state machine can never reverse; pause/resume need none. Submits via the same direct
+    browser `fetch()` + `credentials: "include"` pattern every mutation in this app already uses,
+    reusing `lib/api-errors.ts`'s existing error-message allowlist rather than adding new
+    error-handling code. On success, calls `router.refresh()` instead of navigating away, since the
+    user is already on the one page a status change is relevant to. 65/65 `dashboard-web` unit
+    tests (8 new) and 13/13 e2e tests (unchanged — no new route) passing; typecheck, lint, and
+    `next build` all clean. Not yet reviewed or merged — code review, security review, second-role
+    human review, a gate decision, and merge authorization are each their own separate,
+    not-yet-requested next step, unchanged from this project's standing discipline.
 
 ## Recent decisions
 
@@ -1569,6 +1589,21 @@ af23ba1c0172c834d2d1311666a2811397598b14`, confirming the exact merged commit is
   session gate is intact. **The `dashboard-web` Create/Edit Project form is now genuinely live in
   production**, closing out this slice's full build-to-production arc. Backend, header switcher,
   list page, detail page, and now the create/edit form are all live for the Projects module.
+- `[2026-08-17]` **Built the `dashboard-web` Project Status Change / Archive actions**, under the
+  explicit "build the status change and archive UI" instruction — the last named UI gap against an
+  already-live backend endpoint (`POST /projects/:projectId/status`, built with the Projects module
+  itself but never called from any `dashboard-web` UI until now). A new client island,
+  `ProjectStatusActions`, renders inside the Project Detail page's header alongside the existing
+  "Edit" link, mirroring D2's own state machine (`active`⇄`paused`, either → `archived` terminal,
+  from `apps/dashboard-api/src/projects/project.service.ts`'s `ALLOWED_TRANSITIONS`) by hand — only
+  the transitions actually valid from a project's current status are ever rendered, and `archived`
+  renders no actions at all. Only the archive transition prompts a `window.confirm()` — the one
+  transition the state machine can never reverse. Reuses the existing mutation pattern (direct
+  browser `fetch()` + `credentials: "include"`) and the existing `lib/api-errors.ts` error-message
+  allowlist rather than adding new error-handling code; calls `router.refresh()` on success instead
+  of navigating away. 65/65 `dashboard-web` unit tests (8 new) and 13/13 e2e tests (unchanged, no
+  new route) passing; typecheck/lint/`next build` all clean. Pushed as branch
+  `dashboard-web-project-status-actions`, off `main` at `b889982`. Not yet reviewed or merged.
 
 ## Open client blockers
 
