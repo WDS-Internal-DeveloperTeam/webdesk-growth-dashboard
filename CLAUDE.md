@@ -543,8 +543,8 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     `user_roles(role_id, project_id)` index), independently confirmed via a separate
     `migrate:status` check (45 executed, 0 pending). **The production database schema is now fully
     migrated through `00045`.**
-16. **Dashboard UI/UX design system — 18-document proposal produced, awaiting human review and
-    direction selection (2026-08-17).** `docs/design/dashboard-ui/00` through `17` records the
+16. **Dashboard UI/UX design system — 18-document proposal produced, direction approved, merged,
+    and live in production (2026-08-17).** `docs/design/dashboard-ui/00` through `17` records the
     full package. Requested directly via a user-supplied design prompt (`design_prompt.md`),
     ahead of business-module implementation — a product-design/design-system task, explicitly not
     business-module implementation itself, per the prompt's own scope. Grounded in real research,
@@ -591,8 +591,17 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     section (now marked COMPLETE) and in `outputs/webdesk-growth-dashboard/project.json`'s
     `audit_log`. **This approval covers the design direction only** — implementation still
     requires a separate, not-yet-authorized Dashboard UI Foundation Alignment task package (design
-    prompt §34), and merging PR #32 remains its own separate, not-yet-requested step, per this
-    project's standing "no auto-merge" rule.
+    prompt §34). **"Merge PR #32" was then separately requested and executed** — merged with a
+    real merge commit (not squash/rebase), matching every prior merge in this project's history —
+    merge commit `800472e96a1478ff715edb00f2ad26b6fa2cd44b`, all 14 CI checks green beforehand.
+    Both Vercel projects auto-deployed on push to `main` and were verified live directly:
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+800472e96a1478ff715edb00f2ad26b6fa2cd44b`, and `dashboard-web`'s `/` resolves to `/auth/sign-in`
+    for an unauthenticated visitor. **The approved dashboard UI/UX design-system documentation is
+    now on `main`.** Since this PR contains only documentation (no application code), the merge
+    itself changes nothing about the running application's behavior — the deployment verification
+    above confirms the merge landed cleanly, not a functional change. Building the Dashboard UI
+    Foundation Alignment task package remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -2098,6 +2107,20 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is
   though this decision used the design prompt's own approval mechanism rather than the usual
   code-review/security-review/QA-gate machinery, since there is no code in this PR to run those
   against).
+- `[2026-08-17]` **"Merge PR #32" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `800472e96a1478ff715edb00f2ad26b6fa2cd44b`, all 14 CI checks (including both Vercel
+  preview-deployment checks) green beforehand. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+800472e96a1478ff715edb00f2ad26b6fa2cd44b`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming the
+  session gate is intact. Since PR #32 contains only documentation (`docs/design/dashboard-ui/`,
+  no application code), this merge changes nothing about the running application's actual
+  behavior — the live checks confirm the merge landed cleanly on `main`, not a functional change.
+  **The approved dashboard UI/UX design-system package is now on `main`.** Building the Dashboard
+  UI Foundation Alignment task package (design prompt §34) remains a separate, not-yet-requested
+  next step.
 
 ## Open client blockers
 
