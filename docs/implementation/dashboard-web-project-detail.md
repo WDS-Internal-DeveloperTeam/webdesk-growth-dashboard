@@ -183,6 +183,27 @@ href>`. The backend's only validation, `z.string().url()` in
   `data:`, and unparseable strings. Full re-validation: typecheck/lint/`next build` clean, 44/44
   `dashboard-web` unit tests (3 new), 11/11 Playwright tests.
 
+## 3d. Addendum (2026-08-17) — no longer zero client JS, pause/archive actions now exist
+
+`dashboard-web-project-status-actions` (a separate, later PR) added a small client island
+(`ProjectStatusActions`, pause/resume/archive buttons) directly into this page's header. Three
+claims above, accurate when this document was written, are now stale and should be read in light
+of that PR instead of taken at face value:
+
+- **§1, item 1** ("every other page ... is fully server-rendered, zero JS") and **§3**
+  ("Client-side tabs — sections instead, a deliberate simplification that keeps this page's
+  zero-client-JS property consistent with the rest of the app") — the page itself is still a
+  Server Component and every section below the header remains free of client state, but the page
+  as a whole is no longer zero-JS: `ProjectStatusActions` is one client island in its header,
+  alongside the header switcher's own pre-existing exception.
+- **§3** ("Pause/archive/edit actions — §8's proposed header actions; a real mutation UI is
+  separate, larger, unrequested scope") — pause/resume/archive actions now exist (edit already did
+  by the time this line was written). See `docs/implementation/dashboard-web-project-status-actions.md`
+  for the full as-built record of that slice.
+
+This section is appended rather than rewriting the text above, so §1–§3 remain an accurate record
+of what this PR itself actually built and why.
+
 ## 4. Testing
 
 - `apps/dashboard-web/tests/unit/projects.test.tsx` — 28 tests total (14 new across the initial

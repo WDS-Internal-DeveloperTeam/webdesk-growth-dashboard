@@ -57,12 +57,8 @@
 }
 
 .error {
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  color: var(--webdesk-dashboard-color-danger);
-  background: var(--webdesk-dashboard-color-danger-surface);
-  border-radius: var(--webdesk-dashboard-radius-sm);
+  composes: error from "./error-message.module.css";
   padding: var(--webdesk-dashboard-space-sm);
-  margin: 0;
 }
 
 .actions {

@@ -381,6 +381,50 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     for an unauthenticated visitor. **The Create/Edit Project form is now genuinely live in
     production.** Backend, header switcher, list page, detail page, and now the create/edit form are
     all live for the Projects module.
+12. **`dashboard-web` Project Status Change / Archive actions — built, code-reviewed, security-
+    reviewed, second-role human reviewed, gated, not yet merged (2026-08-17).**
+    `docs/implementation/dashboard-web-project-status-actions.md` records the full account. Not
+    started automatically — built directly on the explicit "build the status change and archive
+    UI" instruction, closing the last named UI gap against `POST /projects/:projectId/status`
+    (live on the backend since the Projects module's original build, never called from any UI
+    until now). A new client island, `ProjectStatusActions`, renders inside the Project Detail
+    page's header alongside the existing "Edit" link, mirroring D2's own state machine
+    (`active`⇄`paused`, either → `archived` terminal) by hand — only the transitions actually valid
+    from the project's current status are ever rendered, and `archived` renders no actions at all.
+    Only the archive transition prompts a confirmation (`window.confirm()`) — the one transition
+    the state machine can never reverse; pause/resume need none. Submits via the same direct
+    browser `fetch()` + `credentials: "include"` pattern every mutation in this app already uses,
+    reusing `lib/api-errors.ts`'s existing error-message allowlist rather than adding new
+    error-handling code. This project's own `code-review` skill then ran (8-angle, medium effort)
+    and surfaced 8 findings that survived verification — most severe a real race where buttons
+    re-enabled before `router.refresh()` had actually delivered the new status, letting a rushed
+    user fire a since-invalid transition. 7 of 8 were fixed: the race (via a locally-owned `status`
+    state updated in the same batched render as re-enabling the buttons, instead of waiting on the
+    refresh), an unguarded status-lookup crash risk, a silent network-failure catch with no
+    logging, a self-contradicting doc comment on the page itself, a stale claim in
+    `dashboard-web-project-detail.md` (addended, not rewritten), a duplicated `.error` CSS class
+    (now shared via a new `components/error-message.module.css` both this component and
+    `project-form.module.css` compose from), and a duplicated `ProjectStatus` type (now imports
+    `lib/projects.ts`'s existing `ProjectStatusFilter`). The 8th — `router.refresh()` re-fetching
+    the whole route (~9 requests) for a 1-field change — was recorded as accepted, tracked debt:
+    fully eliminating it would mean lifting `status` into a shared client wrapper the header badge
+    also reads from, a real architectural step up disproportionate to a review-fix pass. 68/68
+    `dashboard-web` unit tests (11 new across the original build and the fix round) and 13/13 e2e
+    tests (unchanged — no new route) passing; typecheck, lint, and `next build` all clean. A
+    separate `security-review` skill run found **0 findings above threshold** — the backend
+    (`OriginCheckGuard`, `PermissionGuard`, and `project.service.ts`'s own transition validation)
+    was confirmed as the sole authoritative enforcement point, unaffected by this PR's client-side
+    changes. A review packet (published as a Claude artifact — code review + security review
+    findings, fixes, and validation evidence) was prepared for the required second-role human
+    review, since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D
+    reviewed it and returned "Approved."** **The gate (G4-project-status-actions) was then
+    separately requested and approved** — WebDesk Solution, decision CONFIRM, approved commit
+    `90413983591b53c1a67f61d329702344ec22e651` on branch `dashboard-web-project-status-actions` —
+    see `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s
+    "Sign-off" section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This
+    gate approval does not itself authorize merging PR #29 or a production deployment** — merge
+    remains its own separate, not-yet-requested authorization, per this project's standing "no
+    auto-merge" rule (same pattern as every prior gate).
 
 ## Recent decisions
 
@@ -1569,6 +1613,74 @@ af23ba1c0172c834d2d1311666a2811397598b14`, confirming the exact merged commit is
   session gate is intact. **The `dashboard-web` Create/Edit Project form is now genuinely live in
   production**, closing out this slice's full build-to-production arc. Backend, header switcher,
   list page, detail page, and now the create/edit form are all live for the Projects module.
+- `[2026-08-17]` **Built the `dashboard-web` Project Status Change / Archive actions**, under the
+  explicit "build the status change and archive UI" instruction — the last named UI gap against an
+  already-live backend endpoint (`POST /projects/:projectId/status`, built with the Projects module
+  itself but never called from any `dashboard-web` UI until now). A new client island,
+  `ProjectStatusActions`, renders inside the Project Detail page's header alongside the existing
+  "Edit" link, mirroring D2's own state machine (`active`⇄`paused`, either → `archived` terminal,
+  from `apps/dashboard-api/src/projects/project.service.ts`'s `ALLOWED_TRANSITIONS`) by hand — only
+  the transitions actually valid from a project's current status are ever rendered, and `archived`
+  renders no actions at all. Only the archive transition prompts a `window.confirm()` — the one
+  transition the state machine can never reverse. Reuses the existing mutation pattern (direct
+  browser `fetch()` + `credentials: "include"`) and the existing `lib/api-errors.ts` error-message
+  allowlist rather than adding new error-handling code; calls `router.refresh()` on success instead
+  of navigating away. 65/65 `dashboard-web` unit tests (8 new) and 13/13 e2e tests (unchanged, no
+  new route) passing; typecheck/lint/`next build` all clean. Pushed as branch
+  `dashboard-web-project-status-actions`, off `main` at `b889982`. Not yet reviewed or merged.
+- `[2026-08-17]` **Independent code review run on `dashboard-web-project-status-actions` (PR #29),
+  medium effort — 8-angle finder pass, then all findings verified.** 9 candidates surfaced; 8
+  survived 1-vote verification (1 REFUTED — a claimed duplicate of `lib/action-link-style.ts`'s
+  `primaryActionLinkStyle`, which turned out technically unable to support the real
+  `<button>` elements' `:disabled`/`:focus-visible` states, so it wasn't real duplication). Most
+  severe: buttons re-enabled via the component's `finally` block immediately after firing
+  `router.refresh()` — which returns `void` and isn't awaited — rather than after the refresh
+  actually delivered the new status, a real window for a rushed or double-clicking user to fire a
+  since-invalid transition. 7 of 8 findings fixed (commit pending): the race (the component now
+  owns a local `status` state, updated via `setStatus(nextStatus)` in the same batched render as
+  `setPending(null)`, so the rendered button set is never stale relative to whether it's enabled);
+  an unguarded `ALLOWED_TRANSITIONS[status]` lookup that could throw on a status value outside the
+  known union (fixed with a `?? []` fallback — not currently reachable, same latent-risk shape
+  already accepted as debt for `roadmapItemStatusBadge`/`objectiveStatusBadge`); a silent
+  network-failure `catch` with no logging (fixed with `console.error`, closing the same blind-spot
+  class the Project Switcher review already fixed once); the page's own doc comment contradicting
+  itself on whether it has client JS (reworded); `docs/implementation/dashboard-web-project-detail.md`
+  left stale by this PR (an addendum section appended, not rewritten, preserving that doc's own
+  historical accuracy); a duplicated `.error` CSS class (extracted into a new
+  `components/error-message.module.css` that both `project-form.module.css` and
+  `project-status-actions.module.css` now `composes` from); and a duplicated `ProjectStatus` type
+  alias (now imports the existing `ProjectStatusFilter` from `lib/projects.ts`). The 8th —
+  `router.refresh()` re-fetching the whole route (~9 requests: the page's own 6 plus the shell
+  layout's 3) to reflect a 1-field change — was recorded as accepted, tracked debt: the race fix
+  above removes this component's own need for the refresh to complete correctly, but the header's
+  status badge is still server-rendered from the page's `project` prop, so some server
+  reconciliation remains necessary; fully eliminating it would mean lifting `status` into a shared
+  client wrapper the badge also reads from, a real architectural step up out of proportion for a
+  review-fix pass. 3 new regression tests added (68/68 `dashboard-web` unit tests). Not yet
+  security-reviewed, second-role human reviewed, gated, or merged.
+- `[2026-08-17]` **Security review run on `dashboard-web-project-status-actions` (PR #29),
+  separately from the code review.** 0 findings above threshold — confirmed the only file with
+  real logic changes (`project-status-actions.tsx`) sends a fixed literal status value (never
+  free-form input) to an endpoint already gated by `OriginCheckGuard`/`PermissionGuard`, with
+  `project.service.ts`'s own state machine independently re-validating every transition
+  server-side; client-side gating of which buttons render is advisory UX only. The new
+  `console.error()` call (added in the code-review fix round) logs only the caught JS exception,
+  no response bodies, tokens, or PII. A review packet (published as a Claude artifact — code
+  review + security review findings, fixes, and validation evidence) was prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
+  `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-17]` **The gate (G4-project-status-actions) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `90413983591b53c1a67f61d329702344ec22e651` on branch `dashboard-web-project-status-actions` —
+  recorded in `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-project-status-actions`) and
+  `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #29 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

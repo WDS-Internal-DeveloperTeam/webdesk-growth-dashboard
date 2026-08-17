@@ -1,0 +1,45 @@
+.wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.actionButton,
+.archiveButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  cursor: pointer;
+}
+
+.actionButton {
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+}
+
+.archiveButton {
+  color: var(--webdesk-dashboard-color-warning);
+  background: var(--webdesk-dashboard-color-warning-surface);
+  border: 1px solid var(--webdesk-dashboard-color-warning);
+}
+
+.actionButton:disabled,
+.archiveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButton:focus-visible,
+.archiveButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  width: 100%;
+}

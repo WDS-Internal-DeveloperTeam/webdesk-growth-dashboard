@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ContentContainer, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
+import { ProjectStatusActions } from "@/components/project-status-actions";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
 import {
@@ -24,15 +25,15 @@ interface ProjectDetailPageProps {
  *  `module-projects-foundation.md` §8's own proposal (header + Overview/Team/Environments/
  *  Repositories/Roadmap tabs), explicitly flagged there as "not sourced... should be confirmed or
  *  corrected." This renders the same content grouping as a single scrollable page of sections
- *  instead of client-side tabs, keeping the page fully server-rendered like the rest of this app
- *  (no client component, no JS required) — a deliberate simplification, not a client-side gap.
- *  "Team" has no member-identity list (§8's proposal implies one) since no user-lookup endpoint
- *  exists yet to resolve a `userId` to a name; only the real, non-fabricated headcount is shown,
- *  same reasoning already established for `ownerUserId`/`activePhaseId` on the list page. An
- *  "Edit" action now links to `/projects/:id/edit` (name/description/confidentiality only); the
- *  header's proposed pause/archive actions are still deliberately not built — status transitions
- *  are their own separate, dedicated action per `module-projects-foundation.md` §8, not this
- *  form. */
+ *  instead of client-side tabs — a deliberate simplification, not a client-side gap, and it keeps
+ *  every section below the header free of client state. "Team" has no member-identity list (§8's
+ *  proposal implies one) since no user-lookup endpoint exists yet to resolve a `userId` to a name;
+ *  only the real, non-fabricated headcount is shown, same reasoning already established for
+ *  `ownerUserId`/`activePhaseId` on the list page. An "Edit" action links to `/projects/:id/edit`
+ *  (name/description/confidentiality only); pause/resume/archive actions (D2's own state machine
+ *  — `archived` is terminal) are a small client island (`ProjectStatusActions`) rendered alongside
+ *  it — the only client JS this page renders; everything else, including this component itself,
+ *  stays a Server Component. */
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const session = await getServerSession();
   if (!session) {
@@ -59,9 +60,12 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         linkComponent={Link}
         statusBadge={<StatusBadge status={badge.token} label={badge.label} />}
         contextActions={
-          <Link href={`/projects/${project.id}/edit`} style={primaryActionLinkStyle}>
-            Edit
-          </Link>
+          <>
+            <ProjectStatusActions projectId={project.id} status={project.status} />
+            <Link href={`/projects/${project.id}/edit`} style={primaryActionLinkStyle}>
+              Edit
+            </Link>
+          </>
         }
       />
 
