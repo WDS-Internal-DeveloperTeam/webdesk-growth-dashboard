@@ -444,8 +444,8 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     dashboard design prompt to address these at a later time — none of this is started or
     authorized; each remains its own separate, not-yet-requested next step. **Update
     (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.**
-14. **User lookup capability + Project owner assignment — built, validated, code-reviewed and
-    fixed, pushed as its own branch, not yet security-reviewed/merged (2026-08-17).**
+14. **User lookup capability + Project owner assignment — built, validated, code-reviewed,
+    security-reviewed, and second-role human reviewed, not yet gated/merged (2026-08-17).**
     `docs/implementation/user-lookup-and-owner-assignment.md` records the full account. Not
     started automatically — built directly on the explicit "start with the blockers" instruction
     following item 13's gap analysis. Scope was confirmed with the user first (`AskUserQuestion`),
@@ -475,9 +475,17 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     Final numbers: 85/85 `dashboard-web` unit tests (7 new on top of the original 13), 322/322
     `dashboard-api` unit tests (1 new), 122/122 `packages/database` integration tests (1 new),
     93/93 `dashboard-api` e2e/integration tests (1 new) all passing; typecheck/lint/`next
-build`/`nest build` clean; `pnpm exec prettier --check` clean. Not yet security-reviewed,
-    second-role human reviewed, gated, or merged — each its own separate, not-yet-requested next
-    step.
+build`/`nest build` clean; `pnpm exec prettier --check` clean. **A separate `security-review`
+    skill run then found 0 findings above threshold**, across all 5 targeted questions (permission-
+    gate enforcement, `UserSummary` response-shape narrowing, the new `escapeLikePattern()`
+    helper's injection-safety, user-enumeration exposure, and `ownerUserId` target-eligibility
+    validation — the last flagged as pre-existing, out-of-scope context rather than a finding of
+    this branch, since it predates this PR). A review packet (published as a Claude artifact — code
+    review + security review findings, fixes, and validation evidence) was prepared for the
+    required second-role human review, since the implementing agent cannot also be its own reviewer
+    (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
+    `docs/project-state/user-lookup-owner-assignment-approval-checklist.md`'s "Sign-off" section. A
+    gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -1816,6 +1824,25 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, confirming the exact merged commit is
   new), all against a fresh local disposable database; typecheck/lint/`next build`/`nest build`
   clean; `pnpm exec prettier --check` clean. Not yet security-reviewed, second-role human
   reviewed, gated, or merged.
+- `[2026-08-17]` **Security review run on `user-lookup-owner-assignment` (PR #30), separately from
+  the code review.** 0 findings above threshold. Five targeted questions were checked directly
+  against the code: the `users_roles:view` gate is correctly enforced (verified against the real
+  seeded RBAC matrix, plus the e2e suite's real 401/403 proofs); the `UserSummary` response shape
+  stays narrowed to `id`/`displayName`/`email` in every path via one shared `toUserSummary()`
+  helper; the new `escapeLikePattern()` helper is injection-safe (a match-correctness fix, not a
+  SQL-injection vector — Sequelize already parameterizes the value); the search endpoint doesn't
+  enable user enumeration beyond this codebase's already-accepted model (gated to the two most-
+  trusted roles, with indistinguishable 404s across malformed/nonexistent/disabled cases); and
+  `ownerUserId`'s lack of target-user-eligibility validation (UUID shape only) was noted as
+  pre-existing, out-of-scope context — the field and its Zod schema predate this branch, and this
+  PR doesn't touch `project.service.ts`/`projects.dto.ts`. A review packet (published as a Claude
+  artifact — code review + security review findings, fixes, and validation evidence, with a
+  decision section) was prepared for the required second-role human review, since the implementing
+  agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and returned
+  "Approved."** See `docs/project-state/user-lookup-owner-assignment-approval-checklist.md`'s
+  "Sign-off" section. This satisfies the last precondition before a gate decision can be
+  requested, but is not itself a gate decision or a merge authorization — both remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
