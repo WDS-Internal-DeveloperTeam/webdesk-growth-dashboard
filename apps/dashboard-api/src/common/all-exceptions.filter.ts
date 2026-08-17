@@ -46,6 +46,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
             ? exception.message
             : "An unexpected error occurred";
 
+    // `ZodValidationPipe` throws `BadRequestException({ message: "Validation failed", issues })` —
+    // `exception.message` above only ever resolves to the flat "Validation failed" string
+    // (NestJS's own `HttpException.initMessage()` promotes just the object's own `.message`), so
+    // the field-level detail has to be read separately from the raw response body here, or it's
+    // silently dropped and never reaches the client at all.
+    const responseBody = exception instanceof HttpException ? exception.getResponse() : null;
+    const issues =
+      responseBody && typeof responseBody === "object" && "issues" in responseBody
+        ? (responseBody as { issues?: ApiErrorResponse["error"]["issues"] }).issues
+        : undefined;
+
     this.logger.error(
       `[${correlationId}] ${request.method} ${request.url} -> ${status}: ${message}`,
       exception instanceof Error ? exception.stack : undefined,
@@ -61,7 +72,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const body: ApiErrorResponse = {
       success: false,
-      error: { code, message },
+      error: issues ? { code, message, issues } : { code, message },
       correlationId,
     };
 

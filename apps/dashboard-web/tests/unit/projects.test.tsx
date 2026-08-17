@@ -9,6 +9,7 @@ import type { Project, ProjectDetail } from "@webdesk/shared-types";
 import {
   buildProjectsHref,
   formatTimestamp,
+  getProject,
   getProjectDetail,
   getProjects,
   isSafeHttpUrl,
@@ -266,6 +267,76 @@ describe("isSafeHttpUrl", () => {
   it("rejects other non-http(s) schemes and unparseable strings", () => {
     expect(isSafeHttpUrl("data:text/html,<script>alert(1)</script>")).toBe(false);
     expect(isSafeHttpUrl("not a url")).toBe(false);
+  });
+});
+
+describe("getProject", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.example.com";
+    vi.mocked(cookies).mockResolvedValue({ toString: () => "sid=abc" } as never);
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  const VALID_ID = "66666666-6666-6666-6666-666666666666";
+
+  function projectDetailFixture(): ProjectDetail {
+    return {
+      id: VALID_ID,
+      publicId: "proj-1",
+      name: "Acme Website",
+      description: "The Acme website growth engagement.",
+      status: "active",
+      confidentiality: "internal",
+      activePhaseId: null,
+      ownerUserId: null,
+      createdAt: "2026-08-16T00:00:00.000Z",
+      updatedAt: "2026-08-16T00:00:00.000Z",
+    };
+  }
+
+  it("rejects a malformed (non-UUID) projectId as not-found, without calling fetch at all", async () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as typeof fetch;
+
+    expect(await getProject("not-a-real-id")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches only GET /projects/:projectId — no sub-resource requests, unlike getProjectDetail", async () => {
+    const project = projectDetailFixture();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: project, correlationId: "test" }),
+    } as Response);
+    global.fetch = fetchMock as typeof fetch;
+
+    const result = await getProject(VALID_ID);
+
+    expect(result).toEqual(project);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `https://api.example.com/projects/${VALID_ID}`,
+      expect.objectContaining({ headers: { cookie: "sid=abc" } }),
+    );
+  });
+
+  it("returns null on a 404", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response);
+
+    expect(await getProject(VALID_ID)).toBeNull();
+  });
+
+  it("throws on a non-OK, non-404 response", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+
+    await expect(getProject(VALID_ID)).rejects.toThrow(/Failed to load project/);
   });
 });
 

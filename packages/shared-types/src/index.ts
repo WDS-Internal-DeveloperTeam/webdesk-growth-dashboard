@@ -43,11 +43,19 @@ export interface ApiSuccessResponse<T> {
   readonly correlationId: string;
 }
 
+/** A single field-level validation failure — mirrors `ZodValidationPipe`'s `issues` shape. */
+export interface ApiErrorIssue {
+  readonly path: string;
+  readonly message: string;
+}
+
 export interface ApiErrorResponse {
   readonly success: false;
   readonly error: {
     readonly code: string;
     readonly message: string;
+    /** Present only for a Zod validation failure — see `ZodValidationPipe`/`AllExceptionsFilter`. */
+    readonly issues?: readonly ApiErrorIssue[];
   };
   readonly correlationId: string;
 }

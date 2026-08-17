@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentContainer, PageHeader } from "@webdesk/ui";
-import { getServerSession } from "@/lib/server-session";
-import { getProjectDetail } from "@/lib/projects";
 import { ProjectForm } from "@/components/project-form";
+import { getProject } from "@/lib/projects";
+import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +18,10 @@ export default async function EditProjectPage({ params }: EditProjectPageProps) 
   }
 
   const { projectId } = await params;
-  const detail = await getProjectDetail(projectId);
-  if (!detail) {
+  const project = await getProject(projectId);
+  if (!project) {
     notFound();
   }
-
-  const { project } = detail;
 
   return (
     <ContentContainer>

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import type { ProjectDetail } from "@webdesk/shared-types";
 import { ContentContainer, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
-import { getServerSession } from "@/lib/server-session";
+import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
 import {
   formatTimestamp,
   getProjectDetail,
@@ -12,19 +12,13 @@ import {
   projectStatusBadge,
   roadmapItemStatusBadge,
 } from "@/lib/projects";
+import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
 
 interface ProjectDetailPageProps {
   readonly params: Promise<{ projectId: string }>;
 }
-
-const CONFIDENTIALITY_LABEL: Readonly<Record<ProjectDetail["confidentiality"], string>> = {
-  public: "Public",
-  internal: "Internal",
-  confidential: "Confidential",
-  restricted: "Restricted",
-};
 
 /** No approved wireframe exists for a Project Detail screen — the only design reference is
  *  `module-projects-foundation.md` §8's own proposal (header + Overview/Team/Environments/
@@ -65,7 +59,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         linkComponent={Link}
         statusBadge={<StatusBadge status={badge.token} label={badge.label} />}
         contextActions={
-          <Link href={`/projects/${project.id}/edit`} style={editLinkStyle}>
+          <Link href={`/projects/${project.id}/edit`} style={primaryActionLinkStyle}>
             Edit
           </Link>
         }
@@ -189,15 +183,6 @@ function Fact({ label, children }: { readonly label: string; readonly children: 
     </div>
   );
 }
-
-const editLinkStyle: React.CSSProperties = {
-  fontSize: "0.875rem",
-  fontWeight: 600,
-  color: "var(--webdesk-dashboard-color-accent-foreground)",
-  background: "var(--webdesk-dashboard-color-accent)",
-  borderRadius: "var(--webdesk-dashboard-radius-sm)",
-  padding: "0.5rem 0.9rem",
-};
 
 const sectionStyle: React.CSSProperties = {
   marginBottom: "2rem",

@@ -22,13 +22,18 @@ function successResponse(id: string): Response {
   } as Response;
 }
 
-function errorResponse(status: number, message: string): Response {
+function errorResponse(
+  status: number,
+  message: string,
+  code = "BadRequestException",
+  issues?: readonly { path: string; message: string }[],
+): Response {
   return {
     ok: false,
     status,
     json: async () => ({
       success: false,
-      error: { code: "BadRequestException", message },
+      error: issues ? { code, message, issues } : { code, message },
       correlationId: "corr-1",
     }),
   } as Response;
@@ -75,7 +80,7 @@ describe("ProjectForm", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}`));
   });
 
-  it("create mode: sends description as null when left blank", async () => {
+  it("create mode: sends description as an empty string when left blank (never coerced to null)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
     global.fetch = fetchMock as typeof fetch;
 
@@ -86,7 +91,7 @@ describe("ProjectForm", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
-    expect(body.description).toBeNull();
+    expect(body.description).toBe("");
   });
 
   it("edit mode: shows the public ID as read-only text, not an input", () => {
@@ -130,11 +135,34 @@ describe("ProjectForm", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(`https://api.example.com/projects/${PROJECT_ID}/update`);
     const body = JSON.parse(init.body as string);
-    expect(body).toEqual({ name: "Acme Renamed", description: null, confidentiality: "internal" });
+    // description stays "" (never coerced to null) since the user never touched that field.
+    expect(body).toEqual({ name: "Acme Renamed", description: "", confidentiality: "internal" });
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}`));
   });
 
-  it("shows the backend's real error message on a non-OK response (e.g. duplicate publicId)", async () => {
+  it("edit mode: leaving a stored empty-string description untouched preserves it (never nulled)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{ publicId: "acme", name: "Acme", description: "", confidentiality: "internal" }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Confidentiality"), {
+      target: { value: "confidential" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body.description).toBe("");
+  });
+
+  it("shows the backend's real error message for an allowlisted code (e.g. duplicate publicId)", async () => {
     global.fetch = vi
       .fn()
       .mockResolvedValue(errorResponse(400, "publicId already in use: acme")) as typeof fetch;
@@ -146,6 +174,46 @@ describe("ProjectForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("publicId already in use: acme");
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("shows field-level detail from a Zod validation failure's issues array", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        errorResponse(400, "Validation failed", "BadRequestException", [
+          { path: "name", message: "String must contain at least 1 character(s)" },
+        ]),
+      ) as typeof fetch;
+
+    render(<ProjectForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Public ID"), { target: { value: "acme" } });
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Acme" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "name: String must contain at least 1 character(s)",
+    );
+  });
+
+  it("falls back to a generic message for a non-allowlisted error code (e.g. a guard misconfiguration)", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        errorResponse(
+          500,
+          "Route is guarded by PermissionGuard but declares no @RequirePermission",
+          "InternalServerErrorException",
+        ),
+      ) as typeof fetch;
+
+    render(<ProjectForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Public ID"), { target: { value: "acme" } });
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Acme" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Please try again.",
+    );
   });
 
   it("shows a generic error when the request itself fails (network error)", async () => {

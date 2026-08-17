@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
-import type { ApiErrorResponse, ApiSuccessResponse, Project } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, Project } from "@webdesk/shared-types";
+import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CONFIDENTIALITY_LABEL, CONFIDENTIALITY_VALUES } from "@/lib/project-confidentiality";
 import styles from "./project-form.module.css";
@@ -65,18 +66,22 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
     setSubmitting(true);
     try {
       const trimmedName = name.trim();
+      // Sent as-is (may be ""), never coerced to `null` — the schema accepts an empty string just
+      // as validly as null, and coercing would silently overwrite a project's existing stored ""
+      // with null on any edit that left this field untouched (both render identically either way,
+      // so there's no display reason to prefer one over the other).
       const trimmedDescription = description.trim();
       const payload =
         props.mode === "create"
           ? {
               publicId: publicId.trim(),
               name: trimmedName,
-              description: trimmedDescription ? trimmedDescription : null,
+              description: trimmedDescription,
               confidentiality,
             }
           : {
               name: trimmedName,
-              description: trimmedDescription ? trimmedDescription : null,
+              description: trimmedDescription,
               confidentiality,
             };
       const url =
@@ -92,8 +97,7 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
       });
 
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as ApiErrorResponse | null;
-        setError(body?.error.message ?? "Something went wrong. Please try again.");
+        setError(await parseApiErrorMessage(response));
         return;
       }
 

@@ -265,6 +265,43 @@ function tolerateDiscard<T>(promise: Promise<T>): Promise<T> {
  *  either case, so this isn't anchored to a specific UUID version. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** The `GET /projects/:projectId` fetch shared by `getProject()` and `getProjectDetail()` below —
+ *  `null` on a 404, throws on any other non-OK status. Assumes `projectId` already passed the
+ *  `UUID_PATTERN` short-circuit each caller performs before reaching here. */
+async function fetchProject(
+  apiBaseUrl: string,
+  projectId: string,
+  headers: HeadersInit,
+): Promise<ProjectDetail | null> {
+  const response = await fetch(`${apiBaseUrl}/projects/${projectId}`, {
+    headers,
+    cache: "no-store",
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to load project (status ${response.status})`);
+  }
+  return ((await response.json()) as ApiSuccessResponse<ProjectDetail>).data;
+}
+
+/**
+ * Fetches a single project only — no sub-resource lists — for pages that don't need them (e.g. the
+ * edit form only reads `publicId`/`name`/`description`/`confidentiality`). Same null/throw contract
+ * as `getProjectDetail()` below, without the 5 extra `roadmap-items`/`objectives`/`environments`/
+ * `repositories`/`team` requests that page's own sub-resource sections need and this one doesn't.
+ */
+export async function getProject(projectId: string): Promise<ProjectDetail | null> {
+  if (!UUID_PATTERN.test(projectId)) {
+    return null;
+  }
+  const apiBaseUrl = getApiBaseUrl();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+  return fetchProject(apiBaseUrl, projectId, { cookie: cookieHeader });
+}
+
 /**
  * Fetches a single project and its owned sub-resources for the detail page. Returns `null` on a
  * 404 from `GET /projects/:projectId` specifically — the caller renders Next.js's `notFound()` for
@@ -313,17 +350,10 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     fetchProjectSubResource<ProjectTeamEntry>(apiBaseUrl, projectId, "team", headers),
   );
 
-  const projectResponse = await fetch(`${apiBaseUrl}/projects/${projectId}`, {
-    headers,
-    cache: "no-store",
-  });
-  if (projectResponse.status === 404) {
+  const project = await fetchProject(apiBaseUrl, projectId, headers);
+  if (!project) {
     return null;
   }
-  if (!projectResponse.ok) {
-    throw new Error(`Failed to load project (status ${projectResponse.status})`);
-  }
-  const project = ((await projectResponse.json()) as ApiSuccessResponse<ProjectDetail>).data;
 
   const [roadmapItems, objectives, environments, repositories, team] = await Promise.all([
     roadmapItemsPromise,

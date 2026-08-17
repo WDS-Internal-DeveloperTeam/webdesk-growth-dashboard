@@ -1,4 +1,10 @@
-import { type ArgumentsHost, HttpException, HttpStatus, NotFoundException } from "@nestjs/common";
+import {
+  type ArgumentsHost,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  NotFoundException,
+} from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RequestWithCorrelationId } from "./correlation-id.middleware.js";
 
@@ -61,5 +67,26 @@ describe("AllExceptionsFilter", () => {
     filter.catch(exception, host);
     expect(captureException).toHaveBeenCalledWith(exception);
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+  });
+
+  it("surfaces ZodValidationPipe's issues array in the response body, not just the flat message", async () => {
+    const filter = await loadFilter();
+    const { host, json } = buildHost();
+    const issues = [{ path: "name", message: "String must contain at least 1 character(s)" }];
+    filter.catch(new BadRequestException({ message: "Validation failed", issues }), host);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ message: "Validation failed", issues }),
+      }),
+    );
+  });
+
+  it("omits issues entirely for a plain-string HttpException (no validation detail to surface)", async () => {
+    const filter = await loadFilter();
+    const { host, json } = buildHost();
+    filter.catch(new BadRequestException("publicId already in use: acme"), host);
+    const body = json.mock.calls[0]?.[0] as { error: { message: string; issues?: unknown } };
+    expect(body.error.message).toBe("publicId already in use: acme");
+    expect(body.error.issues).toBeUndefined();
   });
 });
