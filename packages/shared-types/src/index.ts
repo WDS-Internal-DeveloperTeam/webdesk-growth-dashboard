@@ -239,13 +239,30 @@ export interface ProjectSummary {
 }
 
 /**
+ * The read-only identity-lookup capability's own response shape (`GET /users`) — the narrowest
+ * projection of `UserEntity` (`packages/database/src/auth/entities.ts`) a picker UI needs to let
+ * someone search for and select an existing user. Deliberately excludes `accountStatus` (the
+ * endpoint that returns this already filters to active-only) and `lastLoginAt`/timestamps — no
+ * picker consumer needs them, and this file's own precedent (`Project` vs `ProjectSummary`) is to
+ * project only what a given UI surface actually reads, not the full backend entity. This is the
+ * first real user-lookup capability in this app — `Project.ownerUserId` and `ProjectTeamEntry`
+ * previously had no name-resolution endpoint to call; this is that endpoint's frontend type.
+ */
+export interface UserSummary {
+  readonly id: string;
+  readonly displayName: string;
+  readonly email: string;
+}
+
+/**
  * The Projects list page's own row shape — a second, wider projection of `ProjectEntity` alongside
  * `ProjectSummary` above, not a replacement for it (the switcher stays on the narrower type it
  * already validated against). Deliberately still not the full backend entity: `activePhaseId` and
- * `ownerUserId` are bare foreign keys with no name-resolution endpoint yet, so showing them as
- * columns would mean either a raw UUID (useless to a reader) or a fabricated label — both worse
- * than omitting the column until a real "resolve to a display name" capability exists.
- * `retentionCategory`/`createdBy`/`updatedBy` are operational metadata, not list-page content.
+ * `ownerUserId` are bare foreign keys, and the list page still doesn't resolve them to a display
+ * name — a name-resolution endpoint now exists (`GET /users/:userId`, see `UserSummary` above),
+ * but wiring it into this page's per-row rendering (N lookups for N rows) is separate, not-yet-done
+ * scope, not a capability gap anymore. `retentionCategory`/`createdBy`/`updatedBy` are operational
+ * metadata, not list-page content.
  */
 export interface Project {
   readonly id: string;
@@ -263,10 +280,11 @@ export interface Project {
  * `activePhaseId`/`ownerUserId` again: the detail page also fetches the project's own roadmap
  * items in the same request pass, so `activePhaseId` can be resolved to a real name by
  * cross-referencing that array (no fabrication, no raw UUID shown). `ownerUserId`'s raw value is
- * used only to render a boolean "assigned"/"not assigned" state — its value is never displayed as
- * an identity, since no user-lookup endpoint exists yet (the same constraint `Project` above
- * already documents). `retentionCategory`/`createdBy`/`updatedBy` remain operational metadata, out
- * of scope for either shape.
+ * used only to render a boolean "assigned"/"not assigned" state — the create/edit form (not this
+ * type) is what actually resolves it to a display identity, via the same `GET /users/:userId`
+ * endpoint `UserSummary` above documents; wiring an owner display into the read-only detail view
+ * itself remains separate, not-yet-done scope. `retentionCategory`/`createdBy`/`updatedBy` remain
+ * operational metadata, out of scope for either shape.
  */
 export interface ProjectDetail extends Project {
   readonly activePhaseId: string | null;
@@ -311,10 +329,11 @@ export interface ProjectRepository {
 }
 
 /**
- * The project team roster's own entry — carries only `id`, since no user-lookup endpoint exists to
- * resolve `userId` to a name yet (same constraint as `ProjectDetail.ownerUserId`). The detail page
- * uses this array's `.length` only, as a real, non-fabricated headcount — never renders an entry's
- * identity.
+ * The project team roster's own entry — carries only `id`. A name-resolution endpoint now exists
+ * (`GET /users/:userId`, see `UserSummary` above), but resolving every roster entry to a display
+ * identity (N lookups for N members, or a batch-resolve endpoint this API doesn't have yet) is
+ * separate, not-yet-done scope — same as `ProjectDetail.ownerUserId`. The detail page uses this
+ * array's `.length` only, as a real, non-fabricated headcount — never renders an entry's identity.
  */
 export interface ProjectTeamEntry {
   readonly id: string;

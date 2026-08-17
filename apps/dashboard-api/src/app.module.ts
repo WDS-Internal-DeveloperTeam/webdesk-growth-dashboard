@@ -16,6 +16,7 @@ import { OperationalContactsModule } from "./operational-contacts/operational-co
 import { ProjectsModule } from "./projects/projects.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
+import { UsersModule } from "./users/users.module.js";
 import { API_VERSION } from "./version.js";
 
 const env = loadEnv(baseEnvSchema);
@@ -57,6 +58,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     ProjectsModule,
     RetentionModule,
     SystemOperationsModule,
+    UsersModule,
   ],
 })
 export class AppModule implements NestModule {

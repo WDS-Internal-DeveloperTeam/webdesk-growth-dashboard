@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
-import type { ApiSuccessResponse, Project } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, Project, UserSummary } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CONFIDENTIALITY_LABEL, CONFIDENTIALITY_VALUES } from "@/lib/project-confidentiality";
+import { UserPicker } from "./user-picker";
 import styles from "./project-form.module.css";
 
 type Confidentiality = Project["confidentiality"];
@@ -15,6 +16,17 @@ export interface ProjectFormInitialValues {
   readonly name: string;
   readonly description: string | null;
   readonly confidentiality: Confidentiality;
+  /** Already resolved to a display summary by the edit page's own server-side `getUser()` call —
+   *  this form never resolves an id to a name itself. `null` covers both "no owner assigned" and
+   *  "the assigned owner id no longer resolves" (disabled/removed) identically; either way, the
+   *  picker starts empty rather than showing a raw, meaningless UUID. */
+  readonly owner: UserSummary | null;
+  /** The project's raw, un-resolved owner id (or `null` if none is assigned) — distinct from
+   *  `owner` above, which is `null` in BOTH the "no owner" and "owner set but unresolvable" cases.
+   *  Kept separately so the submit payload can preserve an unresolvable owner assignment untouched
+   *  (rather than silently clearing it) when the picker itself was never interacted with — see the
+   *  `ownerTouched` logic in the submit handler below. */
+  readonly ownerUserId: string | null;
 }
 
 export type ProjectFormProps =
@@ -38,9 +50,11 @@ const DESCRIPTION_MAX_LENGTH = 10_000;
  * dedicated transition action (not built here). `publicId` is create-only and immutable (absent
  * from `updateProjectSchema` entirely — migration `00036`'s own doc comment: "never regenerated
  * once assigned") so the edit form shows it as read-only reference text, not an input.
- * `ownerUserId` is deliberately not a form field in either mode — no user-lookup/picker capability
- * exists anywhere in this app yet, the same constraint that already shaped the list and detail
- * pages' own omission of owner identity.
+ * `ownerUserId` is now a real field via `UserPicker` — the backend schema always accepted it
+ * (`createProjectSchema`/`updateProjectSchema`), but no UI could set it until the read-only
+ * `GET /users` lookup capability existed to resolve a search into a real identity, closing the
+ * gap the list/detail pages' own doc comments previously recorded ("no user-lookup endpoint
+ * exists yet").
  *
  * Submits with a direct browser `fetch()` (not a Next.js Server Action), `credentials: "include"`,
  * following the one existing real-mutation precedent in this app
@@ -57,8 +71,19 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
   const [confidentiality, setConfidentiality] = useState<Confidentiality>(
     initial?.confidentiality ?? "internal",
   );
+  const [owner, setOwner] = useState<UserSummary | null>(initial?.owner ?? null);
+  // Tracks whether the user has actually interacted with the owner picker (selected someone, or
+  // clicked Remove) — as opposed to `owner` simply being `null` because the initial owner id
+  // couldn't be resolved to a display summary (disabled/removed account). Only an explicit
+  // interaction should ever change what gets submitted for ownerUserId; see handleOwnerChange.
+  const [ownerTouched, setOwnerTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  function handleOwnerChange(next: UserSummary | null): void {
+    setOwner(next);
+    setOwnerTouched(true);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -71,6 +96,12 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
       // with null on any edit that left this field untouched (both render identically either way,
       // so there's no display reason to prefer one over the other).
       const trimmedDescription = description.trim();
+      // If the owner picker was never touched, preserve the project's existing ownerUserId exactly
+      // as-is — including an unresolvable one (a disabled/removed account) — rather than collapsing
+      // it to null just because `owner` (the resolved display summary) happens to be null. Only an
+      // explicit picker interaction (selecting someone new, or clicking Remove) should ever change
+      // this value; otherwise saving an unrelated field edit would silently clear the assignment.
+      const ownerUserId = ownerTouched ? (owner?.id ?? null) : (initial?.ownerUserId ?? null);
       const payload =
         props.mode === "create"
           ? {
@@ -78,11 +109,13 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
               name: trimmedName,
               description: trimmedDescription,
               confidentiality,
+              ownerUserId,
             }
           : {
               name: trimmedName,
               description: trimmedDescription,
               confidentiality,
+              ownerUserId,
             };
       const url =
         props.mode === "create"
@@ -166,6 +199,18 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
           className={styles.textarea}
         />
       </div>
+
+      <UserPicker
+        id="owner"
+        label="Owner"
+        value={owner}
+        onChange={handleOwnerChange}
+        helperText={
+          props.mode === "edit" && !ownerTouched && !owner && initial?.ownerUserId
+            ? "This project has an assigned owner that could not be resolved (the account may be disabled or removed). The existing assignment will be kept as-is unless you search and select someone new."
+            : "Search by name or email. Leave unset for no assigned owner."
+        }
+      />
 
       <div className={styles.field}>
         <label htmlFor="confidentiality" className={styles.label}>

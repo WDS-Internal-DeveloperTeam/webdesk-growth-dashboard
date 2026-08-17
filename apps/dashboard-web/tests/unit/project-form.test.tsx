@@ -74,6 +74,7 @@ describe("ProjectForm", () => {
           name: "Acme",
           description: "A project",
           confidentiality: "internal",
+          ownerUserId: null,
         }),
       }),
     );
@@ -105,6 +106,8 @@ describe("ProjectForm", () => {
           name: "Acme",
           description: "Existing description",
           confidentiality: "confidential",
+          owner: null,
+          ownerUserId: null,
         }}
       />,
     );
@@ -124,7 +127,14 @@ describe("ProjectForm", () => {
       <ProjectForm
         mode="edit"
         projectId={PROJECT_ID}
-        initial={{ publicId: "acme", name: "Acme", description: null, confidentiality: "internal" }}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: null,
+          confidentiality: "internal",
+          owner: null,
+          ownerUserId: null,
+        }}
       />,
     );
 
@@ -136,7 +146,12 @@ describe("ProjectForm", () => {
     expect(url).toBe(`https://api.example.com/projects/${PROJECT_ID}/update`);
     const body = JSON.parse(init.body as string);
     // description stays "" (never coerced to null) since the user never touched that field.
-    expect(body).toEqual({ name: "Acme Renamed", description: "", confidentiality: "internal" });
+    expect(body).toEqual({
+      name: "Acme Renamed",
+      description: "",
+      confidentiality: "internal",
+      ownerUserId: null,
+    });
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}`));
   });
 
@@ -148,7 +163,14 @@ describe("ProjectForm", () => {
       <ProjectForm
         mode="edit"
         projectId={PROJECT_ID}
-        initial={{ publicId: "acme", name: "Acme", description: "", confidentiality: "internal" }}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: "",
+          confidentiality: "internal",
+          owner: null,
+          ownerUserId: null,
+        }}
       />,
     );
 
@@ -226,6 +248,147 @@ describe("ProjectForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Something went wrong. Please try again.",
+    );
+  });
+
+  it("create mode: searching and selecting an owner includes their id in the submitted payload", async () => {
+    const searchResponse = {
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: [
+          {
+            id: "22222222-2222-2222-2222-222222222222",
+            displayName: "Jane Doe",
+            email: "jane@example.com",
+          },
+        ],
+        correlationId: "corr-1",
+      }),
+    } as Response;
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes("/users?")) {
+        return Promise.resolve(searchResponse);
+      }
+      return Promise.resolve(successResponse(PROJECT_ID));
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<ProjectForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Public ID"), { target: { value: "acme" } });
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Acme" } });
+    fireEvent.change(screen.getByPlaceholderText("Search by name or email…"), {
+      target: { value: "Jane" },
+    });
+
+    const option = await screen.findByRole("button", { name: /Jane Doe/ });
+    fireEvent.mouseDown(option);
+
+    expect(await screen.findByText("jane@example.com")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.example.com/projects",
+        expect.objectContaining({
+          body: JSON.stringify({
+            publicId: "acme",
+            name: "Acme",
+            description: "",
+            confidentiality: "internal",
+            ownerUserId: "22222222-2222-2222-2222-222222222222",
+          }),
+        }),
+      ),
+    );
+  });
+
+  it("edit mode: shows the initial owner and clears it via Remove, submitting ownerUserId: null", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: null,
+          confidentiality: "internal",
+          owner: {
+            id: "33333333-3333-3333-3333-333333333333",
+            displayName: "Jane Doe",
+            email: "jane@example.com",
+          },
+          ownerUserId: "33333333-3333-3333-3333-333333333333",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.queryByText("Jane Doe")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `https://api.example.com/projects/${PROJECT_ID}/update`,
+        expect.objectContaining({
+          body: JSON.stringify({
+            name: "Acme",
+            description: "",
+            confidentiality: "internal",
+            ownerUserId: null,
+          }),
+        }),
+      ),
+    );
+  });
+
+  it("edit mode: preserves an unresolvable owner's id on save when the picker was never touched", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+    const UNRESOLVABLE_OWNER_ID = "44444444-4444-4444-4444-444444444444";
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: null,
+          confidentiality: "internal",
+          // owner resolution failed (e.g. a disabled account) — owner is null even though the
+          // project genuinely has an assigned, just-unresolvable owner.
+          owner: null,
+          ownerUserId: UNRESOLVABLE_OWNER_ID,
+        }}
+      />,
+    );
+
+    // The picker itself shows as empty (no resolvable display summary) — but a note explains why.
+    expect(screen.queryByText(/could not be resolved/)).toBeInTheDocument();
+
+    // Editing an unrelated field and saving must NOT silently clear the owner assignment.
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Acme Renamed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `https://api.example.com/projects/${PROJECT_ID}/update`,
+        expect.objectContaining({
+          body: JSON.stringify({
+            name: "Acme Renamed",
+            description: "",
+            confidentiality: "internal",
+            ownerUserId: UNRESOLVABLE_OWNER_ID,
+          }),
+        }),
+      ),
     );
   });
 });
