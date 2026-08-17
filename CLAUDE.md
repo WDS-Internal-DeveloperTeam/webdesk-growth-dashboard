@@ -381,8 +381,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     for an unauthenticated visitor. **The Create/Edit Project form is now genuinely live in
     production.** Backend, header switcher, list page, detail page, and now the create/edit form are
     all live for the Projects module.
-12. **`dashboard-web` Project Status Change / Archive actions — built, code-reviewed, fixes
-    applied, not yet security-reviewed/merged (2026-08-17).**
+12. **`dashboard-web` Project Status Change / Archive actions — built, code-reviewed, security-
+    reviewed, second-role human reviewed, not yet gated or merged (2026-08-17).**
     `docs/implementation/dashboard-web-project-status-actions.md` records the full account. Not
     started automatically — built directly on the explicit "build the status change and archive
     UI" instruction, closing the last named UI gap against `POST /projects/:projectId/status`
@@ -410,9 +410,17 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     fully eliminating it would mean lifting `status` into a shared client wrapper the header badge
     also reads from, a real architectural step up disproportionate to a review-fix pass. 68/68
     `dashboard-web` unit tests (11 new across the original build and the fix round) and 13/13 e2e
-    tests (unchanged — no new route) passing; typecheck, lint, and `next build` all clean. Not yet
-    security-reviewed, second-role human reviewed, gated, or merged — each its own separate,
-    not-yet-requested next step, unchanged from this project's standing discipline.
+    tests (unchanged — no new route) passing; typecheck, lint, and `next build` all clean. A
+    separate `security-review` skill run found **0 findings above threshold** — the backend
+    (`OriginCheckGuard`, `PermissionGuard`, and `project.service.ts`'s own transition validation)
+    was confirmed as the sole authoritative enforcement point, unaffected by this PR's client-side
+    changes. A review packet (published as a Claude artifact — code review + security review
+    findings, fixes, and validation evidence) was prepared for the required second-role human
+    review, since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D
+    reviewed it and returned "Approved."** See
+    `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s "Sign-off"
+    section. A gate decision and merge authorization remain separate, not-yet-requested next
+    steps.
 
 ## Recent decisions
 
@@ -1646,6 +1654,19 @@ af23ba1c0172c834d2d1311666a2811397598b14`, confirming the exact merged commit is
   client wrapper the badge also reads from, a real architectural step up out of proportion for a
   review-fix pass. 3 new regression tests added (68/68 `dashboard-web` unit tests). Not yet
   security-reviewed, second-role human reviewed, gated, or merged.
+- `[2026-08-17]` **Security review run on `dashboard-web-project-status-actions` (PR #29),
+  separately from the code review.** 0 findings above threshold — confirmed the only file with
+  real logic changes (`project-status-actions.tsx`) sends a fixed literal status value (never
+  free-form input) to an endpoint already gated by `OriginCheckGuard`/`PermissionGuard`, with
+  `project.service.ts`'s own state machine independently re-validating every transition
+  server-side; client-side gating of which buttons render is advisory UX only. The new
+  `console.error()` call (added in the code-review fix round) logs only the caught JS exception,
+  no response bodies, tokens, or PII. A review packet (published as a Claude artifact — code
+  review + security review findings, fixes, and validation evidence) was prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
+  `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
