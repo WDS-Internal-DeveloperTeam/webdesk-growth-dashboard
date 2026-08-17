@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-17T00:00:00Z",
-    "version": 19
+    "version": 20
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -877,6 +877,19 @@
       },
       "project_version_before": 35,
       "project_version_after": 36
+    },
+    {
+      "timestamp": "2026-08-17T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "merged PR #30 (user-lookup-owner-assignment) into main under explicit 'merge PR #30' authorization",
+      "details": {
+        "merge": "Merged with a real merge commit (not squash/rebase), matching every prior merge in this project's history. Merge commit d9c42782db8f79207662a25ec6e558cbf4707755.",
+        "deployment_verification": "Both Vercel projects auto-deployed on push to main and were verified live directly, not just via CI's own Vercel status check — dashboard-api's /health returned build.commitSha == d9c42782db8f79207662a25ec6e558cbf4707755, confirming the exact merged commit is what's serving; dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor, confirming the session gate is intact.",
+        "result": "The user lookup capability (GET /users, GET /users/:userId) and Project owner assignment (the UserPicker component wired into the create/edit project form) are now genuinely live in production. Team management and approver-assignment UI remain separate, not-yet-built next steps — their backends already existed before this branch."
+      },
+      "project_version_before": 36,
+      "project_version_after": 37
     }
   ]
 }

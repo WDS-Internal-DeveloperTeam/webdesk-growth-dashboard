@@ -445,7 +445,8 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     authorized; each remains its own separate, not-yet-requested next step. **Update
     (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.**
 14. **User lookup capability + Project owner assignment — built, validated, code-reviewed,
-    security-reviewed, second-role human reviewed, and gated, not yet merged (2026-08-17).**
+    security-reviewed, second-role human reviewed, gated, merged, and live in production
+    (2026-08-17).**
     `docs/implementation/user-lookup-and-owner-assignment.md` records the full account. Not
     started automatically — built directly on the explicit "start with the blockers" instruction
     following item 13's gap analysis. Scope was confirmed with the user first (`AskUserQuestion`),
@@ -488,9 +489,15 @@ build`/`nest build` clean; `pnpm exec prettier --check` clean. **A separate `sec
     Solution, decision CONFIRM, approved commit `22ca2a8c1a6b4695d87e6151f443fec05f586566` on
     branch `user-lookup-owner-assignment` — see
     `docs/project-state/user-lookup-owner-assignment-approval-checklist.md`'s "Sign-off" section
-    and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This gate approval does not
-    itself authorize merging PR #30 or a production deployment** — merge remains its own separate,
-    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **"Merge PR #30" was then
+    separately requested and executed** — merge commit
+    `d9c42782db8f79207662a25ec6e558cbf4707755`, both Vercel projects auto-deployed and were
+    verified live directly: `dashboard-api`'s `/health` returned `build.commitSha ==
+d9c42782db8f79207662a25ec6e558cbf4707755`, and `dashboard-web`'s `/` resolves (via the
+    intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The user lookup
+    capability and Project owner assignment are now genuinely live in production.** Team
+    management and approver-assignment UI remain separate, not-yet-built next steps (their
+    backends already existed before this branch).
 
 ## Recent decisions
 
@@ -1859,6 +1866,18 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, confirming the exact merged commit is
   further Projects-module gap work (team management, approver assignment)** — merge remains its
   own separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule
   (same pattern as every prior gate).
+- `[2026-08-17]` **"Merge PR #30" was separately requested and executed.** Merged with a real merge
+  commit (not squash/rebase), matching every prior merge in this project's history — merge commit
+  `d9c42782db8f79207662a25ec6e558cbf4707755`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+d9c42782db8f79207662a25ec6e558cbf4707755`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The user lookup capability
+  (`GET /users`, `GET /users/:userId`) and Project owner assignment (the `UserPicker` component
+  wired into the create/edit project form) are now genuinely live in production**, closing out
+  this slice's full build-to-production arc. Team management and approver-assignment UI remain
+  separate, not-yet-built next steps — their backends already existed before this branch.
 
 ## Open client blockers
 
