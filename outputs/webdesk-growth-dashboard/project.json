@@ -7,11 +7,7 @@
     "project_type": "custom-app-build",
     "project_profile": "webdesk-growth-dashboard",
     "build_context": "nodejs",
-    "integration_targets": [
-      "github",
-      "wordpress",
-      "google-workspace"
-    ],
+    "integration_targets": ["github", "wordpress", "google-workspace"],
     "timezone": "America/Toronto",
     "tenant": {
       "mode": "per-client",
