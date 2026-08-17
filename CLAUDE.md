@@ -428,6 +428,19 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
 cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (via the
     intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The Project
     Status Change / Archive actions are now genuinely live in production.**
+13. **Remaining Projects module gaps (2026-08-17, recorded, not started).** With backend, header
+    switcher, list page, detail page, create/edit form, and status/archive actions all live, five
+    genuine gaps remain: (1) owner assignment (`ownerUserId` has no UI anywhere), (2) team
+    management (no UI to add/remove team members), (3) approver assignment (the backend endpoint,
+    `POST /projects/:projectId/approvers`, is already built and security-reviewed, but no
+    `dashboard-web` UI calls it), (4) sub-resource editing (roadmap items, objectives,
+    environments, repositories are all read-only lists on the detail page — no create/edit/delete
+    UI for any of them), and (5) "current project" context propagation (the header Project
+    Switcher persists a cookie, per D7, but nothing downstream reads it yet — low urgency with no
+    other business module yet to consume it). Gaps (1)-(3) share the same real blocker: no
+    user-lookup/picker capability exists anywhere in this app yet. The user will provide a
+    dashboard design prompt to address these at a later time — none of this is started or
+    authorized; each remains its own separate, not-yet-requested next step.
 
 ## Recent decisions
 
