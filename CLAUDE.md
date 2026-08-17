@@ -445,7 +445,7 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     authorized; each remains its own separate, not-yet-requested next step. **Update
     (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.**
 14. **User lookup capability + Project owner assignment — built, validated, code-reviewed,
-    security-reviewed, and second-role human reviewed, not yet gated/merged (2026-08-17).**
+    security-reviewed, second-role human reviewed, and gated, not yet merged (2026-08-17).**
     `docs/implementation/user-lookup-and-owner-assignment.md` records the full account. Not
     started automatically — built directly on the explicit "start with the blockers" instruction
     following item 13's gap analysis. Scope was confirmed with the user first (`AskUserQuestion`),
@@ -483,9 +483,14 @@ build`/`nest build` clean; `pnpm exec prettier --check` clean. **A separate `sec
     this branch, since it predates this PR). A review packet (published as a Claude artifact — code
     review + security review findings, fixes, and validation evidence) was prepared for the
     required second-role human review, since the implementing agent cannot also be its own reviewer
-    (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
-    `docs/project-state/user-lookup-owner-assignment-approval-checklist.md`'s "Sign-off" section. A
-    gate decision and merge authorization remain separate, not-yet-requested next steps.
+    (ADR-0010). **Jitesh D reviewed it and returned "Approved."** **The gate
+    (G4-user-lookup-owner-assignment) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM, approved commit `22ca2a8c1a6b4695d87e6151f443fec05f586566` on
+    branch `user-lookup-owner-assignment` — see
+    `docs/project-state/user-lookup-owner-assignment-approval-checklist.md`'s "Sign-off" section
+    and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This gate approval does not
+    itself authorize merging PR #30 or a production deployment** — merge remains its own separate,
+    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -1843,6 +1848,17 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, confirming the exact merged commit is
   "Sign-off" section. This satisfies the last precondition before a gate decision can be
   requested, but is not itself a gate decision or a merge authorization — both remain separate,
   not-yet-requested next steps.
+- `[2026-08-17]` **The gate (G4-user-lookup-owner-assignment) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `22ca2a8c1a6b4695d87e6151f443fec05f586566` on branch `user-lookup-owner-assignment` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-user-lookup-owner-assignment`) and
+  `docs/project-state/user-lookup-owner-assignment-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #30, a production deployment, or any
+  further Projects-module gap work (team management, approver assignment)** — merge remains its
+  own separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule
+  (same pattern as every prior gate).
 
 ## Open client blockers
 
