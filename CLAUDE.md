@@ -543,6 +543,56 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     `user_roles(role_id, project_id)` index), independently confirmed via a separate
     `migrate:status` check (45 executed, 0 pending). **The production database schema is now fully
     migrated through `00045`.**
+16. **Dashboard UI/UX design system — 18-document proposal produced, awaiting human review and
+    direction selection (2026-08-17).** `docs/design/dashboard-ui/00` through `17` records the
+    full package. Requested directly via a user-supplied design prompt (`design_prompt.md`),
+    ahead of business-module implementation — a product-design/design-system task, explicitly not
+    business-module implementation itself, per the prompt's own scope. Grounded in real research,
+    not invention: three parallel research passes read `packages/ui`'s actual token/component
+    source, the live `apps/dashboard-web` shell, all 7 canonical `webdesk-dashboard-documentation-v1/`
+    specs (Master Spec, Module Inclusion Matrix, Detailed Module Specifications, Workflow State
+    Machines, Roles and Permissions, Low-Fidelity Wireframes, Security/Backup/Retention/Operations),
+    the seeded `module_registry` navigation-group data, and both module-roadmap documents. Key
+    findings that shaped the package: **no WebDesk brand-identity material exists anywhere in the
+    repository** (no logo, no approved color, no approved typeface); Phase 1F's existing
+    `packages/ui` tokens are a solid, tested, but never-fully-wired foundation (several token
+    groups — breakpoints, motion, control sizes — are defined but not yet consumed by real CSS);
+    the component library is far smaller than the design prompt's own 41-component inventory (14
+    components exist, roughly 30 are genuinely new); and the `libraries` navigation group holds 25
+    of the 43 modules with no sub-organization, which the package addresses with a
+    display-layer-only 5-cluster grouping (no data-model change). Recommended visual direction:
+    **Clean Enterprise** (Direction A) as the base system — chosen because it matches the
+    system's genuinely dense real content (a 16-tab Page Workspace, ~30-field Ready for Claude
+    records), because it's substantially what `packages/ui`'s existing, tested tokens already are
+    (refined, not discarded, per the prompt's own instruction), and because no brand exists yet to
+    differentiate toward — with one scoped borrowing from a "Modern AI Operations" direction (a
+    richer progress/stepper treatment) applied only to the 5 genuinely pipeline-shaped modules
+    (Ready for Claude Queue, Scan Center, Change Center, Release Center, Review & Approval
+    Center), not system-wide. Dark mode: recommended **not V1** (no user-need signal, no existing
+    foundation, but the token architecture stays dark-mode-ready for later). Full design tokens,
+    a justified component inventory, all 8 page-pattern archetypes, a canonical table/form system,
+    a real-status-vocabulary-to-5-bucket mapping (every actual status name from
+    `05_Workflow_State_Machines.md` and `03_Detailed_Module_Specifications.md`, not an invented
+    example list), approval/Ready-for-Claude/AI-provenance UX, responsive and accessibility
+    requirements, and all 15 representative screens named in the prompt were specified. **No
+    prototype was built** (the prompt permits one only "if authorized," and no such authorization
+    was given). **No implementation, no Phase 1F shell refactor, and no business-module work
+    started** — per the prompt's own explicit stop-and-wait instruction (§33). Pushed as its own
+    branch (`dashboard-ui-design-system`) and opened as
+    [PR #32](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/32) for
+    reviewability; the actual decision gate is
+    `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md`'s own human-decision table,
+    not this project's usual code-review/security-review/QA-gate machinery — this is a
+    documentation-only deliverable with no code, so those steps don't apply. **Update
+    (2026-08-17): the recommended direction was reviewed and approved as-is** — WebDesk Solution,
+    decision "Approve recommended direction (A, with the scoped B borrowing) as-is," no changes
+    requested to any of the 18 documents. Recorded in
+    `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md`'s "Required human decision"
+    section (now marked COMPLETE) and in `outputs/webdesk-growth-dashboard/project.json`'s
+    `audit_log`. **This approval covers the design direction only** — implementation still
+    requires a separate, not-yet-authorized Dashboard UI Foundation Alignment task package (design
+    prompt §34), and merging PR #32 remains its own separate, not-yet-requested step, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -2016,6 +2066,38 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is
   outstanding item from the Projects module backend close-out (PR #31) — this index was a pure
   query-performance optimization for the `GET /projects/:projectId/approvers` endpoint, not a
   functional blocker, so nothing was degraded while it was pending.
+- `[2026-08-17]` **Dashboard UI/UX design-system package produced** (branch
+  `dashboard-ui-design-system`) — an 18-document proposal under `docs/design/dashboard-ui/`,
+  requested via a user-supplied design prompt ahead of business-module implementation. Grounded in
+  real research (Phase 1F's actual token/component code, the live shell, all 7 relevant canonical
+  spec documents, the seeded module registry, both module-roadmap documents) rather than
+  invention. Key finding: no WebDesk brand-identity material exists in the repository at all.
+  Recommends **Clean Enterprise** (Direction A) as the base visual direction, refining Phase 1F's
+  existing token foundation rather than discarding it, with a narrow scoped borrowing (richer
+  progress/stepper treatment) for the 5 pipeline-shaped modules only. Dark mode recommended not
+  V1. All 8 page-pattern archetypes, a real-status-to-5-bucket mapping covering every actual
+  workflow state name in the canonical specs, and all 15 representative screens named in the
+  prompt were specified. No prototype built, no implementation started, no Phase 1F shell
+  refactor performed — per the prompt's own explicit stop-and-wait instruction. See item 16 in
+  "Active tasks" above for the full account and
+  `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md` for the pending human
+  direction-selection decision.
+- `[2026-08-17]` **The recommended dashboard UI/UX direction was reviewed and approved as-is** —
+  WebDesk Solution, decision "Approve recommended direction (A, with the scoped B borrowing)
+  as-is." Direction A (Clean Enterprise) is now the canonical dashboard visual direction for all
+  43 modules, with Direction B's richer progress/stepper treatment scoped only to Ready for Claude
+  Queue, Scan Center, Change Center, Release Center, and Review & Approval Center; dark mode
+  deferred (not V1); all 18 supporting documents approved alongside the direction, with no changes
+  requested to any of them. Recorded in
+  `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md`'s "Required human decision"
+  section (now COMPLETE) and `outputs/webdesk-growth-dashboard/project.json`'s `audit_log`. This
+  approval is scoped to the design direction only, per design prompt §34 — it does not itself
+  authorize a Dashboard UI Foundation Alignment implementation task package, and merging PR #32
+  remains its own separate, not-yet-requested step, per this project's standing "no auto-merge"
+  rule (the same pattern followed for every prior gate/approval in this project's history, even
+  though this decision used the design prompt's own approval mechanism rather than the usual
+  code-review/security-review/QA-gate machinery, since there is no code in this PR to run those
+  against).
 
 ## Open client blockers
 

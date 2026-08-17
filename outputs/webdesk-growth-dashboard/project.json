@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-17T00:00:00Z",
-    "version": 23
+    "version": 24
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -948,6 +948,21 @@
       },
       "project_version_before": 39,
       "project_version_after": 40
+    },
+    {
+      "timestamp": "2026-08-17T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved the recommended dashboard UI/UX design direction (Direction A, Clean Enterprise, with a scoped Direction B borrowing) as-is, per docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md",
+      "details": {
+        "deliverable": "docs/design/dashboard-ui/00 through 17 (18 documents), branch dashboard-ui-design-system, PR #32",
+        "decision": "Approve recommended direction (A, with the scoped B borrowing) as-is",
+        "scope": "Direction A (Clean Enterprise) as the base system for all 43 modules; Direction B's richer progress/stepper treatment scoped only to Ready for Claude Queue, Scan Center, Change Center, Release Center, and Review & Approval Center; dark mode deferred (not V1); all 18 supporting documents approved alongside the direction, not separately revised.",
+        "mechanism_note": "This decision used the design prompt's own human-decision-table approval mechanism (17-dashboard-ui-approval-checklist.md), not this project's usual qa-security-gate machinery in gates[] \u2014 there is no code in this PR to code-review, security-review, or gate in the usual sense, since this is a documentation-only design deliverable.",
+        "not_yet_done": "This approval covers the design direction only. It does not itself authorize a Dashboard UI Foundation Alignment implementation task package (design prompt \u00a734), and merging PR #32 remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+      },
+      "project_version_before": 40,
+      "project_version_after": 41
     }
   ]
 }
