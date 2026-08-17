@@ -1,7 +1,9 @@
 # dashboard-web Create/Edit Project Form — Approval Checklist
 
-**Status:** Required second-role human review complete (2026-08-17, Jitesh D, **Approved**). A gate
-decision and merge authorization remain separate, not-yet-requested next steps.
+**Status:** Required second-role human review complete (2026-08-17, Jitesh D, **Approved**). **The
+gate (G4-project-form) is approved** — WebDesk Solution, decision CONFIRM, 2026-08-17. Merge
+authorization remains a separate, not-yet-requested next step. See "Sign-off" below and
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`/`audit_log`.
 
 ## Completion condition
 
@@ -43,6 +45,11 @@ this slice can be requested.
 
 ## Sign-off
 
+**Second-role human review: complete. Gate G4-project-form: approved.** Both were their own
+separate, explicit human step, per every prior phase's own pattern of keeping the review and the
+gate decision distinct — the gate was requested, and approved, only after the review above was
+already recorded as complete.
+
 | Field                         | Value                                                                                                                                     |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Reviewer (second-role review) | Jitesh D                                                                                                                                  |
@@ -51,5 +58,16 @@ this slice can be requested.
 | Scope reviewed                | Full code-review disposition (7/7 CONFIRMED findings fixed) and full security-review disposition (clean), via the published review packet |
 | Disputes raised               | None recorded                                                                                                                             |
 
-A gate decision (G4-project-form or similar) and merge authorization remain separate, not-yet-
-requested next steps, unchanged from this project's standing discipline for every prior slice.
+| Field                    | Value                                                                                                                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-project-form                                                                                                                                                         |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                        |
+| Gate date                | 2026-08-17                                                                                                                                                              |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                       |
+| Approved commit          | `3ecd3996bc99c87522d8a1a4aab58edc5d048727` on branch `dashboard-web-project-form` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
+| Scope                    | `dashboard-web` Create/Edit Project form only. Merge authorization is a separate, not-yet-requested next step.                                                          |
+
+| Role                          | Name             | Decision   | Date       |
+| ----------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved | 2026-08-17 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-17 |
