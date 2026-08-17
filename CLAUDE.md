@@ -382,7 +382,7 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     production.** Backend, header switcher, list page, detail page, and now the create/edit form are
     all live for the Projects module.
 12. **`dashboard-web` Project Status Change / Archive actions — built, code-reviewed, security-
-    reviewed, second-role human reviewed, not yet gated or merged (2026-08-17).**
+    reviewed, second-role human reviewed, gated, not yet merged (2026-08-17).**
     `docs/implementation/dashboard-web-project-status-actions.md` records the full account. Not
     started automatically — built directly on the explicit "build the status change and archive
     UI" instruction, closing the last named UI gap against `POST /projects/:projectId/status`
@@ -417,10 +417,14 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     changes. A review packet (published as a Claude artifact — code review + security review
     findings, fixes, and validation evidence) was prepared for the required second-role human
     review, since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D
-    reviewed it and returned "Approved."** See
-    `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s "Sign-off"
-    section. A gate decision and merge authorization remain separate, not-yet-requested next
-    steps.
+    reviewed it and returned "Approved."** **The gate (G4-project-status-actions) was then
+    separately requested and approved** — WebDesk Solution, decision CONFIRM, approved commit
+    `90413983591b53c1a67f61d329702344ec22e651` on branch `dashboard-web-project-status-actions` —
+    see `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s
+    "Sign-off" section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This
+    gate approval does not itself authorize merging PR #29 or a production deployment** — merge
+    remains its own separate, not-yet-requested authorization, per this project's standing "no
+    auto-merge" rule (same pattern as every prior gate).
 
 ## Recent decisions
 
@@ -1667,6 +1671,16 @@ af23ba1c0172c834d2d1311666a2811397598b14`, confirming the exact merged commit is
   (ADR-0010). **Jitesh D reviewed it and returned "Approved."** See
   `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-17]` **The gate (G4-project-status-actions) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `90413983591b53c1a67f61d329702344ec22e651` on branch `dashboard-web-project-status-actions` —
+  recorded in `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-project-status-actions`) and
+  `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #29 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
