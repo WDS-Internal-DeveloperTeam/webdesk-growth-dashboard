@@ -537,10 +537,12 @@ build`/`pnpm exec prettier --check` all clean. **Update (2026-08-17): independen
     verified live directly: `dashboard-api`'s `/health` returned `build.commitSha ==
 ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to `/auth/sign-in`
     for an unauthenticated visitor. **The Projects module backend close-out is now genuinely live
-    in production.** Migration `00045` (the `user_roles(role_id, project_id)` index) has not yet
-    been run against the real production database — it's additive-only and doesn't block any
-    functionality, only its query-performance benefit, so running it remains a separate, low-
-    urgency next step whenever a production migration is next convenient.
+    in production.** **The production migration was then run** — user ran
+    `pnpm --filter @webdesk/database run migrate` themselves (same credential-handling discipline
+    as every prior production migration), applying migration `00045` (the additive
+    `user_roles(role_id, project_id)` index), independently confirmed via a separate
+    `migrate:status` check (45 executed, 0 pending). **The production database schema is now fully
+    migrated through `00045`.**
 
 ## Recent decisions
 
@@ -2001,10 +2003,19 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is
   session gate is intact. **The Projects module backend close-out — the
   `GET /projects/:projectId/approvers` endpoint, the environment-URL scheme fix, the `ownerUserId`
   existence check, the expanded sub-resource test coverage, and every code-review/security-review
-  fix from the review round — is now genuinely live in production.** Migration `00045` (an
-  additive-only index) has not yet been run against the real production database — it doesn't
-  block any functionality, only its own query-performance benefit, so running it remains a
-  separate, low-urgency next step.
+  fix from the review round — is now genuinely live in production.**
+- `[2026-08-17]` **Migration `00045` (the additive `user_roles(role_id, project_id)` index) run
+  against the real production Neon database** — user ran
+  `pnpm --filter @webdesk/database run migrate` themselves in their own terminal, sourcing
+  `prod-db.env` — Claude never saw the real `DATABASE_URL`, same discipline as every prior
+  production migration this project. Applied cleanly: `Applied 1 migration(s):
+00045-add-user-roles-role-project-index` (`durationSeconds: 0.988`). **Independently confirmed
+  via a second, separate command** (`migrate:status`, Umzug's own read-only bookkeeping, not just
+  the `migrate` command's own success message) — all 45 migrations executed, 0 pending. **The
+  production database schema is now fully migrated through `00045`**, closing the last
+  outstanding item from the Projects module backend close-out (PR #31) — this index was a pure
+  query-performance optimization for the `GET /projects/:projectId/approvers` endpoint, not a
+  functional blocker, so nothing was degraded while it was pending.
 
 ## Open client blockers
 
