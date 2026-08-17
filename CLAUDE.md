@@ -521,9 +521,12 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, and `dashboard-web`'s `/` resolves (v
     cover all of it. 359/359 `dashboard-api` unit tests (37 new), 102/102 `dashboard-api`
     e2e/integration tests (9 new), 122/122 `packages/database` integration tests (unaffected,
     confirmed still green), all against a fresh local disposable database; typecheck/lint/`nest
-build`/`pnpm exec prettier --check` all clean. Not yet reviewed or merged — code review,
-    security review, second-role human review, a gate decision, and merge authorization are each
-    their own separate, not-yet-requested next step.
+build`/`pnpm exec prettier --check` all clean. **Update (2026-08-17): independent code review run
+    and all 9 CONFIRMED/PLAUSIBLE findings fixed** (1 PLAUSIBLE finding accepted as tracked debt) —
+    see `docs/implementation/module-projects-backend-closeout.md`'s "Independent code review"
+    section and the 2026-08-17 "Recent decisions" entry below for the full account. Security
+    review, second-role human review, a gate decision, and merge authorization remain each their
+    own separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -1904,6 +1907,52 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, confirming the exact merged commit is
   wired into the create/edit project form) are now genuinely live in production**, closing out
   this slice's full build-to-production arc. Team management and approver-assignment UI remain
   separate, not-yet-built next steps — their backends already existed before this branch.
+- `[2026-08-17]` **Built the Projects module backend close-out** (branch
+  `module-projects-backend-closeout`, [PR #31](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/31)),
+  under the explicit "make sure nothing is remaining on the backend/API side from the Projects
+  module" instruction, ahead of an upcoming dashboard design prompt that will drive the remaining
+  frontend wiring. A dedicated audit (read the actual code, not documentation) found the backend
+  almost entirely code-complete but surfaced 3 real gaps — a missing `GET
+/projects/:projectId/approvers` endpoint, `ProjectEnvironment.url` accepting any URL scheme
+  (known, previously client-side-only-fixed security debt), and no existence check on
+  `ownerUserId` before the database write — plus a systemic test-coverage gap (4 of 6 sub-resource
+  controllers had zero unit tests). All fixed and covered; see
+  `docs/implementation/module-projects-backend-closeout.md` for the full account.
+- `[2026-08-17]` **Independent code review run on `module-projects-backend-closeout` (PR #31),
+  medium effort — 8-angle finder pass, then all findings fixed.** 10 candidates surfaced after
+  dedup (7 CONFIRMED, 3 PLAUSIBLE). Most severe: `update()` re-validated `ownerUserId` against
+  `UsersService` even when the patch resent the project's own already-stored, unchanged value —
+  which `dashboard-web`'s edit form always does — so a project whose owner had since been disabled
+  would reject _any_ unrelated edit; fixed by only re-validating when the value is actually
+  changing. Also fixed: `GET /:projectId/approvers` reused the sibling routes'
+  `project_configuration:view` gate, exposing `users_roles`-scoped PII (approver display
+  names/emails) to any project-configuration viewer with no `users_roles` grant at all (e.g. the
+  seeded `read_only` role) — regated to `users_roles:view`, matching
+  `role-assignment.controller.ts`'s own precedent, with a new e2e regression test proving a
+  `read_only` session now gets `403`; an error-swallowing `.catch(() => null)` around each
+  approver's identity resolution that hid any error class, not just a genuine not-found;
+  `assertOwnerExists()` re-declaring its own `UserRepository` binding and duplicating
+  `UsersService.findById()`'s already-existing active-user check — now delegates to `UsersService`
+  instead; `AuthzModule` over-exporting the write-capable `USER_ROLE_REPOSITORY` token just so
+  `ProjectApproversService` could read from it — replaced with a new, read-only
+  `RoleAssignmentService.findUserIdsForRoleInProject()` delegating method, and the export reverted;
+  a missing covering index on the new "list approvers" query (migration `00045`, `(role_id,
+project_id)` on `user_roles`); `safeHttpUrl` duplicated locally instead of using the shared
+  `packages/validation` package it was built for — moved there as `safeHttpUrlSchema`; an N+1
+  query resolving approver identities one-by-one — replaced with a new
+  `UserRepository.findByIds()`/`UsersService.findByIds()` batch-resolve path (also closes the
+  error-swallowing finding, since batch resolution has no per-item catch); and `create()` running
+  its two independent checks (`findByPublicId()`, the owner check) sequentially instead of via
+  `Promise.all()`. The 10th finding — a TOCTOU gap between the owner-existence check and the
+  write — was recorded as accepted, tracked debt: `accountStatus` only changes via operator-run CLI
+  scripts, never concurrent HTTP, so the window isn't practically reachable, and `ownerUserId`
+  carries no authorization weight, making a real fix (a transaction/row-lock spanning both the
+  check and the write) disproportionate. Full re-validation on a fresh local disposable database:
+  363/363 `dashboard-api` unit tests (16 new), 125/125 `packages/database` integration tests (4
+  new), 103/103 `dashboard-api` integration/e2e tests (18 Projects tests, up from 16), migration
+  `00045` up/down round-trip clean, typecheck/lint/`nest build`/prettier all clean, `pnpm audit` 0
+  vulnerabilities. Security review, second-role human review, a gate decision, and merge
+  authorization remain each their own separate, not-yet-requested next step.
 
 ## Open client blockers
 

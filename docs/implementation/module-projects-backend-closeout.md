@@ -97,9 +97,73 @@ All against a fresh local disposable PostgreSQL database:
 - Typecheck, lint (`--max-warnings=0`), `nest build`, and `pnpm exec prettier --check` all clean
   across `dashboard-api` and `packages/database`.
 
-## 4. Not yet reviewed or merged
+## 4. Independent code review (medium effort, 8-angle finder pass)
 
-Pushed as its own branch (`module-projects-backend-closeout`). Code review, security review,
-second-role human review, a gate decision, and merge authorization are each their own separate,
-not-yet-requested next step, unchanged from this project's standing discipline for every prior
-slice.
+Ran this project's own `code-review` skill against the branch. 10 candidates surfaced after
+dedup — 7 CONFIRMED, 3 PLAUSIBLE. 9 fixed; 1 accepted as tracked debt.
+
+1. **CONFIRMED — owner-validation regression on unrelated edits.** `update()` re-validated
+   `ownerUserId` against `UsersService` on every call, even when the patch resent the project's
+   own already-stored, unchanged value — which `dashboard-web`'s edit form always does, since it
+   can't distinguish "picker untouched" from "picker cleared." A project whose owner had since
+   been disabled would reject _any_ unrelated edit (e.g. renaming) with a 400. Fixed: `update()`
+   now only re-validates when `ownerUserId` is actually changing (`patch.ownerUserId !==
+project.ownerUserId`).
+2. **CONFIRMED — error-swallowing in the approvers list.** `.catch(() => null)` around each
+   `usersService.findById()` call hid any error class, not just a genuine not-found. Fixed as a
+   side effect of finding 8 below — batch resolution via `UsersService.findByIds()` has no
+   per-item catch at all; a real database error now propagates normally.
+3. **CONFIRMED — PII exposure via the wrong permission gate.** `GET
+/:projectId/approvers` reused the sibling routes' `project_configuration:view` gate, but this
+   route returns RBAC role-membership data (display names, emails), the same data
+   `role-assignment.controller.ts` already gates on `users_roles:view` — not project-configuration
+   content. A `read_only`-only session (holds `project_configuration:view`, no `users_roles` grant
+   at all) could read every approver's identity. Fixed: gate changed to `users_roles:view`; a new
+   e2e regression test proves a `read_only` session now gets `403`.
+4. **CONFIRMED — duplicated active-user-check logic.** `assertOwnerExists()` re-declared its own
+   `UserRepository`/`USER_REPOSITORY` binding and hand-rolled the same check `UsersService.findById()`
+   already implements (including its malformed-UUID short-circuit). Fixed: `ProjectService` now
+   depends on `UsersService` (already available via `ProjectsModule`'s existing `UsersModule`
+   import) instead; the redundant provider binding was removed from `database.providers.ts`.
+5. **CONFIRMED — no covering index for the new approvers-list query.** `user_roles`' two existing
+   indexes both lead with `user_id`; `findUserIdsForRoleInProject()`'s `WHERE role_id = ? AND
+project_id = ?` has no `user_id` predicate, so it fell back to a full table scan. Fixed: migration
+   `00045` adds a `(role_id, project_id)` index.
+6. **PLAUSIBLE — AuthzModule over-exposed a write-capable repository.** `AuthzModule` exported
+   `USER_ROLE_REPOSITORY` just so `ProjectApproversService` could read from it directly, handing
+   that consumer DI access to `assign()`/`revoke()` it never needed — the same class of
+   self-invented authorization bypass this codebase's task packages explicitly forbid. Fixed: added
+   `RoleAssignmentService.findUserIdsForRoleInProject()`, a thin delegating read method;
+   `AuthzModule`'s export list reverted to omit `USER_ROLE_REPOSITORY`;
+   `ProjectApproversService` now depends on `RoleAssignmentService` only.
+7. **CONFIRMED — `safeHttpUrl` duplicated instead of shared.** The http(s)-only URL-scheme check
+   was defined locally in `projects.dto.ts`, with `packages/validation` existing as the intended
+   shared-schema location (its own package description: "consumed by dashboard-web... and
+   dashboard-api... so both sides validate against the exact same schema"). Fixed: moved to
+   `packages/validation` as `safeHttpUrlSchema`, imported from there.
+8. **CONFIRMED — N+1 query resolving approver identities.** `list()` resolved each approver's
+   identity via an individual `usersService.findById()` call inside `Promise.all()`. Fixed: added
+   `UserRepository.findByIds()`/`UsersService.findByIds()` (batch resolve, same "disabled = not
+   found" convention as the single-id path, silently dropping any id that doesn't resolve) —
+   `list()` is now one query, not N.
+9. **CONFIRMED — independent checks in `create()` ran sequentially.** `findByPublicId()` and the
+   owner-existence check don't depend on each other's result but were awaited one after another.
+   Fixed: both now run inside a single `Promise.all()`.
+10. **PLAUSIBLE, accepted as tracked debt — TOCTOU gap between the owner check and the write.**
+    An account could theoretically be disabled in the narrow window between
+    `assertOwnerExists()` resolving and the write executing. Not fixed: `accountStatus` only
+    changes via operator-run CLI scripts, never concurrent HTTP, so this window isn't practically
+    reachable; `ownerUserId` also carries no authorization weight, so the impact of a stale value
+    is cosmetic. A real fix would need a database transaction/row-lock spanning both the check and
+    the write — disproportionate to a non-reachable, low-impact gap.
+
+All 9 applied fixes re-validated: 363/363 `dashboard-api` unit tests (16 new), 125/125
+`packages/database` integration tests (4 new), 103/103 `dashboard-api` integration/e2e tests (18
+Projects tests, up from 16), migration `00045` up/down round-trip clean, typecheck/lint/`nest
+build`/prettier all clean, `pnpm audit` 0 vulnerabilities.
+
+## 5. Not yet reviewed or merged
+
+Pushed as its own branch (`module-projects-backend-closeout`). Security review, second-role human
+review, a gate decision, and merge authorization are each their own separate, not-yet-requested
+next step, unchanged from this project's standing discipline for every prior slice.

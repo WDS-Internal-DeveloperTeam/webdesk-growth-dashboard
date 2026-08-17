@@ -351,6 +351,23 @@ describe("Projects module endpoints (e2e, real disposable database)", () => {
         { id: approver.id, displayName: "List Approver E2E", email: approver.email },
       ]);
     });
+
+    it("rejects a read_only session with 403 — that role holds project_configuration:view but no users_roles grant at all (code-review finding: this route must not reuse the sibling routes' project_configuration:view gate, since listing approvers exposes users_roles-scoped PII)", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `approver-list-gate-${randomUUID()}`, name: "Approver List Gate Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const readOnlyCookie = await cookieForNewSession(readOnlyUserId);
+      await request(app.getHttpServer())
+        .get(`/projects/${projectId}/approvers`)
+        .set("Cookie", readOnlyCookie)
+        .expect(403);
+    });
   });
 
   describe("POST /projects/:projectId/update", () => {

@@ -20,11 +20,15 @@ function userFixture(overrides: Partial<UserEntity> = {}): UserEntity {
 }
 
 describe("UsersService", () => {
-  let users: { search: ReturnType<typeof vi.fn>; findById: ReturnType<typeof vi.fn> };
+  let users: {
+    search: ReturnType<typeof vi.fn>;
+    findById: ReturnType<typeof vi.fn>;
+    findByIds: ReturnType<typeof vi.fn>;
+  };
   let service: UsersService;
 
   beforeEach(() => {
-    users = { search: vi.fn(), findById: vi.fn() };
+    users = { search: vi.fn(), findById: vi.fn(), findByIds: vi.fn() };
     service = new UsersService(users as unknown as UserRepository);
   });
 
@@ -69,6 +73,31 @@ describe("UsersService", () => {
     it("throws NotFoundException for a malformed (non-UUID) id, without ever calling the repository", async () => {
       await expect(service.findById("not-a-uuid")).rejects.toThrow(NotFoundException);
       expect(users.findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("findByIds", () => {
+    it("resolves multiple ids in a single repository call, narrowed to display summaries", async () => {
+      users.findByIds.mockResolvedValue([
+        userFixture(),
+        userFixture({ id: WELL_FORMED_NONEXISTENT_ID }),
+      ]);
+
+      const result = await service.findByIds([VALID_USER_ID, WELL_FORMED_NONEXISTENT_ID]);
+
+      expect(users.findByIds).toHaveBeenCalledWith([VALID_USER_ID, WELL_FORMED_NONEXISTENT_ID]);
+      expect(result).toEqual([
+        { id: VALID_USER_ID, displayName: "Jane Doe", email: "jane@example.com" },
+        { id: WELL_FORMED_NONEXISTENT_ID, displayName: "Jane Doe", email: "jane@example.com" },
+      ]);
+    });
+
+    it("filters out a malformed id before it ever reaches the repository", async () => {
+      users.findByIds.mockResolvedValue([userFixture()]);
+
+      await service.findByIds([VALID_USER_ID, "not-a-uuid"]);
+
+      expect(users.findByIds).toHaveBeenCalledWith([VALID_USER_ID]);
     });
   });
 });

@@ -129,6 +129,45 @@ describe("Phase 1C auth repositories (real disposable database)", () => {
         expect(results.map((u) => u.email)).toEqual(["john_doe@webdesksolution.com"]);
       });
     });
+
+    describe("findByIds() — batch resolve, avoiding N individual round trips", () => {
+      it("resolves multiple active users in a single query", async () => {
+        const a = await users.create({
+          email: "batch-a@webdesksolution.com",
+          displayName: "Batch A",
+        });
+        const b = await users.create({
+          email: "batch-b@webdesksolution.com",
+          displayName: "Batch B",
+        });
+
+        const results = await users.findByIds([a.id, b.id]);
+        expect(results.map((u) => u.id).sort()).toEqual([a.id, b.id].sort());
+      });
+
+      it("silently drops a disabled or nonexistent id, same convention as findById()", async () => {
+        const active = await users.create({
+          email: "batch-active@webdesksolution.com",
+          displayName: "Batch Active",
+        });
+        const disabled = await users.create({
+          email: "batch-disabled@webdesksolution.com",
+          displayName: "Batch Disabled",
+          accountStatus: "disabled",
+        });
+
+        const results = await users.findByIds([
+          active.id,
+          disabled.id,
+          "00000000-0000-0000-0000-000000000000",
+        ]);
+        expect(results.map((u) => u.id)).toEqual([active.id]);
+      });
+
+      it("returns an empty array for an empty input without querying", async () => {
+        expect(await users.findByIds([])).toEqual([]);
+      });
+    });
   });
 
   describe("ExternalAuthIdentityRepository", () => {

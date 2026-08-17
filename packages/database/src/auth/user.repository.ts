@@ -97,4 +97,21 @@ export class UserRepository {
     });
     return rows.map((row) => toEntity(row));
   }
+
+  /**
+   * Batch counterpart to `search()`/`findById()` — resolves many ids in a single query instead of
+   * N round trips (e.g. resolving every user currently holding a project-scoped role). Silently
+   * drops any id that doesn't resolve to an active user, extending the same "disabled = not found"
+   * convention `findById()` already applies per-id to the batch case — a caller filters the
+   * returned array against its input ids if it needs to know which ones were dropped.
+   */
+  async findByIds(ids: readonly string[]): Promise<readonly UserEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({
+      where: { id: { [Op.in]: ids }, accountStatus: "active" },
+    });
+    return rows.map((row) => toEntity(row));
+  }
 }

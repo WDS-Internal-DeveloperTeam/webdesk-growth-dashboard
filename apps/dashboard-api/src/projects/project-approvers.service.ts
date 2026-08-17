@@ -1,7 +1,7 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { RoleRepository, UserRoleRepository } from "@webdesk/database";
+import type { RoleRepository } from "@webdesk/database";
 import type { UserSummary } from "@webdesk/shared-types";
-import { ROLE_REPOSITORY, USER_ROLE_REPOSITORY } from "../authz/authz.constants.js";
+import { ROLE_REPOSITORY } from "../authz/authz.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { RoleAssignmentService } from "../authz/role-assignment.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as above.
@@ -35,7 +35,6 @@ const ROLE_MANAGEMENT_ACTION = "edit";
 export class ProjectApproversService {
   constructor(
     @Inject(ROLE_REPOSITORY) private readonly roles: RoleRepository,
-    @Inject(USER_ROLE_REPOSITORY) private readonly userRoles: UserRoleRepository,
     private readonly roleAssignment: RoleAssignmentService,
     private readonly authorization: AuthorizationService,
     private readonly usersService: UsersService,
@@ -43,20 +42,24 @@ export class ProjectApproversService {
 
   /**
    * The users currently holding `owner_growth_approver` scoped to this project. Gated at the
-   * controller level on `project_configuration:view` (the same permission every other project
-   * sub-resource list route uses) — unlike `assign()`, reading who the current approvers are
-   * carries no privilege-escalation risk, so it needs no additional internal check.
+   * controller level on `users_roles:view` (not `project_configuration:view`) — this reads
+   * `user_roles`/resolves user identities, the same data `role-assignment.controller.ts`'s own
+   * `users_roles`-gated routes expose, not project-configuration content (code-review finding,
+   * `module-projects-backend-closeout` branch: the original route reused the sibling routes'
+   * `project_configuration:view` gate, which would let a project-configuration viewer with no
+   * `users_roles` grant read PII — display names and emails — this endpoint's own doc comment
+   * already correctly reasoned poses no *privilege-escalation* risk, but does pose a
+   * data-exposure one). Resolves ids via `UsersService.findByIds()` — one query, not N — so an
+   * id that no longer resolves (e.g. a since-disabled account) is silently dropped, matching this
+   * codebase's established "disabled = not found" convention.
    */
   async list(projectId: string): Promise<readonly UserSummary[]> {
     const role = await this.roles.findByKey(APPROVER_ROLE_KEY);
     if (!role) {
       throw new NotFoundException(`Role not seeded: ${APPROVER_ROLE_KEY}`);
     }
-    const userIds = await this.userRoles.findUserIdsForRoleInProject(role.id, projectId);
-    const resolved = await Promise.all(
-      userIds.map((userId) => this.usersService.findById(userId).catch(() => null)),
-    );
-    return resolved.filter((summary): summary is UserSummary => summary !== null);
+    const userIds = await this.roleAssignment.findUserIdsForRoleInProject(role.id, projectId);
+    return this.usersService.findByIds(userIds);
   }
 
   async assign(projectId: string, userId: string, actorId: string): Promise<void> {

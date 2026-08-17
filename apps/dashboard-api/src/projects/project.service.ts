@@ -6,12 +6,12 @@ import type {
   ProjectRepository,
   ProjectStatus,
   RoadmapItemRepository,
-  UserRepository,
 } from "@webdesk/database";
-import { USER_REPOSITORY } from "../auth/config/auth.constants.js";
 import { PROJECT_REPOSITORY, ROADMAP_ITEM_REPOSITORY } from "./projects.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
 import { AuditService } from "../audit/audit.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as above.
+import { UsersService } from "../users/users.service.js";
 
 export interface CreateProjectInput {
   publicId: string;
@@ -57,17 +57,19 @@ export class ProjectService {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly projects: ProjectRepository,
     @Inject(ROADMAP_ITEM_REPOSITORY) private readonly roadmapItems: RoadmapItemRepository,
-    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    private readonly usersService: UsersService,
     private readonly auditService: AuditService,
   ) {}
 
   async create(input: CreateProjectInput, actorUserId: string): Promise<ProjectEntity> {
-    const existing = await this.projects.findByPublicId(input.publicId);
+    // Independent checks (different tables, neither consumes the other's result) — run
+    // concurrently rather than as two sequential round trips (code-review finding, this branch).
+    const [existing] = await Promise.all([
+      this.projects.findByPublicId(input.publicId),
+      input.ownerUserId ? this.assertOwnerExists(input.ownerUserId) : Promise.resolve(),
+    ]);
     if (existing) {
       throw new BadRequestException(`publicId already in use: ${input.publicId}`);
-    }
-    if (input.ownerUserId) {
-      await this.assertOwnerExists(input.ownerUserId);
     }
 
     const project = await this.projects.create({
@@ -107,8 +109,14 @@ export class ProjectService {
   }
 
   async update(id: string, patch: UpdateProjectInput, actorUserId: string): Promise<ProjectEntity> {
-    await this.findById(id); // throws NotFoundException if missing
-    if (patch.ownerUserId) {
+    const project = await this.findById(id); // throws NotFoundException if missing
+    // Only validate when ownerUserId is actually CHANGING — a project-form submit always resends
+    // the current ownerUserId verbatim even when the picker was never touched (deliberately, so an
+    // unresolvable/disabled owner survives an unrelated edit rather than being silently cleared —
+    // see dashboard-web-project-form's own design). Re-validating an unchanged, already-stored
+    // value would reject a benign edit to any project whose owner has since been disabled
+    // (code-review finding, this branch).
+    if (patch.ownerUserId && patch.ownerUserId !== project.ownerUserId) {
       await this.assertOwnerExists(patch.ownerUserId);
     }
     const updated = await this.projects.update(id, { ...patch, updatedBy: actorUserId });
@@ -243,16 +251,23 @@ export class ProjectService {
    * `ownerUserId` is FK-constrained at the database layer, so a garbage id was never able to
    * corrupt data — but the FK violation itself surfaces as an opaque, unhandled 500 rather than a
    * clean, actionable 400. Checked explicitly here so a stale or deactivated owner id (e.g. picked
-   * before the account was disabled) fails the same clean way `UsersService.findById()` already
-   * does for the picker's own lookup endpoint — "disabled = not found," the same convention used
-   * throughout this codebase.
+   * before the account was disabled) fails the same clean way. Delegates to `UsersService.findById()`
+   * — the same "disabled = not found" check the picker's own lookup endpoint already implements,
+   * including its malformed-UUID short-circuit — rather than re-declaring a second, separately
+   * wired `UserRepository` binding and hand-rolling the identical check a second time
+   * (code-review finding, this branch: `ProjectsModule` already imports `UsersModule` for
+   * `ProjectApproversService`'s own use of `UsersService`).
    */
   private async assertOwnerExists(ownerUserId: string): Promise<void> {
-    const user = await this.users.findById(ownerUserId);
-    if (!user || user.accountStatus !== "active") {
-      throw new BadRequestException(
-        `ownerUserId does not resolve to an active user: ${ownerUserId}`,
-      );
+    try {
+      await this.usersService.findById(ownerUserId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new BadRequestException(
+          `ownerUserId does not resolve to an active user: ${ownerUserId}`,
+        );
+      }
+      throw error;
     }
   }
 }

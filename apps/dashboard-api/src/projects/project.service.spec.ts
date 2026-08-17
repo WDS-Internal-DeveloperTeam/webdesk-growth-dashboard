@@ -3,12 +3,11 @@ import type {
   ProjectRepository,
   RoadmapItemEntity,
   RoadmapItemRepository,
-  UserEntity,
-  UserRepository,
 } from "@webdesk/database";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
+import type { UsersService } from "../users/users.service.js";
 import { ProjectService } from "./project.service.js";
 
 // withTransaction() opens a real Sequelize connection (needs DATABASE_URL) — irrelevant to this
@@ -61,15 +60,11 @@ function roadmapItem(overrides: Partial<RoadmapItemEntity> = {}): RoadmapItemEnt
   };
 }
 
-function user(overrides: Partial<UserEntity> = {}): UserEntity {
+function userSummary(overrides: { id?: string; displayName?: string; email?: string } = {}) {
   return {
     id: "owner-1",
     email: "owner@example.com",
     displayName: "Owner One",
-    accountStatus: "active",
-    lastLoginAt: null,
-    createdAt: NOW.toISOString(),
-    updatedAt: NOW.toISOString(),
     ...overrides,
   };
 }
@@ -83,7 +78,7 @@ describe("ProjectService", () => {
     list: ReturnType<typeof vi.fn>;
   };
   let roadmapItems: { findById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
-  let users: { findById: ReturnType<typeof vi.fn> };
+  let usersService: { findById: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let service: ProjectService;
 
@@ -96,12 +91,12 @@ describe("ProjectService", () => {
       list: vi.fn(),
     };
     roadmapItems = { findById: vi.fn(), update: vi.fn() };
-    users = { findById: vi.fn() };
+    usersService = { findById: vi.fn() };
     auditService = { record: vi.fn() };
     service = new ProjectService(
       projects as unknown as ProjectRepository,
       roadmapItems as unknown as RoadmapItemRepository,
-      users as unknown as UserRepository,
+      usersService as unknown as UsersService,
       auditService as unknown as AuditService,
     );
   });
@@ -133,7 +128,7 @@ describe("ProjectService", () => {
 
     it("rejects a create with an ownerUserId that doesn't resolve to an active user", async () => {
       projects.findByPublicId.mockResolvedValue(null);
-      users.findById.mockResolvedValue(null);
+      usersService.findById.mockRejectedValue(new NotFoundException());
 
       await expect(
         service.create(
@@ -176,21 +171,21 @@ describe("ProjectService", () => {
 
       await service.update("project-1", { ownerUserId: null }, "actor-1");
 
-      expect(users.findById).not.toHaveBeenCalled();
+      expect(usersService.findById).not.toHaveBeenCalled();
       expect(projects.update).toHaveBeenCalledWith(
         "project-1",
         expect.objectContaining({ ownerUserId: null }),
       );
     });
 
-    it("accepts a real, active ownerUserId", async () => {
-      projects.findById.mockResolvedValue(project());
-      users.findById.mockResolvedValue(user({ id: "owner-2" }));
+    it("accepts a real, active ownerUserId that is actually changing", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      usersService.findById.mockResolvedValue(userSummary({ id: "owner-2" }));
       projects.update.mockResolvedValue(project({ ownerUserId: "owner-2" }));
 
       await service.update("project-1", { ownerUserId: "owner-2" }, "actor-1");
 
-      expect(users.findById).toHaveBeenCalledWith("owner-2");
+      expect(usersService.findById).toHaveBeenCalledWith("owner-2");
       expect(projects.update).toHaveBeenCalledWith(
         "project-1",
         expect.objectContaining({ ownerUserId: "owner-2" }),
@@ -198,8 +193,8 @@ describe("ProjectService", () => {
     });
 
     it("rejects an ownerUserId that doesn't resolve to any user", async () => {
-      projects.findById.mockResolvedValue(project());
-      users.findById.mockResolvedValue(null);
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      usersService.findById.mockRejectedValue(new NotFoundException());
 
       await expect(
         service.update("project-1", { ownerUserId: "missing-owner" }, "actor-1"),
@@ -207,14 +202,27 @@ describe("ProjectService", () => {
       expect(projects.update).not.toHaveBeenCalled();
     });
 
-    it("rejects an ownerUserId that resolves to a disabled user", async () => {
-      projects.findById.mockResolvedValue(project());
-      users.findById.mockResolvedValue(user({ id: "owner-3", accountStatus: "disabled" }));
+    it("rejects an ownerUserId that resolves to a disabled user (via UsersService's own not-found convention)", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      usersService.findById.mockRejectedValue(new NotFoundException());
 
       await expect(
         service.update("project-1", { ownerUserId: "owner-3" }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
       expect(projects.update).not.toHaveBeenCalled();
+    });
+
+    it("skips owner re-validation when ownerUserId is resent unchanged (regression: an unrelated edit must not reject a project whose owner has since been disabled)", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      projects.update.mockResolvedValue(project({ ownerUserId: "owner-1", name: "Renamed" }));
+
+      await service.update("project-1", { name: "Renamed", ownerUserId: "owner-1" }, "actor-1");
+
+      expect(usersService.findById).not.toHaveBeenCalled();
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ name: "Renamed", ownerUserId: "owner-1" }),
+      );
     });
   });
 

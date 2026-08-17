@@ -145,9 +145,13 @@ export class ProjectsController {
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
+  // Gated on `users_roles:view`, not `MODULE_KEY` like every sibling route on this controller —
+  // this route returns RBAC role-membership data (display names, emails) resolved via
+  // `RoleAssignmentService`, the same data `role-assignment.controller.ts` already gates on
+  // `users_roles:view`, not `project_configuration` content (code-review finding, this branch).
   @Get(":projectId/approvers")
   @UseGuards(PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission("users_roles", "view")
   @ApiOperation({
     summary: "List the users currently holding owner_growth_approver for this project",
   })

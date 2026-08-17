@@ -67,6 +67,19 @@ export class RoleAssignmentService {
   }
 
   /**
+   * The inverse of `listRolesForUser` — every user id holding `roleId` scoped to exactly
+   * `projectId`. A thin delegation to the repository so callers outside `AuthzModule` (the
+   * Projects module's "list current approvers" endpoint) go through this already-exported service
+   * rather than needing `UserRoleRepository`/`USER_ROLE_REPOSITORY` exported from `AuthzModule`
+   * directly — that binding also exposes `assign()`/`revoke()`, write operations no consumer of
+   * "who currently holds this role" should have DI access to (code-review finding,
+   * `module-projects-backend-closeout` branch).
+   */
+  async findUserIdsForRoleInProject(roleId: string, projectId: string): Promise<readonly string[]> {
+    return this.userRoles.findUserIdsForRoleInProject(roleId, projectId);
+  }
+
+  /**
    * `projectId` (task package `docs/task-packages/module-projects-foundation.md` design decision
    * D4) is a new, trailing, optional parameter — added after `now` rather than before it so every
    * existing call site (real or test) that passes exactly 4 positional args is unaffected. `null`
