@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import { colorTokens, radiusTokens, spacingTokens, typographyTokens } from "../tokens.js";
+import {
+  colorTokens,
+  radiusTokens,
+  spacingTokens,
+  statusBadgeTokens,
+  typographyTokens,
+} from "../tokens.js";
 
 /**
  * Shared reusable UI states (Phase 1F brief §15) — future modules render
@@ -102,7 +108,13 @@ export function ErrorState({
   const Title = titleAs;
   return (
     <div style={containerStyle} role="alert">
-      <span style={badgeStyle(colorTokens.dangerSurface, colorTokens.danger)}>Error</span>
+      {/* statusBadgeTokens.blocked.text, not colorTokens.danger — colorTokens.danger on
+          dangerSurface is only 4.41:1, under WCAG AA's 4.5:1 for normal text; a real
+          violation axe-core caught once any badge here was first scanned on an
+          authenticated route (see the Dashboard UI Foundation Alignment a11y coverage). */}
+      <span style={badgeStyle(colorTokens.dangerSurface, statusBadgeTokens.blocked.text)}>
+        Error
+      </span>
       <Title style={titleStyle}>{title}</Title>
       <p style={bodyStyle}>{message}</p>
       {correlationId ? (
@@ -125,7 +137,9 @@ export function ForbiddenState({
 }: ForbiddenStateProps): ReactNode {
   return (
     <div style={containerStyle} role="alert">
-      <span style={badgeStyle(colorTokens.warningSurface, colorTokens.warning)}>
+      {/* statusBadgeTokens.attention.text — colorTokens.warning on warningSurface is only
+          3.07:1, under WCAG AA's 4.5:1 (same class of bug as the ErrorState fix above). */}
+      <span style={badgeStyle(colorTokens.warningSurface, statusBadgeTokens.attention.text)}>
         Access restricted
       </span>
       <p style={titleStyle}>You don&apos;t have permission to view this</p>
@@ -171,7 +185,11 @@ export function NotConfiguredState({
 }: NotConfiguredStateProps): ReactNode {
   return (
     <div style={containerStyle}>
-      <span style={badgeStyle(colorTokens.infoSurface, colorTokens.info)}>Not configured</span>
+      {/* statusBadgeTokens.informational.text — colorTokens.info on infoSurface is only
+          3.84:1, under WCAG AA's 4.5:1 (same class of bug as the ErrorState fix above). */}
+      <span style={badgeStyle(colorTokens.infoSurface, statusBadgeTokens.informational.text)}>
+        Not configured
+      </span>
       <p style={titleStyle}>{title}</p>
       <p style={bodyStyle}>{message}</p>
     </div>
@@ -186,7 +204,9 @@ export interface DegradedStateProps {
 export function DegradedState({ message }: DegradedStateProps): ReactNode {
   return (
     <div style={containerStyle} role="status">
-      <span style={badgeStyle(colorTokens.warningSurface, colorTokens.warning)}>Degraded</span>
+      <span style={badgeStyle(colorTokens.warningSurface, statusBadgeTokens.attention.text)}>
+        Degraded
+      </span>
       <p style={titleStyle}>Some functionality is limited right now</p>
       <p style={bodyStyle}>{message}</p>
     </div>

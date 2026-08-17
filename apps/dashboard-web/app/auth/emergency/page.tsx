@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { Button, Input } from "@webdesk/ui";
 import { getApiBaseUrl } from "@/lib/auth";
+import styles from "../auth.module.css";
 
 /**
  * Step 1 of 2 (password). On success, `dashboard-api` has already set a
@@ -41,49 +43,49 @@ export default function EmergencyLoginPage() {
   }
 
   return (
-    <main style={{ padding: "2rem", maxWidth: 360 }}>
-      <h1>Emergency administrator access</h1>
-      <p style={{ fontSize: "0.85rem", color: "#666" }}>
-        For authorized administrators only, when Google Workspace SSO is unavailable. Every use of
-        this path is logged and reviewed.
-      </p>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="email">Email</label>
-          <br />
-          <input
-            id="email"
-            type="email"
-            autoComplete="username"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </div>
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="password">Password</label>
-          <br />
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
-        {error && (
-          <p role="alert" style={{ color: "#b00020" }}>
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Signing in…" : "Continue"}
-        </button>
-      </form>
-      <p style={{ marginTop: "2rem" }}>
-        <a href="/auth/sign-in">Back to normal sign-in</a>
-      </p>
+    <main className={styles.page}>
+      <div className={`${styles.card} ${styles.cardNarrow}`}>
+        <h1 className={styles.title}>Emergency administrator access</h1>
+        <p className={styles.body}>
+          For authorized administrators only, when Google Workspace SSO is unavailable. Every use of
+          this path is logged and reviewed.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div className={styles.fieldGroup}>
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <Input
+              id="password"
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+          {error && (
+            <p role="alert" className={styles.formError}>
+              {error}
+            </p>
+          )}
+          <Button type="submit" variant="primary" disabled={submitting}>
+            {submitting ? "Signing in…" : "Continue"}
+          </Button>
+        </form>
+        <p className={styles.secondaryLink}>
+          <a href="/auth/sign-in" className={styles.link}>
+            Back to normal sign-in
+          </a>
+        </p>
+      </div>
     </main>
   );
 }

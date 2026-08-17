@@ -2,10 +2,17 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import type {
   ApiSuccessResponse,
+  HealthCheckResult,
   ModuleRegistrySummary,
   ProjectSummary,
 } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
+import {
+  E2E_SESSION_COOKIE_NAME,
+  getE2eFixtureSession,
+  isE2eSessionCookieValid,
+  isE2eTestModeEnabled,
+} from "./e2e-test-session";
 
 /**
  * Server-side session resolution for the application shell (Phase 1F
@@ -21,10 +28,16 @@ export interface ServerSessionProfile {
   readonly displayName: string;
 }
 
+export interface ServerSessionSystemStatus {
+  readonly environment: string | null;
+  readonly isDegraded: boolean;
+}
+
 export interface ServerSession {
   readonly me: ServerSessionProfile;
   readonly navigation: readonly ModuleRegistrySummary[];
   readonly projects: readonly ProjectSummary[];
+  readonly systemStatus: ServerSessionSystemStatus;
 }
 
 /**
@@ -86,6 +99,35 @@ async function fetchProjectSummaries(
   return ((await response.json()) as ApiSuccessResponse<readonly ProjectSummary[]>).data;
 }
 
+const DEFAULT_SYSTEM_STATUS: ServerSessionSystemStatus = { environment: null, isDegraded: false };
+
+/**
+ * Header environment/system-status indicators (`04-navigation-system.md`
+ * §2) — `/health` needs no session cookie, so this never blocks or
+ * fails the session as a whole; a failure here just means the two
+ * conditional indicators stay hidden (their "no signal" state is
+ * indistinguishable from "everything is fine," which is the correct
+ * fail-safe for a purely informational, non-authoritative badge).
+ */
+async function fetchSystemStatus(apiBaseUrl: string): Promise<ServerSessionSystemStatus> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/health`, { cache: "no-store" });
+  } catch (error) {
+    console.error("getServerSession: GET /health request failed", error);
+    return DEFAULT_SYSTEM_STATUS;
+  }
+  if (!response.ok) {
+    console.error(`getServerSession: GET /health returned status ${response.status}`);
+    return DEFAULT_SYSTEM_STATUS;
+  }
+  const body = (await response.json()) as HealthCheckResult;
+  return {
+    environment: body.build?.environment ?? null,
+    isDegraded: body.status !== "ok",
+  };
+}
+
 /**
  * Resolves the current request's session server-side, or `null` if there is
  * no valid session (no cookie, or `dashboard-api` returns 401). Any OTHER
@@ -108,6 +150,16 @@ async function fetchProjectSummaries(
  * flash on every page.
  */
 export const getServerSession = cache(async (): Promise<ServerSession | null> => {
+  // Test-only bypass (see lib/e2e-test-session.ts's own doc comment for the full security
+  // reasoning) — gated on NODE_ENV, which no real deployment can set to non-production, so this
+  // branch is dead code in every real deployment regardless of what any request contains.
+  if (isE2eTestModeEnabled()) {
+    const cookieStore = await cookies();
+    if (isE2eSessionCookieValid(cookieStore.get(E2E_SESSION_COOKIE_NAME)?.value)) {
+      return getE2eFixtureSession();
+    }
+  }
+
   const apiBaseUrl = tryGetApiBaseUrl();
   if (!apiBaseUrl) {
     return null;
@@ -120,14 +172,15 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
   }
 
   const headers = { cookie: cookieHeader };
-  // `fetchProjectSummaries` never rejects (see its own doc comment) — unlike the two calls below,
-  // a `/projects`-only network failure must not fail this whole `Promise.all` and take down `me`/
-  // `navigation` with it, which a raw `fetch()` here would do (fetch() rejects on network errors,
-  // not just resolves with a bad status, so the `.ok` checks below would never even run).
-  const [meResponse, navigationResponse, projects] = await Promise.all([
+  // `fetchProjectSummaries`/`fetchSystemStatus` never reject (see their own doc comments) — unlike
+  // the two calls below, a failure in either must not fail this whole `Promise.all` and take down
+  // `me`/`navigation` with it, which a raw `fetch()` here would do (fetch() rejects on network
+  // errors, not just resolves with a bad status, so the `.ok` checks below would never even run).
+  const [meResponse, navigationResponse, projects, systemStatus] = await Promise.all([
     fetch(`${apiBaseUrl}/me`, { headers, cache: "no-store" }),
     fetch(`${apiBaseUrl}/me/navigation`, { headers, cache: "no-store" }),
     fetchProjectSummaries(apiBaseUrl, headers),
+    fetchSystemStatus(apiBaseUrl),
   ]);
 
   if (meResponse.status === 401 || navigationResponse.status === 401) {
@@ -144,5 +197,5 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
     readonly ModuleRegistrySummary[]
   >;
 
-  return { me: meBody.data, navigation: navigationBody.data, projects };
+  return { me: meBody.data, navigation: navigationBody.data, projects, systemStatus };
 });

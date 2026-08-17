@@ -10,6 +10,7 @@ import {
   radiusTokens,
   shadowTokens,
   spacingTokens,
+  statusBadgeTokens,
   statusTokens,
   toCssCustomProperties,
   typographyTokens,
@@ -58,6 +59,27 @@ describe("design tokens (Phase 1F application-shell foundation)", () => {
       "notConfigured",
       "unknown",
     ]);
+  });
+
+  it("exposes wide-content and drawer layout tokens", () => {
+    expect(layoutTokens.contentMaxWidthWide).toBe("1600px");
+    expect(layoutTokens.drawerWidth).toBe("420px");
+  });
+
+  it("exposes the 5-bucket status-badge palette, distinct from statusTokens", () => {
+    expect(Object.keys(statusBadgeTokens)).toEqual([
+      "healthy",
+      "attention",
+      "blocked",
+      "informational",
+      "neutral",
+    ]);
+    for (const bucket of Object.values(statusBadgeTokens)) {
+      expect(bucket.text).toBeTruthy();
+      expect(bucket.background).toBeTruthy();
+      expect(bucket.dot).toBeTruthy();
+    }
+    expect(statusBadgeTokens.healthy.text).not.toBe(statusTokens.healthy);
   });
 
   it("exposes control-size, breakpoint, z-index, and motion tokens", () => {

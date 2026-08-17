@@ -1,8 +1,41 @@
 # HANDOFF — webdesk-growth-dashboard
 
-- **Session ended:** 2026-08-15 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
+- **Session ended:** 2026-08-17 (timezone: America/Toronto — confirmed default per `project.json`, not yet confirmed by the client; see `docs/project-state/setup-input-register.md`)
 - **Session ID:** b6d0b96c-5964-4572-b360-842ea4eca533
-- **Latest work:** Projects module backend built under explicit "begin implementation" authorization
+- **Latest work:** **Dashboard UI Foundation Alignment built under explicit "Begin this work"
+  authorization**, on branch `dashboard-ui-foundation-alignment` off `main` at
+  `f99f5bc88e652d01b4186dde3db38e0c7877bafc` (verified zero drift). Implements
+  `docs/task-packages/dashboard-ui-foundation-alignment.md`'s 6-item scope against the
+  2026-08-17-approved Dashboard UI/UX Design System: design tokens (`statusBadgeTokens`,
+  `contentMaxWidthWide`, `drawerWidth`, plus a new `check-css-tokens.mjs` lint script enforcing
+  breakpoint/motion-duration consistency); ~30 new `packages/ui` components across 5 files
+  (controls, structural, overlay, feedback, domain — 79 new unit tests); the application shell's
+  desktop sidebar collapse toggle, 5-cluster `libraries` navigation sub-grouping, tablet-range
+  icon-only behavior, and header additions (user-menu dropdown, help icon, environment/degraded-
+  system-status badges, module-only `⌘K` search, a notifications drawer honestly showing
+  "not configured yet" rather than fake data); all 6 pre-`packages/ui` auth pages re-skinned to
+  the token system; and a test-only, security-scrutinized authenticated-session fixture
+  (`lib/e2e-test-session.ts`, gated on `NODE_ENV !== "production"` AND an explicit Playwright-only
+  env flag) that finally gives the automated WCAG 2.2 AA suite real coverage of the authenticated
+  shell — previously zero, since Phase 1C's SSO-only session model meant Playwright could never
+  log in. **That new coverage immediately caught and fixed 3 real, pre-existing WCAG AA contrast
+  violations** (a hardcoded literal on the Home page, 4 `states.tsx` status-badge color pairs, and
+  the sidebar's nav-group-label color) — none introduced by this task's own new code, all now
+  fixed using already-token-driven replacement values. Full validation: 79/79 `packages/ui` +
+  103/103 `dashboard-web` unit tests, 15/15 Playwright tests (including the 2 new authenticated-
+  shell a11y checks), typecheck/lint/`next build`/prettier all clean across both packages; only
+  `apps/dashboard-web` and `packages/ui` files touched, zero `dashboard-api`/`packages/database`
+  changes. See `docs/implementation/dashboard-ui-foundation-alignment.md` for the full as-built
+  record. **Not yet code-reviewed, security-reviewed, gated, or merged** — each is a separate,
+  not-yet-requested next step, per the task package's own Git workflow section. Pushed as its own
+  branch; a PR was opened for reviewability, matching this project's standing pattern.
+- **Prior work this session:** the Dashboard UI/UX design-system documentation package (18
+  documents, `docs/design/dashboard-ui/`) was produced, its recommended direction (Clean Enterprise,
+  with a scoped borrowing for 5 pipeline-shaped modules) was approved as-is by WebDesk Solution, and
+  merged to `main` via PR #32. The Dashboard UI Foundation Alignment task package itself
+  (`docs/task-packages/dashboard-ui-foundation-alignment.md`) was then scoped and committed to
+  `main` as planning-only, ahead of the "Begin this work" instruction described above.
+- **Earlier in this session (2026-08-15), before the design-system work:** Projects module backend built under explicit "begin implementation" authorization
   — schema (migrations `00036`-`00044`), API, RBAC wiring (including a real fix to a
   previously-flagged dormant `Op.in`/NULL bug in project-scoped permission queries, surfaced by
   this module's own e2e tests), and tests. Then this project's own `code-review` skill was run

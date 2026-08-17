@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getApiBaseUrl } from "@/lib/auth";
+import styles from "../auth.module.css";
 
 /** Fires the logout call on mount — `dashboard-api` revokes the session server-side immediately (knowledge/05: "explicitly revokes the current session ... rather than merely discarding the client-side token"). */
 export default function LogoutPage() {
@@ -23,13 +24,17 @@ export default function LogoutPage() {
   }, []);
 
   return (
-    <main style={{ padding: "2rem", maxWidth: 420 }}>
-      <h1>{done ? "Signed out" : "Signing out…"}</h1>
-      {done && (
-        <p>
-          <a href="/auth/sign-in">Sign in again</a>
-        </p>
-      )}
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>{done ? "Signed out" : "Signing out…"}</h1>
+        {done && (
+          <p>
+            <a href="/auth/sign-in" className={styles.link}>
+              Sign in again
+            </a>
+          </p>
+        )}
+      </div>
     </main>
   );
 }

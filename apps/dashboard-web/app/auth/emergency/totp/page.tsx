@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { Button, Input } from "@webdesk/ui";
 import { getApiBaseUrl } from "@/lib/auth";
+import styles from "../../auth.module.css";
 
 /** Step 2 of 2 (TOTP). Reads the pending session cookie set by the password step automatically — the code is the only thing this form submits. */
 export default function EmergencyTotpPage() {
@@ -35,33 +37,34 @@ export default function EmergencyTotpPage() {
   }
 
   return (
-    <main style={{ padding: "2rem", maxWidth: 360 }}>
-      <h1>Enter your authenticator code</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="code">6-digit code</label>
-          <br />
-          <input
-            id="code"
-            type="text"
-            inputMode="numeric"
-            pattern="\d{6}"
-            maxLength={6}
-            autoComplete="one-time-code"
-            required
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-          />
-        </div>
-        {error && (
-          <p role="alert" style={{ color: "#b00020" }}>
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Verifying…" : "Verify"}
-        </button>
-      </form>
+    <main className={styles.page}>
+      <div className={`${styles.card} ${styles.cardNarrow}`}>
+        <h1 className={styles.title}>Enter your authenticator code</h1>
+        <form onSubmit={handleSubmit}>
+          <div className={styles.fieldGroup}>
+            <Input
+              id="code"
+              label="6-digit code"
+              type="text"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              autoComplete="one-time-code"
+              required
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+            />
+          </div>
+          {error && (
+            <p role="alert" className={styles.formError}>
+              {error}
+            </p>
+          )}
+          <Button type="submit" variant="primary" disabled={submitting}>
+            {submitting ? "Verifying…" : "Verify"}
+          </Button>
+        </form>
+      </div>
     </main>
   );
 }

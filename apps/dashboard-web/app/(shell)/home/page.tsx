@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ContentContainer, NotConfiguredState, PageHeader } from "@webdesk/ui";
+import { colorTokens, ContentContainer, NotConfiguredState, PageHeader } from "@webdesk/ui";
 import { getServerSession } from "@/lib/server-session";
 
 /**
@@ -38,7 +38,9 @@ export default async function HomePage() {
         <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.5rem" }}>
           Available to you ({navigation.length} module{navigation.length === 1 ? "" : "s"})
         </h2>
-        <p style={{ color: "#475569", fontSize: "0.875rem", marginBottom: "1rem" }}>
+        <p
+          style={{ color: colorTokens.foregroundMuted, fontSize: "0.875rem", marginBottom: "1rem" }}
+        >
           Modules are shown based on your own role and permissions. A module appearing here does not
           mean its business functionality is built yet — check its status below.
         </p>
@@ -56,18 +58,31 @@ export default async function HomePage() {
             <li
               key={module.key}
               style={{
-                border: "1px solid #e2e8f0",
+                border: `1px solid ${colorTokens.border}`,
                 borderRadius: "0.5rem",
                 padding: "0.75rem 1rem",
               }}
             >
               <Link
                 href={module.route}
-                style={{ fontWeight: 500, color: "#0f172a", textDecoration: "none" }}
+                style={{ fontWeight: 500, color: colorTokens.foreground, textDecoration: "none" }}
               >
                 {module.displayName ?? module.name}
               </Link>
-              <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>
+              {/*
+               * colorTokens.foregroundSubtle (#94a3b8) fails WCAG AA contrast (2.56:1) at this
+               * font size against a white card background — a real violation axe-core caught once
+               * this page finally got automated a11y coverage (previously untested, since no
+               * authenticated-route coverage existed at all). foregroundMuted passes and is the
+               * closest existing token to the original intent.
+               */}
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: colorTokens.foregroundMuted,
+                  marginTop: "0.25rem",
+                }}
+              >
                 {module.featureStatus ?? module.implementationStatus}
               </div>
             </li>

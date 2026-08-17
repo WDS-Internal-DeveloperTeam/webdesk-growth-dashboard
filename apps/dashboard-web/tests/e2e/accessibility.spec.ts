@@ -1,16 +1,21 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+const E2E_SESSION_COOKIE_NAME = "wds_e2e_test_session";
+const E2E_SESSION_COOKIE_VALUE = "playwright-a11y-fixture-v1";
+
 /**
  * WCAG 2.2 AA automated check (Phase 1F brief §17) via axe-core, run
- * against every page this CI environment can actually reach. The
- * authenticated application shell (home, nav, project context) is
- * deliberately NOT covered here — there is no test-only session bypass
- * (Phase 1C's session model is pre-provisioned-Google-SSO only, see
- * CLAUDE.md), so Playwright can never establish a real authenticated
- * session in CI. Manual verification of the authenticated shell is
- * required separately (see docs/implementation/phase-1f-accessibility.md)
- * — this suite never claims to cover more than it does.
+ * against every page this CI environment can actually reach, including —
+ * since the Dashboard UI Foundation Alignment pass added a test-only
+ * authenticated-session fixture (`lib/e2e-test-session.ts`) — the real
+ * authenticated application shell. Before that fixture existed, Phase
+ * 1C's pre-provisioned-Google-SSO-only session model meant Playwright
+ * could never complete a real login here, so the entire authenticated
+ * shell had zero automated a11y coverage; this suite now closes that gap
+ * for the shell itself (see the "authenticated shell" describe block
+ * below). See `lib/e2e-test-session.ts`'s own doc comment for why this
+ * fixture can never activate outside a Playwright-run dev server.
  */
 test.describe("WCAG 2.2 AA automated checks (axe-core)", () => {
   test("sign-in page has no automatically-detectable violations", async ({ page }) => {
@@ -31,6 +36,40 @@ test.describe("WCAG 2.2 AA automated checks (axe-core)", () => {
 
   test("not-found page has no automatically-detectable violations", async ({ page }) => {
     await page.goto("/this-route-does-not-exist");
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+});
+
+test.describe("WCAG 2.2 AA automated checks (axe-core) — authenticated shell", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: E2E_SESSION_COOKIE_NAME,
+        value: E2E_SESSION_COOKIE_VALUE,
+        url: "http://localhost:3000",
+      },
+    ]);
+  });
+
+  test("home page (application shell: header, sidebar nav, library clustering) has no automatically-detectable violations", async ({
+    page,
+  }) => {
+    await page.goto("/home");
+    await expect(page.getByRole("heading", { name: /Welcome,/ })).toBeVisible();
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("home page with the sidebar collapsed has no automatically-detectable violations", async ({
+    page,
+  }) => {
+    await page.goto("/home");
+    await page.getByRole("button", { name: "Collapse sidebar" }).click();
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
       .analyze();

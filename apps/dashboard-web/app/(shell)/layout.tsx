@@ -33,6 +33,7 @@ export default async function ShellLayout({ children }: { children: ReactNode })
       navigation={session.navigation}
       projects={session.projects}
       initialProjectId={initialProjectId}
+      systemStatus={session.systemStatus}
     >
       {children}
     </AppShell>
