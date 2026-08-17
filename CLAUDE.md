@@ -61,8 +61,10 @@ On demand (Tier 2 — Read when the task needs it; do NOT preload):
 - `docs/architecture/decisions/*`, `docs/contracts/*`, `docs/repository-plan/*`, `docs/security/*`,
   `docs/traceability/*`, `docs/phase-plans/*` (Phase 0 foundation — by path per the active task)
 - `canonical-inputs/*` (WordPress Technical Discovery, Owner Clarifications, Agent Specification Batch 1,
-  Service/SEO Library workbook — by path; the workbook is advisory only, never approved business truth,
-  per WDS-014, regardless of what its own internal "Approval Status" column says)
+  Service/SEO Library workbook, Recommended Module Roadmap — by path; the workbook is advisory only,
+  never approved business truth, per WDS-014, regardless of what its own internal "Approval Status"
+  column says; the Recommended Module Roadmap is recorded-for-reference only and authorizes nothing —
+  see its own file for how it relates to `docs/phase-plans/module-implementation-roadmap.md`)
 - `outputs/webdesk-growth-dashboard/{HANDOFF.md, project.json}`
 
 Do NOT load: `webdesk-nodejs/skills/nodejs/integrations/{bigcommerce,shopify,erp}/*` (not this project's
@@ -1708,6 +1710,18 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, confirming the exact merged commit is
   Status Change / Archive actions are now genuinely live in production**, closing out this
   slice's full build-to-production arc. Backend, header switcher, list page, detail page,
   create/edit form, and now status change/archive actions are all live for the Projects module.
+- `[2026-08-17]` **Registered a project-owner-supplied "Recommended Module Roadmap"** —
+  `canonical-inputs/Recommended_Module_Roadmap.md`, sourced from
+  `/Users/admin/Downloads/webdesk-headless-v1.11.29/Recommended Module Roadmap.md`. Recorded
+  verbatim: a 43-module, 10-wave recommended build order with per-module special instructions
+  (e.g. Projects first; Review & Approval Center before Page Workspace; Ready for Claude Queue is
+  manual-execution-only in V1; Users/Roles/Permissions is UI-only, no authorization redesign).
+  **Per the project owner's own explicit instruction, this is recorded for reference only — no
+  module is started, scoped, or authorized.** Distinguished from the existing, independently
+  mechanically-computed `docs/phase-plans/module-implementation-roadmap.md` (Phase 1F's
+  dependency-graph wave assignment) — the two are not the same artifact and may not agree on
+  ordering for a given module; any such conflict gets surfaced to the project owner at the time a
+  module is actually proposed, not resolved silently now.
 
 ## Open client blockers
 
