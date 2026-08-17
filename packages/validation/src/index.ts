@@ -22,3 +22,28 @@ export const healthCheckResultSchema = z.object({
 export type HealthCheckResultInput = z.infer<typeof healthCheckResultSchema>;
 
 export const correlationIdSchema = z.string().uuid();
+
+/**
+ * `z.string().url()` alone accepts any scheme, including `javascript:` — a stored-XSS vector once
+ * a value validated this way is later rendered as a clickable link (the exact issue
+ * `dashboard-web`'s Project Detail page review found and fixed client-side via its own
+ * `isSafeHttpUrl()`, flagging the schema that originally accepted the value as the real place to
+ * close it). Shared here — not re-declared per module — so every future module that accepts a
+ * user-supplied URL gets a safe value by construction (code-review finding,
+ * `module-projects-backend-closeout` branch: an earlier version of this schema was defined locally
+ * in `apps/dashboard-api/src/projects/projects.dto.ts` only).
+ */
+export const safeHttpUrlSchema = z
+  .string()
+  .url()
+  .max(500)
+  .refine(
+    (value) => {
+      try {
+        return ["http:", "https:"].includes(new URL(value).protocol);
+      } catch {
+        return false;
+      }
+    },
+    { message: "must be an http:// or https:// URL" },
+  );

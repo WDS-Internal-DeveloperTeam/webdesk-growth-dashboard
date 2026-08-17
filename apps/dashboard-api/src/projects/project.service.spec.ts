@@ -7,6 +7,7 @@ import type {
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
+import type { UsersService } from "../users/users.service.js";
 import { ProjectService } from "./project.service.js";
 
 // withTransaction() opens a real Sequelize connection (needs DATABASE_URL) — irrelevant to this
@@ -59,6 +60,15 @@ function roadmapItem(overrides: Partial<RoadmapItemEntity> = {}): RoadmapItemEnt
   };
 }
 
+function userSummary(overrides: { id?: string; displayName?: string; email?: string } = {}) {
+  return {
+    id: "owner-1",
+    email: "owner@example.com",
+    displayName: "Owner One",
+    ...overrides,
+  };
+}
+
 describe("ProjectService", () => {
   let projects: {
     create: ReturnType<typeof vi.fn>;
@@ -68,6 +78,7 @@ describe("ProjectService", () => {
     list: ReturnType<typeof vi.fn>;
   };
   let roadmapItems: { findById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let usersService: { findById: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let service: ProjectService;
 
@@ -80,10 +91,12 @@ describe("ProjectService", () => {
       list: vi.fn(),
     };
     roadmapItems = { findById: vi.fn(), update: vi.fn() };
+    usersService = { findById: vi.fn() };
     auditService = { record: vi.fn() };
     service = new ProjectService(
       projects as unknown as ProjectRepository,
       roadmapItems as unknown as RoadmapItemRepository,
+      usersService as unknown as UsersService,
       auditService as unknown as AuditService,
     );
   });
@@ -110,6 +123,105 @@ describe("ProjectService", () => {
           action: "create",
           projectId: "project-1",
         }),
+      );
+    });
+
+    it("rejects a create with an ownerUserId that doesn't resolve to an active user", async () => {
+      projects.findByPublicId.mockResolvedValue(null);
+      usersService.findById.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        service.create(
+          { publicId: "acme-website", name: "Acme", ownerUserId: "missing-owner" },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(projects.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("update", () => {
+    it("updates a project's fields and records an audit event", async () => {
+      projects.findById.mockResolvedValue(project());
+      projects.update.mockResolvedValue(project({ name: "Renamed" }));
+
+      const result = await service.update("project-1", { name: "Renamed" }, "actor-1");
+
+      expect(result.name).toBe("Renamed");
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ name: "Renamed", updatedBy: "actor-1" }),
+      );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: "data_change", action: "update" }),
+      );
+    });
+
+    it("throws NotFoundException for a missing project", async () => {
+      projects.findById.mockResolvedValue(null);
+      await expect(service.update("missing", { name: "X" }, "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(projects.update).not.toHaveBeenCalled();
+    });
+
+    it("allows clearing ownerUserId (null) without any existence check", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      projects.update.mockResolvedValue(project({ ownerUserId: null }));
+
+      await service.update("project-1", { ownerUserId: null }, "actor-1");
+
+      expect(usersService.findById).not.toHaveBeenCalled();
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ ownerUserId: null }),
+      );
+    });
+
+    it("accepts a real, active ownerUserId that is actually changing", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      usersService.findById.mockResolvedValue(userSummary({ id: "owner-2" }));
+      projects.update.mockResolvedValue(project({ ownerUserId: "owner-2" }));
+
+      await service.update("project-1", { ownerUserId: "owner-2" }, "actor-1");
+
+      expect(usersService.findById).toHaveBeenCalledWith("owner-2");
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ ownerUserId: "owner-2" }),
+      );
+    });
+
+    it("rejects an ownerUserId that doesn't resolve to any user", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      usersService.findById.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        service.update("project-1", { ownerUserId: "missing-owner" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(projects.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects an ownerUserId that resolves to a disabled user (via UsersService's own not-found convention)", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      usersService.findById.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        service.update("project-1", { ownerUserId: "owner-3" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(projects.update).not.toHaveBeenCalled();
+    });
+
+    it("skips owner re-validation when ownerUserId is resent unchanged (regression: an unrelated edit must not reject a project whose owner has since been disabled)", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      projects.update.mockResolvedValue(project({ ownerUserId: "owner-1", name: "Renamed" }));
+
+      await service.update("project-1", { name: "Renamed", ownerUserId: "owner-1" }, "actor-1");
+
+      expect(usersService.findById).not.toHaveBeenCalled();
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ name: "Renamed", ownerUserId: "owner-1" }),
       );
     });
   });

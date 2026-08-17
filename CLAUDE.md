@@ -498,6 +498,43 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, and `dashboard-web`'s `/` resolves (v
     capability and Project owner assignment are now genuinely live in production.** Team
     management and approver-assignment UI remain separate, not-yet-built next steps (their
     backends already existed before this branch).
+15. **Projects module backend close-out — built, validated, reviewed, gated, not yet merged
+    (2026-08-17).** `docs/implementation/module-projects-backend-closeout.md`
+    records the full account. Requested directly, ahead of an upcoming dashboard design prompt
+    that will drive the remaining Projects-module frontend wiring — the user wanted confidence
+    that nothing was missing on the backend/API side first. A dedicated audit (read the actual
+    code, not documentation) found the backend almost entirely code-complete but surfaced 3 real
+    gaps and a systemic test-coverage gap. Fixed: (1) a genuinely missing capability — no endpoint
+    existed to list a project's current approvers, closed with a new
+    `GET /projects/:projectId/approvers`, `UserRoleRepository.findUserIdsForRoleInProject()`, and
+    `AuthzModule`/`UsersModule` newly exporting `USER_ROLE_REPOSITORY`/`UsersService`; (2) known,
+    previously-deferred security debt — `ProjectEnvironment.url` accepted any URL scheme,
+    including `javascript:`, a stored-XSS path a 2026-08-16 security review already fixed
+    client-side and explicitly flagged the backend schema as the real fix location for; now closed
+    with a shared `safeHttpUrl` Zod refinement restricting to `http:`/`https:`; (3) an untested
+    reliability gap — `ownerUserId` had no existence check before the database write, so a stale
+    or deactivated owner id likely surfaced as an opaque 500 instead of a clean 400; now validated
+    via a new `ProjectService.assertOwnerExists()`. Also closed: 4 of 6 project sub-resource
+    controllers (team, environments, objectives, repositories) had zero unit test coverage, and
+    the e2e suite never exercised `/update`, `/team`, `/environments`, `/objectives`,
+    `/repositories`, or roadmap-items list/update — 4 new unit spec files plus 9 new e2e tests now
+    cover all of it. 359/359 `dashboard-api` unit tests (37 new), 102/102 `dashboard-api`
+    e2e/integration tests (9 new), 122/122 `packages/database` integration tests (unaffected,
+    confirmed still green), all against a fresh local disposable database; typecheck/lint/`nest
+build`/`pnpm exec prettier --check` all clean. **Update (2026-08-17): independent code review run
+    and all 9 CONFIRMED/PLAUSIBLE findings fixed** (1 PLAUSIBLE finding accepted as tracked debt) —
+    see `docs/implementation/module-projects-backend-closeout.md`'s "Independent code review"
+    section and the 2026-08-17 "Recent decisions" entry below for the full account. **Update
+    (2026-08-17): security review complete (0 findings above threshold) and required second-role
+    human review complete** — Jitesh D, decision "Approved," no disputes. **The gate
+    (G4-projects-backend-closeout) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM, approved commit `8a3baf0` on branch
+    `module-projects-backend-closeout` — see
+    `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s "Sign-off"
+    section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This gate approval
+    does not itself authorize merging PR #31 or a production deployment** — merge remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule
+    (same pattern as every prior gate).
 
 ## Recent decisions
 
@@ -1878,6 +1915,76 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, confirming the exact merged commit is
   wired into the create/edit project form) are now genuinely live in production**, closing out
   this slice's full build-to-production arc. Team management and approver-assignment UI remain
   separate, not-yet-built next steps — their backends already existed before this branch.
+- `[2026-08-17]` **Built the Projects module backend close-out** (branch
+  `module-projects-backend-closeout`, [PR #31](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/31)),
+  under the explicit "make sure nothing is remaining on the backend/API side from the Projects
+  module" instruction, ahead of an upcoming dashboard design prompt that will drive the remaining
+  frontend wiring. A dedicated audit (read the actual code, not documentation) found the backend
+  almost entirely code-complete but surfaced 3 real gaps — a missing `GET
+/projects/:projectId/approvers` endpoint, `ProjectEnvironment.url` accepting any URL scheme
+  (known, previously client-side-only-fixed security debt), and no existence check on
+  `ownerUserId` before the database write — plus a systemic test-coverage gap (4 of 6 sub-resource
+  controllers had zero unit tests). All fixed and covered; see
+  `docs/implementation/module-projects-backend-closeout.md` for the full account.
+- `[2026-08-17]` **Independent code review run on `module-projects-backend-closeout` (PR #31),
+  medium effort — 8-angle finder pass, then all findings fixed.** 10 candidates surfaced after
+  dedup (7 CONFIRMED, 3 PLAUSIBLE). Most severe: `update()` re-validated `ownerUserId` against
+  `UsersService` even when the patch resent the project's own already-stored, unchanged value —
+  which `dashboard-web`'s edit form always does — so a project whose owner had since been disabled
+  would reject _any_ unrelated edit; fixed by only re-validating when the value is actually
+  changing. Also fixed: `GET /:projectId/approvers` reused the sibling routes'
+  `project_configuration:view` gate, exposing `users_roles`-scoped PII (approver display
+  names/emails) to any project-configuration viewer with no `users_roles` grant at all (e.g. the
+  seeded `read_only` role) — regated to `users_roles:view`, matching
+  `role-assignment.controller.ts`'s own precedent, with a new e2e regression test proving a
+  `read_only` session now gets `403`; an error-swallowing `.catch(() => null)` around each
+  approver's identity resolution that hid any error class, not just a genuine not-found;
+  `assertOwnerExists()` re-declaring its own `UserRepository` binding and duplicating
+  `UsersService.findById()`'s already-existing active-user check — now delegates to `UsersService`
+  instead; `AuthzModule` over-exporting the write-capable `USER_ROLE_REPOSITORY` token just so
+  `ProjectApproversService` could read from it — replaced with a new, read-only
+  `RoleAssignmentService.findUserIdsForRoleInProject()` delegating method, and the export reverted;
+  a missing covering index on the new "list approvers" query (migration `00045`, `(role_id,
+project_id)` on `user_roles`); `safeHttpUrl` duplicated locally instead of using the shared
+  `packages/validation` package it was built for — moved there as `safeHttpUrlSchema`; an N+1
+  query resolving approver identities one-by-one — replaced with a new
+  `UserRepository.findByIds()`/`UsersService.findByIds()` batch-resolve path (also closes the
+  error-swallowing finding, since batch resolution has no per-item catch); and `create()` running
+  its two independent checks (`findByPublicId()`, the owner check) sequentially instead of via
+  `Promise.all()`. The 10th finding — a TOCTOU gap between the owner-existence check and the
+  write — was recorded as accepted, tracked debt: `accountStatus` only changes via operator-run CLI
+  scripts, never concurrent HTTP, so the window isn't practically reachable, and `ownerUserId`
+  carries no authorization weight, making a real fix (a transaction/row-lock spanning both the
+  check and the write) disproportionate. Full re-validation on a fresh local disposable database:
+  363/363 `dashboard-api` unit tests (16 new), 125/125 `packages/database` integration tests (4
+  new), 103/103 `dashboard-api` integration/e2e tests (18 Projects tests, up from 16), migration
+  `00045` up/down round-trip clean, typecheck/lint/`nest build`/prettier all clean, `pnpm audit` 0
+  vulnerabilities. Security review, second-role human review, a gate decision, and merge
+  authorization remain each their own separate, not-yet-requested next step.
+- `[2026-08-17]` **Security review run on `module-projects-backend-closeout` (PR #31), separately
+  from the code review.** 0 findings above threshold — the new `GET /projects/:projectId/approvers`
+  route is correctly gated on `users_roles:view` (proven by a real e2e `403` test against a
+  `read_only` session), `safeHttpUrlSchema` correctly allowlists `http:`/`https:` via the WHATWG
+  `URL` parser, the new batch identity-resolution path (`findByIds()`) preserves the existing
+  active-user filter and malformed-id rejection, `AuthzModule` no longer exporting a write-capable
+  repository token is a hardening rather than a new risk, and migration `00045` is a pure additive
+  index with no data or authorization-model change. A review packet (published as a Claude
+  artifact — code review + security review findings, fixes, and validation evidence, with a
+  decision section) was prepared for the required second-role human review, since the implementing
+  agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and returned
+  "Approved."** See `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s
+  "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
+  next steps.
+- `[2026-08-17]` **The gate (G4-projects-backend-closeout) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review and the security review were already complete before the gate was
+  requested), approved commit `8a3baf0` on branch `module-projects-backend-closeout` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-projects-backend-closeout`) and
+  `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #31 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

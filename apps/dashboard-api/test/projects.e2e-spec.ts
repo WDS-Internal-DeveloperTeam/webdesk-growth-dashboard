@@ -314,5 +314,320 @@ describe("Projects module endpoints (e2e, real disposable database)", () => {
         approverRole!.id,
       );
     });
+
+    it("lists the current approvers for a project, reflecting an assignment made moments earlier", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `approver-list-${randomUUID()}`, name: "Approver List Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const emptyList = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/approvers`)
+        .set("Cookie", adminCookie)
+        .expect(200);
+      expect(emptyList.body.data).toEqual([]);
+
+      const approver = await users.create({
+        email: `projects.list-approver.e2e.${randomUUID()}@webdesksolution.com`,
+        displayName: "List Approver E2E",
+        accountStatus: "active",
+      });
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/approvers`)
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ userId: approver.id })
+        .expect(204);
+
+      const populatedList = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/approvers`)
+        .set("Cookie", adminCookie)
+        .expect(200);
+      expect(populatedList.body.data).toEqual([
+        { id: approver.id, displayName: "List Approver E2E", email: approver.email },
+      ]);
+    });
+
+    it("rejects a read_only session with 403 — that role holds project_configuration:view but no users_roles grant at all (code-review finding: this route must not reuse the sibling routes' project_configuration:view gate, since listing approvers exposes users_roles-scoped PII)", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", adminCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `approver-list-gate-${randomUUID()}`, name: "Approver List Gate Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const readOnlyCookie = await cookieForNewSession(readOnlyUserId);
+      await request(app.getHttpServer())
+        .get(`/projects/${projectId}/approvers`)
+        .set("Cookie", readOnlyCookie)
+        .expect(403);
+    });
+  });
+
+  describe("POST /projects/:projectId/update", () => {
+    it("updates a project's fields, including a real, active ownerUserId", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `update-${randomUUID()}`, name: "Update Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const updateResponse = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/update`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ name: "Updated Name", ownerUserId: readOnlyUserId })
+        .expect(200);
+
+      expect(updateResponse.body.data.name).toBe("Updated Name");
+      expect(updateResponse.body.data.ownerUserId).toBe(readOnlyUserId);
+    });
+
+    it("rejects an ownerUserId that doesn't resolve to any real user, with a clean 400", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `update-bad-owner-${randomUUID()}`, name: "Update Bad Owner Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/update`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ ownerUserId: randomUUID() })
+        .expect(400);
+    });
+  });
+
+  describe("project team roster", () => {
+    it("adds, lists, and removes a team member", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `team-${randomUUID()}`, name: "Team Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const teamMember = await users.create({
+        email: `projects.team-member.e2e.${randomUUID()}@webdesksolution.com`,
+        displayName: "Team Member E2E",
+        accountStatus: "active",
+      });
+
+      const addResponse = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/team`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ userId: teamMember.id })
+        .expect(201);
+      const teamEntryId = addResponse.body.data.id as string;
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/team`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(1);
+      expect(listResponse.body.data[0].userId).toBe(teamMember.id);
+
+      await request(app.getHttpServer())
+        .delete(`/projects/${projectId}/team/${teamEntryId}`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(204);
+
+      const finalListResponse = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/team`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(finalListResponse.body.data).toEqual([]);
+    });
+  });
+
+  describe("project environments", () => {
+    it("creates, lists, updates, and removes an environment", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `env-${randomUUID()}`, name: "Environment Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const createEnvResponse = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/environments`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ name: "Staging", url: "https://staging.example.com" })
+        .expect(201);
+      const environmentId = createEnvResponse.body.data.id as string;
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/environments`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(1);
+
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/environments/${environmentId}/update`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ name: "Production" })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .delete(`/projects/${projectId}/environments/${environmentId}`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(204);
+    });
+
+    it("rejects a non-http(s) URL scheme (e.g. javascript:) with a clean 400 (backend hardening for the stored-XSS class the frontend already guards against)", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `env-xss-${randomUUID()}`, name: "Environment XSS Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/environments`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ name: "Malicious", url: "javascript:alert(1)" })
+        .expect(400);
+    });
+  });
+
+  describe("project objectives", () => {
+    it("creates, lists, updates, and removes an objective", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `objective-${randomUUID()}`, name: "Objective Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const createObjResponse = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/objectives`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ description: "Grow organic traffic 20%" })
+        .expect(201);
+      const objectiveId = createObjResponse.body.data.id as string;
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/objectives`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(1);
+
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/objectives/${objectiveId}/update`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ status: "complete" })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .delete(`/projects/${projectId}/objectives/${objectiveId}`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(204);
+    });
+  });
+
+  describe("project repositories", () => {
+    it("links, lists, updates, and unlinks a repository", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `repo-${randomUUID()}`, name: "Repository Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const createRepoResponse = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/repositories`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ repoOwner: "WDS-Internal-DeveloperTeam", repoName: "webdesk-growth-dashboard" })
+        .expect(201);
+      const repositoryId = createRepoResponse.body.data.id as string;
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/repositories`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(1);
+
+      await request(app.getHttpServer())
+        .post(`/projects/${projectId}/repositories/${repositoryId}/update`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ defaultBranch: "develop" })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .delete(`/projects/${projectId}/repositories/${repositoryId}`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(204);
+    });
+  });
+
+  describe("project roadmap items — list and update", () => {
+    it("lists a project's roadmap items and updates one's name/sequence", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const createResponse = await request(app.getHttpServer())
+        .post("/projects")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ publicId: `roadmap-list-${randomUUID()}`, name: "Roadmap List Test" })
+        .expect(201);
+      const projectId = createResponse.body.data.id as string;
+
+      const roadmapResponse = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/roadmap-items`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ name: "Discovery" })
+        .expect(201);
+      const roadmapItemId = roadmapResponse.body.data.id as string;
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/projects/${projectId}/roadmap-items`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(1);
+
+      const updateResponse = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/roadmap-items/${roadmapItemId}/update`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ name: "Discovery — Renamed", sequence: 3 })
+        .expect(200);
+      expect(updateResponse.body.data.name).toBe("Discovery — Renamed");
+      expect(updateResponse.body.data.sequence).toBe(3);
+    });
   });
 });

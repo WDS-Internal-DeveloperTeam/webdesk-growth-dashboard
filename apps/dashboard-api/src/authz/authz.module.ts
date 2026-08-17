@@ -49,6 +49,10 @@ import { NavigationController } from "./navigation.controller.js";
   // RoleAssignmentService/ROLE_REPOSITORY exported so the Projects module's ProjectApproversService
   // (docs/task-packages/module-projects-foundation.md D4) can assign the existing
   // owner_growth_approver role scoped to a real project, instead of reimplementing role assignment.
+  // Deliberately does NOT export USER_ROLE_REPOSITORY — a consumer needing "who holds role R for
+  // project P" goes through RoleAssignmentService.findUserIdsForRoleInProject() instead, which
+  // exposes only that one read rather than the write-capable repository itself (code-review
+  // finding, `module-projects-backend-closeout` branch).
   exports: [AuthorizationService, PermissionGuard, RoleAssignmentService, ROLE_REPOSITORY],
 })
 export class AuthzModule {}

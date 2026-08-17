@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeHttpUrlSchema } from "@webdesk/validation";
 
 const confidentialityEnum = z.enum(["public", "internal", "confidential", "restricted"]);
 
@@ -48,14 +49,14 @@ export type ListProjectsQueryDto = z.infer<typeof listProjectsQuerySchema>;
 
 export const createEnvironmentSchema = z.object({
   name: z.string().min(1).max(64),
-  url: z.string().url().max(500).nullish(),
+  url: safeHttpUrlSchema.nullish(),
   notes: z.string().max(10_000).nullish(),
 });
 export type CreateEnvironmentDto = z.infer<typeof createEnvironmentSchema>;
 
 export const updateEnvironmentSchema = z.object({
   name: z.string().min(1).max(64).optional(),
-  url: z.string().url().max(500).nullish(),
+  url: safeHttpUrlSchema.nullish(),
   notes: z.string().max(10_000).nullish(),
 });
 export type UpdateEnvironmentDto = z.infer<typeof updateEnvironmentSchema>;

@@ -53,4 +53,20 @@ export class UsersService {
     }
     return toUserSummary(user);
   }
+
+  /**
+   * Batch counterpart to `findById()` — resolves many ids in one query instead of N individual
+   * round trips (e.g. `ProjectApproversService.list()` resolving every user holding a
+   * project-scoped role). Silently drops any id that doesn't resolve to an active user, same
+   * "disabled = not found" convention `findById()` applies per-id — extended here to the batch
+   * case rather than each caller re-implementing its own per-item try/catch around `findById()`
+   * (code-review finding, `module-projects-backend-closeout` branch: an earlier version of
+   * `ProjectApproversService.list()` did exactly that, both N+1-querying and swallowing every
+   * error, not just a genuine not-found, in the process).
+   */
+  async findByIds(userIds: readonly string[]): Promise<readonly UserSummary[]> {
+    const validIds = userIds.filter((id) => USER_ID_PATTERN.test(id));
+    const users = await this.users.findByIds(validIds);
+    return users.map(toUserSummary);
+  }
 }

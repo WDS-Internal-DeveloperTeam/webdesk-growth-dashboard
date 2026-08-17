@@ -17,6 +17,7 @@ describe("RoleAssignmentService", () => {
   let roles: { listAll: ReturnType<typeof vi.fn>; findById: ReturnType<typeof vi.fn> };
   let userRoles: {
     findRoleIdsForUser: ReturnType<typeof vi.fn>;
+    findUserIdsForRoleInProject: ReturnType<typeof vi.fn>;
     hasRole: ReturnType<typeof vi.fn>;
     assign: ReturnType<typeof vi.fn>;
     revoke: ReturnType<typeof vi.fn>;
@@ -31,6 +32,7 @@ describe("RoleAssignmentService", () => {
     roles = { listAll: vi.fn(), findById: vi.fn() };
     userRoles = {
       findRoleIdsForUser: vi.fn(),
+      findUserIdsForRoleInProject: vi.fn(),
       hasRole: vi.fn(),
       assign: vi.fn(),
       revoke: vi.fn(),
@@ -78,6 +80,17 @@ describe("RoleAssignmentService", () => {
       );
 
       expect(await service.listRolesForUser("user-1")).toEqual([ROLE]);
+    });
+  });
+
+  describe("findUserIdsForRoleInProject", () => {
+    it("delegates directly to the repository — a thin pass-through so callers outside AuthzModule (Projects module's approvers-list endpoint) don't need UserRoleRepository/USER_ROLE_REPOSITORY exported from AuthzModule", async () => {
+      userRoles.findUserIdsForRoleInProject.mockResolvedValue(["user-1", "user-2"]);
+
+      const result = await service.findUserIdsForRoleInProject("role-1", "project-1");
+
+      expect(userRoles.findUserIdsForRoleInProject).toHaveBeenCalledWith("role-1", "project-1");
+      expect(result).toEqual(["user-1", "user-2"]);
     });
   });
 
