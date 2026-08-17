@@ -1,11 +1,13 @@
 # Dashboard UI/UX Design System — Approval Checklist
 
-**Status:** Awaiting human review and design-direction selection. Nothing in
-`docs/design/dashboard-ui/` is approved yet. No implementation, no Phase 1F shell refactor, and no
-business-module work has started or been authorized — per the design prompt's own explicit
-instructions (§33): _"Do not automatically refactor the Phase 1F dashboard shell. Do not start
-Projects or any other business module. Wait for human selection/approval of the dashboard visual
-direction."_
+**Status:** **Approved.** WebDesk Solution approved the recommended direction as-is on 2026-08-17
+— see "Required human decision" below. Direction A (Clean Enterprise), with the scoped Direction B
+progress/stepper borrowing for the 5 pipeline-shaped modules, and dark mode deferred (not V1), are
+now the canonical dashboard UI/UX direction. This approval covers the design direction only — per
+design prompt §34, implementation still requires a separate Dashboard UI Foundation Alignment task
+package, not yet authorized; see "What happens after approval" below. Merging
+[PR #32](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/32) is also a
+separate, not-yet-requested step, per this project's standing "no auto-merge" rule.
 
 ## Completion condition (design prompt's own list, verified against this package)
 
@@ -62,22 +64,20 @@ never connected to real business APIs, kept isolated so it can't be mistaken for
 implementation) remains a separate, explicitly requestable next step once a visual direction is
 selected below.
 
-## Required human decision
+## Required human decision — COMPLETE
 
 Per design prompt §29 and §33: **human approval is required before the canonical design is
 implemented**, and specifically before selecting among the three directions in
-`01-visual-directions.md`. The recommendation in `02-recommended-direction.md` is a recommendation,
-not a decision already made.
+`01-visual-directions.md`. The recommendation in `02-recommended-direction.md` was reviewed and
+approved as-is, not modified.
 
-| Field       | Value                                                                  |
-| ----------- | ---------------------------------------------------------------------- |
-| Reviewer    | _pending_                                                              |
-| Review date | _pending_                                                              |
-| Decision    | ☐ Approve recommended direction (A, with the scoped B borrowing) as-is |
-|             | ☐ Approve a different direction (specify: A / B / C / a custom blend)  |
-|             | ☐ Approve with changes (specify which document(s) need revision)       |
-|             | ☐ Not yet — request more detail before deciding                        |
-| Notes       |                                                                        |
+| Field       | Value                                                                                                                                                                                                                                                                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer    | WebDesk Solution                                                                                                                                                                                                                                                                                                                                         |
+| Review date | 2026-08-17                                                                                                                                                                                                                                                                                                                                               |
+| Decision    | ☑ Approve recommended direction (A, with the scoped B borrowing) as-is                                                                                                                                                                                                                                                                                   |
+| Scope       | Direction A (Clean Enterprise) as the base system for all 43 modules; Direction B's richer progress/stepper treatment scoped only to Ready for Claude Queue, Scan Center, Change Center, Release Center, and Review & Approval Center; dark mode deferred (not V1); all 18 supporting documents approved alongside the direction, not separately revised |
+| Notes       | Approved as originally proposed — no changes requested to any document in this package.                                                                                                                                                                                                                                                                  |
 
 ## What happens after approval (design prompt §34, not part of this task)
 

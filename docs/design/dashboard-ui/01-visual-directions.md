@@ -1,8 +1,9 @@
 # Three Visual Directions
 
-**Status:** Proposed for human selection. See `02-recommended-direction.md` for the recommendation
-and its reasoning. Do not implement any of these until one is approved — see
-`17-dashboard-ui-approval-checklist.md`.
+**Status:** Direction A (Clean Enterprise) was selected and approved as-is — WebDesk Solution,
+2026-08-17. See `02-recommended-direction.md` for the reasoning and
+`17-dashboard-ui-approval-checklist.md` for the recorded decision. Directions B and C are kept
+here as the record of what was considered, not as live options.
 
 ## Grounding constraints (apply to all three)
 

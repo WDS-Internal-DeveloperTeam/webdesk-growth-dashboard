@@ -1,8 +1,9 @@
 # Recommended Direction
 
-**Status:** Recommendation only. Requires explicit human approval before any of the remaining
-documents in this package (05 onward) are treated as final, and before any implementation begins.
-See `17-dashboard-ui-approval-checklist.md`.
+**Status:** **Approved as-is** — WebDesk Solution, 2026-08-17. See
+`17-dashboard-ui-approval-checklist.md` for the recorded decision. This is now the canonical
+dashboard visual direction. Implementation still requires a separate, not-yet-authorized Dashboard
+UI Foundation Alignment task package (design prompt §34).
 
 ## Recommendation: Direction A — Clean Enterprise, as the base system, with one deliberate
 

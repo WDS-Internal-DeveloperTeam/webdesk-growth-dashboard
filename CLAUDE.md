@@ -578,12 +578,21 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     prototype was built** (the prompt permits one only "if authorized," and no such authorization
     was given). **No implementation, no Phase 1F shell refactor, and no business-module work
     started** — per the prompt's own explicit stop-and-wait instruction (§33). Pushed as its own
-    branch (`dashboard-ui-design-system`) and opened as a PR for reviewability; the actual decision
-    gate is `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md`'s own human-decision
-    table, not this project's usual code-review/security-review/QA-gate machinery — this is a
-    documentation-only deliverable with no code, so those steps don't apply. Awaiting the human's
-    direction selection before any next step (a Dashboard UI Foundation Alignment implementation
-    task package, per the prompt's own §34) can be proposed.
+    branch (`dashboard-ui-design-system`) and opened as
+    [PR #32](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/32) for
+    reviewability; the actual decision gate is
+    `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md`'s own human-decision table,
+    not this project's usual code-review/security-review/QA-gate machinery — this is a
+    documentation-only deliverable with no code, so those steps don't apply. **Update
+    (2026-08-17): the recommended direction was reviewed and approved as-is** — WebDesk Solution,
+    decision "Approve recommended direction (A, with the scoped B borrowing) as-is," no changes
+    requested to any of the 18 documents. Recorded in
+    `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md`'s "Required human decision"
+    section (now marked COMPLETE) and in `outputs/webdesk-growth-dashboard/project.json`'s
+    `audit_log`. **This approval covers the design direction only** — implementation still
+    requires a separate, not-yet-authorized Dashboard UI Foundation Alignment task package (design
+    prompt §34), and merging PR #32 remains its own separate, not-yet-requested step, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -2073,6 +2082,22 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is
   "Active tasks" above for the full account and
   `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md` for the pending human
   direction-selection decision.
+- `[2026-08-17]` **The recommended dashboard UI/UX direction was reviewed and approved as-is** —
+  WebDesk Solution, decision "Approve recommended direction (A, with the scoped B borrowing)
+  as-is." Direction A (Clean Enterprise) is now the canonical dashboard visual direction for all
+  43 modules, with Direction B's richer progress/stepper treatment scoped only to Ready for Claude
+  Queue, Scan Center, Change Center, Release Center, and Review & Approval Center; dark mode
+  deferred (not V1); all 18 supporting documents approved alongside the direction, with no changes
+  requested to any of them. Recorded in
+  `docs/design/dashboard-ui/17-dashboard-ui-approval-checklist.md`'s "Required human decision"
+  section (now COMPLETE) and `outputs/webdesk-growth-dashboard/project.json`'s `audit_log`. This
+  approval is scoped to the design direction only, per design prompt §34 — it does not itself
+  authorize a Dashboard UI Foundation Alignment implementation task package, and merging PR #32
+  remains its own separate, not-yet-requested step, per this project's standing "no auto-merge"
+  rule (the same pattern followed for every prior gate/approval in this project's history, even
+  though this decision used the design prompt's own approval mechanism rather than the usual
+  code-review/security-review/QA-gate machinery, since there is no code in this PR to run those
+  against).
 
 ## Open client blockers
 
