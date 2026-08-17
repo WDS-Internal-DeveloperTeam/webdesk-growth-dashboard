@@ -524,9 +524,12 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, and `dashboard-web`'s `/` resolves (v
 build`/`pnpm exec prettier --check` all clean. **Update (2026-08-17): independent code review run
     and all 9 CONFIRMED/PLAUSIBLE findings fixed** (1 PLAUSIBLE finding accepted as tracked debt) —
     see `docs/implementation/module-projects-backend-closeout.md`'s "Independent code review"
-    section and the 2026-08-17 "Recent decisions" entry below for the full account. Security
-    review, second-role human review, a gate decision, and merge authorization remain each their
-    own separate, not-yet-requested next step.
+    section and the 2026-08-17 "Recent decisions" entry below for the full account. **Update
+    (2026-08-17): security review complete (0 findings above threshold) and required second-role
+    human review complete** — Jitesh D, decision "Approved," no disputes. See
+    `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s "Sign-off"
+    section. A gate decision and merge authorization remain each their own separate,
+    not-yet-requested next step.
 
 ## Recent decisions
 
@@ -1953,6 +1956,20 @@ project_id)` on `user_roles`); `safeHttpUrl` duplicated locally instead of using
   `00045` up/down round-trip clean, typecheck/lint/`nest build`/prettier all clean, `pnpm audit` 0
   vulnerabilities. Security review, second-role human review, a gate decision, and merge
   authorization remain each their own separate, not-yet-requested next step.
+- `[2026-08-17]` **Security review run on `module-projects-backend-closeout` (PR #31), separately
+  from the code review.** 0 findings above threshold — the new `GET /projects/:projectId/approvers`
+  route is correctly gated on `users_roles:view` (proven by a real e2e `403` test against a
+  `read_only` session), `safeHttpUrlSchema` correctly allowlists `http:`/`https:` via the WHATWG
+  `URL` parser, the new batch identity-resolution path (`findByIds()`) preserves the existing
+  active-user filter and malformed-id rejection, `AuthzModule` no longer exporting a write-capable
+  repository token is a hardening rather than a new risk, and migration `00045` is a pure additive
+  index with no data or authorization-model change. A review packet (published as a Claude
+  artifact — code review + security review findings, fixes, and validation evidence, with a
+  decision section) was prepared for the required second-role human review, since the implementing
+  agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and returned
+  "Approved."** See `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s
+  "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
+  next steps.
 
 ## Open client blockers
 
