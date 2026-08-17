@@ -758,6 +758,22 @@
       },
       "project_version_before": 29,
       "project_version_after": 30
+    },
+    {
+      "timestamp": "2026-08-17T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "completed required second-role human review of dashboard-web-project-form (PR #28) — decision: Approved",
+      "details": {
+        "branch": "dashboard-web-project-form",
+        "pr": 28,
+        "scope_reviewed": "Independent code-review disposition (8-angle finder pass, 7 findings, all CONFIRMED and fixed — most severe: the session cookie's SameSite=Strict setting meant it was never attached to this form's cross-site fetch(), since dashboard-web/dashboard-api are separate *.vercel.app deployments isolated as distinct sites per the Public Suffix List; fixed by changing the cookie to SameSite=None under separate explicit user authorization, after confirming OriginCheckGuard — not SameSite — is the real CSRF defense on every mutating route across the API) and independent security-review disposition (0 findings above threshold — the SameSite=None change and a new error-message allowlist were both scrutinized directly and held up), via a published review packet (Claude artifact)",
+        "record": "docs/project-state/dashboard-web-project-form-approval-checklist.md and this entry",
+        "disputes_raised": "None recorded",
+        "not_yet_done": "A gate decision (none requested yet for this slice) and merge authorization remain separate, not-yet-requested next steps, per this project's standing 'no auto-merge' discipline."
+      },
+      "project_version_before": 30,
+      "project_version_after": 31
     }
   ]
 }
