@@ -498,8 +498,8 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, and `dashboard-web`'s `/` resolves (v
     capability and Project owner assignment are now genuinely live in production.** Team
     management and approver-assignment UI remain separate, not-yet-built next steps (their
     backends already existed before this branch).
-15. **Projects module backend close-out — built, validated, pushed as its own branch, not yet
-    reviewed/merged (2026-08-17).** `docs/implementation/module-projects-backend-closeout.md`
+15. **Projects module backend close-out — built, validated, reviewed, gated, not yet merged
+    (2026-08-17).** `docs/implementation/module-projects-backend-closeout.md`
     records the full account. Requested directly, ahead of an upcoming dashboard design prompt
     that will drive the remaining Projects-module frontend wiring — the user wanted confidence
     that nothing was missing on the backend/API side first. A dedicated audit (read the actual
@@ -526,10 +526,15 @@ build`/`pnpm exec prettier --check` all clean. **Update (2026-08-17): independen
     see `docs/implementation/module-projects-backend-closeout.md`'s "Independent code review"
     section and the 2026-08-17 "Recent decisions" entry below for the full account. **Update
     (2026-08-17): security review complete (0 findings above threshold) and required second-role
-    human review complete** — Jitesh D, decision "Approved," no disputes. See
+    human review complete** — Jitesh D, decision "Approved," no disputes. **The gate
+    (G4-projects-backend-closeout) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM, approved commit `8a3baf0` on branch
+    `module-projects-backend-closeout` — see
     `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s "Sign-off"
-    section. A gate decision and merge authorization remain each their own separate,
-    not-yet-requested next step.
+    section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This gate approval
+    does not itself authorize merging PR #31 or a production deployment** — merge remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule
+    (same pattern as every prior gate).
 
 ## Recent decisions
 
@@ -1970,6 +1975,16 @@ project_id)` on `user_roles`); `safeHttpUrl` duplicated locally instead of using
   "Approved."** See `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s
   "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
   next steps.
+- `[2026-08-17]` **The gate (G4-projects-backend-closeout) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review and the security review were already complete before the gate was
+  requested), approved commit `8a3baf0` on branch `module-projects-backend-closeout` — recorded in
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-projects-backend-closeout`) and
+  `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #31 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
