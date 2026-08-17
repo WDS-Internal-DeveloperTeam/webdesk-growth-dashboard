@@ -381,8 +381,8 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     for an unauthenticated visitor. **The Create/Edit Project form is now genuinely live in
     production.** Backend, header switcher, list page, detail page, and now the create/edit form are
     all live for the Projects module.
-12. **`dashboard-web` Project Status Change / Archive actions — built, code-reviewed, security-
-    reviewed, second-role human reviewed, gated, not yet merged (2026-08-17).**
+12. **`dashboard-web` Project Status Change / Archive actions — built, reviewed, gated, merged, and
+    live in production (2026-08-17).**
     `docs/implementation/dashboard-web-project-status-actions.md` records the full account. Not
     started automatically — built directly on the explicit "build the status change and archive
     UI" instruction, closing the last named UI gap against `POST /projects/:projectId/status`
@@ -421,10 +421,13 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
     separately requested and approved** — WebDesk Solution, decision CONFIRM, approved commit
     `90413983591b53c1a67f61d329702344ec22e651` on branch `dashboard-web-project-status-actions` —
     see `docs/project-state/dashboard-web-project-status-actions-approval-checklist.md`'s
-    "Sign-off" section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This
-    gate approval does not itself authorize merging PR #29 or a production deployment** — merge
-    remains its own separate, not-yet-requested authorization, per this project's standing "no
-    auto-merge" rule (same pattern as every prior gate).
+    "Sign-off" section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **"Merge
+    PR #29" was then separately requested and executed** — merge commit
+    `cf507d7edc569dac4807cf456540e7412a1cfea8`, both Vercel projects auto-deployed and were
+    verified live directly: `dashboard-api`'s `/health` returned `build.commitSha ==
+cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (via the
+    intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The Project
+    Status Change / Archive actions are now genuinely live in production.**
 
 ## Recent decisions
 
@@ -1681,6 +1684,17 @@ af23ba1c0172c834d2d1311666a2811397598b14`, confirming the exact merged commit is
   section. **This gate approval does not itself authorize merging PR #29 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-17]` **"Merge PR #29" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `cf507d7edc569dac4807cf456540e7412a1cfea8`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+cf507d7edc569dac4807cf456540e7412a1cfea8`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The `dashboard-web` Project
+  Status Change / Archive actions are now genuinely live in production**, closing out this
+  slice's full build-to-production arc. Backend, header switcher, list page, detail page,
+  create/edit form, and now status change/archive actions are all live for the Projects module.
 
 ## Open client blockers
 

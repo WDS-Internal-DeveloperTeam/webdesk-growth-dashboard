@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-17T00:00:00Z",
-    "version": 17
+    "version": 18
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -835,6 +835,19 @@
       },
       "project_version_before": 33,
       "project_version_after": 34
+    },
+    {
+      "timestamp": "2026-08-17T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "merged PR #29 (dashboard-web-project-status-actions) into main under explicit 'merge PR #29' authorization",
+      "details": {
+        "merge": "Merged with a real merge commit (not squash/rebase), matching every prior merge in this project's history. Merge commit cf507d7edc569dac4807cf456540e7412a1cfea8.",
+        "deployment_verification": "Both Vercel projects auto-deployed on push to main and were verified live directly, not just via CI's own Vercel status check \u2014 dashboard-api's /health returned build.commitSha == cf507d7edc569dac4807cf456540e7412a1cfea8, confirming the exact merged commit is what's serving; dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor, confirming the session gate is intact.",
+        "result": "The dashboard-web Project Status Change / Archive actions are now genuinely live in production, closing out this slice's full build-to-production arc. Backend, header switcher, list page, detail page, create/edit form, and now status change/archive actions are all live for the Projects module."
+      },
+      "project_version_before": 34,
+      "project_version_after": 35
     }
   ]
 }
