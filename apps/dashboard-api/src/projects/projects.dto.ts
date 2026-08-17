@@ -46,16 +46,36 @@ export const listProjectsQuerySchema = z.object({
 });
 export type ListProjectsQueryDto = z.infer<typeof listProjectsQuerySchema>;
 
+// `z.string().url()` alone accepts any scheme, including `javascript:` — a stored-XSS vector once
+// this value is rendered as a clickable link (the exact issue dashboard-web's Project Detail page
+// review found and fixed client-side via isSafeHttpUrl(), flagging this schema as the real place to
+// close it). Restricting to http(s) here means every consumer gets a safe value by construction,
+// not just the one page that happened to add its own guard.
+const safeHttpUrl = z
+  .string()
+  .url()
+  .max(500)
+  .refine(
+    (value) => {
+      try {
+        return ["http:", "https:"].includes(new URL(value).protocol);
+      } catch {
+        return false;
+      }
+    },
+    { message: "must be an http:// or https:// URL" },
+  );
+
 export const createEnvironmentSchema = z.object({
   name: z.string().min(1).max(64),
-  url: z.string().url().max(500).nullish(),
+  url: safeHttpUrl.nullish(),
   notes: z.string().max(10_000).nullish(),
 });
 export type CreateEnvironmentDto = z.infer<typeof createEnvironmentSchema>;
 
 export const updateEnvironmentSchema = z.object({
   name: z.string().min(1).max(64).optional(),
-  url: z.string().url().max(500).nullish(),
+  url: safeHttpUrl.nullish(),
   notes: z.string().max(10_000).nullish(),
 });
 export type UpdateEnvironmentDto = z.infer<typeof updateEnvironmentSchema>;

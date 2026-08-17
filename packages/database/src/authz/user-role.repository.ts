@@ -38,6 +38,19 @@ export class UserRoleRepository {
     return rows.map((row) => row.get("roleId") as string);
   }
 
+  /**
+   * The inverse of `findRoleIdsForUser` — every user id holding `roleId` scoped to exactly this
+   * project (never a global-scope grant, which wouldn't itself represent "an approver defined for
+   * this specific project"). Used by the Projects module's "list current approvers" endpoint.
+   */
+  async findUserIdsForRoleInProject(roleId: string, projectId: string): Promise<readonly string[]> {
+    const rows = await this.model.findAll({
+      where: { roleId, projectId },
+      attributes: ["userId"],
+    });
+    return rows.map((row) => row.get("userId") as string);
+  }
+
   async listForUser(userId: string): Promise<readonly UserRoleEntity[]> {
     const rows = await this.model.findAll({ where: { userId } });
     return rows.map(toEntity);

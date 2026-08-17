@@ -3,6 +3,8 @@ import type {
   ProjectRepository,
   RoadmapItemEntity,
   RoadmapItemRepository,
+  UserEntity,
+  UserRepository,
 } from "@webdesk/database";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -59,6 +61,19 @@ function roadmapItem(overrides: Partial<RoadmapItemEntity> = {}): RoadmapItemEnt
   };
 }
 
+function user(overrides: Partial<UserEntity> = {}): UserEntity {
+  return {
+    id: "owner-1",
+    email: "owner@example.com",
+    displayName: "Owner One",
+    accountStatus: "active",
+    lastLoginAt: null,
+    createdAt: NOW.toISOString(),
+    updatedAt: NOW.toISOString(),
+    ...overrides,
+  };
+}
+
 describe("ProjectService", () => {
   let projects: {
     create: ReturnType<typeof vi.fn>;
@@ -68,6 +83,7 @@ describe("ProjectService", () => {
     list: ReturnType<typeof vi.fn>;
   };
   let roadmapItems: { findById: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+  let users: { findById: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let service: ProjectService;
 
@@ -80,10 +96,12 @@ describe("ProjectService", () => {
       list: vi.fn(),
     };
     roadmapItems = { findById: vi.fn(), update: vi.fn() };
+    users = { findById: vi.fn() };
     auditService = { record: vi.fn() };
     service = new ProjectService(
       projects as unknown as ProjectRepository,
       roadmapItems as unknown as RoadmapItemRepository,
+      users as unknown as UserRepository,
       auditService as unknown as AuditService,
     );
   });
@@ -111,6 +129,92 @@ describe("ProjectService", () => {
           projectId: "project-1",
         }),
       );
+    });
+
+    it("rejects a create with an ownerUserId that doesn't resolve to an active user", async () => {
+      projects.findByPublicId.mockResolvedValue(null);
+      users.findById.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          { publicId: "acme-website", name: "Acme", ownerUserId: "missing-owner" },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(projects.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("update", () => {
+    it("updates a project's fields and records an audit event", async () => {
+      projects.findById.mockResolvedValue(project());
+      projects.update.mockResolvedValue(project({ name: "Renamed" }));
+
+      const result = await service.update("project-1", { name: "Renamed" }, "actor-1");
+
+      expect(result.name).toBe("Renamed");
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ name: "Renamed", updatedBy: "actor-1" }),
+      );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: "data_change", action: "update" }),
+      );
+    });
+
+    it("throws NotFoundException for a missing project", async () => {
+      projects.findById.mockResolvedValue(null);
+      await expect(service.update("missing", { name: "X" }, "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(projects.update).not.toHaveBeenCalled();
+    });
+
+    it("allows clearing ownerUserId (null) without any existence check", async () => {
+      projects.findById.mockResolvedValue(project({ ownerUserId: "owner-1" }));
+      projects.update.mockResolvedValue(project({ ownerUserId: null }));
+
+      await service.update("project-1", { ownerUserId: null }, "actor-1");
+
+      expect(users.findById).not.toHaveBeenCalled();
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ ownerUserId: null }),
+      );
+    });
+
+    it("accepts a real, active ownerUserId", async () => {
+      projects.findById.mockResolvedValue(project());
+      users.findById.mockResolvedValue(user({ id: "owner-2" }));
+      projects.update.mockResolvedValue(project({ ownerUserId: "owner-2" }));
+
+      await service.update("project-1", { ownerUserId: "owner-2" }, "actor-1");
+
+      expect(users.findById).toHaveBeenCalledWith("owner-2");
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ ownerUserId: "owner-2" }),
+      );
+    });
+
+    it("rejects an ownerUserId that doesn't resolve to any user", async () => {
+      projects.findById.mockResolvedValue(project());
+      users.findById.mockResolvedValue(null);
+
+      await expect(
+        service.update("project-1", { ownerUserId: "missing-owner" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(projects.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects an ownerUserId that resolves to a disabled user", async () => {
+      projects.findById.mockResolvedValue(project());
+      users.findById.mockResolvedValue(user({ id: "owner-3", accountStatus: "disabled" }));
+
+      await expect(
+        service.update("project-1", { ownerUserId: "owner-3" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(projects.update).not.toHaveBeenCalled();
     });
   });
 

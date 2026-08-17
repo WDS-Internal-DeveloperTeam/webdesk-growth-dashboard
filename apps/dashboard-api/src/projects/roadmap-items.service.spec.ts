@@ -74,6 +74,62 @@ describe("RoadmapItemsService", () => {
     );
   });
 
+  describe("create", () => {
+    it("creates a roadmap item scoped to the project", async () => {
+      roadmapItems.create.mockResolvedValue(roadmapItem());
+
+      const result = await service.create("project-1", { name: "Discovery" }, "actor-1");
+
+      expect(result.name).toBe("Discovery");
+      expect(roadmapItems.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: "project-1",
+          name: "Discovery",
+          createdBy: "actor-1",
+        }),
+      );
+    });
+  });
+
+  describe("listByProject", () => {
+    it("delegates to the repository", async () => {
+      roadmapItems.listByProject.mockResolvedValue([roadmapItem()]);
+
+      const result = await service.listByProject("project-1");
+
+      expect(result).toEqual([roadmapItem()]);
+      expect(roadmapItems.listByProject).toHaveBeenCalledWith("project-1");
+    });
+  });
+
+  describe("update", () => {
+    it("forwards only name/sequence to the repository, never status", async () => {
+      roadmapItems.update.mockResolvedValue(roadmapItem({ name: "Renamed" }));
+
+      const result = await service.update(
+        "phase-1",
+        "project-1",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliberately widened to prove `status` is never forwarded even if a caller's patch object carried one.
+        { name: "Renamed", sequence: 2, status: "active" } as any,
+        "actor-1",
+      );
+
+      expect(result.name).toBe("Renamed");
+      expect(roadmapItems.update).toHaveBeenCalledWith("phase-1", "project-1", {
+        name: "Renamed",
+        sequence: 2,
+        updatedBy: "actor-1",
+      });
+    });
+
+    it("throws NotFoundException for a missing roadmap item", async () => {
+      roadmapItems.update.mockResolvedValue(null);
+      await expect(
+        service.update("missing", "project-1", { name: "X" }, "actor-1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe("remove", () => {
     it("rejects removing the project's current active phase (destructive-deletion guard)", async () => {
       roadmapItems.findById.mockResolvedValue(roadmapItem({ id: "phase-1" }));

@@ -12,7 +12,7 @@ import {
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { ProjectEntity } from "@webdesk/database";
-import type { ApiSuccessResponse } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, UserSummary } from "@webdesk/shared-types";
 import type { RequestWithCorrelationId } from "../common/correlation-id.middleware.js";
 import { OriginCheckGuard } from "../auth/common/origin-check.guard.js";
 import type { AuthenticatedRequest } from "../auth/session/session.guard.js";
@@ -142,6 +142,20 @@ export class ProjectsController {
       body.roadmapItemId,
       req.authUser!.id,
     );
+    return { success: true, data, correlationId: req.correlationId ?? "unknown" };
+  }
+
+  @Get(":projectId/approvers")
+  @UseGuards(PermissionGuard)
+  @RequirePermission(MODULE_KEY, "view")
+  @ApiOperation({
+    summary: "List the users currently holding owner_growth_approver for this project",
+  })
+  async listApprovers(
+    @Param("projectId") projectId: string,
+    @Req() req: ProjectsRequest,
+  ): Promise<ApiSuccessResponse<readonly UserSummary[]>> {
+    const data = await this.approversService.list(projectId);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 

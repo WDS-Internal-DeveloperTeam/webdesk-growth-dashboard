@@ -498,6 +498,32 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, and `dashboard-web`'s `/` resolves (v
     capability and Project owner assignment are now genuinely live in production.** Team
     management and approver-assignment UI remain separate, not-yet-built next steps (their
     backends already existed before this branch).
+15. **Projects module backend close-out — built, validated, pushed as its own branch, not yet
+    reviewed/merged (2026-08-17).** `docs/implementation/module-projects-backend-closeout.md`
+    records the full account. Requested directly, ahead of an upcoming dashboard design prompt
+    that will drive the remaining Projects-module frontend wiring — the user wanted confidence
+    that nothing was missing on the backend/API side first. A dedicated audit (read the actual
+    code, not documentation) found the backend almost entirely code-complete but surfaced 3 real
+    gaps and a systemic test-coverage gap. Fixed: (1) a genuinely missing capability — no endpoint
+    existed to list a project's current approvers, closed with a new
+    `GET /projects/:projectId/approvers`, `UserRoleRepository.findUserIdsForRoleInProject()`, and
+    `AuthzModule`/`UsersModule` newly exporting `USER_ROLE_REPOSITORY`/`UsersService`; (2) known,
+    previously-deferred security debt — `ProjectEnvironment.url` accepted any URL scheme,
+    including `javascript:`, a stored-XSS path a 2026-08-16 security review already fixed
+    client-side and explicitly flagged the backend schema as the real fix location for; now closed
+    with a shared `safeHttpUrl` Zod refinement restricting to `http:`/`https:`; (3) an untested
+    reliability gap — `ownerUserId` had no existence check before the database write, so a stale
+    or deactivated owner id likely surfaced as an opaque 500 instead of a clean 400; now validated
+    via a new `ProjectService.assertOwnerExists()`. Also closed: 4 of 6 project sub-resource
+    controllers (team, environments, objectives, repositories) had zero unit test coverage, and
+    the e2e suite never exercised `/update`, `/team`, `/environments`, `/objectives`,
+    `/repositories`, or roadmap-items list/update — 4 new unit spec files plus 9 new e2e tests now
+    cover all of it. 359/359 `dashboard-api` unit tests (37 new), 102/102 `dashboard-api`
+    e2e/integration tests (9 new), 122/122 `packages/database` integration tests (unaffected,
+    confirmed still green), all against a fresh local disposable database; typecheck/lint/`nest
+build`/`pnpm exec prettier --check` all clean. Not yet reviewed or merged — code review,
+    security review, second-role human review, a gate decision, and merge authorization are each
+    their own separate, not-yet-requested next step.
 
 ## Recent decisions
 

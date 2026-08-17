@@ -1,10 +1,13 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { RoleRepository } from "@webdesk/database";
-import { ROLE_REPOSITORY } from "../authz/authz.constants.js";
+import type { RoleRepository, UserRoleRepository } from "@webdesk/database";
+import type { UserSummary } from "@webdesk/shared-types";
+import { ROLE_REPOSITORY, USER_ROLE_REPOSITORY } from "../authz/authz.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { RoleAssignmentService } from "../authz/role-assignment.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as above.
 import { AuthorizationService } from "../authz/authorization.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as above.
+import { UsersService } from "../users/users.service.js";
 
 const APPROVER_ROLE_KEY = "owner_growth_approver";
 const ROLE_MANAGEMENT_MODULE_KEY = "users_roles";
@@ -32,9 +35,29 @@ const ROLE_MANAGEMENT_ACTION = "edit";
 export class ProjectApproversService {
   constructor(
     @Inject(ROLE_REPOSITORY) private readonly roles: RoleRepository,
+    @Inject(USER_ROLE_REPOSITORY) private readonly userRoles: UserRoleRepository,
     private readonly roleAssignment: RoleAssignmentService,
     private readonly authorization: AuthorizationService,
+    private readonly usersService: UsersService,
   ) {}
+
+  /**
+   * The users currently holding `owner_growth_approver` scoped to this project. Gated at the
+   * controller level on `project_configuration:view` (the same permission every other project
+   * sub-resource list route uses) — unlike `assign()`, reading who the current approvers are
+   * carries no privilege-escalation risk, so it needs no additional internal check.
+   */
+  async list(projectId: string): Promise<readonly UserSummary[]> {
+    const role = await this.roles.findByKey(APPROVER_ROLE_KEY);
+    if (!role) {
+      throw new NotFoundException(`Role not seeded: ${APPROVER_ROLE_KEY}`);
+    }
+    const userIds = await this.userRoles.findUserIdsForRoleInProject(role.id, projectId);
+    const resolved = await Promise.all(
+      userIds.map((userId) => this.usersService.findById(userId).catch(() => null)),
+    );
+    return resolved.filter((summary): summary is UserSummary => summary !== null);
+  }
 
   async assign(projectId: string, userId: string, actorId: string): Promise<void> {
     const decision = await this.authorization.evaluate(

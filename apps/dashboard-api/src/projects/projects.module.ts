@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module.js";
 import { AuthModule } from "../auth/auth.module.js";
 import { AuthzModule } from "../authz/authz.module.js";
+import { UsersModule } from "../users/users.module.js";
 import { projectsRepositoryProviders } from "./database.providers.js";
 import { ProjectService } from "./project.service.js";
 import { ProjectEnvironmentsService } from "./project-environments.service.js";
@@ -23,11 +24,12 @@ import { RoadmapItemsController } from "./roadmap-items.controller.js";
  * `AuthModule` for `SessionGuard`/`OriginCheckGuard`, `AuthzModule` for `PermissionGuard`,
  * `RoleAssignmentService` (project-scoped approver assignment, D4), and `AuthorizationService`
  * (the second, explicit `users_roles:edit` check `ProjectApproversService` performs before
- * delegating to `RoleAssignmentService` — security-review finding, this branch), and `AuditModule`
- * for `AuditService`.
+ * delegating to `RoleAssignmentService` — security-review finding, this branch), `AuditModule`
+ * for `AuditService`, and `UsersModule` for `UsersService` (resolving approver/owner user ids to
+ * display summaries).
  */
 @Module({
-  imports: [AuthModule, AuthzModule, AuditModule],
+  imports: [AuthModule, AuthzModule, AuditModule, UsersModule],
   controllers: [
     ProjectsController,
     ProjectEnvironmentsController,

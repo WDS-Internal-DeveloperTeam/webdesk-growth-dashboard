@@ -14,11 +14,14 @@ import { UsersService } from "./users.service.js";
  * `SessionGuard` and `AuthzModule` for `PermissionGuard`, same as `ProjectsModule`. Provides its
  * own `USER_REPOSITORY` binding rather than importing it from `AuthModule` (which doesn't export
  * it) — the same "re-declare, don't cross-import" pattern `AuthModule` itself already uses for
- * `AUTHORIZATION_ACTION_REPOSITORY`.
+ * `AUTHORIZATION_ACTION_REPOSITORY`. Exports `UsersService` so the Projects module's
+ * `ProjectApproversService` can resolve approver user ids to display summaries for its "list
+ * current approvers" endpoint, the same narrowed `UserSummary` shape the picker itself uses.
  */
 @Module({
   imports: [AuthModule, AuthzModule],
   controllers: [UsersController],
   providers: [{ provide: USER_REPOSITORY, useFactory: () => new UserRepository() }, UsersService],
+  exports: [UsersService],
 })
 export class UsersModule {}

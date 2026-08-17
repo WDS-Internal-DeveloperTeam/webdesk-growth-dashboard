@@ -6,7 +6,9 @@ import type {
   ProjectRepository,
   ProjectStatus,
   RoadmapItemRepository,
+  UserRepository,
 } from "@webdesk/database";
+import { USER_REPOSITORY } from "../auth/config/auth.constants.js";
 import { PROJECT_REPOSITORY, ROADMAP_ITEM_REPOSITORY } from "./projects.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
 import { AuditService } from "../audit/audit.service.js";
@@ -55,6 +57,7 @@ export class ProjectService {
   constructor(
     @Inject(PROJECT_REPOSITORY) private readonly projects: ProjectRepository,
     @Inject(ROADMAP_ITEM_REPOSITORY) private readonly roadmapItems: RoadmapItemRepository,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     private readonly auditService: AuditService,
   ) {}
 
@@ -62,6 +65,9 @@ export class ProjectService {
     const existing = await this.projects.findByPublicId(input.publicId);
     if (existing) {
       throw new BadRequestException(`publicId already in use: ${input.publicId}`);
+    }
+    if (input.ownerUserId) {
+      await this.assertOwnerExists(input.ownerUserId);
     }
 
     const project = await this.projects.create({
@@ -102,6 +108,9 @@ export class ProjectService {
 
   async update(id: string, patch: UpdateProjectInput, actorUserId: string): Promise<ProjectEntity> {
     await this.findById(id); // throws NotFoundException if missing
+    if (patch.ownerUserId) {
+      await this.assertOwnerExists(patch.ownerUserId);
+    }
     const updated = await this.projects.update(id, { ...patch, updatedBy: actorUserId });
     if (!updated) {
       throw new NotFoundException(`Project not found: ${id}`);
@@ -228,5 +237,22 @@ export class ProjectService {
     });
 
     return updated;
+  }
+
+  /**
+   * `ownerUserId` is FK-constrained at the database layer, so a garbage id was never able to
+   * corrupt data — but the FK violation itself surfaces as an opaque, unhandled 500 rather than a
+   * clean, actionable 400. Checked explicitly here so a stale or deactivated owner id (e.g. picked
+   * before the account was disabled) fails the same clean way `UsersService.findById()` already
+   * does for the picker's own lookup endpoint — "disabled = not found," the same convention used
+   * throughout this codebase.
+   */
+  private async assertOwnerExists(ownerUserId: string): Promise<void> {
+    const user = await this.users.findById(ownerUserId);
+    if (!user || user.accountStatus !== "active") {
+      throw new BadRequestException(
+        `ownerUserId does not resolve to an active user: ${ownerUserId}`,
+      );
+    }
   }
 }
