@@ -67,6 +67,54 @@ describe("Phase 1C auth repositories (real disposable database)", () => {
       const found = await users.findById(created.id);
       expect(found?.lastLoginAt).toBe(loginAt.toISOString());
     });
+
+    describe("search() — the read-only lookup capability for picker UIs", () => {
+      it("matches by a substring of either displayName or email, case-insensitively", async () => {
+        await users.create({ email: "jane.doe@webdesksolution.com", displayName: "Jane Doe" });
+        await users.create({
+          email: "someone-else@webdesksolution.com",
+          displayName: "Someone Else",
+        });
+
+        const byName = await users.search({ search: "jane" });
+        expect(byName.map((u) => u.email)).toEqual(["jane.doe@webdesksolution.com"]);
+
+        const byEmail = await users.search({ search: "JANE.DOE" });
+        expect(byEmail.map((u) => u.email)).toEqual(["jane.doe@webdesksolution.com"]);
+
+        const noMatch = await users.search({ search: "nonexistent-zzz" });
+        expect(noMatch).toEqual([]);
+      });
+
+      it("excludes disabled accounts even when they match the search term", async () => {
+        const disabled = await users.create({
+          email: "disabled-search-user@webdesksolution.com",
+          displayName: "Disabled Search User",
+          accountStatus: "disabled",
+        });
+
+        const results = await users.search({ search: "Disabled Search User" });
+        expect(results.some((u) => u.id === disabled.id)).toBe(false);
+      });
+
+      it("with no search term, returns active users ordered by displayName", async () => {
+        await users.create({ email: "aaa-first@webdesksolution.com", displayName: "AAA First" });
+        const results = await users.search({ limit: 200 });
+        expect(results[0]?.displayName).toBe("AAA First");
+        expect(results.every((u) => u.accountStatus === "active")).toBe(true);
+      });
+
+      it("respects the limit/offset bounds", async () => {
+        for (let index = 0; index < 5; index += 1) {
+          await users.create({
+            email: `paged-user-${index}@webdesksolution.com`,
+            displayName: `Paged User ${index}`,
+          });
+        }
+        const page = await users.search({ search: "Paged User", limit: 2, offset: 1 });
+        expect(page).toHaveLength(2);
+      });
+    });
   });
 
   describe("ExternalAuthIdentityRepository", () => {

@@ -239,6 +239,22 @@ export interface ProjectSummary {
 }
 
 /**
+ * The read-only identity-lookup capability's own response shape (`GET /users`) — the narrowest
+ * projection of `UserEntity` (`packages/database/src/auth/entities.ts`) a picker UI needs to let
+ * someone search for and select an existing user. Deliberately excludes `accountStatus` (the
+ * endpoint that returns this already filters to active-only) and `lastLoginAt`/timestamps — no
+ * picker consumer needs them, and this file's own precedent (`Project` vs `ProjectSummary`) is to
+ * project only what a given UI surface actually reads, not the full backend entity. This is the
+ * first real user-lookup capability in this app — `Project.ownerUserId` and `ProjectTeamEntry`
+ * previously had no name-resolution endpoint to call; this is that endpoint's frontend type.
+ */
+export interface UserSummary {
+  readonly id: string;
+  readonly displayName: string;
+  readonly email: string;
+}
+
+/**
  * The Projects list page's own row shape — a second, wider projection of `ProjectEntity` alongside
  * `ProjectSummary` above, not a replacement for it (the switcher stays on the narrower type it
  * already validated against). Deliberately still not the full backend entity: `activePhaseId` and

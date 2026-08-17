@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
-import type { ApiSuccessResponse, Project } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, Project, UserSummary } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CONFIDENTIALITY_LABEL, CONFIDENTIALITY_VALUES } from "@/lib/project-confidentiality";
+import { UserPicker } from "./user-picker";
 import styles from "./project-form.module.css";
 
 type Confidentiality = Project["confidentiality"];
@@ -15,6 +16,11 @@ export interface ProjectFormInitialValues {
   readonly name: string;
   readonly description: string | null;
   readonly confidentiality: Confidentiality;
+  /** Already resolved to a display summary by the edit page's own server-side `getUser()` call —
+   *  this form never resolves an id to a name itself. `null` covers both "no owner assigned" and
+   *  "the assigned owner id no longer resolves" (disabled/removed) identically; either way, the
+   *  picker starts empty rather than showing a raw, meaningless UUID. */
+  readonly owner: UserSummary | null;
 }
 
 export type ProjectFormProps =
@@ -38,9 +44,11 @@ const DESCRIPTION_MAX_LENGTH = 10_000;
  * dedicated transition action (not built here). `publicId` is create-only and immutable (absent
  * from `updateProjectSchema` entirely — migration `00036`'s own doc comment: "never regenerated
  * once assigned") so the edit form shows it as read-only reference text, not an input.
- * `ownerUserId` is deliberately not a form field in either mode — no user-lookup/picker capability
- * exists anywhere in this app yet, the same constraint that already shaped the list and detail
- * pages' own omission of owner identity.
+ * `ownerUserId` is now a real field via `UserPicker` — the backend schema always accepted it
+ * (`createProjectSchema`/`updateProjectSchema`), but no UI could set it until the read-only
+ * `GET /users` lookup capability existed to resolve a search into a real identity, closing the
+ * gap the list/detail pages' own doc comments previously recorded ("no user-lookup endpoint
+ * exists yet").
  *
  * Submits with a direct browser `fetch()` (not a Next.js Server Action), `credentials: "include"`,
  * following the one existing real-mutation precedent in this app
@@ -57,6 +65,7 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
   const [confidentiality, setConfidentiality] = useState<Confidentiality>(
     initial?.confidentiality ?? "internal",
   );
+  const [owner, setOwner] = useState<UserSummary | null>(initial?.owner ?? null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,11 +87,13 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
               name: trimmedName,
               description: trimmedDescription,
               confidentiality,
+              ownerUserId: owner?.id ?? null,
             }
           : {
               name: trimmedName,
               description: trimmedDescription,
               confidentiality,
+              ownerUserId: owner?.id ?? null,
             };
       const url =
         props.mode === "create"
@@ -166,6 +177,14 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
           className={styles.textarea}
         />
       </div>
+
+      <UserPicker
+        id="owner"
+        label="Owner"
+        value={owner}
+        onChange={setOwner}
+        helperText="Search by name or email. Leave unset for no assigned owner."
+      />
 
       <div className={styles.field}>
         <label htmlFor="confidentiality" className={styles.label}>

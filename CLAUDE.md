@@ -442,7 +442,29 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     other business module yet to consume it). Gaps (1)-(3) share the same real blocker: no
     user-lookup/picker capability exists anywhere in this app yet. The user will provide a
     dashboard design prompt to address these at a later time — none of this is started or
-    authorized; each remains its own separate, not-yet-requested next step.
+    authorized; each remains its own separate, not-yet-requested next step. **Update
+    (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.**
+14. **User lookup capability + Project owner assignment — built, validated, pushed as its own
+    branch, not yet reviewed/merged (2026-08-17).**
+    `docs/implementation/user-lookup-and-owner-assignment.md` records the full account. Not
+    started automatically — built directly on the explicit "start with the blockers" instruction
+    following item 13's gap analysis. Scope was confirmed with the user first (`AskUserQuestion`),
+    since a user-lookup capability sits on this project's own standing caution against
+    user-management work beyond role assignment without a separate go-ahead: the user chose a
+    **minimal read-only lookup** (not module #39's fuller admin surface) and **owner assignment**
+    as the first feature to unblock. New backend: `GET /users` (search) and `GET /users/:userId`
+    (resolve), both read-only, both gated on the existing `users_roles:view` grant, returning a
+    narrowed `UserSummary` (`id`/`displayName`/`email` only). New frontend: a reusable
+    `UserPicker` component (debounced search, built generic enough for team/approver assignment
+    later) wired into the create/edit project form's new `owner` field — the backend schema
+    already accepted `ownerUserId`; this is what finally lets a person set it. 81/81
+    `dashboard-web` unit tests (13 new), 321/321 `dashboard-api` unit tests (4 new), 121/121
+    `packages/database` integration tests (4 new), 92/92 `dashboard-api` e2e tests (5 new,
+    including a real RBAC-denial check) all passing; typecheck/lint/build clean across all
+    touched packages. Team management and approver-assignment UI remain separate, not-yet-built
+    next steps (their backends already existed before this branch). Not yet reviewed or merged —
+    code review, security review, second-role human review, a gate decision, and merge
+    authorization are each their own separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -1722,6 +1744,28 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, confirming the exact merged commit is
   dependency-graph wave assignment) — the two are not the same artifact and may not agree on
   ordering for a given module; any such conflict gets surfaced to the project owner at the time a
   module is actually proposed, not resolved silently now.
+- `[2026-08-17]` **Built the minimal read-only user-lookup capability and wired it into Project
+  owner assignment**, under the explicit "start with the blockers" instruction following the
+  "Remaining Projects module gaps" entry above. Scope confirmed with the user first
+  (`AskUserQuestion`), since this touches the standing "no user-management CRUD beyond role
+  assignment without a separate go-ahead" caution: chose a minimal read-only lookup (not module
+  #39's fuller admin surface) and owner assignment as the first feature to unblock. New backend:
+  `packages/database`'s `UserRepository.search()` (active-only, `ILIKE` across email/displayName)
+  and a new `UsersModule` (`GET /users`, `GET /users/:userId`), both gated on the existing
+  `users_roles:view` grant — verified as the right fit, not a scope mismatch, since only
+  `super_admin`/`owner_growth_approver` (the two roles holding that grant) can ever reach a
+  project owner picker anyway. New shared type `UserSummary` (`id`/`displayName`/`email` only).
+  New frontend: a reusable `components/user-picker.tsx` (debounced search, built generic enough
+  for team/approver assignment later) wired into `project-form.tsx`'s new `owner` field — the
+  backend schema already accepted `ownerUserId` since the Projects module's original build; this
+  is what finally lets a person set it. `lib/users.ts`'s `getUser()` resolves an existing owner
+  server-side for the edit page, mirroring `getProject()`'s null-on-404 contract. 81/81
+  `dashboard-web` unit tests (13 new), 321/321 `dashboard-api` unit tests (4 new), 121/121
+  `packages/database` integration tests (4 new, real disposable database), 92/92 `dashboard-api`
+  e2e tests (5 new, including a real RBAC-denial check) all passing; typecheck/lint/build clean.
+  Pushed as branch `user-lookup-owner-assignment`. Not yet reviewed or merged — team management
+  and approver-assignment UI remain separate, not-yet-built next steps (their backends already
+  existed before this branch).
 
 ## Open client blockers
 

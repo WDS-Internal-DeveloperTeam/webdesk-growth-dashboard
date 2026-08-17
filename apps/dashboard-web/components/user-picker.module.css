@@ -1,0 +1,138 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.label {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.helperText {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.searchWrapper {
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  font-size: var(--webdesk-dashboard-font-size-md);
+  font-family: inherit;
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  height: 2.25rem;
+  box-sizing: border-box;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.dropdown {
+  position: absolute;
+  z-index: var(--webdesk-dashboard-zindex-modal);
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--webdesk-dashboard-color-surface-raised);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  box-shadow: var(--webdesk-dashboard-shadow-lg);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.dropdownStatus {
+  padding: var(--webdesk-dashboard-space-sm);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.dropdownItem {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  gap: 0.1rem;
+  padding: var(--webdesk-dashboard-space-sm);
+  border: none;
+  background: none;
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  cursor: pointer;
+}
+
+.dropdownItem:hover,
+.dropdownItem:focus-visible {
+  background: var(--webdesk-dashboard-color-muted-surface);
+}
+
+.dropdownItemName {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.dropdownItemEmail {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  background: var(--webdesk-dashboard-color-surface);
+}
+
+.selectedText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.selectedName {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.selectedEmail {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.removeButton {
+  flex-shrink: 0;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: 0.3rem var(--webdesk-dashboard-space-sm);
+  cursor: pointer;
+}
+
+.removeButton:hover,
+.removeButton:focus-visible {
+  background: var(--webdesk-dashboard-color-muted-surface);
+}
+
+.removeButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}

@@ -1,6 +1,9 @@
-import type { Model } from "sequelize";
+import { Op, type Model } from "sequelize";
 import { getAuthModels } from "./models.js";
 import type { UserEntity } from "./entities.js";
+
+const DEFAULT_SEARCH_LIMIT = 20;
+const MAX_SEARCH_LIMIT = 200;
 
 function toEntity(instance: Model): UserEntity {
   const json = instance.toJSON() as Record<string, unknown>;
@@ -52,5 +55,35 @@ export class UserRepository {
 
   async recordSuccessfulLogin(id: string, loginAt: Date): Promise<void> {
     await this.model.update({ lastLoginAt: loginAt }, { where: { id } });
+  }
+
+  /**
+   * Read-only identity lookup for picker UIs (project owner/team/approver assignment) — not part
+   * of Task 8's user-management CRUD (create/edit/deactivate a user remain that separate,
+   * not-yet-authorized scope; this method only ever reads). Always excludes `disabled` accounts
+   * (Sequelize's `paranoid: true` already excludes soft-deleted rows by default) — a picker should
+   * never offer a user who can no longer sign in or has been offboarded.
+   */
+  async search(
+    filter: { search?: string; limit?: number; offset?: number } = {},
+  ): Promise<readonly UserEntity[]> {
+    const limit = Math.min(filter.limit ?? DEFAULT_SEARCH_LIMIT, MAX_SEARCH_LIMIT);
+    const rows = await this.model.findAll({
+      where: {
+        accountStatus: "active",
+        ...(filter.search
+          ? {
+              [Op.or]: [
+                { email: { [Op.iLike]: `%${filter.search}%` } },
+                { displayName: { [Op.iLike]: `%${filter.search}%` } },
+              ],
+            }
+          : {}),
+      },
+      order: [["displayName", "ASC"]],
+      limit,
+      offset: filter.offset ?? 0,
+    });
+    return rows.map((row) => toEntity(row));
   }
 }

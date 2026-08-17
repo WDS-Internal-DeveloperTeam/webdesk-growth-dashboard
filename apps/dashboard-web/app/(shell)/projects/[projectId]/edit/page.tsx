@@ -4,6 +4,7 @@ import { ContentContainer, PageHeader } from "@webdesk/ui";
 import { ProjectForm } from "@/components/project-form";
 import { getProject } from "@/lib/projects";
 import { getServerSession } from "@/lib/server-session";
+import { getUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,10 @@ export default async function EditProjectPage({ params }: EditProjectPageProps) 
   if (!project) {
     notFound();
   }
+  // Resolved server-side, alongside the project itself, so the picker never flashes an empty
+  // state before a client-side lookup lands — null covers both "no owner assigned" and "the
+  // assigned owner no longer resolves" (disabled/removed) identically.
+  const owner = project.ownerUserId ? await getUser(project.ownerUserId) : null;
 
   return (
     <ContentContainer>
@@ -42,6 +47,7 @@ export default async function EditProjectPage({ params }: EditProjectPageProps) 
           name: project.name,
           description: project.description,
           confidentiality: project.confidentiality,
+          owner,
         }}
       />
     </ContentContainer>
