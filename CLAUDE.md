@@ -498,8 +498,8 @@ d9c42782db8f79207662a25ec6e558cbf4707755`, and `dashboard-web`'s `/` resolves (v
     capability and Project owner assignment are now genuinely live in production.** Team
     management and approver-assignment UI remain separate, not-yet-built next steps (their
     backends already existed before this branch).
-15. **Projects module backend close-out — built, validated, reviewed, gated, not yet merged
-    (2026-08-17).** `docs/implementation/module-projects-backend-closeout.md`
+15. **Projects module backend close-out — built, validated, reviewed, gated, merged, and live in
+    production (2026-08-17).** `docs/implementation/module-projects-backend-closeout.md`
     records the full account. Requested directly, ahead of an upcoming dashboard design prompt
     that will drive the remaining Projects-module frontend wiring — the user wanted confidence
     that nothing was missing on the backend/API side first. A dedicated audit (read the actual
@@ -531,10 +531,16 @@ build`/`pnpm exec prettier --check` all clean. **Update (2026-08-17): independen
     Solution, decision CONFIRM, approved commit `8a3baf0` on branch
     `module-projects-backend-closeout` — see
     `docs/project-state/module-projects-backend-closeout-approval-checklist.md`'s "Sign-off"
-    section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **This gate approval
-    does not itself authorize merging PR #31 or a production deployment** — merge remains its own
-    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule
-    (same pattern as every prior gate).
+    section and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **"Merge PR #31" was
+    then separately requested and executed** — merge commit
+    `ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, both Vercel projects auto-deployed and were
+    verified live directly: `dashboard-api`'s `/health` returned `build.commitSha ==
+ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to `/auth/sign-in`
+    for an unauthenticated visitor. **The Projects module backend close-out is now genuinely live
+    in production.** Migration `00045` (the `user_roles(role_id, project_id)` index) has not yet
+    been run against the real production database — it's additive-only and doesn't block any
+    functionality, only its query-performance benefit, so running it remains a separate, low-
+    urgency next step whenever a production migration is next convenient.
 
 ## Recent decisions
 
@@ -1985,6 +1991,20 @@ project_id)` on `user_roles`); `safeHttpUrl` duplicated locally instead of using
   **This gate approval does not itself authorize merging PR #31 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-17]` **"Merge PR #31" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming the
+  session gate is intact. **The Projects module backend close-out — the
+  `GET /projects/:projectId/approvers` endpoint, the environment-URL scheme fix, the `ownerUserId`
+  existence check, the expanded sub-resource test coverage, and every code-review/security-review
+  fix from the review round — is now genuinely live in production.** Migration `00045` (an
+  additive-only index) has not yet been run against the real production database — it doesn't
+  block any functionality, only its own query-performance benefit, so running it remains a
+  separate, low-urgency next step.
 
 ## Open client blockers
 

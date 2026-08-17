@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-17T00:00:00Z",
-    "version": 21
+    "version": 22
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -921,6 +921,19 @@
       },
       "project_version_before": 37,
       "project_version_after": 38
+    },
+    {
+      "timestamp": "2026-08-17T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "merged PR #31 (module-projects-backend-closeout) into main under explicit 'merge PR #31' authorization",
+      "details": {
+        "merge": "Merged with a real merge commit (not squash/rebase), matching every prior merge in this project's history. Merge commit ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88.",
+        "deployment_verification": "Both Vercel projects auto-deployed on push to main and were verified live directly, not just via CI's own Vercel status check \u2014 dashboard-api's /health returned build.commitSha == ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88, confirming the exact merged commit is what's serving; dashboard-web's / resolves to /auth/sign-in for an unauthenticated visitor, confirming the session gate is intact.",
+        "result": "The Projects module backend close-out (GET /projects/:projectId/approvers, the environment-URL scheme fix, the ownerUserId existence check, and the expanded sub-resource test coverage) is now genuinely live in production. No production migration was needed \u2014 migration 00045 (the user_roles(role_id, project_id) index) is additive-only and has not yet been run against the real production database."
+      },
+      "project_version_before": 38,
+      "project_version_after": 39
     }
   ]
 }
