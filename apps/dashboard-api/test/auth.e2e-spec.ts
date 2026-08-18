@@ -20,6 +20,7 @@ import { AuthModule } from "../src/auth/auth.module.js";
 import { OIDC_CONFIGURATION } from "../src/auth/config/auth.constants.js";
 import { hashPassword } from "../src/auth/crypto/password.js";
 import { encryptTotpSecret } from "../src/auth/crypto/totp-encryption.js";
+import { SessionExchangeService } from "../src/auth/session/session-exchange.service.js";
 import cookieParser from "cookie-parser";
 import type { NextFunction, Response } from "express";
 
@@ -57,6 +58,7 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
   let app: INestApplication;
   let users: UserRepository;
   let credentials: EmergencyAdminCredentialRepository;
+  let sessionExchange: SessionExchangeService;
   const totpSecret = "JBSWY3DPEHPK3PXP";
   const password = "correct-horse-battery-staple-1!";
 
@@ -92,6 +94,7 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
 
     users = new UserRepository();
     credentials = new EmergencyAdminCredentialRepository();
+    sessionExchange = moduleRef.get(SessionExchangeService);
 
     const user = await users.create({
       email: "emergency.e2e@webdesksolution.com",
@@ -282,6 +285,74 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
       );
       expect(response.status).toBe(302);
       expect(response.headers.location).toBe(`${WEB_APP_ORIGIN}/auth/error?reason=expired`);
+    });
+  });
+
+  /**
+   * `POST /auth/exchange` — the server-to-server leg `dashboard-web`'s own exchange route calls
+   * to redeem a session-exchange code (docs/implementation/session-exchange.md). Exercised here
+   * against the real `SessionExchangeService`/repository/database, not mocked — the Google OIDC
+   * callback's own success path is covered separately (mocked) in
+   * `google-auth.controller.e2e-spec.ts`, since driving a real token exchange here would require
+   * real network access to Google.
+   */
+  describe("POST /auth/exchange", () => {
+    it("redeems a valid code into a brand-new, independently-valid session, exactly once", async () => {
+      const user = await users.create({
+        email: "exchange.e2e@webdesksolution.com",
+        displayName: "Exchange E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({ userId: user.id, authMethod: "google_sso" });
+
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+
+      expect(response.status).toBe(200);
+      expect(typeof response.body.data.sessionToken).toBe("string");
+      expect(response.body.data.sessionToken.length).toBeGreaterThan(0);
+
+      // The minted session is real and independently valid — proven via a second agent that never
+      // touched the original login cookie, using only the exchanged raw token.
+      const verifyAgent = request.agent(app.getHttpServer());
+      const sessionCheck = await verifyAgent
+        .get("/auth/session")
+        .set("Cookie", `wds_session=${response.body.data.sessionToken as string}`);
+      expect(sessionCheck.status).toBe(200);
+      expect(sessionCheck.body.data.user.email).toBe("exchange.e2e@webdesksolution.com");
+
+      // Single-use: redeeming the same raw code again must fail.
+      const secondAttempt = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      expect(secondAttempt.status).toBe(400);
+    });
+
+    it("rejects an unknown code with a generic 400, no session issued", async () => {
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: "this-code-was-never-issued" });
+      expect(response.status).toBe(400);
+    });
+
+    it("rejects a missing code at the validation layer", async () => {
+      const response = await request(app.getHttpServer()).post("/auth/exchange").send({});
+      expect(response.status).toBe(400);
+    });
+
+    it("requires no Origin header — this is a server-to-server call, not a browser-mediated one", async () => {
+      const user = await users.create({
+        email: "exchange.no-origin.e2e@webdesksolution.com",
+        displayName: "Exchange No Origin E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({ userId: user.id, authMethod: "google_sso" });
+
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      expect(response.status).toBe(200);
     });
   });
 });

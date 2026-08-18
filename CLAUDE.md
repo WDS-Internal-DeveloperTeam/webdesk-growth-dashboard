@@ -768,6 +768,54 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
       session gate is intact. **The Team management + Approver assignment UI is now genuinely live
       in production.** Gaps (4) sub-resource editing and (5) current-project context propagation
       remain not started.
+19. **Cross-domain session-exchange fix for Google SSO login — built, fully validated, not yet
+    reviewed, gated, or merged (2026-08-18).** `docs/implementation/session-exchange.md` records
+    the full account. Not started automatically — the user reported that signing in with Google
+    appeared to work at Google's consent screen but then looped back to the sign-in page instead
+    of reaching the authenticated app; diagnosed directly by reading
+    `apps/dashboard-api/src/auth/session/cookie.util.ts` and
+    `apps/dashboard-web/lib/server-session.ts`, then the fix was implemented under the user's
+    explicit "yes please" authorization. Real root cause: `dashboard-api`'s Google OIDC callback
+    set its session cookie and redirected straight to `WEB_APP_ORIGIN`'s root, but that cookie is
+    host-only to `dashboard-api`'s own `*.vercel.app` domain (no `Domain` attribute, no shared
+    parent domain with `dashboard-web`'s separate `*.vercel.app` project) — it was never actually
+    sent on the browser's subsequent navigation to `dashboard-web`, so every login silently landed
+    the visitor back at `/auth/sign-in`. **Not a `SameSite` bug** — `SameSite=None` is already
+    correct for the genuinely cross-site requests this app makes _to_ `dashboard-api`; the broken
+    case is the browser's own top-level navigation _away from_ `dashboard-api`, which that cookie
+    could never reach regardless of `SameSite`. Went undetected since the authenticated shell was
+    built (Phase 1F, 2026-08-14) because every prior "verified live" deployment check only tested
+    the _unauthenticated_ redirect, and the Playwright a11y suite uses a test-only session bypass
+    specifically because a real SSO login can't run in CI — so the real cross-domain cookie path
+    was never actually exercised by any check, human or automated, until now. Fixed with a new
+    session-exchange mechanism: the Google callback now mints a short-lived (60s), single-use,
+    opaque exchange code (migration `00046`, `session_exchange_codes`, hashed like the existing
+    session token, atomic conditional-`UPDATE` redemption mirroring
+    `IdempotencyKeyRepository.reserve()`) and redirects to a new `dashboard-web` Route Handler
+    (`app/auth/exchange/route.ts`, the first one in this app), which redeems it server-to-server
+    against a new `POST /auth/exchange` endpoint and sets `dashboard-web`'s own first-party
+    `wds_session` cookie. `SessionExchangeService#redeem()` deliberately mints a **second,
+    independent session** via the existing `SessionService.issue()` rather than relaying the
+    original raw token (which is never persisted anywhere to relay in the first place).
+    `dashboard-api`'s own session cookie is unchanged — still needed for direct browser-mediated
+    mutation fetches. A related, explicitly out-of-scope gap was found and flagged, not fixed: the
+    emergency-admin TOTP page has the identical underlying bug via a different mechanism (a
+    client-side `fetch` + `router.push`, not a server redirect) — recorded as a known adjacent gap
+    for a separate, not-yet-authorized fix. Full validation: 6 new `dashboard-api` unit tests
+    (`session-exchange.service.spec.ts`), 5 new `packages/database` integration tests (real
+    disposable database — create/redeem, single-use enforcement, expiry enforcement, migration
+    up/down round-trip), 5 new `dashboard-api` e2e tests (real disposable database — a redeemed
+    code mints a genuinely independent working session verified via a separate `supertest` agent,
+    single-use enforcement over real HTTP, a successful-callback redirect-through-`/auth/exchange`
+    regression test), 6 new `dashboard-web` unit tests (the route handler's every branch) — 369/369
+    `dashboard-api` unit tests, 140/140 `dashboard-web` unit tests, all passing; typecheck/lint/
+    `next build`/`nest build`/`pnpm exec prettier --check` all clean across `packages/database`,
+    `packages/shared-types`, `apps/dashboard-api`, and `apps/dashboard-web`. Built on branch
+    `fix-cross-domain-session-exchange`, off `main` at `32e5bba` (the PR #34 merge commit). **Not
+    yet pushed, code-reviewed, security-reviewed, second-role human reviewed, gated, or merged** —
+    each a separate, not-yet-requested next step, unchanged from this project's standing
+    discipline, warranted especially here since this touches authentication/session issuance
+    directly. Migration `00046` has not been run against the real production database.
 
 ## Recent decisions
 
@@ -2494,6 +2542,22 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
   `dashboard-web` Team management + Approver assignment UI is now genuinely live in production.**
   No business-module implementation work starts automatically as a result of this merge.
+- `[2026-08-18]` **Diagnosed and fixed a real production authentication bug**: the user reported
+  that Google Workspace SSO login appeared to succeed at Google's own consent screen but then
+  looped back to `/auth/sign-in` instead of reaching the authenticated app. Diagnosed directly
+  against the deployed app (via the user's own Chrome session, then confirmed by reading
+  `cookie.util.ts`/`server-session.ts`) as a genuine cross-domain cookie-scoping bug:
+  `dashboard-api`'s Google OIDC callback set its session cookie and redirected straight to
+  `WEB_APP_ORIGIN`'s root, but that cookie is host-only to `dashboard-api`'s own domain (no
+  `Domain` attribute, no shared parent domain between the two separate `*.vercel.app` projects) —
+  it was never actually sent on the subsequent navigation to `dashboard-web`. Not a `SameSite`
+  bug — `SameSite=None` is already correct for the cross-site requests this app makes _to_
+  `dashboard-api`; the broken case is the browser's own top-level navigation _away from_ it, which
+  that cookie could never reach. Explained 3 candidate fixes and asked directly which to
+  implement; the user replied "yes please" to the recommended session-exchange approach. Built and
+  fully validated on branch `fix-cross-domain-session-exchange` — see "Active tasks" item 19 above
+  and `docs/implementation/session-exchange.md` for the complete account. **Not yet pushed,
+  reviewed, gated, or merged.**
 
 ## Open client blockers
 
