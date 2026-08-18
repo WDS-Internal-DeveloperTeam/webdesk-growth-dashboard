@@ -677,8 +677,16 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is"** (2026-08-18),
     accepting the 2 open PLAUSIBLE findings as tracked debt rather than requesting fixes — see
     `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
-    section. **A gate decision and merge authorization remain separate, not-yet-requested next
-    steps** — no business-module implementation work starts automatically once this lands.
+    section. **The gate (G4-dashboard-ui-foundation-alignment) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `4a256c74735b4c819e62d8e00cac16ff3e762782` on branch `dashboard-ui-foundation-alignment` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-ui-foundation-alignment`) and the approval checklist's "Sign-off" section. **This
+    gate approval does not itself authorize merging PR #33 or a production deployment** — merge
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule (same pattern as every prior gate). No business-module implementation
+    work starts automatically once this lands.
 
 ## Recent decisions
 
@@ -2281,6 +2289,16 @@ alignment` (PR #33).** A review packet (published as a Claude artifact — code 
   PLAUSIBLE code-review findings as tracked debt rather than requesting fixes. See
   `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-18]` **The gate (G4-dashboard-ui-foundation-alignment) was then separately requested
+  and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `4a256c74735b4c819e62d8e00cac16ff3e762782` on branch `dashboard-ui-foundation-alignment` —
+  recorded in `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-ui-foundation-alignment`) and
+  `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #33 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

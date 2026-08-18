@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-projects-backend-closeout",
+    "current_gate": "G4-dashboard-ui-foundation-alignment",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -260,6 +260,20 @@
       "approved_commit": "8a3baf0",
       "record": "docs/project-state/module-projects-backend-closeout-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #31 or a production deployment — merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-ui-foundation-alignment",
+      "type": "qa-security-gate",
+      "scope": "dashboard-ui-foundation-alignment",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-18T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Dashboard UI Foundation Alignment (branch dashboard-ui-foundation-alignment, PR #33) — design tokens, ~30 new packages/ui components, application-shell navigation/header alignment, 6 auth-page re-skins, an accessibility test-coverage closure (test-only session bypass + new axe-core coverage of the authenticated shell, which caught and fixed 3 real pre-existing WCAG AA contrast violations), and component documentation. Independent code review (high effort, 8 finder angles) surfaced 10 findings (8 CONFIRMED, 2 PLAUSIBLE) — most severe a tablet/mobile @media breakpoint overlap at exactly 768px that also exposed a decimal-matching gap in the CSS token lint script itself; all 8 CONFIRMED findings fixed and re-validated. Security review (run separately) found 0 findings above threshold, focused on the new e2e-test-session bypass and confirming both its gates are structurally unreachable in a real deployment. Final numbers: 79/79 packages/ui unit tests, 103/103 dashboard-web unit tests, 15/15 Playwright tests, typecheck/lint/build/prettier all clean across both packages; zero packages/database or apps/dashboard-api files touched. Required second-role human review complete — Jitesh D, decision 'Approved as-is', 2026-08-18, accepting the 2 open PLAUSIBLE findings (Sign Out menu item missing a real href; Badge/StatusBadge structural near-duplication) as tracked debt rather than requesting fixes.",
+      "approved_commit": "4a256c74735b4c819e62d8e00cac16ff3e762782",
+      "record": "docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #33 or a production deployment — merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -998,6 +1012,19 @@
       },
       "project_version_before": 42,
       "project_version_after": 43
+    },
+    {
+      "timestamp": "2026-08-18T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-dashboard-ui-foundation-alignment for dashboard-ui-foundation-alignment (PR #33) — decision: CONFIRM",
+      "details": {
+        "basis": "Clean pass, not an override — the required second-role human review (Jitesh D, Approved as-is, 2026-08-18) was already complete before the gate was requested, matching every prior gate in this project's history.",
+        "approved_commit": "4a256c74735b4c819e62d8e00cac16ff3e762782",
+        "result": "Recorded in outputs/webdesk-growth-dashboard/project.json's gates[] and docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md's 'Sign-off' section. Does not itself authorize merging PR #33 or a production deployment — merge remains a separate, not-yet-requested authorization."
+      },
+      "project_version_before": 43,
+      "project_version_after": 44
     }
   ]
 }

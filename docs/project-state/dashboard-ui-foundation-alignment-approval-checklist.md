@@ -1,7 +1,8 @@
 # Dashboard UI Foundation Alignment — Approval Checklist
 
-**Status:** Required second-role human review complete (2026-08-18, Jitesh D, **Approved**). Gate
-decision and merge authorization remain separate, not-yet-requested next steps — this project's
+**Status:** Required second-role human review complete (2026-08-18, Jitesh D, **Approved**). **The
+gate (G4-dashboard-ui-foundation-alignment) is approved** — WebDesk Solution, decision CONFIRM,
+2026-08-18. Merge authorization remains a separate, not-yet-requested next step — this project's
 standing discipline keeps review, gate, and merge as three distinct, explicitly-requested steps.
 
 ## Completion condition
@@ -59,9 +60,11 @@ see Sign-off below.
 
 ## Sign-off
 
-**Second-role human review: complete.** A gate decision (G4-dashboard-ui-foundation-alignment or
-equivalent) and merge authorization are each their own separate, not-yet-requested next step, per
-this project's standing "no auto-merge" / review-then-gate-then-merge discipline.
+**Second-role human review: complete. Gate G4-dashboard-ui-foundation-alignment: approved.** Both
+were their own separate, explicit human step, per every prior phase's own pattern of keeping the
+review and the gate decision distinct — the gate was requested, and approved, only after the
+review above was already recorded as complete. Merge authorization remains its own separate,
+not-yet-requested next step.
 
 | Field                         | Value                                                                                                                                                               |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -71,6 +74,16 @@ this project's standing "no auto-merge" / review-then-gate-then-merge discipline
 | Scope reviewed                | Full code-review disposition (8/8 CONFIRMED fixed, 2 PLAUSIBLE accepted as debt) and full security-review disposition (0 findings), via the published review packet |
 | Disputes raised               | None recorded                                                                                                                                                       |
 
-| Role                          | Name     | Decision   | Date       |
-| ----------------------------- | -------- | ---------- | ---------- |
-| Reviewer (second-role review) | Jitesh D | ☑ Approved | 2026-08-18 |
+| Field                    | Value                                                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-dashboard-ui-foundation-alignment                                                                                                                                           |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                               |
+| Gate date                | 2026-08-18                                                                                                                                                                     |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                              |
+| Approved commit          | `4a256c74735b4c819e62d8e00cac16ff3e762782` on branch `dashboard-ui-foundation-alignment` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
+| Scope                    | Dashboard UI Foundation Alignment only (PR #33). Does not authorize merge — that remains a separate, not-yet-requested authorization.                                          |
+
+| Role                          | Name             | Decision   | Date       |
+| ----------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved | 2026-08-18 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-18 |
