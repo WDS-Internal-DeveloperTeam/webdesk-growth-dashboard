@@ -1,7 +1,9 @@
 # `dashboard-web` Team Management + Approver Assignment — As-Built Record
 
-**Status:** Built and fully validated on branch `dashboard-web-team-approver-management`. Not yet
-code-reviewed, security-reviewed, gated, or merged — each remains a separate, not-yet-requested
+**Status:** Built, fully validated, independently code-reviewed (10 findings, 9 fixed, 1 accepted
+as out-of-scope debt), and security-reviewed (0 findings above threshold) on branch
+`dashboard-web-team-approver-management`. A review packet has been published for the required
+second-role human review. Not yet gated or merged — each remains a separate, not-yet-requested
 next step, matching this project's standing discipline for every prior slice.
 
 **Authorization:** Not started automatically — built directly on the user's explicit choice
@@ -109,6 +111,58 @@ passed down to `ProjectApproversSection`.
   typecheck clean, lint clean, `next build` clean, `pnpm exec prettier --check` clean.
 - Playwright: 15/15 tests passing (unaffected — no new route, the Project Detail page's
   unauthenticated-redirect smoke test still covers it).
+
+## 5. Independent code review
+
+Ran this project's own `code-review` skill (8-angle finder pass, high effort) against the full
+branch diff. All 10 candidates that survived deduplication were CONFIRMED on verification. 9 of 10
+fixed, per explicit "fix the confirmed findings" instruction:
+
+1. **Crash on 403** — `getProjectDetail()` had no try/catch around team-identity resolution, and
+   `getUser()` throws on any non-404 error, so a single 403 from `GET /users/:userId` crashed the
+   whole page. Fixed: `getUsersByIds()` now uses `Promise.allSettled` with per-id error logging.
+2. **Approver revoke ignored `revoked: false`** — `handleRemove` only checked `response.ok`, not
+   the response body, so it reported success even when the backend found no matching row to
+   revoke. Fixed: now checks `body.data.revoked` and shows an error otherwise.
+3. **Team's `UserPicker` 403s on first keystroke for most roles** — rendered unconditionally
+   despite needing `users_roles:view`. Fixed: new `canSearchUsers` prop, derived from the same
+   signal the Approvers section already resolves.
+4. **Shared `pendingRemoveId` raced across rows** — a single shared id, not per-row. Fixed: both
+   roster components now track pending removals in a per-row `Set<string>`.
+5. **Silent 403/5xx swallowing in `lib/roles.ts`** — no logging on the `!response.ok` branch.
+   Fixed: both helpers now log the status.
+6. **Roster state never resynced after `router.refresh()`** — `useState` initializers don't re-run
+   on prop updates without a remount. Fixed: both components gained a resync `useEffect`.
+7. **N+1 instead of the backend's batch endpoint** (`lib/users.ts`) — real, but fixing it needs a
+   new `dashboard-api` route; this branch is declared UI-only. **Accepted as out-of-scope,
+   tracked debt** — not fixed.
+8. **Duplicated primary-button CSS** — `.addButton` retyped `.submitButton` byte-for-byte. Fixed:
+   now `composes: submitButton from "./project-form.module.css"`.
+9. **Unconditional approver-role-id fetch** — fired even when `ProjectApproversSection` (its only
+   consumer) wouldn't render. Fixed: now only called after confirming `approvers !== null`.
+10. **Team-identity resolution serialized behind unrelated fetches** — waited on the full 6-way
+    `Promise.all` instead of chaining off just the team fetch. Fixed: new `resolveTeam()` helper
+    chains directly off `teamPromise`, folded into the same concurrent pass.
+
+Re-validated after fixes: 128/128 `dashboard-web` unit tests (7 new), 15/15 Playwright tests,
+typecheck/lint/`next build`/prettier all clean.
+
+## 6. Security review
+
+Ran this project's own `security-review` skill separately from the code review. **0 findings above
+threshold.** Checked and confirmed clean: no `dangerouslySetInnerHTML`/raw DOM manipulation (all
+rendered fields are React-escaped JSX interpolation of backend-sourced data); no path-traversal-
+relevant input reaches the fetch-URL interpolations (`projectId`/`userId`/`approverRoleId` are all
+backend-sourced UUIDs); both new components rely entirely on the backend's
+`PermissionGuard`/`OriginCheckGuard` for real enforcement, with the new `canSearchUsers` prop only
+toggling UI visibility (a stale/tampered value can only over-restrict, never grant privilege); the
+approver-revoke path always targets a fixed, server-resolved role id; new `console.error` calls log
+only status codes/generic errors, no PII or secrets.
+
+A review packet (code review + security review findings, fixes, and validation evidence, with a
+decision section) was published as a Claude artifact for the required second-role human review,
+since the implementing agent cannot also be its own reviewer (ADR-0010). See
+`docs/project-state/dashboard-web-team-approver-management-approval-checklist.md`.
 
 ## Explicitly out of scope (deferred to a separate slice)
 

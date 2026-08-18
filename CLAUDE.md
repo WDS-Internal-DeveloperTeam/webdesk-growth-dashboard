@@ -693,8 +693,9 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The Dashboard UI
     Foundation Alignment slice is now genuinely live in production.** No business-module
     implementation work starts automatically once this lands.
-18. **`dashboard-web` Team management + Approver assignment UI — built, fully validated, not yet
-    reviewed, gated, or merged (2026-08-18).** Closes gaps (2) and (3) from item 13's remaining
+18. **`dashboard-web` Team management + Approver assignment UI — built, fully validated,
+    code-reviewed, and security-reviewed; review packet published; not yet gated or merged
+    (2026-08-18).** Closes gaps (2) and (3) from item 13's remaining
     Projects module gap analysis. Not started automatically — built directly on the user's
     explicit choice ("Team + Approver UI first") among 4 scoping options presented for this work.
     Both backends (team roster CRUD, approver list/assign/revoke) already existed, already
@@ -719,9 +720,33 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     `docs/implementation/dashboard-web-team-approver-management.md` for the full as-built record.
     Pushed as its own branch (`dashboard-web-team-approver-management`); opened as
     [PR #34](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/34) for
-    reviewability. **Not yet code-reviewed, security-reviewed, gated, or merged** — each remains a
-    separate, not-yet-requested next step. Gaps (4) sub-resource editing and (5) current-project
-    context propagation remain not started.
+    reviewability. **Independent code review then ran** (8-angle finder pass, high effort) — 10
+    findings surfaced, all CONFIRMED. 9 fixed per explicit "fix the confirmed findings"
+    instruction (most severe: `getProjectDetail()` had no try/catch around team-identity
+    resolution, so a single 403 from `GET /users/:userId` crashed the whole page — fixed by
+    switching `getUsersByIds()` to `Promise.allSettled`; also fixed: an approver-revoke handler
+    that ignored a `revoked: false` backend response, the Team section's `UserPicker` being
+    offered to viewers who'd 403 on it, a shared `pendingRemoveId` racing across concurrent row
+    removals, silent 403/5xx swallowing in `lib/roles.ts`, both roster components never
+    resyncing local state after `router.refresh()`, a duplicated primary-button CSS block, an
+    unconditional approver-role-id fetch even when unused, and team-identity resolution
+    serialized behind unrelated fetches). The 10th (`getUsersByIds()` using N parallel requests
+    instead of the backend's existing `findByIds()` batch endpoint) was recorded as accepted,
+    out-of-scope debt — fixing it means adding new `dashboard-api` code, out of scope for a
+    branch declared `dashboard-web` UI only. 128/128 `dashboard-web` unit tests (7 new),
+    typecheck/lint/`next build`/prettier all re-verified clean. **A separate `security-review`
+    skill run then found 0 findings above threshold** — confirmed no XSS surface (React-escaped
+    JSX only), no path-traversal-relevant input in fetch-URL interpolations (all backend-sourced
+    UUIDs), the backend's `PermissionGuard`/`OriginCheckGuard` as the sole enforcement point (the
+    new `canSearchUsers` prop only toggles UI visibility, never enforcement), and no PII/secret
+    exposure in the new log lines. A review packet (published as a Claude artifact — code review
+    - security review findings, fixes, and validation evidence, with a decision section) was
+      prepared for the required second-role human review, since the implementing agent cannot also
+      be its own reviewer (ADR-0010). See
+      `docs/project-state/dashboard-web-team-approver-management-approval-checklist.md`. **Not yet
+      reviewed by a second-role human, gated, or merged** — each remains a separate, not-yet-requested
+      next step. Gaps (4) sub-resource editing and (5) current-project context propagation remain not
+      started.
 
 ## Recent decisions
 
@@ -2374,6 +2399,41 @@ alignment` (PR #33).** A review packet (published as a Claude artifact — code 
   Pushed as branch `dashboard-web-team-approver-management`, opened as
   [PR #34](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/34) — not
   yet code-reviewed, security-reviewed, gated, or merged.
+- `[2026-08-18]` **Independent code review run on `dashboard-web-team-approver-management` (PR
+  #34), high effort — 8-angle finder pass.** 10 candidates surfaced after dedup, all 10 CONFIRMED.
+  Most severe: `getProjectDetail()` had no try/catch around team-identity resolution, and
+  `getUser()` throws on any non-404 error, so a single 403 from `GET /users/:userId` (a viewer
+  lacking `users_roles:view`) crashed the entire Project Detail page. 9 of 10 fixed per explicit
+  "fix the confirmed findings" instruction: the crash (switched `getUsersByIds()` to
+  `Promise.allSettled` with per-id error logging); the approver-revoke handler ignoring a
+  `revoked: false` backend response; the Team section's `UserPicker` being offered to viewers
+  who'd 403 on the first keystroke (new `canSearchUsers` prop, reusing the same signal the
+  Approvers section already resolves); a single shared `pendingRemoveId` racing across concurrent
+  row removals in both roster components (now a per-row `Set`); silent 403/5xx swallowing in
+  `lib/roles.ts` with no logging; both roster components never resyncing local state from fresh
+  props after `router.refresh()` (new resync `useEffect`s); a duplicated primary-button CSS block
+  (now composes from `project-form.module.css`); an unconditional approver-role-id fetch even when
+  unused; and team-identity resolution serialized behind unrelated sub-resource fetches instead of
+  chained directly off the team fetch. The 10th (`getUsersByIds()` using N parallel requests
+  instead of the backend's existing `findByIds()` batch endpoint) was recorded as accepted,
+  out-of-scope debt — closing it means adding new `dashboard-api` code, out of scope for a branch
+  declared `dashboard-web` UI only. 128/128 `dashboard-web` unit tests (7 new), 15/15 Playwright
+  tests, typecheck/lint/`next build`/prettier all re-verified clean. Pushed as commit `249faa8`.
+- `[2026-08-18]` **Security review run on `dashboard-web-team-approver-management` (PR #34),
+  separately from the code review.** 0 findings above threshold. Confirmed no XSS surface (all
+  rendered fields are React-escaped JSX interpolation of backend-sourced data, no
+  `dangerouslySetInnerHTML`); no path-traversal-relevant input reaches the fetch-URL
+  interpolations (`projectId`/`userId`/`approverRoleId` are all backend-sourced UUIDs); both new
+  components rely entirely on the backend's `PermissionGuard`/`OriginCheckGuard` for real
+  enforcement, with the new `canSearchUsers` prop only toggling UI visibility, never enforcement
+  (a stale/tampered value can only over-restrict, never grant privilege); the approver-revoke path
+  always targets a fixed, server-resolved role id; new `console.error` calls log only status codes
+  or generic errors, no PII or secrets. A review packet (published as a Claude artifact — code
+  review + security review findings, fixes, and validation evidence, with a decision section) was
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-team-approver-management-approval-checklist.md`. A gate
+  decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
