@@ -646,11 +646,39 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     contrast verification of the new `statusBadgeTokens` palette itself: all 5 buckets computed
     directly against the WCAG 2.1 relative-luminance formula, ranging 6.81:1–9.45:1, comfortably
     over the 4.5:1 minimum. See `docs/implementation/dashboard-ui-foundation-alignment.md` for the
-    full as-built record. **Not yet code-reviewed, security-reviewed, gated, or merged** — each
-    remains a separate, not-yet-requested next step, per the task package's own Git workflow
-    section and this project's standing discipline. Pushed as its own branch; a PR was opened for
-    reviewability, matching this project's standing pattern. No business-module implementation
-    work starts automatically once this lands.
+    full as-built record. Pushed as its own branch; opened as
+    [PR #33](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/33) for
+    reviewability, matching this project's standing pattern. **Update (2026-08-18): independent
+    code review run** (high effort, 8 finder angles) — 10 findings surfaced (8 CONFIRMED, 2
+    PLAUSIBLE). Most severe: the tablet (`768px`–`1023.98px`) and mobile (`max-width: 768px`) shell
+    breakpoints overlapped at exactly 768px, a real device width, letting the mobile off-canvas CSS
+    and the JS icon-only tablet state both apply at once — which also required fixing
+    `check-css-tokens.mjs` itself, since its regex never matched decimal breakpoints and only
+    validated one clause per compound `@media` query, so it silently passed the violating value.
+    All 8 CONFIRMED findings fixed and re-validated per explicit "fix the confirmed findings"
+    instruction (also: a dialog focus-trap effect re-running on unrelated re-renders due to
+    `onClose` identity churn; `ApprovalBlock`'s Reject/Request Revision modals leaking a shared
+    reason textarea; the a11y spec hardcoding a duplicate copy of the e2e session cookie constants;
+    `Progress` rendering `"NaN%"` at `max=0`; a duplicated `initialsFor()` helper; and two
+    independently-maintained test-fixture default shapes that had already drifted). The 2 PLAUSIBLE
+    findings (the header "Sign out" menu item lacking a real `href`; the new `Badge` structurally
+    near-duplicating the pre-existing `StatusBadge`) were left unaddressed, scope being literal.
+    Re-validated: 79/79 `packages/ui` + 103/103 `dashboard-web` unit tests, 15/15 Playwright tests,
+    typecheck/lint/build/prettier all clean. **A separate `security-review` skill run then found 0
+    findings above threshold** — focused on `lib/e2e-test-session.ts` (the new test-only
+    authenticated-session bypass for Playwright's a11y suite), confirming both its gates are
+    structurally sound (`NODE_ENV !== "production"` is fixed Next.js/Vercel behavior, not
+    app-configurable) and traced to have no header/query-param path around them; two candidates
+    (the unused `FileAttachment` component's missing URL-scheme guard, and the bypass's
+    partly-environment-variable-dependent gating) were considered and excluded at confidence
+    3/10 and 2/10 respectively. A review packet (published as a Claude artifact — code review +
+    security review findings, fixes, and validation evidence, with a decision section) was prepared
+    for the required second-role human review, since the implementing agent cannot also be its own
+    reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is"** (2026-08-18),
+    accepting the 2 open PLAUSIBLE findings as tracked debt rather than requesting fixes — see
+    `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
+    section. **A gate decision and merge authorization remain separate, not-yet-requested next
+    steps** — no business-module implementation work starts automatically once this lands.
 
 ## Recent decisions
 
@@ -2203,8 +2231,56 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is
   violations the new authenticated-shell accessibility coverage caught and fixed. 79/79
   `packages/ui` + 103/103 `dashboard-web` unit tests, 15/15 Playwright tests, typecheck/lint/
   `next build`/prettier all clean; only `apps/dashboard-web` and `packages/ui` touched. Pushed and
-  opened as a PR for reviewability. **Not yet code-reviewed, security-reviewed, gated, or
-  merged** — each is a separate, not-yet-requested next step.
+  opened as [PR #33](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/33)
+  for reviewability.
+- `[2026-08-18]` **Independent code review run on `dashboard-ui-foundation-alignment` (PR #33),
+  high effort — 8 finder angles, 1-vote verification.** 10 findings surfaced, 8 CONFIRMED and 2
+  PLAUSIBLE. Most severe: the tablet (`min-width: 768px, max-width: 1023.98px`) and mobile
+  (`max-width: 768px`) shell breakpoints overlapped at exactly 768px, a real device width, letting
+  the mobile off-canvas CSS and the JS icon-only tablet state both apply at once — this also
+  required fixing `check-css-tokens.mjs` itself, since its regex never matched decimal breakpoints
+  and only validated one clause per compound `@media` query, so it silently passed the now-removed
+  `1023.98px` violation. All 8 CONFIRMED findings fixed and re-validated per the explicit "fix the
+  confirmed findings" instruction: the breakpoint/lint-script pair above; a dialog focus-trap
+  effect (`useDialogBehavior`) re-running on any unrelated parent re-render because it depended on
+  the `onClose` callback's identity (fixed via the latest-ref pattern); `ApprovalBlock`'s Reject
+  and Request Revision modals sharing one `reason` textarea, cleared only on submit and leaking
+  between them on Cancel; `accessibility.spec.ts` hardcoding a duplicate copy of the e2e session
+  cookie constants instead of importing them from `lib/e2e-test-session.ts`; `Progress` rendering
+  `width: "NaN%"` at `max === 0`; a duplicated `initialsFor()` helper between `app-shell.tsx` and
+  `packages/ui` (now exported and reused); and two independently-maintained test-fixture default
+  shapes (`fixtureModule()`/`navEntry()`) that had already drifted on their `implementationStatus`
+  default. The 2 PLAUSIBLE findings — the header "Sign out" menu item using `router.push()` instead
+  of a real `href`, and the new `Badge` structurally near-duplicating the pre-existing
+  `StatusBadge` — were left unaddressed, since the fix instruction's scope was literal
+  (CONFIRMED-only); both were flagged for the second-role reviewer's disposition. Re-validated:
+  79/79 `packages/ui` + 103/103 `dashboard-web` unit tests, 15/15 Playwright tests, typecheck/lint/
+  build/`pnpm exec prettier --check` all clean. See `docs/implementation/dashboard-ui-foundation-
+alignment.md`'s "Independent code review" section for the full account.
+- `[2026-08-18]` **Security review run on `dashboard-ui-foundation-alignment` (PR #33), separately
+  from the code review.** 0 findings above threshold. Focused on this branch's most
+  security-relevant addition, `lib/e2e-test-session.ts` (the new test-only authenticated-session
+  bypass built so Playwright's automated accessibility suite can exercise the real authenticated
+  shell in CI). Traced its only consumer (`getServerSession()`) and confirmed no header/query-param
+  path reaches it; both gates are structurally sound — Next.js force-sets `NODE_ENV=production` for
+  the real `next build`/Vercel Runtime pipeline regardless of any other env var, so even a
+  misconfigured `PLAYWRIGHT_E2E_TEST_MODE=1` in production wouldn't clear the first gate. Two
+  candidates were considered and excluded: the unused `FileAttachment` component's `<a href>`
+  rendering with no URL-scheme allowlist (the same shape as a previously-fixed stored-XSS bug, but
+  with no live caller anywhere in this branch — confidence 3/10, a hardening gap to close before
+  first real use, not a live vulnerability today) and the bypass's partly-environment-variable-
+  dependent gating (excluded per this project's standing precedent that environment variables are
+  trusted, not attacker-controllable — confidence 2/10). No SQL/command injection, hardcoded
+  secrets, broken auth/authz logic, or exploitable XSS found elsewhere; the 6 re-skinned auth pages
+  are style-only, with zero change to `fetch()` calls, credentials, endpoints, or form logic.
+- `[2026-08-18]` **Required second-role human review complete for `dashboard-ui-foundation-
+alignment` (PR #33).** A review packet (published as a Claude artifact — code review + security
+  review findings, fixes, and validation evidence, with a decision section) was prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open
+  PLAUSIBLE code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
