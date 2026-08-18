@@ -443,7 +443,8 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     user-lookup/picker capability exists anywhere in this app yet. The user will provide a
     dashboard design prompt to address these at a later time — none of this is started or
     authorized; each remains its own separate, not-yet-requested next step. **Update
-    (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.**
+    (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.** **Update
+    (2026-08-18): gaps (2) and (3) built — see item 18.** Gaps (4) and (5) remain not started.
 14. **User lookup capability + Project owner assignment — built, validated, code-reviewed,
     security-reviewed, second-role human reviewed, gated, merged, and live in production
     (2026-08-17).**
@@ -692,6 +693,35 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The Dashboard UI
     Foundation Alignment slice is now genuinely live in production.** No business-module
     implementation work starts automatically once this lands.
+18. **`dashboard-web` Team management + Approver assignment UI — built, fully validated, not yet
+    reviewed, gated, or merged (2026-08-18).** Closes gaps (2) and (3) from item 13's remaining
+    Projects module gap analysis. Not started automatically — built directly on the user's
+    explicit choice ("Team + Approver UI first") among 4 scoping options presented for this work.
+    Both backends (team roster CRUD, approver list/assign/revoke) already existed, already
+    reviewed and gated under `module-projects-foundation`/`module-projects-backend-closeout` —
+    this slice is `dashboard-web` UI only. Widens `ProjectTeamEntry`
+    (`packages/shared-types`) to carry `userId`/`addedAt` so roster entries resolve to real
+    identities via the existing `GET /users/:userId` endpoint (new `getUsersByIds()`, parallel
+    resolution, drops unresolvable ids instead of throwing). `getProjectDetail()` now returns a
+    resolved team list and the real approvers list, degrading `approvers` to `null` on a 403
+    rather than throwing (most roles lack `users_roles:view`, the permission `GET
+.../approvers` itself requires). New `lib/roles.ts#getApproverRoleId()` resolves the seeded
+    `owner_growth_approver` role's id, needed since approver revocation reuses the general
+    role-assignment `DELETE` endpoint (no approver-specific revoke route exists). New
+    `ProjectTeamSection`/`ProjectApproversSection` client components reuse the existing
+    `UserPicker` and this app's established direct-`fetch()` mutation pattern. A real
+    cross-boundary bug was found and fixed along the way: the team section needed
+    `formatTimestamp()` as a real (not type-only) import from `lib/projects.ts`, which pulls in
+    `next/headers` and breaks the client bundle — extracted into a new zero-dependency
+    `lib/format-timestamp.ts` that `lib/projects.ts` re-exports. 123/123 `dashboard-web` unit
+    tests (18 new), 15/15 Playwright tests, typecheck/lint/`next build`/prettier all clean across
+    `packages/shared-types` and `dashboard-web`. See
+    `docs/implementation/dashboard-web-team-approver-management.md` for the full as-built record.
+    Pushed as its own branch (`dashboard-web-team-approver-management`); opened as
+    [PR #34](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/34) for
+    reviewability. **Not yet code-reviewed, security-reviewed, gated, or merged** — each remains a
+    separate, not-yet-requested next step. Gaps (4) sub-resource editing and (5) current-project
+    context propagation remain not started.
 
 ## Recent decisions
 
@@ -2318,6 +2348,32 @@ alignment` (PR #33).** A review packet (published as a Claude artifact — code 
   accessibility test coverage — is now genuinely live in production**, closing out this slice's
   full build-to-production arc. No business-module implementation work starts automatically as a
   result of this merge.
+- `[2026-08-18]` **Built the `dashboard-web` Team management + Approver assignment UI**, closing
+  gaps (2) and (3) from item 13's remaining-Projects-module-gaps analysis. Presented 4 scoping
+  options for this work (team+approver UI first / sub-resource editing first / all 4 gaps as one
+  package / something else); the user chose "Team + Approver UI first" — both reuse the existing
+  `UserPicker` and already-built, already-security-reviewed backend endpoints, the smallest,
+  lowest-risk next slice. Widened `ProjectTeamEntry` (`packages/shared-types`) to carry
+  `userId`/`addedAt`; added `getUsersByIds()` (`lib/users.ts`) to resolve a team roster to real
+  identities via the existing `GET /users/:userId` endpoint, in parallel, dropping unresolvable
+  ids rather than throwing; `getProjectDetail()` now returns a resolved team list and the real
+  approvers list (`null` when the viewer lacks `users_roles:view`, distinct from an empty list);
+  new `lib/roles.ts#getApproverRoleId()` resolves the `owner_growth_approver` role's id needed to
+  construct the approver-revoke call (reuses the general role-assignment `DELETE` endpoint — no
+  approver-specific revoke route exists). New `ProjectTeamSection`/`ProjectApproversSection`
+  client components render on the Project Detail page, replacing the old headcount-only Team
+  display. A real cross-boundary bug was found and fixed: the team section needed
+  `formatTimestamp()` as a real (not type-only) import from `lib/projects.ts`, which pulls in
+  `next/headers` and broke the client bundle — extracted into a new zero-dependency
+  `lib/format-timestamp.ts` that `lib/projects.ts` re-exports, so every existing server-side call
+  site stayed unaffected. 123/123 `dashboard-web` unit tests (18 new: `ProjectTeamSection`,
+  `ProjectApproversSection`, `getApproverRoleId`, `getUsersByIds`, plus updated/new
+  `getProjectDetail` coverage), 15/15 Playwright tests, typecheck/lint/`next build`/prettier all
+  clean across `packages/shared-types` and `dashboard-web`. See
+  `docs/implementation/dashboard-web-team-approver-management.md` for the full as-built record.
+  Pushed as branch `dashboard-web-team-approver-management`, opened as
+  [PR #34](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/34) — not
+  yet code-reviewed, security-reviewed, gated, or merged.
 
 ## Open client blockers
 
