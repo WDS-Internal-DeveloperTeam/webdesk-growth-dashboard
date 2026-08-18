@@ -396,8 +396,9 @@ describe("getProjectDetail", () => {
     const result = await getProjectDetail(MISSING_ID);
 
     expect(result).toBeNull();
-    // 1 primary + 5 sub-resource fetches — all started concurrently, not gated on the primary.
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    // 1 primary + 6 sub-resource fetches (roadmap-items, objectives, environments, repositories,
+    // team, approvers) — all started concurrently, not gated on the primary.
+    expect(fetchMock).toHaveBeenCalledTimes(7);
   });
 
   it("throws on a non-OK, non-404 primary response instead of treating it as missing", async () => {
@@ -417,8 +418,11 @@ describe("getProjectDetail", () => {
     await expect(getProjectDetail(VALID_ID)).rejects.toThrow(/Failed to load project/);
   });
 
-  it("fetches the project and every sub-resource concurrently, returning a real team headcount", async () => {
+  it("fetches the project and every sub-resource concurrently, resolving team and approver identities", async () => {
     const project = projectDetailFixture();
+    const teamUserId1 = "66666666-6666-6666-6666-666666666666";
+    const teamUserId2 = "77777777-7777-7777-7777-777777777777";
+    const approverUserId = "88888888-8888-8888-8888-888888888888";
     const requestedUrls: string[] = [];
     global.fetch = vi.fn((url: string) => {
       requestedUrls.push(url);
@@ -440,7 +444,27 @@ describe("getProjectDetail", () => {
         return Promise.resolve(okJson([]));
       }
       if (url.endsWith("/team")) {
-        return Promise.resolve(okJson([{ id: "a" }, { id: "b" }, { id: "c" }]));
+        return Promise.resolve(
+          okJson([
+            { id: "team-entry-1", userId: teamUserId1, addedAt: "2026-08-18T00:00:00.000Z" },
+            { id: "team-entry-2", userId: teamUserId2, addedAt: "2026-08-18T00:00:00.000Z" },
+          ]),
+        );
+      }
+      if (url.endsWith("/approvers")) {
+        return Promise.resolve(
+          okJson([{ id: approverUserId, displayName: "Ada Approver", email: "ada@example.com" }]),
+        );
+      }
+      if (url.endsWith(`/users/${teamUserId1}`)) {
+        return Promise.resolve(
+          okJson({ id: teamUserId1, displayName: "Tom Team", email: "tom@example.com" }),
+        );
+      }
+      if (url.endsWith(`/users/${teamUserId2}`)) {
+        return Promise.resolve(
+          okJson({ id: teamUserId2, displayName: "Tia Team", email: "tia@example.com" }),
+        );
       }
       throw new Error(`Unexpected URL in test: ${url}`);
     }) as typeof fetch;
@@ -450,7 +474,21 @@ describe("getProjectDetail", () => {
     expect(result).not.toBeNull();
     expect(result?.project).toEqual(project);
     expect(result?.roadmapItems).toHaveLength(1);
-    expect(result?.teamCount).toBe(3);
+    expect(result?.team).toEqual([
+      {
+        id: "team-entry-1",
+        addedAt: "2026-08-18T00:00:00.000Z",
+        user: { id: teamUserId1, displayName: "Tom Team", email: "tom@example.com" },
+      },
+      {
+        id: "team-entry-2",
+        addedAt: "2026-08-18T00:00:00.000Z",
+        user: { id: teamUserId2, displayName: "Tia Team", email: "tia@example.com" },
+      },
+    ]);
+    expect(result?.approvers).toEqual([
+      { id: approverUserId, displayName: "Ada Approver", email: "ada@example.com" },
+    ]);
     expect(requestedUrls).toEqual(
       expect.arrayContaining([
         `https://api.example.com/projects/${VALID_ID}`,
@@ -459,7 +497,70 @@ describe("getProjectDetail", () => {
         `https://api.example.com/projects/${VALID_ID}/environments`,
         `https://api.example.com/projects/${VALID_ID}/repositories`,
         `https://api.example.com/projects/${VALID_ID}/team`,
+        `https://api.example.com/projects/${VALID_ID}/approvers`,
       ]),
     );
+  });
+
+  it("resolves a team entry to user: null when its userId no longer resolves (disabled/deleted account)", async () => {
+    const project = projectDetailFixture();
+    const staleUserId = "99999999-9999-9999-9999-999999999999";
+    global.fetch = vi.fn((url: string) => {
+      if (url.endsWith(`/projects/${VALID_ID}`)) {
+        return Promise.resolve(okJson(project));
+      }
+      if (url.endsWith("/roadmap-items") || url.endsWith("/objectives")) {
+        return Promise.resolve(okJson([]));
+      }
+      if (url.endsWith("/environments") || url.endsWith("/repositories")) {
+        return Promise.resolve(okJson([]));
+      }
+      if (url.endsWith("/team")) {
+        return Promise.resolve(
+          okJson([
+            { id: "team-entry-1", userId: staleUserId, addedAt: "2026-08-18T00:00:00.000Z" },
+          ]),
+        );
+      }
+      if (url.endsWith("/approvers")) {
+        return Promise.resolve(okJson([]));
+      }
+      if (url.endsWith(`/users/${staleUserId}`)) {
+        return Promise.resolve({ ok: false, status: 404 } as Response);
+      }
+      throw new Error(`Unexpected URL in test: ${url}`);
+    }) as typeof fetch;
+
+    const result = await getProjectDetail(VALID_ID);
+
+    expect(result?.team).toEqual([
+      { id: "team-entry-1", addedAt: "2026-08-18T00:00:00.000Z", user: null },
+    ]);
+  });
+
+  it("resolves approvers: null when GET .../approvers responds 403 (caller lacks users_roles:view)", async () => {
+    const project = projectDetailFixture();
+    global.fetch = vi.fn((url: string) => {
+      if (url.endsWith(`/projects/${VALID_ID}`)) {
+        return Promise.resolve(okJson(project));
+      }
+      if (
+        url.endsWith("/roadmap-items") ||
+        url.endsWith("/objectives") ||
+        url.endsWith("/environments") ||
+        url.endsWith("/repositories") ||
+        url.endsWith("/team")
+      ) {
+        return Promise.resolve(okJson([]));
+      }
+      if (url.endsWith("/approvers")) {
+        return Promise.resolve({ ok: false, status: 403 } as Response);
+      }
+      throw new Error(`Unexpected URL in test: ${url}`);
+    }) as typeof fetch;
+
+    const result = await getProjectDetail(VALID_ID);
+
+    expect(result?.approvers).toBeNull();
   });
 });

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ContentContainer, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
+import { ProjectApproversSection } from "@/components/project-approvers-section";
 import { ProjectStatusActions } from "@/components/project-status-actions";
+import { ProjectTeamSection } from "@/components/project-team-section";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
 import {
@@ -13,6 +15,7 @@ import {
   projectStatusBadge,
   roadmapItemStatusBadge,
 } from "@/lib/projects";
+import { getApproverRoleId } from "@/lib/roles";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -26,14 +29,15 @@ interface ProjectDetailPageProps {
  *  Repositories/Roadmap tabs), explicitly flagged there as "not sourced... should be confirmed or
  *  corrected." This renders the same content grouping as a single scrollable page of sections
  *  instead of client-side tabs — a deliberate simplification, not a client-side gap, and it keeps
- *  every section below the header free of client state. "Team" has no member-identity list (§8's
- *  proposal implies one) since no user-lookup endpoint exists yet to resolve a `userId` to a name;
- *  only the real, non-fabricated headcount is shown, same reasoning already established for
- *  `ownerUserId`/`activePhaseId` on the list page. An "Edit" action links to `/projects/:id/edit`
- *  (name/description/confidentiality only); pause/resume/archive actions (D2's own state machine
- *  — `archived` is terminal) are a small client island (`ProjectStatusActions`) rendered alongside
- *  it — the only client JS this page renders; everything else, including this component itself,
- *  stays a Server Component. */
+ *  most sections below the header free of client state. Team and Approvers are now real
+ *  roster-management sections (`ProjectTeamSection`/`ProjectApproversSection`, small client
+ *  islands, `CLAUDE.md` "Active tasks" item 13 gaps 2/3) — user identities resolve via `GET
+ *  /users/:userId` (`lib/users.ts#getUsersByIds`), the capability that was missing when this page
+ *  was first built. Approvers renders only when the viewer holds `users_roles:view` (the
+ *  permission `GET .../approvers` itself requires) — see `ProjectDetailData.approvers`'s own doc
+ *  comment. An "Edit" action links to `/projects/:id/edit` (name/description/confidentiality
+ *  only); pause/resume/archive actions (D2's own state machine — `archived` is terminal) are a
+ *  small client island (`ProjectStatusActions`) rendered alongside it. */
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const session = await getServerSession();
   if (!session) {
@@ -46,7 +50,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     notFound();
   }
 
-  const { project, roadmapItems, objectives, environments, repositories, teamCount } = detail;
+  const { project, roadmapItems, objectives, environments, repositories, team, approvers } = detail;
+  // approvers is non-null only when the viewer holds users_roles:view — the same permission
+  // getApproverRoleId()'s own GET /authz/roles call needs, and the same permission UserPicker's
+  // GET /users search needs. Gating both on this one already-resolved signal avoids a wasted
+  // fetch (and a picker that would 403 on first keystroke) for the majority of viewers who don't
+  // hold it (code-review findings, this branch).
+  const approverRoleId = approvers ? await getApproverRoleId() : null;
   const badge = projectStatusBadge(project.status);
   const activePhase = project.activePhaseId
     ? (roadmapItems.find((item) => item.id === project.activePhaseId) ?? null)
@@ -78,7 +88,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           <Fact label="Confidentiality">{CONFIDENTIALITY_LABEL[project.confidentiality]}</Fact>
           <Fact label="Active phase">{activePhase ? activePhase.name : "None set"}</Fact>
           <Fact label="Owner">{project.ownerUserId ? "Assigned" : "Not assigned"}</Fact>
-          <Fact label="Team">{teamCount === 1 ? "1 member" : `${teamCount} members`}</Fact>
           <Fact label="Created">{formatTimestamp(project.createdAt)}</Fact>
           <Fact label="Updated">{formatTimestamp(project.updatedAt)}</Fact>
         </dl>
@@ -88,6 +97,26 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           <p style={mutedStyle}>No description.</p>
         )}
       </section>
+
+      <section style={sectionStyle}>
+        <h2 style={h2Style}>Team</h2>
+        <ProjectTeamSection
+          projectId={project.id}
+          initialTeam={team}
+          canSearchUsers={approvers !== null}
+        />
+      </section>
+
+      {approvers ? (
+        <section style={sectionStyle}>
+          <h2 style={h2Style}>Approvers</h2>
+          <ProjectApproversSection
+            projectId={project.id}
+            initialApprovers={approvers}
+            approverRoleId={approverRoleId}
+          />
+        </section>
+      ) : null}
 
       <section style={sectionStyle}>
         <h2 style={h2Style}>Roadmap</h2>

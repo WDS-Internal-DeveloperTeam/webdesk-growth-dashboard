@@ -329,12 +329,16 @@ export interface ProjectRepository {
 }
 
 /**
- * The project team roster's own entry — carries only `id`. A name-resolution endpoint now exists
- * (`GET /users/:userId`, see `UserSummary` above), but resolving every roster entry to a display
- * identity (N lookups for N members, or a batch-resolve endpoint this API doesn't have yet) is
- * separate, not-yet-done scope — same as `ProjectDetail.ownerUserId`. The detail page uses this
- * array's `.length` only, as a real, non-fabricated headcount — never renders an entry's identity.
+ * The project team roster's own entry (`ProjectUserEntity`, `packages/database/src/projects/entities.ts`).
+ * `userId` is resolved to a display identity via `GET /users/:userId` — one lookup per roster
+ * entry, the same N-lookups approach `ProjectDetail.ownerUserId`'s resolution already established
+ * for the edit form, since no batch team-resolve endpoint exists (team rosters are small). `id` is
+ * this entry's own row id, needed (not `userId`) to call `DELETE /projects/:projectId/team/:id`.
+ * `addedBy` (who added this member) is operational metadata, omitted same as `Project`'s own
+ * `createdBy`/`updatedBy`.
  */
 export interface ProjectTeamEntry {
   readonly id: string;
+  readonly userId: string;
+  readonly addedAt: string;
 }
