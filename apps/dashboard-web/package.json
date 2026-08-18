@@ -7,7 +7,7 @@
     "build": "next build",
     "dev": "next dev",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint app lib components tests --max-warnings=0",
+    "lint": "eslint app lib components tests --max-warnings=0 && node scripts/check-css-tokens.mjs",
     "test": "vitest run",
     "test:integration": "playwright test"
   },

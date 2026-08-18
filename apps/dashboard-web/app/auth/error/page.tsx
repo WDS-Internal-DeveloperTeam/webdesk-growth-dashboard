@@ -1,3 +1,5 @@
+import styles from "../auth.module.css";
+
 /**
  * Landed on after a rejected `/auth/google/callback` (knowledge/05: reject
  * a login "without leaking to the rejected user *which* check failed").
@@ -22,12 +24,16 @@ export default async function AuthErrorPage({
   const message = (reason && REASON_MESSAGES[reason]) ?? DEFAULT_MESSAGE;
 
   return (
-    <main style={{ padding: "2rem", maxWidth: 420 }}>
-      <h1>Sign-in failed</h1>
-      <p>{message}</p>
-      <p>
-        <a href="/auth/sign-in">Try again</a>
-      </p>
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Sign-in failed</h1>
+        <p className={styles.body}>{message}</p>
+        <p>
+          <a href="/auth/sign-in" className={styles.link}>
+            Try again
+          </a>
+        </p>
+      </div>
     </main>
   );
 }

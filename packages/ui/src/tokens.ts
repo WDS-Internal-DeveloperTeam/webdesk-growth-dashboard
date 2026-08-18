@@ -72,9 +72,13 @@ export const spacingTokens = {
 
 export const layoutTokens = {
   contentMaxWidth: "1280px",
+  /** Wider content max-width for dense tables (design system §5.5) — e.g. Page Inventory, Ready for Claude Queue. */
+  contentMaxWidthWide: "1600px",
   sidebarWidth: "260px",
   sidebarWidthCollapsed: "64px",
   headerHeight: "56px",
+  /** Side-drawer panel width (design system §5.5) — e.g. notifications, record detail drawers. */
+  drawerWidth: "420px",
 } as const;
 
 export const borderTokens = {
@@ -113,6 +117,25 @@ export const statusTokens = {
   unavailable: colorTokens.danger,
   notConfigured: colorTokens.muted,
   unknown: colorTokens.foregroundSubtle,
+} as const;
+
+/**
+ * The 5-bucket business-record/workflow status-badge palette (design system
+ * `10-status-and-workflow-system.md`) — every real status name from the
+ * approved workflow-state-machine and module-specification documents maps
+ * to one of these five buckets, never an invented status. Distinct from
+ * `statusTokens` above (system/integration health only, unchanged). Each
+ * bucket carries text/background/dot so status is encoded in form as well
+ * as color (never color alone). Nested like `controlSizeTokens` — meant for
+ * direct JS/inline-style consumption by badge components, not flattened
+ * into CSS custom properties.
+ */
+export const statusBadgeTokens = {
+  healthy: { text: "#166534", background: "#f0fdf4", dot: "#22c55e" },
+  attention: { text: "#92400e", background: "#fffbeb", dot: "#f59e0b" },
+  blocked: { text: "#991b1b", background: "#fef2f2", dot: "#ef4444" },
+  informational: { text: "#075985", background: "#f0f9ff", dot: "#38bdf8" },
+  neutral: { text: "#334155", background: "#f1f5f9", dot: "#94a3b8" },
 } as const;
 
 export const controlSizeTokens = {
@@ -154,6 +177,7 @@ export type BorderToken = keyof typeof borderTokens;
 export type RadiusToken = keyof typeof radiusTokens;
 export type ShadowToken = keyof typeof shadowTokens;
 export type StatusToken = keyof typeof statusTokens;
+export type StatusBadgeToken = keyof typeof statusBadgeTokens;
 export type ControlSizeToken = keyof typeof controlSizeTokens;
 export type BreakpointToken = keyof typeof breakpointTokens;
 export type ZIndexToken = keyof typeof zIndexTokens;

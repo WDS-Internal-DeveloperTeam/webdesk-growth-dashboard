@@ -602,6 +602,91 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     itself changes nothing about the running application's behavior — the deployment verification
     above confirms the merge landed cleanly, not a functional change. Building the Dashboard UI
     Foundation Alignment task package remains a separate, not-yet-requested next step.
+17. **Dashboard UI Foundation Alignment task package scoped (2026-08-17), then built (2026-08-17)
+    under a separate explicit "Begin this work" instruction — built, fully validated, not yet
+    reviewed, gated, or merged.** `docs/task-packages/dashboard-ui-foundation-alignment.md` records
+    the 6-item scope (design tokens, ~30-component library, navigation/shell alignment, auth-page
+    re-skin, accessibility test-coverage gap, component documentation), committed planning-only to
+    `main`. Built on branch `dashboard-ui-foundation-alignment` off `main` at
+    `f99f5bc88e652d01b4186dde3db38e0c7877bafc` (verified zero drift). Adds `statusBadgeTokens`/
+    `contentMaxWidthWide`/`drawerWidth` to `packages/ui`'s tokens plus a new
+    `apps/dashboard-web/scripts/check-css-tokens.mjs` lint check tying `@media`/transition literals
+    back to `breakpointTokens`/`motionTokens`; ~30 new `packages/ui` components across 5 new files
+    (`controls.tsx`, `structural.tsx`, `overlay.tsx`, `feedback.tsx`, `domain.tsx`, 79 new unit
+    tests, plus a new `packages/ui/README.md` reference — no Storybook); the application shell's
+    desktop sidebar collapse toggle, 5-cluster `libraries` navigation sub-grouping (derived from
+    each module's existing seeded `navigationOrder`, no schema change), tablet-range icon-only
+    behavior, and header additions (user-menu dropdown, help icon, environment/degraded-system-
+    status badges sourced from `/health`, a module-only `⌘K` search over the caller's own
+    navigation list, and a notifications drawer that honestly shows "not configured yet" rather
+    than fake data — the real `GET /notifications` endpoint is confirmed zero-seeded and has no
+    per-caller filter, so wiring it as a real inbox is separate, not-yet-authorized scope); all 6
+    pre-`packages/ui` auth pages (`sign-in`, `error`, `logout`, `session-expired`, `emergency`,
+    `emergency/totp`) re-skinned to the token system with zero change to auth flow/fields/logic,
+    closing the `#b00020` vs. `colorTokens.danger` drift the design system's own gap analysis
+    flagged; and a test-only, security-scrutinized authenticated-session fixture
+    (`apps/dashboard-web/lib/e2e-test-session.ts`, gated on **both**
+    `process.env.NODE_ENV !== "production"` — true for every real Vercel deployment regardless of
+    what this app configures, since `next build`/`next start` always run under `NODE_ENV=production`
+    — **and** an explicit `PLAYWRIGHT_E2E_TEST_MODE` flag set only in `playwright.config.ts`'s own
+    `webServer.env`) that finally gives the automated WCAG 2.2 AA suite real coverage of the
+    authenticated shell, previously zero since Phase 1C's SSO-only session model means Playwright
+    can never complete a real login in CI. **That new coverage immediately caught and fixed 3 real,
+    pre-existing WCAG AA contrast violations** — none introduced by this task's own new component
+    code — in `app/(shell)/home/page.tsx` (a hardcoded `#94a3b8` literal, 2.56:1), 4 status-badge
+    color pairs in `packages/ui/src/components/states.tsx` (`danger`/`warning`/`info` on their
+    respective surfaces, 3.07–4.41:1), and the sidebar's `.navGroupLabel`/`.clusterLabel`
+    (`foreground-subtle`, 2.45:1) — all fixed using already-token-driven, already-WCAG-verified
+    replacement values (the new `statusBadgeTokens` bucket text colors, and `foreground-muted`).
+    Full validation: 79/79 `packages/ui` unit tests, 103/103 `dashboard-web` unit tests, 15/15
+    Playwright tests (including the 2 new authenticated-shell a11y checks), typecheck/lint/
+    `next build`/`pnpm exec prettier --check` all clean across both packages; only
+    `apps/dashboard-web` and `packages/ui` files touched — zero `dashboard-api`/`packages/database`
+    changes (the task package's own two narrow backend-touch exceptions were never needed). Manual
+    contrast verification of the new `statusBadgeTokens` palette itself: all 5 buckets computed
+    directly against the WCAG 2.1 relative-luminance formula, ranging 6.81:1–9.45:1, comfortably
+    over the 4.5:1 minimum. See `docs/implementation/dashboard-ui-foundation-alignment.md` for the
+    full as-built record. Pushed as its own branch; opened as
+    [PR #33](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/33) for
+    reviewability, matching this project's standing pattern. **Update (2026-08-18): independent
+    code review run** (high effort, 8 finder angles) — 10 findings surfaced (8 CONFIRMED, 2
+    PLAUSIBLE). Most severe: the tablet (`768px`–`1023.98px`) and mobile (`max-width: 768px`) shell
+    breakpoints overlapped at exactly 768px, a real device width, letting the mobile off-canvas CSS
+    and the JS icon-only tablet state both apply at once — which also required fixing
+    `check-css-tokens.mjs` itself, since its regex never matched decimal breakpoints and only
+    validated one clause per compound `@media` query, so it silently passed the violating value.
+    All 8 CONFIRMED findings fixed and re-validated per explicit "fix the confirmed findings"
+    instruction (also: a dialog focus-trap effect re-running on unrelated re-renders due to
+    `onClose` identity churn; `ApprovalBlock`'s Reject/Request Revision modals leaking a shared
+    reason textarea; the a11y spec hardcoding a duplicate copy of the e2e session cookie constants;
+    `Progress` rendering `"NaN%"` at `max=0`; a duplicated `initialsFor()` helper; and two
+    independently-maintained test-fixture default shapes that had already drifted). The 2 PLAUSIBLE
+    findings (the header "Sign out" menu item lacking a real `href`; the new `Badge` structurally
+    near-duplicating the pre-existing `StatusBadge`) were left unaddressed, scope being literal.
+    Re-validated: 79/79 `packages/ui` + 103/103 `dashboard-web` unit tests, 15/15 Playwright tests,
+    typecheck/lint/build/prettier all clean. **A separate `security-review` skill run then found 0
+    findings above threshold** — focused on `lib/e2e-test-session.ts` (the new test-only
+    authenticated-session bypass for Playwright's a11y suite), confirming both its gates are
+    structurally sound (`NODE_ENV !== "production"` is fixed Next.js/Vercel behavior, not
+    app-configurable) and traced to have no header/query-param path around them; two candidates
+    (the unused `FileAttachment` component's missing URL-scheme guard, and the bypass's
+    partly-environment-variable-dependent gating) were considered and excluded at confidence
+    3/10 and 2/10 respectively. A review packet (published as a Claude artifact — code review +
+    security review findings, fixes, and validation evidence, with a decision section) was prepared
+    for the required second-role human review, since the implementing agent cannot also be its own
+    reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is"** (2026-08-18),
+    accepting the 2 open PLAUSIBLE findings as tracked debt rather than requesting fixes — see
+    `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
+    section. **The gate (G4-dashboard-ui-foundation-alignment) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `4a256c74735b4c819e62d8e00cac16ff3e762782` on branch `dashboard-ui-foundation-alignment` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-ui-foundation-alignment`) and the approval checklist's "Sign-off" section. **This
+    gate approval does not itself authorize merging PR #33 or a production deployment** — merge
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule (same pattern as every prior gate). No business-module implementation
+    work starts automatically once this lands.
 
 ## Recent decisions
 
@@ -2145,6 +2230,75 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, confirming the exact merged commit is
   is scoping only — a separate, explicit "begin this work" instruction is still required before
   any branch is created or any code is touched**, matching this project's discipline for every
   prior phase.
+- `[2026-08-17]` **Dashboard UI Foundation Alignment built**, under the separate explicit "Begin
+  this work" instruction the task package above itself required. Branch
+  `dashboard-ui-foundation-alignment`, off `main` at `f99f5bc88e652d01b4186dde3db38e0c7877bafc`
+  (re-verified zero drift before starting). All 6 scoped items built and fully validated — see the
+  new "Active tasks" item 17 above and `docs/implementation/dashboard-ui-foundation-alignment.md`
+  for the complete as-built account, including the 3 real, pre-existing WCAG AA contrast
+  violations the new authenticated-shell accessibility coverage caught and fixed. 79/79
+  `packages/ui` + 103/103 `dashboard-web` unit tests, 15/15 Playwright tests, typecheck/lint/
+  `next build`/prettier all clean; only `apps/dashboard-web` and `packages/ui` touched. Pushed and
+  opened as [PR #33](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/33)
+  for reviewability.
+- `[2026-08-18]` **Independent code review run on `dashboard-ui-foundation-alignment` (PR #33),
+  high effort — 8 finder angles, 1-vote verification.** 10 findings surfaced, 8 CONFIRMED and 2
+  PLAUSIBLE. Most severe: the tablet (`min-width: 768px, max-width: 1023.98px`) and mobile
+  (`max-width: 768px`) shell breakpoints overlapped at exactly 768px, a real device width, letting
+  the mobile off-canvas CSS and the JS icon-only tablet state both apply at once — this also
+  required fixing `check-css-tokens.mjs` itself, since its regex never matched decimal breakpoints
+  and only validated one clause per compound `@media` query, so it silently passed the now-removed
+  `1023.98px` violation. All 8 CONFIRMED findings fixed and re-validated per the explicit "fix the
+  confirmed findings" instruction: the breakpoint/lint-script pair above; a dialog focus-trap
+  effect (`useDialogBehavior`) re-running on any unrelated parent re-render because it depended on
+  the `onClose` callback's identity (fixed via the latest-ref pattern); `ApprovalBlock`'s Reject
+  and Request Revision modals sharing one `reason` textarea, cleared only on submit and leaking
+  between them on Cancel; `accessibility.spec.ts` hardcoding a duplicate copy of the e2e session
+  cookie constants instead of importing them from `lib/e2e-test-session.ts`; `Progress` rendering
+  `width: "NaN%"` at `max === 0`; a duplicated `initialsFor()` helper between `app-shell.tsx` and
+  `packages/ui` (now exported and reused); and two independently-maintained test-fixture default
+  shapes (`fixtureModule()`/`navEntry()`) that had already drifted on their `implementationStatus`
+  default. The 2 PLAUSIBLE findings — the header "Sign out" menu item using `router.push()` instead
+  of a real `href`, and the new `Badge` structurally near-duplicating the pre-existing
+  `StatusBadge` — were left unaddressed, since the fix instruction's scope was literal
+  (CONFIRMED-only); both were flagged for the second-role reviewer's disposition. Re-validated:
+  79/79 `packages/ui` + 103/103 `dashboard-web` unit tests, 15/15 Playwright tests, typecheck/lint/
+  build/`pnpm exec prettier --check` all clean. See `docs/implementation/dashboard-ui-foundation-
+alignment.md`'s "Independent code review" section for the full account.
+- `[2026-08-18]` **Security review run on `dashboard-ui-foundation-alignment` (PR #33), separately
+  from the code review.** 0 findings above threshold. Focused on this branch's most
+  security-relevant addition, `lib/e2e-test-session.ts` (the new test-only authenticated-session
+  bypass built so Playwright's automated accessibility suite can exercise the real authenticated
+  shell in CI). Traced its only consumer (`getServerSession()`) and confirmed no header/query-param
+  path reaches it; both gates are structurally sound — Next.js force-sets `NODE_ENV=production` for
+  the real `next build`/Vercel Runtime pipeline regardless of any other env var, so even a
+  misconfigured `PLAYWRIGHT_E2E_TEST_MODE=1` in production wouldn't clear the first gate. Two
+  candidates were considered and excluded: the unused `FileAttachment` component's `<a href>`
+  rendering with no URL-scheme allowlist (the same shape as a previously-fixed stored-XSS bug, but
+  with no live caller anywhere in this branch — confidence 3/10, a hardening gap to close before
+  first real use, not a live vulnerability today) and the bypass's partly-environment-variable-
+  dependent gating (excluded per this project's standing precedent that environment variables are
+  trusted, not attacker-controllable — confidence 2/10). No SQL/command injection, hardcoded
+  secrets, broken auth/authz logic, or exploitable XSS found elsewhere; the 6 re-skinned auth pages
+  are style-only, with zero change to `fetch()` calls, credentials, endpoints, or form logic.
+- `[2026-08-18]` **Required second-role human review complete for `dashboard-ui-foundation-
+alignment` (PR #33).** A review packet (published as a Claude artifact — code review + security
+  review findings, fixes, and validation evidence, with a decision section) was prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open
+  PLAUSIBLE code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-18]` **The gate (G4-dashboard-ui-foundation-alignment) was then separately requested
+  and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `4a256c74735b4c819e62d8e00cac16ff3e762782` on branch `dashboard-ui-foundation-alignment` —
+  recorded in `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-ui-foundation-alignment`) and
+  `docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #33 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
@@ -2340,3 +2494,15 @@ debt), security-reviewed (0 findings above threshold), second-role human reviewe
 "Recent decisions" entries, `docs/implementation/dashboard-web-projects-list.md`, and
 `docs/project-state/dashboard-web-projects-list-approval-checklist.md`'s "Sign-off" section. No
 project-detail page or create/edit form exists yet — both separate, not-yet-requested next steps.
+
+**This footer narrative stops at 2026-08-16** — everything from the Project Detail page (2026-08-16)
+through the Dashboard UI Foundation Alignment build (2026-08-17) is recorded in "Recent decisions"
+and "Active tasks" above (items 10–17), which are kept current every session; this block is not
+rewritten at the same cadence. As of 2026-08-17: the Projects module (backend, header switcher,
+list/detail pages, create/edit form, status/archive actions, user-lookup + owner assignment,
+backend close-out) is fully live in production; the Dashboard UI/UX design system is approved and
+merged to `main`; and the Dashboard UI Foundation Alignment implementation (tokens, ~30 new
+`packages/ui` components, application-shell navigation/header alignment, auth-page re-skin, and a
+new authenticated-shell accessibility test path that caught and fixed 3 real pre-existing WCAG AA
+contrast bugs) is built, fully validated, and pushed as its own PR — not yet reviewed, gated, or
+merged. See item 17 under "Active tasks" for the full account.

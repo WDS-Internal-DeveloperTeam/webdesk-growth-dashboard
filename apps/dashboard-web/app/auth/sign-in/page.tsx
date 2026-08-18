@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "@/lib/auth";
+import styles from "../auth.module.css";
 
 /**
  * Google Workspace SSO is the primary path (ADR-0008); the emergency-admin
@@ -21,15 +22,21 @@ export default function SignInPage() {
   const apiBaseUrl = getApiBaseUrl();
 
   return (
-    <main style={{ padding: "2rem", maxWidth: 420 }}>
-      <h1>Sign in</h1>
-      <p>
-        <a href={`${apiBaseUrl}/auth/google/start`}>Sign in with Google Workspace</a>
-      </p>
-      <p style={{ marginTop: "3rem", fontSize: "0.85rem", color: "#666" }}>
-        <a href="/auth/emergency">Emergency administrator access</a> — for authorized administrators
-        only, when Google Workspace SSO is unavailable.
-      </p>
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Sign in</h1>
+        <p>
+          <a href={`${apiBaseUrl}/auth/google/start`} className={styles.link}>
+            Sign in with Google Workspace
+          </a>
+        </p>
+        <p className={styles.secondaryLink}>
+          <a href="/auth/emergency" className={styles.link}>
+            Emergency administrator access
+          </a>{" "}
+          — for authorized administrators only, when Google Workspace SSO is unavailable.
+        </p>
+      </div>
     </main>
   );
 }

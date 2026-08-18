@@ -23,6 +23,11 @@
   background: var(--webdesk-dashboard-color-background);
   color: var(--webdesk-dashboard-color-foreground);
   font-family: var(--webdesk-dashboard-font-family-base);
+  transition: grid-template-columns 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shellCollapsed {
+  grid-template-columns: var(--webdesk-dashboard-layout-sidebar-width-collapsed) 1fr;
 }
 
 .header {
@@ -78,6 +83,31 @@
   outline-offset: 2px;
 }
 
+.collapseToggle {
+  flex-shrink: 0;
+}
+
+.userMenuEmail {
+  display: block;
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.clusterLabel {
+  display: block;
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-sm)
+    var(--webdesk-dashboard-space-xs);
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* --webdesk-dashboard-color-foreground-subtle is only 2.45:1 against this surface at this
+     font size — under WCAG AA's 4.5:1, a real violation axe-core caught once the shell was
+     first scanned on an authenticated route. foreground-muted passes (7+:1). */
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
 .sidebar {
   grid-area: sidebar;
   border-right: 1px solid var(--webdesk-dashboard-color-border);
@@ -96,7 +126,10 @@
   font-weight: var(--webdesk-dashboard-font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--webdesk-dashboard-color-foreground-subtle);
+  /* --webdesk-dashboard-color-foreground-subtle is only 2.45:1 against this surface at this
+     font size — under WCAG AA's 4.5:1, a real violation axe-core caught once the shell was
+     first scanned on an authenticated route. foreground-muted passes (7+:1). */
+  color: var(--webdesk-dashboard-color-foreground-muted);
   padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
 }
 
@@ -135,7 +168,31 @@
   min-width: 0;
 }
 
-@media (max-width: 768px) {
+/* Desktop collapsed toggle AND the tablet-forced icon-only rail (§1.2/§1.5) share this rendering:
+   links become fixed-size monogram tiles instead of full-width text rows. */
+.sidebarIconOnly .sidebarLink,
+.sidebarIconOnly .sidebarLinkActive {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+}
+
+.sidebarIconOnly .navList {
+  align-items: center;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .shell {
+    grid-template-columns: var(--webdesk-dashboard-layout-sidebar-width-collapsed) 1fr;
+  }
+}
+
+@media (max-width: 767px) {
   .shell {
     grid-template-columns: 1fr;
     grid-template-areas: "header" "main";
@@ -152,7 +209,7 @@
     inset-inline-start: 0;
     width: min(80vw, var(--webdesk-dashboard-layout-sidebar-width));
     transform: translateX(-100%);
-    transition: transform 200ms ease;
+    transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 20;
     box-shadow: var(--webdesk-dashboard-shadow-lg);
   }
