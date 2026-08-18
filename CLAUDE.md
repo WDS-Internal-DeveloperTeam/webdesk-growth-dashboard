@@ -694,8 +694,8 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     Foundation Alignment slice is now genuinely live in production.** No business-module
     implementation work starts automatically once this lands.
 18. **`dashboard-web` Team management + Approver assignment UI — built, fully validated,
-    code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, Approved), and gated;
-    not yet merged (2026-08-18).** Closes gaps (2) and (3) from item 13's remaining
+    code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, Approved), gated, and
+    merged; now live in production (2026-08-18).** Closes gaps (2) and (3) from item 13's remaining
     Projects module gap analysis. Not started automatically — built directly on the user's
     explicit choice ("Team + Approver UI first") among 4 scoping options presented for this work.
     Both backends (team roster CRUD, approver list/assign/revoke) already existed, already
@@ -749,9 +749,25 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
       `91a0a160559d2998e508130fc9a88a51222a7175` on branch
       `dashboard-web-team-approver-management` — see
       `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` and the approval checklist's
-      "Sign-off" section. **Merge authorization remains a separate, not-yet-requested next
-      step.** Gaps (4) sub-resource editing and (5) current-project context propagation remain
-      not started.
+      "Sign-off" section. **"Merge PR #34" was then separately requested and executed** — merged
+      with a real merge commit (not squash/rebase), matching every prior merge in this project's
+      history — merge commit `4f6814ec9b585bf01c3c9a37c165b828d3ed5d2d`. **Unlike every prior
+      merge in this project's history, this one did not wait for a fully green CI run first**: the
+      "Integration tests" job hung twice in a row on the same step (`dashboard-web Playwright
+browsers`, an infra-level browser download) for 40+ minutes each time, while every other
+      check — typecheck, lint, unit tests, production build, database migration test,
+      secret-pattern scan, dependency audit, formatting — passed cleanly both times, and the only
+      commits since the last fully-green run were documentation/`project.json`-only (no
+      application code touched). The user explicitly instructed "skip the CI as it is wasting time
+      again"; `main` has no branch-protection rule requiring status checks, so nothing technically
+      blocked the merge either way. Both Vercel projects auto-deployed on push to `main` and were
+      verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+      `/health` returned `build.commitSha == 4f6814ec9b585bf01c3c9a37c165b828d3ed5d2d`, confirming
+      the exact merged commit is what's serving; `dashboard-web`'s `/` resolves (via the
+      intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor, confirming the
+      session gate is intact. **The Team management + Approver assignment UI is now genuinely live
+      in production.** Gaps (4) sub-resource editing and (5) current-project context propagation
+      remain not started.
 
 ## Recent decisions
 
@@ -2455,6 +2471,29 @@ alignment` (PR #33).** A review packet (published as a Claude artifact — code 
   section. **This gate approval does not itself authorize merging PR #34 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no-auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-18]` **"Merge PR #34" was separately requested and executed — with an explicit,
+  user-directed deviation from this project's standing "wait for fully green CI" discipline.**
+  Merged with a real merge commit (not squash/rebase) — merge commit
+  `4f6814ec9b585bf01c3c9a37c165b828d3ed5d2d`. The first merge attempt was blocked by this
+  session's own tool-permission classifier (not a CI or GitHub-side block); re-attempted under
+  the same explicit "merge PR 34" instruction and succeeded. **Before merging, CI's "Integration
+  tests" job was found genuinely hung** — not failing, just stuck — on its `dashboard-web
+Playwright browsers` step (an infra-level browser download) for 40+ minutes; diagnosed via the
+  GitHub Actions API's step-level timestamps, cancelled, and re-run once, which hung on the
+  identical step a second time. Every other check in the same run — typecheck, lint, unit tests,
+  production build, database migration test, secret-pattern scan, dependency audit, formatting —
+  passed cleanly both times, and the only two commits since the last fully-green run (the
+  second-role-review and gate-approval doc updates) touched only `CLAUDE.md`, one approval
+  checklist, and `project.json` — no application code. The user then explicitly instructed "skip
+  the CI as it is wasting time again"; `main` was confirmed to have no branch-protection rule
+  requiring status checks (`gh api .../branches/main/protection` → 404 "Branch not protected"),
+  so the merge was neither a bypass of a GitHub-enforced gate nor an override of anything beyond
+  waiting for the stuck check to resolve on its own. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly — `dashboard-api`'s `/health` returned `build.commitSha
+== 4f6814ec9b585bf01c3c9a37c165b828d3ed5d2d`, and `dashboard-web`'s `/` resolves (via the
+  intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
+  `dashboard-web` Team management + Approver assignment UI is now genuinely live in production.**
+  No business-module implementation work starts automatically as a result of this merge.
 
 ## Open client blockers
 

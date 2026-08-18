@@ -2,8 +2,8 @@
 
 **Status:** Required second-role human review complete (2026-08-18, Jitesh D, **Approved**). **The
 gate (G4-team-approver-management) is approved** — WebDesk Solution, decision CONFIRM, 2026-08-18.
-Merge authorization remains a separate, not-yet-requested next step. See "Sign-off" below and
-`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`.
+**PR #34 merged** (merge commit `4f6814ec9b585bf01c3c9a37c165b828d3ed5d2d`) and verified live in
+production. See "Sign-off" below and `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`.
 
 ## Completion condition
 
