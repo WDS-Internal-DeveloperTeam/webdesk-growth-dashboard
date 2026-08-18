@@ -1,0 +1,116 @@
+/* Shared by project-team-section.tsx and project-approvers-section.tsx — both render the same
+ * shape (a list of people + an add-picker below it), so the layout/row/button styling lives here
+ * once rather than being redeclared per component. */
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--webdesk-dashboard-space-md);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.name {
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.email {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.meta {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-subtle);
+}
+
+.removeButton {
+  flex-shrink: 0;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: 0.3rem var(--webdesk-dashboard-space-sm);
+  cursor: pointer;
+}
+
+.removeButton:hover,
+.removeButton:focus-visible {
+  background: var(--webdesk-dashboard-color-muted-surface);
+}
+
+.removeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.removeButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.addRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.addRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.addButton {
+  flex-shrink: 0;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-accent-foreground);
+  background: var(--webdesk-dashboard-color-accent);
+  border: none;
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  cursor: pointer;
+}
+
+.addButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.addButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  margin-top: var(--webdesk-dashboard-space-xs);
+}
+
+.muted {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0 0 var(--webdesk-dashboard-space-sm);
+}

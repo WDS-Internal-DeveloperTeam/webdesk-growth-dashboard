@@ -30,3 +30,25 @@ export async function getUser(userId: string): Promise<UserSummary | null> {
   }
   return ((await response.json()) as ApiSuccessResponse<UserSummary>).data;
 }
+
+/**
+ * Resolves several user ids at once — N parallel `getUser()` calls (no batch-resolve endpoint
+ * exists; team rosters are small, see `ProjectTeamEntry`'s own doc comment). Deduplicates ids
+ * first so a roster with repeated entries never issues the same lookup twice. An id that fails to
+ * resolve (deleted/disabled account, matching `getUser()`'s own null-on-404 contract) is simply
+ * absent from the returned map rather than throwing — callers render an "Unknown member" fallback
+ * for a missing key instead of losing the whole roster to one bad id.
+ */
+export async function getUsersByIds(
+  userIds: readonly string[],
+): Promise<ReadonlyMap<string, UserSummary>> {
+  const uniqueIds = [...new Set(userIds)];
+  const resolved = await Promise.all(uniqueIds.map((id) => getUser(id)));
+  const map = new Map<string, UserSummary>();
+  resolved.forEach((user, index) => {
+    if (user) {
+      map.set(uniqueIds[index]!, user);
+    }
+  });
+  return map;
+}

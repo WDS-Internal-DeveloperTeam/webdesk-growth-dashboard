@@ -8,9 +8,14 @@ import type {
   ProjectRepository,
   ProjectTeamEntry,
   RoadmapItem,
+  UserSummary,
 } from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
 import { getApiBaseUrl } from "./auth";
+import { formatTimestamp } from "./format-timestamp";
+import { getUsersByIds } from "./users";
+
+export { formatTimestamp };
 
 export const PROJECTS_PAGE_SIZE = 25;
 
@@ -165,12 +170,6 @@ export async function getProjects(query: ProjectsQuery): Promise<ProjectsPageRes
   };
 }
 
-/** Shared by the list and detail pages — displayed as the raw stored UTC timestamp, not localized;
- *  see the detail page's own note on why (real timezone confirmation is still an open item). */
-export function formatTimestamp(iso: string): string {
-  return `${iso.slice(0, 16).replace("T", " ")} UTC`;
-}
-
 /**
  * Guards a stored URL before it's ever rendered as a clickable `<a href>`. The backend's own
  * validation (`z.string().url()` on `ProjectEnvironment.url`) only confirms the value parses as
@@ -220,15 +219,26 @@ export function objectiveStatusBadge(status: ProjectObjective["status"]): {
   return OBJECTIVE_STATUS_BADGE[status];
 }
 
+/** A team-roster entry with its `userId` resolved to a display identity where possible — `user` is
+ *  `null` for an id that no longer resolves (disabled/deleted account), so the roster stays
+ *  fully rendered instead of one bad id dropping the whole list. */
+export interface ResolvedTeamMember {
+  readonly id: string;
+  readonly addedAt: string;
+  readonly user: UserSummary | null;
+}
+
 export interface ProjectDetailData {
   readonly project: ProjectDetail;
   readonly roadmapItems: readonly RoadmapItem[];
   readonly objectives: readonly ProjectObjective[];
   readonly environments: readonly ProjectEnvironment[];
   readonly repositories: readonly ProjectRepository[];
-  /** A real, non-fabricated headcount only — see `ProjectTeamEntry`'s own doc comment for why
-   *  individual team-roster identities aren't fetched or shown. */
-  readonly teamCount: number;
+  readonly team: readonly ResolvedTeamMember[];
+  /** `null` means the caller lacks `users_roles:view` (the permission `GET .../approvers` itself
+   *  is gated on), so the section renders nothing at all, not an empty list — distinct from `[]`,
+   *  a real project with zero approvers currently assigned. */
+  readonly approvers: readonly UserSummary[] | null;
 }
 
 async function fetchProjectSubResource<T>(
@@ -245,6 +255,32 @@ async function fetchProjectSubResource<T>(
     throw new Error(`Failed to load project ${resource} (status ${response.status})`);
   }
   return ((await response.json()) as ApiSuccessResponse<readonly T[]>).data;
+}
+
+/**
+ * Unlike `fetchProjectSubResource()` above, a non-OK response here degrades to `null` instead of
+ * throwing — `GET /projects/:projectId/approvers` is gated on `users_roles:view`, a permission
+ * most roles don't hold, so a 403 is an expected, routine outcome (the section simply isn't shown
+ * to that viewer), not a real failure the page's error boundary should ever see.
+ */
+async function fetchProjectApprovers(
+  apiBaseUrl: string,
+  projectId: string,
+  headers: HeadersInit,
+): Promise<readonly UserSummary[] | null> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/projects/${projectId}/approvers`, {
+      headers,
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return ((await response.json()) as ApiSuccessResponse<readonly UserSummary[]>).data;
+  } catch (err) {
+    console.error("getProjectDetail: GET .../approvers request failed", err);
+    return null;
+  }
 }
 
 /**
@@ -349,19 +385,29 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   const teamPromise = tolerateDiscard(
     fetchProjectSubResource<ProjectTeamEntry>(apiBaseUrl, projectId, "team", headers),
   );
+  const approversPromise = fetchProjectApprovers(apiBaseUrl, projectId, headers);
 
   const project = await fetchProject(apiBaseUrl, projectId, headers);
   if (!project) {
     return null;
   }
 
-  const [roadmapItems, objectives, environments, repositories, team] = await Promise.all([
-    roadmapItemsPromise,
-    objectivesPromise,
-    environmentsPromise,
-    repositoriesPromise,
-    teamPromise,
-  ]);
+  const [roadmapItems, objectives, environments, repositories, rawTeam, approvers] =
+    await Promise.all([
+      roadmapItemsPromise,
+      objectivesPromise,
+      environmentsPromise,
+      repositoriesPromise,
+      teamPromise,
+      approversPromise,
+    ]);
+
+  const teamUsers = await getUsersByIds(rawTeam.map((entry) => entry.userId));
+  const team: readonly ResolvedTeamMember[] = rawTeam.map((entry) => ({
+    id: entry.id,
+    addedAt: entry.addedAt,
+    user: teamUsers.get(entry.userId) ?? null,
+  }));
 
   return {
     project,
@@ -369,6 +415,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     objectives,
     environments,
     repositories,
-    teamCount: team.length,
+    team,
+    approvers,
   };
 }
