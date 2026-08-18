@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-ui-foundation-alignment",
+    "current_gate": "G4-team-approver-management",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-17T00:00:00Z",
-    "version": 26
+    "updated_at": "2026-08-18T00:00:00Z",
+    "version": 27
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -274,6 +274,20 @@
       "approved_commit": "4a256c74735b4c819e62d8e00cac16ff3e762782",
       "record": "docs/project-state/dashboard-ui-foundation-alignment-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #33 or a production deployment — merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-team-approver-management",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-team-approver-management",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-18T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web Team management + Approver assignment UI (branch dashboard-web-team-approver-management, PR #34) — Team roster management and Approver assignment sections on the Project Detail page, closing Projects-module gaps (2) and (3) from CLAUDE.md item 13. UI only — no dashboard-api or packages/database changes; reuses already-built, already-reviewed backend endpoints (GET/POST/DELETE /projects/:projectId/team, GET/POST /projects/:projectId/approvers, DELETE /authz/users/:userId/roles/:roleId). Independent code review (high effort, 8-angle finder pass) surfaced 10 CONFIRMED findings — most severe a crash on any 403 from GET /users/:userId during team-identity resolution; 9 of 10 fixed and re-validated, 1 (getUsersByIds() using N parallel requests instead of the backend's existing findByIds() batch endpoint) recorded as accepted, out-of-scope debt since fixing it needs new backend code, out of scope for a branch declared dashboard-web UI only. Security review (run separately) found 0 findings above threshold. Final numbers: 128/128 dashboard-web unit tests (25 new across the build and fix round), 15/15 Playwright tests, typecheck/lint/next build/prettier all clean. Required second-role human review complete — Jitesh D, decision \"Approved\", 2026-08-18, no disputes.",
+      "approved_commit": "91a0a160559d2998e508130fc9a88a51222a7175",
+      "record": "docs/project-state/dashboard-web-team-approver-management-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #34 or a production deployment — merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -1038,6 +1052,21 @@
       },
       "project_version_before": 44,
       "project_version_after": 45
+    },
+    {
+      "timestamp": "2026-08-18T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-team-approver-management for dashboard-web-team-approver-management (PR #34)",
+      "details": {
+        "decision": "CONFIRM (clean pass, not an override — the required second-role human review, code review, and security review were all already complete before the gate was requested)",
+        "scope": "dashboard-web Team management + Approver assignment UI only — Team roster and Approver assignment sections on the Project Detail page. No dashboard-api or packages/database changes.",
+        "approved_commit": "91a0a160559d2998e508130fc9a88a51222a7175",
+        "record": "docs/project-state/dashboard-web-team-approver-management-approval-checklist.md",
+        "excludes": "This gate does not itself authorize merging PR #34 or a production deployment — merge remains its own separate, not-yet-requested authorization."
+      },
+      "project_version_before": 26,
+      "project_version_after": 27
     }
   ]
 }

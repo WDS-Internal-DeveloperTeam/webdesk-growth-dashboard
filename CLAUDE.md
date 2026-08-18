@@ -694,8 +694,8 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     Foundation Alignment slice is now genuinely live in production.** No business-module
     implementation work starts automatically once this lands.
 18. **`dashboard-web` Team management + Approver assignment UI — built, fully validated,
-    code-reviewed, security-reviewed, and second-role human reviewed (Jitesh D, Approved); not yet
-    gated or merged (2026-08-18).** Closes gaps (2) and (3) from item 13's remaining
+    code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, Approved), and gated;
+    not yet merged (2026-08-18).** Closes gaps (2) and (3) from item 13's remaining
     Projects module gap analysis. Not started automatically — built directly on the user's
     explicit choice ("Team + Approver UI first") among 4 scoping options presented for this work.
     Both backends (team roster CRUD, approver list/assign/revoke) already existed, already
@@ -744,9 +744,14 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
       prepared for the required second-role human review, since the implementing agent cannot also
       be its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved"** — see
       `docs/project-state/dashboard-web-team-approver-management-approval-checklist.md`'s
-      "Sign-off" section. **A gate decision and merge authorization remain separate,
-      not-yet-requested next steps.** Gaps (4) sub-resource editing and (5) current-project context
-      propagation remain not started.
+      "Sign-off" section. **The gate (G4-team-approver-management) was then separately requested
+      and approved** — WebDesk Solution, decision CONFIRM, approved commit
+      `91a0a160559d2998e508130fc9a88a51222a7175` on branch
+      `dashboard-web-team-approver-management` — see
+      `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` and the approval checklist's
+      "Sign-off" section. **Merge authorization remains a separate, not-yet-requested next
+      step.** Gaps (4) sub-resource editing and (5) current-project context propagation remain
+      not started.
 
 ## Recent decisions
 
@@ -2440,6 +2445,16 @@ alignment` (PR #33).** A review packet (published as a Claude artifact — code 
   D reviewed it and returned "Approved."** See
   `docs/project-state/dashboard-web-team-approver-management-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-18]` **The gate (G4-team-approver-management) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `91a0a160559d2998e508130fc9a88a51222a7175` on branch `dashboard-web-team-approver-management` —
+  recorded in `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-team-approver-management`) and
+  `docs/project-state/dashboard-web-team-approver-management-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #34 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no-auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
