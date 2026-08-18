@@ -165,7 +165,13 @@ export interface ProgressProps {
  */
 export function Progress({ label, value, max = 100 }: ProgressProps): ReactNode {
   const isDeterminate = typeof value === "number";
-  const percent = isDeterminate ? Math.min(100, Math.max(0, (value / max) * 100)) : undefined;
+  // Guard `max <= 0` explicitly — `(value / max) * 100` is `NaN` (or `Infinity`) at `max === 0`,
+  // which would otherwise propagate straight through both clamps into `style={{ width: "NaN%" }}`.
+  const percent = isDeterminate
+    ? max > 0
+      ? Math.min(100, Math.max(0, (value / max) * 100))
+      : 0
+    : undefined;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.xs }}>
       <span style={{ fontSize: typographyTokens.fontSizeSm, color: colorTokens.foregroundMuted }}>

@@ -102,6 +102,7 @@ export {
   Pagination,
   Table,
   Tabs,
+  initialsFor,
   type AccordionItem,
   type AccordionProps,
   type AvatarProps,

@@ -15,6 +15,7 @@ import {
   Drawer,
   Dropdown,
   IconButton,
+  initialsFor,
   NotConfiguredState,
   Tooltip,
 } from "@webdesk/ui";
@@ -103,17 +104,7 @@ const LIBRARY_CLUSTERS: ReadonlyArray<{
 ];
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "webdesk-dashboard-sidebar-collapsed";
-const TABLET_RANGE_QUERY = "(min-width: 768px) and (max-width: 1023.98px)";
-
-function initialsFor(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) {
-    return "?";
-  }
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return (first + last).toUpperCase();
-}
+const TABLET_RANGE_QUERY = "(min-width: 768px) and (max-width: 1023px)";
 
 /**
  * Groups navigation entries, then orders the groups per

@@ -21,6 +21,10 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const APPROVED_BREAKPOINTS_PX = [480, 768, 1024, 1280];
+// A `max-width` clause pairing with the NEXT breakpoint up needs to stop one pixel short of it
+// (e.g. `max-width: 767px` to hand off cleanly to a `min-width: 768px` rule with no overlap at
+// the boundary pixel) — allow exactly that "breakpoint minus 1" value for `max-width` only.
+const APPROVED_MAX_WIDTH_EXCLUSIVE_PX = APPROVED_BREAKPOINTS_PX.map((value) => value - 1);
 const APPROVED_DURATIONS_MS = [120, 200, 320];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,12 +39,23 @@ for (const file of files) {
   const contents = readFileSync(file, "utf8");
   const relative = path.relative(appRoot, file);
 
-  for (const match of contents.matchAll(/@media[^{]*\(\s*(?:min|max)-width:\s*(\d+)px\s*\)/g)) {
-    const value = Number(match[1]);
-    if (!APPROVED_BREAKPOINTS_PX.includes(value)) {
-      violations.push(
-        `${relative}: @media breakpoint ${value}px is not one of the approved breakpointTokens values (${APPROVED_BREAKPOINTS_PX.join(", ")})`,
-      );
+  // Each `@media (...)` prelude can hold more than one `min-width`/`max-width` clause (a
+  // compound range query like `(min-width: 768px) and (max-width: 1023px)`) — extract the
+  // full prelude first, then check every width clause inside it, not just the first/last match.
+  for (const preludeMatch of contents.matchAll(/@media\s*([^{]+)\{/g)) {
+    const prelude = preludeMatch[1];
+    for (const widthMatch of prelude.matchAll(/(min|max)-width:\s*(\d+(?:\.\d+)?)px/g)) {
+      const kind = widthMatch[1];
+      const value = Number(widthMatch[2]);
+      const approved =
+        kind === "max"
+          ? [...APPROVED_BREAKPOINTS_PX, ...APPROVED_MAX_WIDTH_EXCLUSIVE_PX]
+          : APPROVED_BREAKPOINTS_PX;
+      if (!approved.includes(value)) {
+        violations.push(
+          `${relative}: @media ${kind}-width ${value}px is not one of the approved breakpointTokens values (${approved.join(", ")})`,
+        );
+      }
     }
   }
 

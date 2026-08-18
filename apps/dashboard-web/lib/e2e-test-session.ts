@@ -43,7 +43,10 @@ import type { ServerSession } from "./server-session";
  */
 
 export const E2E_SESSION_COOKIE_NAME = "wds_e2e_test_session";
-const E2E_SESSION_COOKIE_VALUE = "playwright-a11y-fixture-v1";
+// Exported (not just used internally) so the Playwright spec that sets this cookie can import
+// the real value instead of keeping its own hardcoded copy that can silently drift from this
+// one. Not a secret once both gates in the doc comment above hold — see that comment.
+export const E2E_SESSION_COOKIE_VALUE = "playwright-a11y-fixture-v1";
 
 export function isE2eTestModeEnabled(): boolean {
   return process.env.NODE_ENV !== "production" && process.env["PLAYWRIGHT_E2E_TEST_MODE"] === "1";
@@ -57,7 +60,13 @@ export function e2eSessionCookieHeader(): string {
   return `${E2E_SESSION_COOKIE_NAME}=${E2E_SESSION_COOKIE_VALUE}`;
 }
 
-function fixtureModule(
+/**
+ * Builds a full `ModuleRegistrySummary` fixture from a minimal set of overrides. Exported so
+ * other test-only fixture builders (e.g. `tests/unit/app-shell.test.tsx`'s `navEntry()`) can
+ * derive from this single default shape instead of maintaining their own independent copy of
+ * all ~19 fields, which drifts silently otherwise.
+ */
+export function fixtureModule(
   overrides: Partial<ModuleRegistrySummary> & {
     key: string;
     navigationGroup: string;

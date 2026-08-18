@@ -250,8 +250,87 @@ component-library dependency; production deployment and merge.
 
 ## Next steps (each separate, not-yet-requested)
 
-Independent code review; a security review (given the auth-adjacent test-mode bypass in §5); a
-review packet for the required second-role human review (ADR-0010 — the implementing agent cannot
-also be its own reviewer); a gate decision; merge authorization; production deployment. No
-business-module implementation work starts automatically once this lands, per the task package's
-own explicit instruction.
+A security review (given the auth-adjacent test-mode bypass in §5); a review packet for the
+required second-role human review (ADR-0010 — the implementing agent cannot also be its own
+reviewer); a gate decision; merge authorization; production deployment. No business-module
+implementation work starts automatically once this lands, per the task package's own explicit
+instruction.
+
+## Independent code review
+
+This project's own `code-review` skill ran (high effort, 8 finder angles, 1-vote verification)
+against the full branch diff (PR #33) — 10 findings survived: 8 CONFIRMED, 2 PLAUSIBLE. Per the
+explicit "fix the confirmed findings" instruction, all 8 CONFIRMED findings were fixed; the 2
+PLAUSIBLE findings were left unaddressed pending a separate decision (scope was literal — only
+verdict-CONFIRMED findings were in scope for this fix pass).
+
+Fixed:
+
+1. **Tablet/mobile `@media` breakpoints overlapped at exactly 768px**
+   (`components/app-shell.module.css`, `components/app-shell.tsx`) — the tablet range query
+   (`min-width: 768px, max-width: 1023.98px`) and the mobile query (`max-width: 768px`) both
+   matched at 768px itself (a real device width, e.g. iPad portrait), so the mobile off-canvas CSS
+   and the JS tablet-icon-only state could both apply at once, producing an unintended combination
+   (off-canvas drawer contents rendered as cramped icon-only tiles). Fixed by moving both
+   boundaries to whole-pixel, non-overlapping values: mobile now `max-width: 767px`, tablet now
+   `max-width: 1023px` (matching `TABLET_RANGE_QUERY` in `app-shell.tsx`).
+2. **`check-css-tokens.mjs`'s breakpoint regex missed decimal values and only checked one clause
+   per compound `@media` query** — `(\d+)px` never matched `1023.98px` (the exact value finding 1
+   introduced), so the lint script silently passed a violating value; separately, a compound query
+   with two `min-width`/`max-width` clauses only ever had one validated. Rewrote the check to
+   extract the full `@media (...)` prelude first, then validate every `min-width`/`max-width`
+   clause inside it against a decimal-aware regex, and to explicitly allow the "breakpoint minus
+   one" exclusive-boundary pattern finding 1's fix now relies on (e.g. `767px` as the pixel just
+   below the `768px` token).
+3. **Dialog focus-trap effect re-ran on unrelated re-renders** (`packages/ui/src/components/
+overlay.tsx`, `useDialogBehavior`) — every caller passes an inline arrow `onClose`, giving it a
+   new identity on every parent render; the effect depended on `[isOpen, onClose]`, so any
+   unrelated re-render while a dialog was open (e.g. the shell's tablet-detection `matchMedia`
+   listener firing on a real viewport resize) tore down and re-ran the focus trap, yanking focus
+   back to the trigger element. Fixed via the standard latest-ref pattern: `onClose` is now read
+   through a ref kept fresh every render (no effect needed to update it), and the effect depends
+   on `isOpen` alone.
+4. **`ApprovalBlock`'s `reason` textarea leaked between the Reject and Request Revision modals**
+   (`packages/ui/src/components/domain.tsx`) — both modals share one `reason` state, cleared only
+   on successful submit, never on Cancel/Escape/backdrop-dismiss; a reason typed and abandoned in
+   one modal reappeared pre-filled the next time either modal opened. Fixed by clearing `reason` on
+   every path that opens or closes either modal (`openReject`/`openRevision`/`closeReject`/
+   `closeRevision`, now also used by both `Modal`'s `onClose` and each Cancel button).
+5. **`accessibility.spec.ts` hardcoded a second, independent copy of the e2e session cookie
+   name/value** instead of importing them from `lib/e2e-test-session.ts` (which already exported
+   the name and had the value as a private constant) — a silent-drift risk for a file this
+   project's own task package flagged as needing the same review scrutiny as real auth code. Fixed
+   by exporting `E2E_SESSION_COOKIE_VALUE` (documented as not itself a secret once both real gates
+   hold — see that file's own doc comment) and importing both constants in the spec.
+6. **`Progress` rendered `width: "NaN%"` at `max === 0`** (`packages/ui/src/components/
+feedback.tsx`) — `(value / max) * 100` is `NaN`/`Infinity` at `max <= 0`, propagating through both
+   clamps unguarded. Fixed with an explicit `max > 0` guard, rendering `0%` otherwise.
+7. **`initialsFor()` was duplicated verbatim** between `components/app-shell.tsx` and
+   `packages/ui/src/components/structural.tsx` (the latter already exported `Avatar`, which uses
+   its own private copy internally) — `app-shell.tsx` already imported from `@webdesk/ui` in the
+   same file, so a working import path existed but wasn't used. Fixed by exporting `initialsFor`
+   from `packages/ui` (added to the barrel) and having `app-shell.tsx` import it instead of
+   defining its own copy.
+8. **Test fixture default-shape duplication had already drifted** — `lib/e2e-test-session.ts`'s
+   `fixtureModule()` and `tests/unit/app-shell.test.tsx`'s `navEntry()` independently built the
+   same ~19-field `ModuleRegistrySummary` default shape, and their `implementationStatus` defaults
+   had already diverged (`"available"` vs. `"not_started"`) with no indication it was intentional.
+   Fixed by exporting `fixtureModule()` from `e2e-test-session.ts` and having `navEntry()` delegate
+   to it (passing its own `navigationGroup`/`navigationOrder`/`route` defaults as overrides),
+   leaving one single source of truth for the shape.
+
+Left unaddressed (PLAUSIBLE, not CONFIRMED — outside this fix pass's literal scope):
+
+- The header "Sign out" menu item uses `onSelect: () => router.push("/auth/logout")` instead of a
+  real `href` — the verifier confirmed the regression but downgraded it since `/auth/logout`'s own
+  session-revocation call was already JS-only before this PR, and other new header controls in
+  this same PR are already JS-only too.
+- `structural.tsx`'s new `Badge` (business-status, `statusBadgeTokens`) and `page-shell.tsx`'s
+  pre-existing `StatusBadge` (system-health, `statusTokens`) are structurally near-duplicate — the
+  verifier found real mitigation already in place (differently-typed required props, explicit
+  doc-comment cross-references in both files) and downgraded to PLAUSIBLE.
+
+Re-validated after fixes: 79/79 `packages/ui` unit tests, 103/103 `dashboard-web` unit tests,
+15/15 Playwright tests (including both authenticated-shell a11y checks, now importing the cookie
+constants instead of hardcoding them), typecheck/lint/`next build`/`tsc` build clean across both
+packages, `pnpm exec prettier --check` clean.

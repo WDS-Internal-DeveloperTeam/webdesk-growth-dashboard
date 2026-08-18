@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ModuleRegistrySummary, ProjectSummary } from "@webdesk/shared-types";
 import { AppShell } from "../../components/app-shell.js";
+import { fixtureModule } from "../../lib/e2e-test-session.js";
 
 const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 
@@ -10,34 +11,18 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPush, replace: vi.fn(), refresh: vi.fn() }),
 }));
 
+// Delegates to `lib/e2e-test-session.ts`'s `fixtureModule()` — the single source of truth for
+// this ~19-field default shape — instead of maintaining an independent copy that can silently
+// drift from it (e.g. a previously-differing `implementationStatus` default between the two).
 function navEntry(
   overrides: Partial<ModuleRegistrySummary> & { key: string },
 ): ModuleRegistrySummary {
-  const base = {
-    id: overrides.key,
-    name: overrides.key,
-    permissionGroupKey: "project_configuration",
-    displayName: overrides.key,
-    description: null,
+  return fixtureModule({
     navigationGroup: "home",
     navigationOrder: 1,
     route: `/${overrides.key}`,
-    iconReference: null,
-    v1InclusionStatus: "included",
-    implementationStatus: "not_started",
-    viewPermissionAction: "view",
-    actionPermissions: null,
-    featureStatus: null,
-    documentationReference: "docs.md",
-    helpDocumentReference: null,
-    owner: "TBD",
-    dependencies: null,
-    confidentialityLevel: null,
-    badgeSupport: true,
-    deprecationReference: null,
-    canView: true,
-  } satisfies Omit<ModuleRegistrySummary, "key">;
-  return { ...base, ...overrides, key: overrides.key };
+    ...overrides,
+  });
 }
 
 function projectSummary(overrides: Partial<ProjectSummary> & { id: string }): ProjectSummary {

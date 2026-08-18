@@ -1,8 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-
-const E2E_SESSION_COOKIE_NAME = "wds_e2e_test_session";
-const E2E_SESSION_COOKIE_VALUE = "playwright-a11y-fixture-v1";
+import { E2E_SESSION_COOKIE_NAME, E2E_SESSION_COOKIE_VALUE } from "../../lib/e2e-test-session.js";
 
 /**
  * WCAG 2.2 AA automated check (Phase 1F brief §17) via axe-core, run

@@ -186,13 +186,13 @@
   align-items: center;
 }
 
-@media (min-width: 768px) and (max-width: 1023.98px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .shell {
     grid-template-columns: var(--webdesk-dashboard-layout-sidebar-width-collapsed) 1fr;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .shell {
     grid-template-columns: 1fr;
     grid-template-areas: "header" "main";

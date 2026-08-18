@@ -91,13 +91,36 @@ export function ApprovalBlock({
   const [isPreviousExpanded, setIsPreviousExpanded] = useState(false);
   const labelId = useId();
 
+  // Reject and Request Revision share one `reason` field (only one modal is ever open at a
+  // time), so every path that closes either modal — submit, Cancel, Escape, backdrop click —
+  // must also clear it. Otherwise a reason typed and then abandoned in one modal reappears
+  // pre-filled the next time either modal opens.
+  function closeReject() {
+    setIsRejectOpen(false);
+    setReason("");
+  }
+
+  function closeRevision() {
+    setIsRevisionOpen(false);
+    setReason("");
+  }
+
+  function openReject() {
+    setReason("");
+    setIsRejectOpen(true);
+  }
+
+  function openRevision() {
+    setReason("");
+    setIsRevisionOpen(true);
+  }
+
   function submitReject() {
     if (!reason.trim()) {
       return;
     }
     onReject?.(reason);
-    setIsRejectOpen(false);
-    setReason("");
+    closeReject();
   }
 
   function submitRevision() {
@@ -105,8 +128,7 @@ export function ApprovalBlock({
       return;
     }
     onRequestRevision?.(reason);
-    setIsRevisionOpen(false);
-    setReason("");
+    closeRevision();
   }
 
   return (
@@ -264,12 +286,12 @@ export function ApprovalBlock({
           </Button>
         ) : null}
         {onRequestRevision ? (
-          <Button variant="secondary" onClick={() => setIsRevisionOpen(true)}>
+          <Button variant="secondary" onClick={openRevision}>
             Request Revision
           </Button>
         ) : null}
         {onReject ? (
-          <Button variant="danger" onClick={() => setIsRejectOpen(true)}>
+          <Button variant="danger" onClick={openReject}>
             Reject
           </Button>
         ) : null}
@@ -277,11 +299,11 @@ export function ApprovalBlock({
 
       <Modal
         isOpen={isRejectOpen}
-        onClose={() => setIsRejectOpen(false)}
+        onClose={closeReject}
         title="Reject this submission?"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsRejectOpen(false)}>
+            <Button variant="secondary" onClick={closeReject}>
               Cancel
             </Button>
             <Button variant="danger" onClick={submitReject} disabled={!reason.trim()}>
@@ -303,11 +325,11 @@ export function ApprovalBlock({
 
       <Modal
         isOpen={isRevisionOpen}
-        onClose={() => setIsRevisionOpen(false)}
+        onClose={closeRevision}
         title="Request revision"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsRevisionOpen(false)}>
+            <Button variant="secondary" onClick={closeRevision}>
               Cancel
             </Button>
             <Button variant="primary" onClick={submitRevision} disabled={!reason.trim()}>

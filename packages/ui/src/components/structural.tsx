@@ -70,7 +70,8 @@ const AVATAR_DIMENSION: Readonly<Record<"sm" | "md" | "lg", string>> = {
   lg: "2.75rem",
 };
 
-function initialsFor(name: string): string {
+/** Shared initials-from-display-name derivation — also used directly by `dashboard-web`'s `AppShell` for icon-only sidebar tiles. */
+export function initialsFor(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) {
     return "?";

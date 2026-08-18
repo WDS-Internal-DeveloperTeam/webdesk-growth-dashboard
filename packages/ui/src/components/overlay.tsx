@@ -33,6 +33,12 @@ const FOCUSABLE_SELECTOR =
 function useDialogBehavior(isOpen: boolean, onClose: () => void) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  // Callers routinely pass an inline arrow function, so `onClose` gets a new identity on every
+  // render of the parent. Reading it through a ref (kept fresh below, no effect needed) lets the
+  // focus-trap effect depend on `isOpen` alone — it no longer tears down and re-runs (stealing
+  // focus back to the trigger element) on an unrelated parent re-render while the dialog is open.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) {
@@ -45,7 +51,7 @@ function useDialogBehavior(isOpen: boolean, onClose: () => void) {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !container) {
