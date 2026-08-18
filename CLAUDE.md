@@ -682,11 +682,16 @@ ca7eec0b252a8faf47e67dd4cddb7297e9fb7b88`, and `dashboard-web`'s `/` resolves to
     second-role review was already complete before the gate was requested), approved commit
     `4a256c74735b4c819e62d8e00cac16ff3e762782` on branch `dashboard-ui-foundation-alignment` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
-    `G4-dashboard-ui-foundation-alignment`) and the approval checklist's "Sign-off" section. **This
-    gate approval does not itself authorize merging PR #33 or a production deployment** — merge
-    remains its own separate, not-yet-requested authorization, per this project's standing
-    "no auto-merge" rule (same pattern as every prior gate). No business-module implementation
-    work starts automatically once this lands.
+    `G4-dashboard-ui-foundation-alignment`) and the approval checklist's "Sign-off" section.
+    **"Merge PR #33" was then separately requested and executed** — merge commit
+    `77c95ced4f18a9f63031321b17f80081d6627bcc`, all 14 CI checks (including both Vercel
+    preview-deployment checks) green beforehand. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+77c95ced4f18a9f63031321b17f80081d6627bcc`, and `dashboard-web`'s `/` resolves (via the
+    intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The Dashboard UI
+    Foundation Alignment slice is now genuinely live in production.** No business-module
+    implementation work starts automatically once this lands.
 
 ## Recent decisions
 
@@ -2299,6 +2304,20 @@ alignment` (PR #33).** A review packet (published as a Claude artifact — code 
   section. **This gate approval does not itself authorize merging PR #33 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-18]` **"Merge PR #33" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `77c95ced4f18a9f63031321b17f80081d6627bcc`, all 14 CI checks (including both Vercel
+  preview-deployment checks) green beforehand. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+77c95ced4f18a9f63031321b17f80081d6627bcc`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The Dashboard UI Foundation
+  Alignment slice — design tokens, ~30 new `packages/ui` components, application-shell
+  navigation/header alignment, 6 re-skinned auth pages, and the new authenticated-shell
+  accessibility test coverage — is now genuinely live in production**, closing out this slice's
+  full build-to-production arc. No business-module implementation work starts automatically as a
+  result of this merge.
 
 ## Open client blockers
 
@@ -2505,4 +2524,9 @@ merged to `main`; and the Dashboard UI Foundation Alignment implementation (toke
 `packages/ui` components, application-shell navigation/header alignment, auth-page re-skin, and a
 new authenticated-shell accessibility test path that caught and fixed 3 real pre-existing WCAG AA
 contrast bugs) is built, fully validated, and pushed as its own PR — not yet reviewed, gated, or
-merged. See item 17 under "Active tasks" for the full account.
+merged. See item 17 under "Active tasks" for the full account. **Update (2026-08-18): the Dashboard
+UI Foundation Alignment PR (#33) has since gone through independent code review (8/8 CONFIRMED
+findings fixed), a security review (0 findings above threshold), the required second-role human
+review (Jitesh D, "Approved as-is"), the gate (G4-dashboard-ui-foundation-alignment, WebDesk
+Solution, CONFIRM), and "Merge PR #33" — it is now genuinely live in production. See the 2026-08-18
+"Recent decisions" entries for the full account.**
