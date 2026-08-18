@@ -5,6 +5,7 @@ import {
   buildMigrator,
   closeConnection,
   EmergencyAdminCredentialRepository,
+  SessionRepository,
   UserRepository,
 } from "@webdesk/database";
 import * as client from "openid-client";
@@ -20,6 +21,7 @@ import { AuthModule } from "../src/auth/auth.module.js";
 import { OIDC_CONFIGURATION } from "../src/auth/config/auth.constants.js";
 import { hashPassword } from "../src/auth/crypto/password.js";
 import { encryptTotpSecret } from "../src/auth/crypto/totp-encryption.js";
+import { hashSessionToken } from "../src/auth/crypto/session-token.js";
 import { SessionExchangeService } from "../src/auth/session/session-exchange.service.js";
 import cookieParser from "cookie-parser";
 import type { NextFunction, Response } from "express";
@@ -59,6 +61,7 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
   let users: UserRepository;
   let credentials: EmergencyAdminCredentialRepository;
   let sessionExchange: SessionExchangeService;
+  let sessions: SessionRepository;
   const totpSecret = "JBSWY3DPEHPK3PXP";
   const password = "correct-horse-battery-staple-1!";
 
@@ -95,6 +98,7 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
     users = new UserRepository();
     credentials = new EmergencyAdminCredentialRepository();
     sessionExchange = moduleRef.get(SessionExchangeService);
+    sessions = new SessionRepository();
 
     const user = await users.create({
       email: "emergency.e2e@webdesksolution.com",
@@ -312,13 +316,19 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
       expect(response.status).toBe(200);
       expect(typeof response.body.data.sessionToken).toBe("string");
       expect(response.body.data.sessionToken.length).toBeGreaterThan(0);
+      // cookieName is env.SESSION_COOKIE_NAME echoed back — dashboard-web's exchange route sets
+      // its cookie under THIS value, not a separately-hardcoded constant of its own.
+      expect(response.body.data.cookieName).toBe("wds_session");
 
       // The minted session is real and independently valid — proven via a second agent that never
       // touched the original login cookie, using only the exchanged raw token.
       const verifyAgent = request.agent(app.getHttpServer());
       const sessionCheck = await verifyAgent
         .get("/auth/session")
-        .set("Cookie", `wds_session=${response.body.data.sessionToken as string}`);
+        .set(
+          "Cookie",
+          `${response.body.data.cookieName as string}=${response.body.data.sessionToken as string}`,
+        );
       expect(sessionCheck.status).toBe(200);
       expect(sessionCheck.body.data.user.email).toBe("exchange.e2e@webdesksolution.com");
 
@@ -327,6 +337,33 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
         .post("/auth/exchange")
         .send({ code: rawCode });
       expect(secondAttempt.status).toBe(400);
+    });
+
+    it("stamps the redeemed session with the ipHash/userAgent captured at issue time, not the exchange request's own", async () => {
+      const user = await users.create({
+        email: "exchange.forensics.e2e@webdesksolution.com",
+        displayName: "Exchange Forensics E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({
+        userId: user.id,
+        authMethod: "google_sso",
+        ipHash: "real-browser-ip-hash",
+        userAgent: "real-browser-user-agent",
+      });
+
+      // The exchange POST itself carries no such headers — the redeemed session must not pick up
+      // whatever supertest/Express derives for THIS request.
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      expect(response.status).toBe(200);
+
+      const session = await sessions.findByTokenHash(
+        hashSessionToken(response.body.data.sessionToken as string),
+      );
+      expect(session?.ipHash).toBe("real-browser-ip-hash");
+      expect(session?.userAgent).toBe("real-browser-user-agent");
     });
 
     it("rejects an unknown code with a generic 400, no session issued", async () => {
@@ -353,6 +390,45 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
         .post("/auth/exchange")
         .send({ code: rawCode });
       expect(response.status).toBe(200);
+    });
+  });
+
+  /**
+   * Proves the mechanism `dashboard-web`'s own `DELETE /auth/session` route relies on
+   * (`apps/dashboard-web/app/auth/session/route.ts`, see `docs/implementation/session-exchange.md`):
+   * a session token that arrived via a manually-constructed `Cookie` header (not the browser's own
+   * jar, e.g. forwarded server-to-server) is still found and revoked by `POST /auth/logout`,
+   * exactly like a browser-held cookie would be — the guard only cares about a real `Origin`.
+   */
+  describe("POST /auth/logout via a forwarded (non-browser-jar) Cookie header", () => {
+    it("revokes the session and the token stops working, exactly like a browser-held cookie would", async () => {
+      const user = await users.create({
+        email: "logout.forwarded.e2e@webdesksolution.com",
+        displayName: "Logout Forwarded E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({ userId: user.id, authMethod: "google_sso" });
+      const exchangeResponse = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      const cookieName = exchangeResponse.body.data.cookieName as string;
+      const sessionToken = exchangeResponse.body.data.sessionToken as string;
+
+      const preLogoutCheck = await request(app.getHttpServer())
+        .get("/auth/session")
+        .set("Cookie", `${cookieName}=${sessionToken}`);
+      expect(preLogoutCheck.status).toBe(200);
+
+      const logoutResponse = await request(app.getHttpServer())
+        .post("/auth/logout")
+        .set("Cookie", `${cookieName}=${sessionToken}`)
+        .set("Origin", WEB_APP_ORIGIN as string);
+      expect(logoutResponse.status).toBe(200);
+
+      const postLogoutCheck = await request(app.getHttpServer())
+        .get("/auth/session")
+        .set("Cookie", `${cookieName}=${sessionToken}`);
+      expect(postLogoutCheck.status).toBe(401);
     });
   });
 });

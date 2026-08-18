@@ -48,6 +48,21 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
       type: DataTypes.DATE,
       allowNull: true,
     },
+    /**
+     * Captured from the real browser request at `GoogleAuthController#callback` (`issue()` time),
+     * NOT re-derived at `redeem()` time — the redeem leg is a server-to-server call from
+     * `dashboard-web`'s own Route Handler, which carries no forwarded client IP/user-agent, so
+     * re-deriving there would stamp the resulting session with Vercel-internal request data
+     * instead of the real visitor's. Same columns/semantics as `sessions.ip_hash`/`user_agent`.
+     */
+    ip_hash: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+    },
+    user_agent: {
+      type: DataTypes.STRING(512),
+      allowNull: true,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,

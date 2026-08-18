@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { ApiSuccessResponse } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "../../../lib/auth";
-import { SESSION_COOKIE_NAME } from "../../../lib/session-cookie";
 
 /**
  * Redeems a single-use session-exchange code minted by `dashboard-api`'s Google OIDC callback
@@ -19,18 +18,41 @@ import { SESSION_COOKIE_NAME } from "../../../lib/session-cookie";
  * default 60s) — this handler is the only intended redeemer, reached only via the top-level
  * redirect `GoogleAuthController#callback` itself issues immediately after minting it.
  */
+
+function redirectToAuthError(request: Request, logMessage?: string, logError?: unknown): Response {
+  if (logMessage) {
+    console.error(logMessage, ...(logError !== undefined ? [logError] : []));
+  }
+  return NextResponse.redirect(new URL("/auth/error?reason=expired", request.url));
+}
+
+/**
+ * Cookies set over plain HTTP are silently refused by browsers when marked `Secure` — mirrors
+ * `dashboard-api`'s own `SESSION_COOKIE_SECURE` env var (`auth-env.ts`), which exists for the
+ * identical reason: local dev runs `dashboard-web` over `http://localhost` by default (see
+ * `.env.example`'s `NEXT_PUBLIC_API_BASE_URL`), where a hardcoded `secure: true` would silently
+ * drop the cookie with no visible error. Server-only (no `NEXT_PUBLIC_` prefix) — never read by
+ * client code, only by this Route Handler.
+ */
+function isSecureCookieEnabled(): boolean {
+  return process.env.SESSION_COOKIE_SECURE !== "false";
+}
+
 export async function GET(request: Request): Promise<Response> {
   const code = new URL(request.url).searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(new URL("/auth/error?reason=expired", request.url));
+    return redirectToAuthError(request);
   }
 
   let apiBaseUrl: string;
   try {
     apiBaseUrl = getApiBaseUrl();
   } catch (error) {
-    console.error("auth/exchange: NEXT_PUBLIC_API_BASE_URL is not configured", error);
-    return NextResponse.redirect(new URL("/auth/error?reason=expired", request.url));
+    return redirectToAuthError(
+      request,
+      "auth/exchange: NEXT_PUBLIC_API_BASE_URL is not configured",
+      error,
+    );
   }
 
   let response: Response;
@@ -42,22 +64,29 @@ export async function GET(request: Request): Promise<Response> {
       cache: "no-store",
     });
   } catch (error) {
-    console.error("auth/exchange: POST /auth/exchange request failed", error);
-    return NextResponse.redirect(new URL("/auth/error?reason=expired", request.url));
+    return redirectToAuthError(request, "auth/exchange: POST /auth/exchange request failed", error);
   }
 
   if (!response.ok) {
-    if (response.status !== 400) {
-      console.error(`auth/exchange: POST /auth/exchange returned status ${response.status}`);
-    }
-    return NextResponse.redirect(new URL("/auth/error?reason=expired", request.url));
+    return redirectToAuthError(
+      request,
+      response.status === 400
+        ? undefined
+        : `auth/exchange: POST /auth/exchange returned status ${response.status}`,
+    );
   }
 
-  const body = (await response.json()) as ApiSuccessResponse<{
-    sessionToken: string;
-    expiresAt: string;
-  }>;
-  const { sessionToken, expiresAt } = body.data;
+  let body: ApiSuccessResponse<{ sessionToken: string; expiresAt: string; cookieName: string }>;
+  try {
+    body = await response.json();
+  } catch (error) {
+    return redirectToAuthError(
+      request,
+      "auth/exchange: POST /auth/exchange returned a malformed response body",
+      error,
+    );
+  }
+  const { sessionToken, expiresAt, cookieName } = body.data;
 
   const maxAgeSeconds = Math.max(
     0,
@@ -65,9 +94,9 @@ export async function GET(request: Request): Promise<Response> {
   );
 
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+  cookieStore.set(cookieName, sessionToken, {
     httpOnly: true,
-    secure: true,
+    secure: isSecureCookieEnabled(),
     sameSite: "lax",
     path: "/",
     maxAge: maxAgeSeconds,

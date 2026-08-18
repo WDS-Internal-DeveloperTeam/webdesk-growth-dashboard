@@ -174,6 +174,8 @@ export function getAuthModels(sequelize: Sequelize = getConnection()): AuthModel
       codeHash: { type: DataTypes.STRING(64), allowNull: false, unique: true },
       expiresAt: { type: DataTypes.DATE, allowNull: false },
       redeemedAt: { type: DataTypes.DATE, allowNull: true },
+      ipHash: { type: DataTypes.STRING(64), allowNull: true },
+      userAgent: { type: DataTypes.STRING(512), allowNull: true },
     },
     {
       tableName: "session_exchange_codes",

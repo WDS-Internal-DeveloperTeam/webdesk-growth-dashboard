@@ -57,10 +57,12 @@ export class GoogleAuthController {
       return;
     }
 
+    const ipHash = getIpHash(req);
+    const userAgent = getUserAgent(req);
     const currentUrl = new URL(req.originalUrl, `${req.protocol}://${req.get("host") ?? ""}`);
     const result = await this.googleAuth.handleCallback(currentUrl, transaction, {
-      ipHash: getIpHash(req),
-      userAgent: getUserAgent(req),
+      ipHash,
+      userAgent,
     });
 
     if (!result.ok) {
@@ -68,11 +70,25 @@ export class GoogleAuthController {
       return;
     }
 
+    // Issued BEFORE the cookie is set (and guarded), not after — so a failure here (e.g. a
+    // transient DB error) can never leave the browser holding a valid session cookie alongside a
+    // raw, unstyled 500 response; it cleanly redirects to the same /auth/error page every other
+    // failure in this method uses instead.
+    let exchangeCode: string;
+    try {
+      exchangeCode = await this.sessionExchange.issue({
+        userId: result.user.id,
+        authMethod: "google_sso",
+        ipHash,
+        userAgent,
+      });
+    } catch (error) {
+      console.error("GoogleAuthController#callback: failed to issue session-exchange code", error);
+      res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=expired`);
+      return;
+    }
+
     setSessionCookie(res, result.rawToken, this.env);
-    const exchangeCode = await this.sessionExchange.issue({
-      userId: result.user.id,
-      authMethod: "google_sso",
-    });
     res.redirect(
       HttpStatus.FOUND,
       `${this.env.WEB_APP_ORIGIN}/auth/exchange?code=${encodeURIComponent(exchangeCode)}`,

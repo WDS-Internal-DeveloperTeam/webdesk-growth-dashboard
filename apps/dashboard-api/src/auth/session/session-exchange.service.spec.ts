@@ -1,4 +1,4 @@
-import type { SessionExchangeCodeRepository } from "@webdesk/database";
+import type { AuthEventRepository, SessionExchangeCodeRepository } from "@webdesk/database";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthEnv } from "../config/auth-env.js";
 import { hashSessionToken } from "../crypto/session-token.js";
@@ -13,14 +13,17 @@ describe("SessionExchangeService", () => {
     redeem: ReturnType<typeof vi.fn>;
   };
   let sessions: { issue: ReturnType<typeof vi.fn> };
+  let events: { record: ReturnType<typeof vi.fn> };
   let service: SessionExchangeService;
 
   beforeEach(() => {
     exchangeCodes = { create: vi.fn(), redeem: vi.fn() };
     sessions = { issue: vi.fn() };
+    events = { record: vi.fn() };
     service = new SessionExchangeService(
       exchangeCodes as unknown as SessionExchangeCodeRepository,
       sessions as unknown as SessionService,
+      events as unknown as AuthEventRepository,
       env,
     );
   });
@@ -49,14 +52,21 @@ describe("SessionExchangeService", () => {
       );
     });
 
-    it("passes the given userId/authMethod through to the repository", async () => {
+    it("passes the given userId/authMethod/ipHash/userAgent through to the repository", async () => {
       exchangeCodes.create.mockResolvedValue({ id: "c1" });
 
-      await service.issue({ userId: "u1", authMethod: "google_sso" });
+      await service.issue({
+        userId: "u1",
+        authMethod: "google_sso",
+        ipHash: "hash1",
+        userAgent: "ua1",
+      });
 
       const createCall = exchangeCodes.create.mock.calls[0]?.[0];
       expect(createCall.userId).toBe("u1");
       expect(createCall.authMethod).toBe("google_sso");
+      expect(createCall.ipHash).toBe("hash1");
+      expect(createCall.userAgent).toBe("ua1");
     });
   });
 
@@ -64,17 +74,20 @@ describe("SessionExchangeService", () => {
     it("returns null without minting a session when the code is missing, expired, or already redeemed", async () => {
       exchangeCodes.redeem.mockResolvedValue(null);
 
-      const result = await service.redeem("some-code", {});
+      const result = await service.redeem("some-code");
 
       expect(result).toBeNull();
       expect(sessions.issue).not.toHaveBeenCalled();
+      expect(events.record).not.toHaveBeenCalled();
     });
 
-    it("mints a brand-new, independent second session for the redeemed code's user", async () => {
+    it("mints a brand-new, independent second session using the ipHash/userAgent stored at issue time", async () => {
       exchangeCodes.redeem.mockResolvedValue({
         id: "c1",
         userId: "u1",
         authMethod: "google_sso",
+        ipHash: "real-hash",
+        userAgent: "real-ua",
       });
       const issued: IssuedSession = {
         session: { id: "s2" } as IssuedSession["session"],
@@ -82,11 +95,7 @@ describe("SessionExchangeService", () => {
       };
       sessions.issue.mockResolvedValue(issued);
 
-      const result = await service.redeem(
-        "raw-code",
-        { ipHash: "hash1", userAgent: "ua1" },
-        new Date("2026-01-01T00:00:00.000Z"),
-      );
+      const result = await service.redeem("raw-code", new Date("2026-01-01T00:00:00.000Z"));
 
       expect(result).toBe(issued);
       expect(sessions.issue).toHaveBeenCalledWith(
@@ -94,8 +103,37 @@ describe("SessionExchangeService", () => {
           userId: "u1",
           authMethod: "google_sso",
           requiresMfa: false,
-          ipHash: "hash1",
-          userAgent: "ua1",
+          ipHash: "real-hash",
+          userAgent: "real-ua",
+        }),
+      );
+    });
+
+    it("records a session_exchange_redeemed audit event referencing the new session", async () => {
+      exchangeCodes.redeem.mockResolvedValue({
+        id: "c1",
+        userId: "u1",
+        authMethod: "google_sso",
+        ipHash: "real-hash",
+        userAgent: "real-ua",
+      });
+      const issued: IssuedSession = {
+        session: { id: "s2" } as IssuedSession["session"],
+        rawToken: "new-raw-token",
+      };
+      sessions.issue.mockResolvedValue(issued);
+
+      await service.redeem("raw-code");
+
+      expect(events.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "session_exchange_redeemed",
+          userId: "u1",
+          sessionId: "s2",
+          authMethod: "google_sso",
+          success: true,
+          ipHash: "real-hash",
+          userAgent: "real-ua",
         }),
       );
     });
@@ -103,7 +141,7 @@ describe("SessionExchangeService", () => {
     it("hashes the raw code the same way issue() does, so redeem() can find what issue() stored", async () => {
       exchangeCodes.redeem.mockResolvedValue(null);
 
-      await service.redeem("raw-code-value", {});
+      await service.redeem("raw-code-value");
 
       expect(exchangeCodes.redeem).toHaveBeenCalledWith(
         hashSessionToken("raw-code-value"),

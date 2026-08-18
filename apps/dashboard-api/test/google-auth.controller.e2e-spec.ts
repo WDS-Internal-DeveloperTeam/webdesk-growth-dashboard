@@ -39,9 +39,12 @@ describe("GoogleAuthController — currentUrl construction (integration)", () =>
   async function buildApp(
     trustProxy: boolean,
     handleCallbackResult: unknown = { ok: false, reason: "token_exchange_failed" },
+    issueExchangeCodeImpl?: () => Promise<string>,
   ): Promise<INestApplication> {
     handleCallback = vi.fn().mockResolvedValue(handleCallbackResult);
-    issueExchangeCode = vi.fn().mockResolvedValue("raw-exchange-code");
+    issueExchangeCode = issueExchangeCodeImpl
+      ? vi.fn(issueExchangeCodeImpl)
+      : vi.fn().mockResolvedValue("raw-exchange-code");
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [GoogleAuthController],
@@ -131,6 +134,37 @@ describe("GoogleAuthController — currentUrl construction (integration)", () =>
     expect(response.status).toBe(302);
     expect(response.headers.location).toBe(
       `${env.WEB_APP_ORIGIN}/auth/exchange?code=raw-exchange-code`,
+    );
+  });
+
+  /**
+   * Regression coverage for a real gap this branch's own code review surfaced: the exchange-code
+   * issuance used to run AFTER `setSessionCookie()` with no guard, so a transient failure there
+   * (e.g. a DB error) would leak a raw JSON 500 body while a valid session cookie was already
+   * staged on the response. Fixed by issuing the code FIRST, guarded — this proves both halves of
+   * the fix: a clean redirect (not a raw 500) and no `Set-Cookie` header on the failure response.
+   */
+  it("on a failure to issue the exchange code, redirects to /auth/error?reason=expired without staging a session cookie", async () => {
+    app = await buildApp(
+      true,
+      { ok: true, user: { id: "u1" }, rawToken: "raw-session-token" },
+      () => Promise.reject(new Error("transient DB error")),
+    );
+    const transaction = { state: "s", nonce: "n", codeVerifier: "v" };
+
+    const response = await request(app.getHttpServer())
+      .get("/auth/google/callback?code=abc&state=s")
+      .set("X-Forwarded-Proto", "https")
+      .set(
+        "Cookie",
+        `${env.OIDC_TRANSACTION_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(transaction))}`,
+      );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe(`${env.WEB_APP_ORIGIN}/auth/error?reason=expired`);
+    const setCookie = (response.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
+    expect(setCookie.some((cookie) => cookie.startsWith(`${env.SESSION_COOKIE_NAME}=`))).toBe(
+      false,
     );
   });
 });

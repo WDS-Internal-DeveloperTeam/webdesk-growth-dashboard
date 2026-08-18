@@ -79,6 +79,9 @@ export interface SessionExchangeCodeEntity {
   readonly codeHash: string;
   readonly expiresAt: string;
   readonly redeemedAt: string | null;
+  /** Captured from the real browser request at issue time — see the migration's own doc comment. */
+  readonly ipHash: string | null;
+  readonly userAgent: string | null;
   readonly createdAt: string;
 }
 

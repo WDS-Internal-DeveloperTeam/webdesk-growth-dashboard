@@ -20,7 +20,6 @@ import type { Response } from "express";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe.js";
 import type { RequestWithCorrelationId } from "../../common/correlation-id.middleware.js";
 import { OriginCheckGuard } from "../common/origin-check.guard.js";
-import { getIpHash, getUserAgent } from "../common/request-context.util.js";
 import { AUTH_ENV, USER_REPOSITORY } from "../config/auth.constants.js";
 import type { AuthEnv } from "../config/auth-env.js";
 import { clearSessionCookie, readSessionCookie } from "./cookie.util.js";
@@ -30,10 +29,17 @@ import { SessionService } from "./session.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
 import { SessionExchangeService } from "./session-exchange.service.js";
 
-/** `dashboard-web`'s own exchange route redeems a code into this — never a documented public API shape (`@webdesk/shared-types`), since no client other than `dashboard-web`'s own server-to-server call is meant to consume it. */
+/**
+ * `dashboard-web`'s own exchange route redeems a code into this — never a documented public API
+ * shape (`@webdesk/shared-types`), since no client other than `dashboard-web`'s own server-to-server
+ * call is meant to consume it. `cookieName` is `env.SESSION_COOKIE_NAME` echoed back — dashboard-web
+ * sets its cookie under THIS value rather than its own separately-hardcoded constant, closing the
+ * drift risk of the two independently-deployed apps' cookie names silently diverging.
+ */
 export interface SessionExchangeResult {
   readonly sessionToken: string;
   readonly expiresAt: string;
+  readonly cookieName: string;
 }
 
 @ApiTags("auth")
@@ -111,16 +117,17 @@ export class SessionController {
     @Body() dto: SessionExchangeDto,
     @Req() req: RequestWithCorrelationId,
   ): Promise<ApiSuccessResponse<SessionExchangeResult>> {
-    const issued = await this.sessionExchangeService.redeem(dto.code, {
-      ipHash: getIpHash(req),
-      userAgent: getUserAgent(req),
-    });
+    const issued = await this.sessionExchangeService.redeem(dto.code);
     if (!issued) {
       throw new BadRequestException("Invalid or expired exchange code");
     }
     return {
       success: true,
-      data: { sessionToken: issued.rawToken, expiresAt: issued.session.expiresAt },
+      data: {
+        sessionToken: issued.rawToken,
+        expiresAt: issued.session.expiresAt,
+        cookieName: this.env.SESSION_COOKIE_NAME,
+      },
       correlationId: req.correlationId ?? "unknown",
     };
   }

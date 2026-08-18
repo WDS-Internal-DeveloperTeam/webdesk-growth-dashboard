@@ -811,11 +811,38 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     `dashboard-api` unit tests, 140/140 `dashboard-web` unit tests, all passing; typecheck/lint/
     `next build`/`nest build`/`pnpm exec prettier --check` all clean across `packages/database`,
     `packages/shared-types`, `apps/dashboard-api`, and `apps/dashboard-web`. Built on branch
-    `fix-cross-domain-session-exchange`, off `main` at `32e5bba` (the PR #34 merge commit). **Not
-    yet pushed, code-reviewed, security-reviewed, second-role human reviewed, gated, or merged** —
-    each a separate, not-yet-requested next step, unchanged from this project's standing
-    discipline, warranted especially here since this touches authentication/session issuance
-    directly. Migration `00046` has not been run against the real production database.
+    `fix-cross-domain-session-exchange`, off `main` at `32e5bba` (the PR #34 merge commit). Pushed
+    and opened as
+    [PR #35](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/35).
+    **Update (2026-08-18): independent code review complete, 9 of 10 CONFIRMED findings fixed.**
+    High effort (8 finder angles, 1-vote verification) — 11 candidates surfaced, all verified
+    (10 CONFIRMED, 1 PLAUSIBLE, 0 refuted). Most severe: splitting one login into two independent
+    sessions meant "Sign out" only ever revoked the rarely-used `dashboard-api`-side session, never
+    the `dashboard-web`-side one `getServerSession()` actually authenticates every page against —
+    fixed with a new `DELETE /auth/session` route in `dashboard-web` that forwards the whole
+    incoming `Cookie` header (not a name-keyed lookup) to `dashboard-api`'s `/auth/logout` with an
+    explicit `Origin` header, called alongside the existing dashboard-api logout call. Also fixed:
+    an unguarded exchange-code `issue()` call that could leak a raw `500` with a session cookie
+    already staged; the actively-used session being stamped with the server-to-server exchange
+    call's own `ipHash`/`userAgent` instead of the real browser's (migration `00046` amended,
+    not superseded, since it hadn't shipped anywhere yet — new `ip_hash`/`user_agent` columns);
+    a missing `auth_events` record for the session actually in use (new `session_exchange_redeemed`
+    vocabulary entry); an unguarded `response.json()` in the exchange route; the cookie name
+    `dashboard-web` writes under being a separately-hardcoded constant kept in sync with
+    `dashboard-api`'s own env var purely by convention (now echoed back in `POST /auth/exchange`'s
+    response instead); a hardcoded `secure: true` with no local-dev override; a 4x-duplicated
+    redirect-to-error literal; and an extra DB round-trip in `redeem()` (now uses Sequelize's
+    `returning: true`). **One finding left as accepted, tracked debt, flagged explicitly for the
+    second-role reviewer**: `POST /auth/exchange` has no `OriginCheckGuard`/shared secret beyond
+    the code's own entropy/single-use/60s TTL, and the code traverses a real, Vercel-logged URL on
+    every login — closing it properly means a materially bigger architectural change (a POST-based
+    redirect flow) for a narrow (~60s, single-use) exploit window. Re-validated: 370/370
+    `dashboard-api` unit tests, 143/143 `dashboard-web` unit tests, new integration/e2e coverage
+    for every fix, typecheck/lint/build/prettier all clean. See
+    `docs/implementation/session-exchange.md` §5 for the full account. **Still not yet
+    security-reviewed, second-role human reviewed, gated, or merged** — each a separate,
+    not-yet-requested next step. Migration `00046` has not been run against the real production
+    database.
 
 ## Recent decisions
 
@@ -2556,8 +2583,36 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   that cookie could never reach. Explained 3 candidate fixes and asked directly which to
   implement; the user replied "yes please" to the recommended session-exchange approach. Built and
   fully validated on branch `fix-cross-domain-session-exchange` — see "Active tasks" item 19 above
-  and `docs/implementation/session-exchange.md` for the complete account. **Not yet pushed,
-  reviewed, gated, or merged.**
+  and `docs/implementation/session-exchange.md` for the complete account. Pushed and opened as
+  [PR #35](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/35).
+- `[2026-08-18]` **Independent code review run on `fix-cross-domain-session-exchange` (PR #35),
+  high effort — 8-angle finder pass, then all 10 CONFIRMED findings verified individually.** Most
+  severe: splitting one Google SSO login into two independent sessions meant "Sign out" only ever
+  revoked the rarely-used `dashboard-api`-side session — the `dashboard-web`-side one
+  `getServerSession()` actually authenticates every page against was never touched, so a user
+  clicking "Sign out" remained effectively signed in for up to 7 days. Fixed with a new
+  `DELETE /auth/session` route in `dashboard-web` that forwards the whole incoming `Cookie` header
+  to `dashboard-api`'s `/auth/logout` with an explicit `Origin` header, called alongside the
+  existing dashboard-api logout call. 9 of 10 CONFIRMED findings fixed per explicit "fix the
+  confirmed findings" instruction (also: an unguarded exchange-code `issue()` call that could leak
+  a raw `500` with a session cookie already staged; the actively-used session being stamped with
+  the server-to-server exchange call's own `ipHash`/`userAgent` instead of the real browser's,
+  fixed by capturing forensic data at issue time and storing it on the amended migration `00046`;
+  a missing `auth_events` record for the session actually in use, via a new
+  `session_exchange_redeemed` vocabulary entry; an unguarded `response.json()`; a cookie-name
+  drift risk between the two independently-deployed apps, closed by having `POST /auth/exchange`
+  echo back the authoritative name instead of `dashboard-web` guessing its own; a hardcoded
+  `secure: true` with no local-dev override; a 4x-duplicated redirect-to-error literal; and an
+  extra DB round-trip in `redeem()`). The 10th — `POST /auth/exchange` having no
+  `OriginCheckGuard`/shared secret beyond the code's own entropy/single-use/60s TTL — was left as
+  **accepted, tracked debt**, flagged explicitly for the second-role reviewer's own judgment,
+  since closing it properly means a materially bigger architectural change (a POST-based redirect
+  flow) for a narrow exploit window. Re-validated: 370/370 `dashboard-api` unit tests, 143/143
+  `dashboard-web` unit tests, new integration/e2e coverage for every fix (including a real
+  logout-via-forwarded-cookie regression test proving the new route's mechanism), typecheck/lint/
+  build/prettier all clean. See `docs/implementation/session-exchange.md`'s "Independent code
+  review" section for the full account. Not yet security-reviewed, second-role human reviewed,
+  gated, or merged.
 
 ## Open client blockers
 

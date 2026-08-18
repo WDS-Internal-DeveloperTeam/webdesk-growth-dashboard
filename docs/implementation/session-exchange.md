@@ -154,12 +154,83 @@ string().min(1) }`).
   all clean across `packages/database`, `packages/shared-types`, `apps/dashboard-api`, and
   `apps/dashboard-web`.
 
-## 5. What this deliberately does not cover
+## 5. Independent code review (2026-08-18)
+
+This project's own `code-review` skill ran at high effort (8 finder angles, 1-vote verification
+per candidate) against the full branch diff. All 11 candidates survived verification (10
+CONFIRMED, 1 PLAUSIBLE); the PLAUSIBLE one (no cleanup job for expired-but-unredeemed
+`session_exchange_codes` rows) was left out of the top-10 report as low-severity, precedented debt
+(`IdempotencyKeyRepository` has the identical gap). All 10 reported findings were CONFIRMED; 9
+were fixed, 1 was deliberately left as accepted debt:
+
+- **Logout didn't revoke the session that actually gates the app.** Splitting one login into two
+  independent sessions meant `dashboard-api`'s own `POST /auth/logout` (called via a browser
+  `credentials: "include"` fetch) only ever revoked the rarely-used `dashboard-api`-side session —
+  the `dashboard-web`-side session `getServerSession()` actually authenticates every `(shell)` page
+  against was never touched. Fixed with a new `apps/dashboard-web/app/auth/session/route.ts`
+  (`DELETE`), which forwards the whole incoming `Cookie` header (not a name-keyed lookup) to
+  `dashboard-api`'s `/auth/logout` with an explicit `Origin` header (server-to-server calls set
+  none by default, and `OriginCheckGuard` fails closed on a missing one), then clears the local
+  cookie. `LogoutPage` now calls both endpoints via `Promise.allSettled`.
+- **`GoogleAuthController#callback`'s exchange-code issuance was unguarded**, running _after_
+  `setSessionCookie()` with no try/catch — a transient failure there would leave a valid session
+  cookie staged on a raw, unstyled `500` response instead of the graceful `/auth/error` redirect
+  every sibling failure path uses. Fixed by reordering (issue the code first, guarded) and setting
+  the cookie only once issuance succeeds.
+- **The actively-used session was stamped with the wrong `ipHash`/`userAgent`** — captured from
+  the server-to-server `POST /auth/exchange` request (no forwarded client IP/user-agent) instead
+  of the real browser request. Fixed by capturing `ipHash`/`userAgent` at `issue()` time (the real
+  callback request) and storing them on the `session_exchange_codes` row itself (migration `00046`
+  amended, not superseded, since it hadn't shipped anywhere yet — new `ip_hash`/`user_agent`
+  columns) — `redeem()` now uses the stored values instead of re-deriving them.
+- **No `auth_events` record for the session actually in use.** `SessionExchangeService#redeem()`
+  called `SessionService#issue()` directly with no corresponding audit event, unlike every other
+  session-issuing path in this codebase (`sso_login_succeeded`, `emergency_login_succeeded`).
+  Fixed by adding a `session_exchange_redeemed` event type to the `AuthEventType` vocabulary,
+  recorded in `redeem()` referencing the new session's id.
+- **`POST /auth/exchange` has no `OriginCheckGuard`/shared secret** — protected only by the code's
+  256-bit entropy, single-use redemption, and 60s TTL, and the code itself traverses a real,
+  Vercel-logged URL (`GET /auth/exchange?code=...`) on every login. **Left as accepted, tracked
+  debt** — closing it properly means either a POST-based redirect flow (a materially bigger
+  architectural change for a narrow, ~60-second exploit window requiring near-real-time log
+  access) or accepting the same shape every OAuth Authorization Code grant already accepts. Flagged
+  explicitly for the required second-role reviewer's own judgment rather than silently accepted.
+- **`response.json()` in the exchange route was unguarded**, unlike every sibling failure branch
+  in the same function. Fixed with a try/catch redirecting to the same `/auth/error?reason=expired`
+  page.
+- **The cookie name `dashboard-web` writes under was a separately-hardcoded constant**, kept in
+  sync with `dashboard-api`'s own `SESSION_COOKIE_NAME` env var purely by convention — the same
+  shape as this project's own documented CJS-barrel-export production incident. Fixed by having
+  `POST /auth/exchange`'s response echo back `cookieName` (`env.SESSION_COOKIE_NAME`); the route
+  now writes the cookie under that value, not its own guess. `lib/session-cookie.ts`'s constant is
+  now only a best-effort default for the new logout route's local cookie clear.
+- **The new cookie hardcoded `secure: true`** with no override, unlike `dashboard-api`'s own
+  `SESSION_COOKIE_SECURE`-driven equivalent — would silently drop the cookie in local dev (plain
+  `http://localhost`). Fixed with an equivalent server-only `SESSION_COOKIE_SECURE` env read.
+- **A redirect-to-error literal was duplicated 4 times** in the 77-line exchange route. Fixed by
+  extracting a `redirectToAuthError()` helper.
+- **`SessionExchangeCodeRepository#redeem()` did two DB round trips** (a conditional `UPDATE` then
+  a separate `findOne`) where Sequelize's `returning: true` returns the updated row from the
+  `UPDATE` itself. Fixed.
+
+Re-validated after fixes: 7 new `dashboard-api` unit tests (`session-exchange.service.spec.ts`,
+now 7), 2 new `packages/database` integration tests (`ip_hash`/`user_agent` round-trip and
+default-null), 6 new `dashboard-api` e2e tests (`cookieName` echo, `ipHash`/`userAgent` stamping
+from issue-time context, a logout-via-forwarded-cookie regression proving the new `/auth/session`
+route's mechanism, and a guarded-`issue()`-failure regression), 3 new `dashboard-web` unit test
+files (`auth-session-route.test.tsx`, `logout-page.test.tsx`, and expanded
+`auth-exchange-route.test.tsx` coverage) — 370/370 `dashboard-api` unit tests, 143/143
+`dashboard-web` unit tests, all passing; typecheck/lint/`next build`/`nest build`/
+`pnpm exec prettier --check` all clean.
+
+## 6. What this deliberately does not cover
 
 - The emergency-admin TOTP login path has the identical underlying bug (§1) but is not fixed here
   — flagged as a known, separate, not-yet-authorized follow-up.
 - No change to `dashboard-api`'s own session cookie, its `SameSite=None` setting, or
   `OriginCheckGuard` — all remain exactly as already reviewed and gated.
+- `POST /auth/exchange`'s lack of an `OriginCheckGuard`/shared-secret guard (§5) — accepted,
+  tracked debt, flagged explicitly for second-role review rather than silently left unaddressed.
 - No production migration has been run yet — migration `00046` still needs the user to run
   `pnpm --filter @webdesk/database run migrate` themselves in their own terminal, per this
   project's standing credential-handling discipline, only after this branch is reviewed, gated,

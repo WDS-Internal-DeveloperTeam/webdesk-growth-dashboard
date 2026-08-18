@@ -84,4 +84,42 @@ describe("SessionExchangeCodeRepository (real disposable database)", () => {
     const result = await exchangeCodes.redeem("d".repeat(64), new Date());
     expect(result).toBeNull();
   });
+
+  it("stores and round-trips ipHash/userAgent captured at issue time", async () => {
+    const user = await users.create({
+      email: "exchange-forensics@webdesksolution.com",
+      displayName: "Exchange Forensics",
+    });
+    const now = new Date();
+    const created = await exchangeCodes.create({
+      userId: user.id,
+      authMethod: "google_sso",
+      codeHash: "e".repeat(64),
+      expiresAt: new Date(now.getTime() + 60_000),
+      ipHash: "real-browser-ip-hash",
+      userAgent: "real-browser-user-agent",
+    });
+    expect(created.ipHash).toBe("real-browser-ip-hash");
+    expect(created.userAgent).toBe("real-browser-user-agent");
+
+    const redeemed = await exchangeCodes.redeem("e".repeat(64), now);
+    expect(redeemed?.ipHash).toBe("real-browser-ip-hash");
+    expect(redeemed?.userAgent).toBe("real-browser-user-agent");
+  });
+
+  it("defaults ipHash/userAgent to null when not provided", async () => {
+    const user = await users.create({
+      email: "exchange-no-forensics@webdesksolution.com",
+      displayName: "Exchange No Forensics",
+    });
+    const now = new Date();
+    const created = await exchangeCodes.create({
+      userId: user.id,
+      authMethod: "google_sso",
+      codeHash: "f".repeat(64),
+      expiresAt: new Date(now.getTime() + 60_000),
+    });
+    expect(created.ipHash).toBeNull();
+    expect(created.userAgent).toBeNull();
+  });
 });
