@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { UserSummary } from "@webdesk/shared-types";
 
 const refreshMock = vi.fn();
 
@@ -136,6 +137,62 @@ describe("ProjectApproversSection", () => {
 
     fireEvent.click(removeButton);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows an error and keeps the row when the revoke call returns revoked: false", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: { revoked: false }, correlationId: "corr-1" }),
+    } as Response);
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ProjectApproversSection
+        projectId={PROJECT_ID}
+        initialApprovers={[
+          { id: APPROVER_USER_ID, displayName: "Ada Approver", email: "ada@example.com" },
+        ]}
+        approverRoleId={ROLE_ID}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That approver assignment was already removed.",
+    );
+    expect(screen.getByText("Ada Approver")).toBeInTheDocument();
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("resyncs from fresh initialApprovers props after a re-render (router.refresh())", () => {
+    const first: readonly UserSummary[] = [
+      { id: APPROVER_USER_ID, displayName: "Ada Approver", email: "ada@example.com" },
+    ];
+    const { rerender } = render(
+      <ProjectApproversSection
+        projectId={PROJECT_ID}
+        initialApprovers={first}
+        approverRoleId={ROLE_ID}
+      />,
+    );
+    expect(screen.getByText("Ada Approver")).toBeInTheDocument();
+
+    const second: readonly UserSummary[] = [
+      {
+        id: "44444444-4444-4444-4444-444444444444",
+        displayName: "Bob Backup",
+        email: "bob@example.com",
+      },
+    ];
+    rerender(
+      <ProjectApproversSection
+        projectId={PROJECT_ID}
+        initialApprovers={second}
+        approverRoleId={ROLE_ID}
+      />,
+    );
+    expect(screen.queryByText("Ada Approver")).not.toBeInTheDocument();
+    expect(screen.getByText("Bob Backup")).toBeInTheDocument();
   });
 
   it("shows the backend's error message on a failed assignment", async () => {

@@ -165,4 +165,35 @@ describe("getUsersByIds", () => {
     expect(result.has(idB)).toBe(false);
     expect(result.size).toBe(1);
   });
+
+  it("does not throw when one id 403s — omits it and logs, resolving the rest normally", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith(`/users/${idA}`)) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { id: idA, displayName: "Alice", email: "alice@example.com" },
+            correlationId: "corr-1",
+          }),
+        } as Response);
+      }
+      // getUser() throws on any non-404 non-OK status (e.g. a 403 from a caller lacking
+      // users_roles:view) — getUsersByIds() must not let that take down the whole batch.
+      return Promise.resolve({ ok: false, status: 403 } as Response);
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const result = await getUsersByIds([idA, idB]);
+
+    expect(result.get(idA)).toEqual({ id: idA, displayName: "Alice", email: "alice@example.com" });
+    expect(result.has(idB)).toBe(false);
+    expect(result.size).toBe(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`failed to resolve user ${idB}`),
+      expect.anything(),
+    );
+  });
 });

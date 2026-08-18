@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ApiSuccessResponse, ProjectTeamEntry, UserSummary } from "@webdesk/shared-types";
 import { UserPicker } from "@/components/user-picker";
 import { parseApiErrorMessage } from "@/lib/api-errors";
@@ -13,6 +13,12 @@ import styles from "./project-roster-section.module.css";
 export interface ProjectTeamSectionProps {
   readonly projectId: string;
   readonly initialTeam: readonly ResolvedTeamMember[];
+  /** `false` when the viewer's own session couldn't resolve `GET /projects/:projectId/approvers`
+   *  (gated on `users_roles:view`, the same permission `UserPicker`'s `GET /users` search needs) —
+   *  used as a proxy signal so the picker isn't rendered only to 403 on the first keystroke for
+   *  most roles (code-review finding, this branch). See `page.tsx`'s own doc comment for why this
+   *  reuses that existing fetch instead of a new permission check. */
+  readonly canSearchUsers: boolean;
 }
 
 /**
@@ -24,13 +30,23 @@ export interface ProjectTeamSectionProps {
  * enforcement point; an unauthorized viewer simply sees a real 403 message on submit, the same
  * degrade every other mutation control in this app already accepts.
  */
-export function ProjectTeamSection({ projectId, initialTeam }: ProjectTeamSectionProps): ReactNode {
+export function ProjectTeamSection({
+  projectId,
+  initialTeam,
+  canSearchUsers,
+}: ProjectTeamSectionProps): ReactNode {
   const router = useRouter();
   const [team, setTeam] = useState(initialTeam);
   const [candidate, setCandidate] = useState<UserSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+  const [pendingRemoveIds, setPendingRemoveIds] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState(false);
+
+  // Resync from fresh server props after router.refresh() — this component isn't remounted
+  // (no key change), so useState's initial value alone would never see the updated roster.
+  useEffect(() => {
+    setTeam(initialTeam);
+  }, [initialTeam]);
 
   async function handleAdd(): Promise<void> {
     if (!candidate) {
@@ -66,7 +82,7 @@ export function ProjectTeamSection({ projectId, initialTeam }: ProjectTeamSectio
 
   async function handleRemove(teamEntryId: string): Promise<void> {
     setError(null);
-    setPendingRemoveId(teamEntryId);
+    setPendingRemoveIds((current) => new Set(current).add(teamEntryId));
     try {
       const response = await fetch(`${getApiBaseUrl()}/projects/${projectId}/team/${teamEntryId}`, {
         method: "DELETE",
@@ -82,7 +98,11 @@ export function ProjectTeamSection({ projectId, initialTeam }: ProjectTeamSectio
       console.error("Failed to remove team member", err);
       setError("Something went wrong. Please try again.");
     } finally {
-      setPendingRemoveId(null);
+      setPendingRemoveIds((current) => {
+        const next = new Set(current);
+        next.delete(teamEntryId);
+        return next;
+      });
     }
   }
 
@@ -102,36 +122,40 @@ export function ProjectTeamSection({ projectId, initialTeam }: ProjectTeamSectio
               <button
                 type="button"
                 className={styles.removeButton}
-                disabled={pendingRemoveId === entry.id}
+                disabled={pendingRemoveIds.has(entry.id)}
                 onClick={() => {
                   void handleRemove(entry.id);
                 }}
               >
-                {pendingRemoveId === entry.id ? "…" : "Remove"}
+                {pendingRemoveIds.has(entry.id) ? "…" : "Remove"}
               </button>
             </li>
           ))}
         </ul>
       )}
 
-      <div className={styles.addRow}>
-        <UserPicker
-          id="team-member-picker"
-          label="Add team member"
-          value={candidate}
-          onChange={setCandidate}
-        />
-        <button
-          type="button"
-          className={styles.addButton}
-          disabled={!candidate || adding}
-          onClick={() => {
-            void handleAdd();
-          }}
-        >
-          {adding ? "Adding…" : "Add"}
-        </button>
-      </div>
+      {canSearchUsers ? (
+        <div className={styles.addRow}>
+          <UserPicker
+            id="team-member-picker"
+            label="Add team member"
+            value={candidate}
+            onChange={setCandidate}
+          />
+          <button
+            type="button"
+            className={styles.addButton}
+            disabled={!candidate || adding}
+            onClick={() => {
+              void handleAdd();
+            }}
+          >
+            {adding ? "Adding…" : "Add"}
+          </button>
+        </div>
+      ) : (
+        <p className={styles.muted}>Your role can&apos;t search for people to add to this team.</p>
+      )}
       {error ? (
         <p role="alert" className={styles.error}>
           {error}

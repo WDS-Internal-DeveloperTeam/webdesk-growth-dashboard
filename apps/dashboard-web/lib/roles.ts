@@ -12,6 +12,9 @@ const APPROVER_ROLE_KEY = "owner_growth_approver";
  * requires, so most callers of the Approvers section will never reach this — degrades to `null`
  * (not a thrown error) on any non-OK response, exactly like `fetchProjectSummaries()`'s own
  * never-throws-for-optional-content pattern, so a 403 here doesn't break the rest of the page.
+ * Still logs the status on a non-OK response (not just a thrown network error) — a bare `null`
+ * would make a real backend regression indistinguishable from routine permission denial in the
+ * logs (code-review finding, this branch).
  */
 export async function getApproverRoleId(): Promise<string | null> {
   const apiBaseUrl = getApiBaseUrl();
@@ -22,6 +25,7 @@ export async function getApproverRoleId(): Promise<string | null> {
       cache: "no-store",
     });
     if (!response.ok) {
+      console.error(`getApproverRoleId: GET /authz/roles returned status ${response.status}`);
       return null;
     }
     const body = (await response.json()) as ApiSuccessResponse<readonly RoleSummary[]>;

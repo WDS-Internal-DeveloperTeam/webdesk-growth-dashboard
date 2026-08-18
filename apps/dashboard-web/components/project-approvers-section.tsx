@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
-import type { UserSummary } from "@webdesk/shared-types";
+import { useEffect, useState, type ReactNode } from "react";
+import type { ApiSuccessResponse, UserSummary } from "@webdesk/shared-types";
 import { UserPicker } from "@/components/user-picker";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
@@ -36,8 +36,14 @@ export function ProjectApproversSection({
   const [approvers, setApprovers] = useState(initialApprovers);
   const [candidate, setCandidate] = useState<UserSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+  const [pendingRemoveIds, setPendingRemoveIds] = useState<ReadonlySet<string>>(new Set());
   const [adding, setAdding] = useState(false);
+
+  // Resync from fresh server props after router.refresh() — this component isn't remounted
+  // (no key change), so useState's initial value alone would never see the updated roster.
+  useEffect(() => {
+    setApprovers(initialApprovers);
+  }, [initialApprovers]);
 
   async function handleAdd(): Promise<void> {
     if (!candidate) {
@@ -76,7 +82,7 @@ export function ProjectApproversSection({
       return;
     }
     setError(null);
-    setPendingRemoveId(userId);
+    setPendingRemoveIds((current) => new Set(current).add(userId));
     try {
       const response = await fetch(
         `${getApiBaseUrl()}/authz/users/${userId}/roles/${approverRoleId}?projectId=${projectId}`,
@@ -86,13 +92,22 @@ export function ProjectApproversSection({
         setError(await parseApiErrorMessage(response));
         return;
       }
+      const body = (await response.json()) as ApiSuccessResponse<{ revoked: boolean }>;
+      if (!body.data.revoked) {
+        setError("That approver assignment was already removed.");
+        return;
+      }
       setApprovers((current) => current.filter((approver) => approver.id !== userId));
       router.refresh();
     } catch (err) {
       console.error("Failed to remove approver", err);
       setError("Something went wrong. Please try again.");
     } finally {
-      setPendingRemoveId(null);
+      setPendingRemoveIds((current) => {
+        const next = new Set(current);
+        next.delete(userId);
+        return next;
+      });
     }
   }
 
@@ -111,13 +126,13 @@ export function ProjectApproversSection({
               <button
                 type="button"
                 className={styles.removeButton}
-                disabled={!approverRoleId || pendingRemoveId === approver.id}
+                disabled={!approverRoleId || pendingRemoveIds.has(approver.id)}
                 title={approverRoleId ? undefined : "Unable to resolve the approver role right now"}
                 onClick={() => {
                   void handleRemove(approver.id);
                 }}
               >
-                {pendingRemoveId === approver.id ? "…" : "Remove"}
+                {pendingRemoveIds.has(approver.id) ? "…" : "Remove"}
               </button>
             </li>
           ))}

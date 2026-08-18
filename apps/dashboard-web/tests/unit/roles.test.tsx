@@ -54,12 +54,14 @@ describe("getApproverRoleId", () => {
     expect(await getApproverRoleId()).toBeNull();
   });
 
-  it("returns null (not a thrown error) on a 403 — most roles lack users_roles:view", async () => {
+  it("returns null and logs the status on a 403 — most roles lack users_roles:view", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     global.fetch = vi
       .fn()
       .mockResolvedValue({ ok: false, status: 403 } as Response) as typeof fetch;
 
     expect(await getApproverRoleId()).toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("status 403"));
   });
 
   it("returns null (not a thrown error) on a network failure", async () => {

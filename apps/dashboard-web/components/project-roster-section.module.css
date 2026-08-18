@@ -82,25 +82,8 @@
 }
 
 .addButton {
+  composes: submitButton from "./project-form.module.css";
   flex-shrink: 0;
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  font-weight: var(--webdesk-dashboard-font-weight-medium);
-  color: var(--webdesk-dashboard-color-accent-foreground);
-  background: var(--webdesk-dashboard-color-accent);
-  border: none;
-  border-radius: var(--webdesk-dashboard-radius-sm);
-  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
-  cursor: pointer;
-}
-
-.addButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.addButton:focus-visible {
-  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
-  outline-offset: 2px;
 }
 
 .error {

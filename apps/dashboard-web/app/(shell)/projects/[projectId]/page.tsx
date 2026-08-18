@@ -45,15 +45,18 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   }
 
   const { projectId } = await params;
-  const [detail, approverRoleId] = await Promise.all([
-    getProjectDetail(projectId),
-    getApproverRoleId(),
-  ]);
+  const detail = await getProjectDetail(projectId);
   if (!detail) {
     notFound();
   }
 
   const { project, roadmapItems, objectives, environments, repositories, team, approvers } = detail;
+  // approvers is non-null only when the viewer holds users_roles:view — the same permission
+  // getApproverRoleId()'s own GET /authz/roles call needs, and the same permission UserPicker's
+  // GET /users search needs. Gating both on this one already-resolved signal avoids a wasted
+  // fetch (and a picker that would 403 on first keystroke) for the majority of viewers who don't
+  // hold it (code-review findings, this branch).
+  const approverRoleId = approvers ? await getApproverRoleId() : null;
   const badge = projectStatusBadge(project.status);
   const activePhase = project.activePhaseId
     ? (roadmapItems.find((item) => item.id === project.activePhaseId) ?? null)
@@ -97,7 +100,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
       <section style={sectionStyle}>
         <h2 style={h2Style}>Team</h2>
-        <ProjectTeamSection projectId={project.id} initialTeam={team} />
+        <ProjectTeamSection
+          projectId={project.id}
+          initialTeam={team}
+          canSearchUsers={approvers !== null}
+        />
       </section>
 
       {approvers ? (

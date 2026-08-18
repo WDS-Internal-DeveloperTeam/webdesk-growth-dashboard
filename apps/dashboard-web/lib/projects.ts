@@ -261,7 +261,11 @@ async function fetchProjectSubResource<T>(
  * Unlike `fetchProjectSubResource()` above, a non-OK response here degrades to `null` instead of
  * throwing — `GET /projects/:projectId/approvers` is gated on `users_roles:view`, a permission
  * most roles don't hold, so a 403 is an expected, routine outcome (the section simply isn't shown
- * to that viewer), not a real failure the page's error boundary should ever see.
+ * to that viewer), not a real failure the page's error boundary should ever see. Still logged —
+ * a 403 and a genuine 5xx both degrade to the same `null`, but only logging lets a real backend
+ * regression here be told apart from routine permission denial (code-review finding, this branch:
+ * this function's own doc comment already cited `fetchProjectSummaries()` as the model to follow,
+ * but originally only copied its network-catch logging, not its `!response.ok`-path logging too).
  */
 async function fetchProjectApprovers(
   apiBaseUrl: string,
@@ -274,6 +278,7 @@ async function fetchProjectApprovers(
       cache: "no-store",
     });
     if (!response.ok) {
+      console.error(`getProjectDetail: GET .../approvers returned status ${response.status}`);
       return null;
     }
     return ((await response.json()) as ApiSuccessResponse<readonly UserSummary[]>).data;
@@ -281,6 +286,26 @@ async function fetchProjectApprovers(
     console.error("getProjectDetail: GET .../approvers request failed", err);
     return null;
   }
+}
+
+/**
+ * Resolves a raw team roster's `userId`s to display identities, folded into the same concurrent
+ * fetch pass `getProjectDetail()` already runs — chained directly off `teamPromise` (via
+ * `.then()`) rather than awaited only after every other sub-resource fetch settles, so identity
+ * resolution can start the moment the team list itself arrives instead of waiting on the slowest
+ * of the unrelated roadmap/objectives/environments/repositories/approvers fetches too
+ * (code-review finding, this branch).
+ */
+async function resolveTeam(
+  teamPromise: Promise<readonly ProjectTeamEntry[]>,
+): Promise<readonly ResolvedTeamMember[]> {
+  const rawTeam = await teamPromise;
+  const teamUsers = await getUsersByIds(rawTeam.map((entry) => entry.userId));
+  return rawTeam.map((entry) => ({
+    id: entry.id,
+    addedAt: entry.addedAt,
+    user: teamUsers.get(entry.userId) ?? null,
+  }));
 }
 
 /**
@@ -385,6 +410,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
   const teamPromise = tolerateDiscard(
     fetchProjectSubResource<ProjectTeamEntry>(apiBaseUrl, projectId, "team", headers),
   );
+  const resolvedTeamPromise = tolerateDiscard(resolveTeam(teamPromise));
   const approversPromise = fetchProjectApprovers(apiBaseUrl, projectId, headers);
 
   const project = await fetchProject(apiBaseUrl, projectId, headers);
@@ -392,22 +418,16 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
     return null;
   }
 
-  const [roadmapItems, objectives, environments, repositories, rawTeam, approvers] =
-    await Promise.all([
+  const [roadmapItems, objectives, environments, repositories, team, approvers] = await Promise.all(
+    [
       roadmapItemsPromise,
       objectivesPromise,
       environmentsPromise,
       repositoriesPromise,
-      teamPromise,
+      resolvedTeamPromise,
       approversPromise,
-    ]);
-
-  const teamUsers = await getUsersByIds(rawTeam.map((entry) => entry.userId));
-  const team: readonly ResolvedTeamMember[] = rawTeam.map((entry) => ({
-    id: entry.id,
-    addedAt: entry.addedAt,
-    user: teamUsers.get(entry.userId) ?? null,
-  }));
+    ],
+  );
 
   return {
     project,

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ResolvedTeamMember } from "../../lib/projects.js";
 
 const refreshMock = vi.fn();
 
@@ -37,7 +38,7 @@ describe("ProjectTeamSection", () => {
   });
 
   it("renders 'No team members yet.' when the roster is empty", () => {
-    render(<ProjectTeamSection projectId={PROJECT_ID} initialTeam={[]} />);
+    render(<ProjectTeamSection projectId={PROJECT_ID} initialTeam={[]} canSearchUsers={true} />);
     expect(screen.getByText("No team members yet.")).toBeInTheDocument();
   });
 
@@ -53,6 +54,7 @@ describe("ProjectTeamSection", () => {
           },
           { id: "entry-2", addedAt: "2026-08-18T00:00:00.000Z", user: null },
         ]}
+        canSearchUsers={true}
       />,
     );
     expect(screen.getByText("Jane Doe")).toBeInTheDocument();
@@ -85,7 +87,7 @@ describe("ProjectTeamSection", () => {
     });
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    render(<ProjectTeamSection projectId={PROJECT_ID} initialTeam={[]} />);
+    render(<ProjectTeamSection projectId={PROJECT_ID} initialTeam={[]} canSearchUsers={true} />);
     fireEvent.change(screen.getByPlaceholderText("Search by name or email…"), {
       target: { value: "Jane" },
     });
@@ -122,6 +124,7 @@ describe("ProjectTeamSection", () => {
             user: { id: MEMBER_USER_ID, displayName: "Jane Doe", email: "jane@example.com" },
           },
         ]}
+        canSearchUsers={true}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
@@ -156,7 +159,7 @@ describe("ProjectTeamSection", () => {
     });
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    render(<ProjectTeamSection projectId={PROJECT_ID} initialTeam={[]} />);
+    render(<ProjectTeamSection projectId={PROJECT_ID} initialTeam={[]} canSearchUsers={true} />);
     fireEvent.change(screen.getByPlaceholderText("Search by name or email…"), {
       target: { value: "Jane" },
     });
@@ -166,5 +169,45 @@ describe("ProjectTeamSection", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("User is already on the team");
     expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("hides the picker and shows an explanatory message when canSearchUsers is false", () => {
+    render(<ProjectTeamSection projectId={PROJECT_ID} initialTeam={[]} canSearchUsers={false} />);
+    expect(screen.queryByPlaceholderText("Search by name or email…")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Your role can't search for people to add to this team."),
+    ).toBeInTheDocument();
+  });
+
+  it("resyncs from fresh initialTeam props after a re-render (router.refresh())", () => {
+    const first: readonly ResolvedTeamMember[] = [
+      {
+        id: "entry-1",
+        addedAt: "2026-08-18T00:00:00.000Z",
+        user: { id: MEMBER_USER_ID, displayName: "Jane Doe", email: "jane@example.com" },
+      },
+    ];
+    const { rerender } = render(
+      <ProjectTeamSection projectId={PROJECT_ID} initialTeam={first} canSearchUsers={true} />,
+    );
+    expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+
+    const second: readonly ResolvedTeamMember[] = [
+      {
+        id: "entry-2",
+        addedAt: "2026-08-18T00:00:00.000Z",
+        user: {
+          id: "55555555-5555-5555-5555-555555555555",
+          displayName: "Sam Second",
+          email: "sam@example.com",
+        },
+      },
+    ];
+    rerender(
+      <ProjectTeamSection projectId={PROJECT_ID} initialTeam={second} canSearchUsers={true} />,
+    );
+    expect(screen.queryByText("Jane Doe")).not.toBeInTheDocument();
+    expect(screen.getByText("Sam Second")).toBeInTheDocument();
   });
 });
