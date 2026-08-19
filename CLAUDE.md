@@ -865,7 +865,7 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     resolved same-day: see the 2026-08-19 "Recent decisions" entry below. **The cross-domain
     session-exchange fix for Google SSO login is now genuinely live and working in production.**
 20. **`/auth/exchange` error-masking fix — built, fully validated, code-reviewed, security-reviewed,
-    second-role human reviewed, not yet gated or merged (2026-08-19).**
+    second-role human reviewed, and gated (2026-08-19); not yet merged.**
     `docs/implementation/session-exchange.md` §7 records the full account.
     Not started automatically — built directly on the explicit "fix the /auth/exchange error
     masking" instruction, following item 19's incident diagnosis, which surfaced that every
@@ -2814,6 +2814,16 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   before merge. See
   `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-error-masking-fix) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit
+  `f5ecff611261183e6ae9e03ee4edd6fd5ff3a34e` on branch `fix-auth-exchange-error-masking` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-error-masking-fix`) and
+  `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #36 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
