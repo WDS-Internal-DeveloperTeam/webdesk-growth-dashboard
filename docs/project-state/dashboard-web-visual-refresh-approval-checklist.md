@@ -13,17 +13,17 @@ Solution, decision CONFIRM, 2026-08-19, approved commit `9eb8f28` on branch
 Every item below must be genuinely true, verified against real evidence, before a gate decision for
 this slice can be requested.
 
-| #   | Item                                            | Status                                                                                                                                                                                                 |
-| --- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Built against the already-approved design system | ✅ Home widget grid renders the already-approved §15.1 widget-grid spec via `packages/ui`; visual refresh applies the user-selected "Enterprise Plus" direction chosen from a 3-direction canvas       |
-| 2   | Required tests pass                               | ✅ 162/162 `dashboard-web` unit tests (4 new), 79/79 `packages/ui` unit tests, 15/15 Playwright e2e (incl. 2 authenticated-shell axe-core WCAG 2.2 AA scans, 0 violations)                              |
-| 3   | Full validation clean                             | ✅ typecheck, lint, `next build`, prettier all clean across both packages; `pnpm audit` 0 vulnerabilities                                                                                              |
-| 4   | Live-rendered, not just typechecked/built blind   | ✅ Rendered in the Browser pane via the sanctioned E2E test-session bypass; the CSS-token double-prefix fix specifically verified via `getComputedStyle`                                              |
-| 5   | Independent code review complete                  | ✅ 8-angle finder pass (high effort) — 9 candidates, 7 CONFIRMED fixed, 2 PLAUSIBLE recorded as tracked debt. See the review packet.                                                                   |
-| 6   | Security review complete                          | ✅ `security-review` skill run separately, against the fixed branch — 0 findings above threshold. See the review packet.                                                                              |
-| 7   | Review packet produced for second-role reviewer   | ✅ Published as a Claude artifact — code review + security review findings, fixes, and validation evidence, with a decision section                                                                   |
-| 8   | Documentation updated                             | ✅ `CLAUDE.md`, `docs/implementation/dashboard-web-home-widget-grid.md`, `docs/implementation/dashboard-web-visual-refresh.md`, this checklist                                                        |
-| 9   | Exact branch/commit verified and recorded         | ✅ Branch `dashboard-web-home-widget-grid`, off `main` at `f745d7b`, PR #39, latest commit `a71d2bc4a003fa6af5621468c13a726162f81d8a`                                                                  |
+| #   | Item                                             | Status                                                                                                                                                                                           |
+| --- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Built against the already-approved design system | ✅ Home widget grid renders the already-approved §15.1 widget-grid spec via `packages/ui`; visual refresh applies the user-selected "Enterprise Plus" direction chosen from a 3-direction canvas |
+| 2   | Required tests pass                              | ✅ 162/162 `dashboard-web` unit tests (4 new), 79/79 `packages/ui` unit tests, 15/15 Playwright e2e (incl. 2 authenticated-shell axe-core WCAG 2.2 AA scans, 0 violations)                       |
+| 3   | Full validation clean                            | ✅ typecheck, lint, `next build`, prettier all clean across both packages; `pnpm audit` 0 vulnerabilities                                                                                        |
+| 4   | Live-rendered, not just typechecked/built blind  | ✅ Rendered in the Browser pane via the sanctioned E2E test-session bypass; the CSS-token double-prefix fix specifically verified via `getComputedStyle`                                         |
+| 5   | Independent code review complete                 | ✅ 8-angle finder pass (high effort) — 9 candidates, 7 CONFIRMED fixed, 2 PLAUSIBLE recorded as tracked debt. See the review packet.                                                             |
+| 6   | Security review complete                         | ✅ `security-review` skill run separately, against the fixed branch — 0 findings above threshold. See the review packet.                                                                         |
+| 7   | Review packet produced for second-role reviewer  | ✅ Published as a Claude artifact — code review + security review findings, fixes, and validation evidence, with a decision section                                                              |
+| 8   | Documentation updated                            | ✅ `CLAUDE.md`, `docs/implementation/dashboard-web-home-widget-grid.md`, `docs/implementation/dashboard-web-visual-refresh.md`, this checklist                                                   |
+| 9   | Exact branch/commit verified and recorded        | ✅ Branch `dashboard-web-home-widget-grid`, off `main` at `f745d7b`, PR #39, latest commit `a71d2bc4a003fa6af5621468c13a726162f81d8a`                                                            |
 
 ## Forbidden-actions check
 
@@ -48,24 +48,24 @@ separate, explicit human step, per every prior phase's own pattern of keeping th
 gate decision distinct — the gate was requested, and approved, only after the review above was
 already recorded as complete.
 
-| Field                         | Value                                                                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reviewer (second-role review) | Jitesh D                                                                                                                                                          |
-| Review date                   | 2026-08-19                                                                                                                                                        |
-| Decision                      | Approved as-is                                                                                                                                                    |
+| Field                         | Value                                                                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                                                    |
+| Review date                   | 2026-08-19                                                                                                                                                                  |
+| Decision                      | Approved as-is                                                                                                                                                              |
 | Scope reviewed                | Full code-review disposition (7/7 CONFIRMED fixed, 2 PLAUSIBLE accepted as tracked debt) and full security-review disposition (0 findings), via the published review packet |
-| Disputes raised               | None recorded — the 2 open PLAUSIBLE findings accepted as tracked debt, not requested to be fixed                                                                |
+| Disputes raised               | None recorded — the 2 open PLAUSIBLE findings accepted as tracked debt, not requested to be fixed                                                                           |
 
-| Field                    | Value                                                                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Gate                     | G4-visual-refresh                                                                                                                                                       |
-| Approver (gate decision) | WebDesk Solution                                                                                                                                                        |
-| Gate date                | 2026-08-19                                                                                                                                                              |
-| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                     |
-| Approved commit          | `9eb8f28` on branch `dashboard-web-home-widget-grid` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record                             |
-| Scope                    | `dashboard-web` Home widget grid + whole-app visual refresh only (PR #39). Merge authorization is a separate, not-yet-requested next step.                             |
+| Field                    | Value                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-visual-refresh                                                                                                                          |
+| Approver (gate decision) | WebDesk Solution                                                                                                                           |
+| Gate date                | 2026-08-19                                                                                                                                 |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                          |
+| Approved commit          | `9eb8f28` on branch `dashboard-web-home-widget-grid` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
+| Scope                    | `dashboard-web` Home widget grid + whole-app visual refresh only (PR #39). Merge authorization is a separate, not-yet-requested next step. |
 
-| Role                          | Name             | Decision   | Date       |
-| ----------------------------- | ---------------- | ---------- | ---------- |
+| Role                          | Name             | Decision         | Date       |
+| ----------------------------- | ---------------- | ---------------- | ---------- |
 | Reviewer (second-role review) | Jitesh D         | ☑ Approved as-is | 2026-08-19 |
-| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-19 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM        | 2026-08-19 |
