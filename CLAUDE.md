@@ -865,7 +865,7 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     resolved same-day: see the 2026-08-19 "Recent decisions" entry below. **The cross-domain
     session-exchange fix for Google SSO login is now genuinely live and working in production.**
 20. **`/auth/exchange` error-masking fix — built, fully validated, code-reviewed, security-reviewed,
-    second-role human reviewed, and gated (2026-08-19); not yet merged.**
+    second-role human reviewed, gated, merged, and live in production (2026-08-19).**
     `docs/implementation/session-exchange.md` §7 records the full account.
     Not started automatically — built directly on the explicit "fix the /auth/exchange error
     masking" instruction, following item 19's incident diagnosis, which surfaced that every
@@ -2824,6 +2824,18 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   **This gate approval does not itself authorize merging PR #36 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-19]` **"Merge PR #36" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `78aaa4ac0b5b0508d492a196ae9394b24e31b9ef`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+78aaa4ac0b5b0508d492a196ae9394b24e31b9ef`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The `/auth/exchange`
+  error-masking fix is now genuinely live in production.** The 5 open PLAUSIBLE findings accepted
+  as tracked debt during second-role review remain recorded in
+  `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md` for future reference.
 
 ## Open client blockers
 
