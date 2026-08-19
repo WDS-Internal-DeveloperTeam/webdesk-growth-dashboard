@@ -3,10 +3,18 @@
 **Status:** Code review complete (7/7 CONFIRMED findings fixed, 2 PLAUSIBLE left as tracked debt).
 Security review complete (0 findings above threshold). Required second-role human review complete
 (2026-08-19, Jitesh D, "Approved as-is"), accepting the 2 open PLAUSIBLE code-review findings as
-tracked debt rather than requesting fixes. **The gate (G4-visual-refresh) is approved** — WebDesk
+tracked debt rather than requesting fixes. The gate (G4-visual-refresh) was approved — WebDesk
 Solution, decision CONFIRM, 2026-08-19, approved commit `9eb8f28` on branch
 `dashboard-web-home-widget-grid` — see `outputs/webdesk-growth-dashboard/project.json`'s
-`gates[]`. Merge authorization remains a separate, not-yet-requested next step.
+`gates[]`. **"Merge PR #39" was then separately requested and executed** — merge commit
+`7728830065c0d14a306216209a0f087b64fbddf0`, all 14 CI checks green beforehand (one formatting-only
+fix, `7a085dd`, was pushed to correct a prettier table-alignment drift before merging). Both
+Vercel projects auto-deployed on push to `main` and were verified live directly, not just via CI's
+own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+7728830065c0d14a306216209a0f087b64fbddf0`, confirming the exact merged commit is what's serving;
+`dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+unauthenticated visitor, confirming the session gate is intact. **The dashboard-web Home widget
+grid and whole-app visual refresh are now genuinely live in production.**
 
 ## Completion condition
 

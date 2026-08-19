@@ -1082,7 +1082,9 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     whole-app visual refresh.
 24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated,
     code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"),
-    and gated (G4-visual-refresh, WebDesk Solution, CONFIRM); not yet merged (2026-08-19).** Not started automatically — after seeing item
+    gated (G4-visual-refresh, WebDesk Solution, CONFIRM), and merged (PR #39, merge commit
+    `7728830065c0d14a306216209a0f087b64fbddf0`) — now genuinely live in production
+    (2026-08-19).** Not started automatically — after seeing item
     23's widget grid live-rendered, the user said the UI "still looks simple." Rather than guess
     again in code, drafted 3 full visual directions (Current, "Enterprise Plus," "Modern SaaS") as
     a design canvas — a real mockup of the actual Home page content in each direction, not abstract
@@ -3348,6 +3350,18 @@ build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
   **This gate approval does not itself authorize merging PR #39 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-19]` **"Merge PR #39" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first — one, "Formatting validation," initially failed on a prettier
+  table-alignment drift in the approval checklist committed with the gate approval; fixed and
+  pushed as commit `7a085dd` before merging. Merged with a real merge commit (not squash/rebase),
+  matching every prior merge in this project's history — merge commit
+  `7728830065c0d14a306216209a0f087b64fbddf0`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+7728830065c0d14a306216209a0f087b64fbddf0`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The `dashboard-web` Home
+  widget grid and whole-app visual refresh are now genuinely live in production.**
 
 ## Open client blockers
 
