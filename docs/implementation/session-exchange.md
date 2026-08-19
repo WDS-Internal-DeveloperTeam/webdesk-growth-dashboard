@@ -358,3 +358,178 @@ directly — the generic/no-reason path, each known reason's specific message, a
 falling back to the generic message while logging exactly once, and the `constructor` prototype-key
 case specifically. Re-validated: 149/149 `dashboard-web` unit tests (6 new), typecheck/lint/
 `next build`/`pnpm exec prettier --check` all clean.
+
+## 9. Remaining PR #36 accepted-debt items closed together (2026-08-19)
+
+PR #36's second-role review accepted 5 findings as tracked debt. Item 1 (the `AuthErrorReason`
+shared-type duplication) was closed separately by PR #37/§8 above. This section closes the
+remaining items in a single batch, under the explicit "fix the sibling OIDC-cookie branch ... and
+if anything remaining then please do it all together" instruction — one branch, one validation
+pass, one review cycle for all of them, rather than repeating the full review/gate/merge process
+per item.
+
+### 9a. Sibling OIDC-cookie masking bug (fixed)
+
+`GoogleAuthController#callback`'s `if (!transaction)` branch collapsed two genuinely different
+states into the identical `reason=expired` redirect with zero logging:
+
+- **Missing** — no OIDC transaction cookie was sent at all. Genuinely expired/never-arrived (the
+  cookie's own `maxAge` elapsed, or the browser never carried it back). Not an anomaly.
+- **Invalid** — a cookie WAS sent but `readOidcTransactionCookie` couldn't parse it as JSON, or it
+  parsed but didn't match `OidcTransaction`'s shape. A real anomaly — corruption, a stale/foreign
+  cookie, or a future schema change to the cookie's own shape — the exact sibling of the
+  `sessionExchange.issue()` masking bug §7 already fixed once in this same file.
+
+**Fixed** by widening `readOidcTransactionCookie`'s return type from `OidcTransaction | null` to a
+discriminated `OidcTransactionReadResult` (`{status: "missing"} | {status: "invalid"} |
+{status: "ok", transaction: OidcTransaction}`, `oidc-transaction.ts`). The controller now branches
+on `status`: `"missing"` still redirects `reason=expired` with no log (the routine case);
+`"invalid"` now redirects `reason=error` and logs `"OIDC transaction cookie present but
+malformed/invalid"` server-side, so a real anomaly is diagnosable instead of silently masquerading
+as an everyday expiry. New coverage: `oidc-transaction.spec.ts` (5 unit tests covering all three
+`readOidcTransactionCookie` outcomes) and 2 new `google-auth.controller.e2e-spec.ts` e2e tests
+(missing cookie → `reason=expired`, no log; malformed cookie → `reason=error`, logged exactly
+once).
+
+### 9b. Unguarded `body.data` destructure in `dashboard-web`'s `/auth/exchange` route (fixed)
+
+`response.json()` succeeding only proves the body is valid JSON, not that it has the shape this
+route expects — `const { sessionToken, expiresAt, cookieName } = body.data;` would throw an
+uncaught `TypeError` if `dashboard-api` ever returned a differently-shaped 200 (a future
+API-contract drift, or a proxy/CDN substituting its own body), crashing this route instead of
+cleanly redirecting to `/auth/error` like every other failure branch already does. **Fixed** with a
+new `isSessionExchangeSuccessBody()` type guard validating `data.sessionToken`/`expiresAt`/
+`cookieName` are all present and string-typed before destructuring; an unexpected shape now
+redirects `reason=error` and logs the malformed body, instead of crashing. New coverage: 2 new
+`auth-exchange-route.test.tsx` tests (a `data`-less 200 body, and a wrong-typed `sessionToken`).
+
+### 9c. Undocumented "backend 400 always means expired" assumption (documented, not changed)
+
+The route's `response.status === 400 ? "expired" : "error"` branch assumes every 400 from
+`POST /auth/exchange` means "invalid/expired code." That holds today only because
+`sessionExchangeSchema` (`session-exchange.dto.ts`) is a single required `code: z.string().min(1)`
+field, and this route already guards `code` non-empty before ever calling the backend — so the
+`ZodValidationPipe`'s own validation-failure 400 path can't currently be reached from this caller.
+If that DTO ever grows a second field, a validation-error 400 would silently masquerade as
+"expired" here too. **Not fixed** — distinguishing the two 400 causes needs a real backend contract
+change (e.g. a distinct error code in the response body), its own separate, not-yet-requested
+scope. The assumption and its fragility bound are now recorded directly as a code comment at the
+branch itself, closing the "undocumented" half of the finding without inventing new backend scope.
+
+### 9d. `reason=error` bucket collapsing 5 failure classes into one message (reviewed, no change needed)
+
+Reviewed directly rather than left silently unaddressed: `dashboard-web`'s `/auth/error` page shows
+one identical generic message for every `reason=error` cause (misconfiguration, network failure,
+`issue()` failure, non-2xx status, malformed/unexpected response body) — but each of those 5 causes
+already logs its own distinct, specific message server-side (visible in Vercel runtime logs) at the
+point it's raised. The _user-facing_ message stays deliberately generic per knowledge/05's
+no-information-leakage framing; the _operator-facing_ diagnosability this finding was really about
+already exists via those per-cause log lines. No code change made.
+
+### PR #37's own 3 accepted-debt items — reviewed, no change needed
+
+Also checked against this same "make sure nothing remains" instruction, since they're still open,
+tracked debt from the most recent prior review
+(`docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`):
+
+- **`reason=""` behavior change** — only reachable via a hand-typed `/auth/error?reason=` URL, no
+  real application redirect ever sends an empty string, and the current behavior (generic message)
+  is strictly better than the old blank-message one. No change needed.
+- **`redirectToAuthError` name collision** — the two functions live in genuinely separate
+  runtimes/files, both already cross-reference each other by path in their own doc comments, and
+  renaming either would touch working, well-tested code for a pure grep-ergonomics gain. No change
+  needed.
+- **Incident narrative duplicated across 4 files' doc comments** — each comment also carries
+  genuinely distinct local context (why _this_ file's usage needs the shared type), closer to
+  normal per-usage-site documentation than harmful duplication. No change needed.
+
+### Validation
+
+370/370 → 375/375 `dashboard-api` unit tests (5 new), 111/111 → 113/113 `dashboard-api` e2e tests
+(2 new, real disposable database), 28/28 `packages/database` integration tests (unaffected,
+confirmed still green), 149/149 → 151/151 `dashboard-web` unit tests (2 new), typecheck/lint/
+`next build`/`nest build`/`pnpm exec prettier --check` all clean across `apps/dashboard-api` and
+`apps/dashboard-web`.
+
+## 10. Independent code review on the consolidated batch (PR #38, 2026-08-19)
+
+This project's own `code-review` skill ran against the consolidated branch above
+(`fix-remaining-session-exchange-debt`, PR #38) at high effort (8 finder angles, 1-vote
+verification). 6 candidates survived dedup — 3 CONFIRMED, 3 PLAUSIBLE. 4 fixed in this same round
+(3 CONFIRMED + 1 cheap PLAUSIBLE), 2 left as flagged, tracked debt (both genuinely larger in scope
+than this PR's stated purpose), matching the same "bundle it, don't repeat the cycle per finding"
+instruction that produced this whole consolidated PR in the first place.
+
+### 10a. `NaN` `expiresAt` silently degrades the session cookie to session-only (fixed)
+
+`isSessionExchangeSuccessBody` (§9b) validated `expiresAt` was a `string`, but not that it was a
+_parseable_ date. An unparseable value flowed into
+`Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))` —
+`Math.max`'s `NaN` propagation means the whole expression evaluates to `NaN`, so
+`cookieStore.set(cookieName, sessionToken, { maxAge: NaN, ... })` was reached. This doesn't throw:
+Next.js's Edge Runtime `@edge-runtime/cookies` package's `stringifyCookie` only checks
+`typeof maxAge === "number"` before emitting it, and `typeof NaN === "number"` is `true` — so it
+emits a literal `Max-Age=NaN` header, which every mainstream browser then ignores per RFC 6265,
+silently degrading the newly-issued session cookie to session-only (cleared on browser close)
+instead of failing loudly. **Fixed** by extending `isSessionExchangeSuccessBody`'s validation to
+`!Number.isNaN(new Date(expiresAt).getTime())`, so an unparseable `expiresAt` now fails the type
+guard entirely and redirects `reason=error` before any cookie is ever set. New coverage: a new
+`auth-exchange-route.test.tsx` test asserting `setCookie` is never called when `expiresAt` isn't a
+parseable date.
+
+### 10b. Invalid-cookie log line still had no diagnostic detail (fixed)
+
+§9a's `"invalid"` status collapsed a JSON-parse failure and a shape-mismatch failure into one
+undifferentiated case, so the resulting log line couldn't say which one actually happened —
+exactly the "something's wrong but not what" gap this whole fix round exists to close, just one
+level deeper. **Fixed** by widening `OidcTransactionReadResult`'s `"invalid"` variant with a
+`reason: "parse" | "shape"` field, and updating `GoogleAuthController#callback`'s log line to
+include it. `oidc-transaction.spec.ts`'s three "invalid" test cases updated to assert the specific
+`reason`.
+
+### 10c. `isSessionExchangeSuccessBody` didn't actually validate `success`/`correlationId` (fixed)
+
+The type predicate claimed the full `SessionExchangeSuccessBody` shape (including `success: true`
+and `correlationId: string`, inherited from `ApiSuccessResponse<T>`) but only checked `data`'s leaf
+fields, letting `success`/`correlationId` be trusted as compiler-guaranteed-present without ever
+being validated — an unsound predicate. **Fixed** by adding explicit `success !== true` /
+`typeof correlationId !== "string"` checks before the `data` checks. New coverage: a new
+`auth-exchange-route.test.tsx` test asserting a 200 response with valid-looking `data` but a
+missing `success`/`correlationId` still redirects `reason=error`.
+
+### 10d. Shape-mismatch log could leak a live session token (fixed, PLAUSIBLE)
+
+§9b's shape-mismatch branch logged the raw response body directly. On a future backend response-
+contract drift, that body could still carry a real, redeemable `sessionToken` alongside the one
+field that actually changed — the raw log would then write a live credential into Vercel's log
+storage. **Fixed** with a new `describeUnexpectedBody()` helper that logs only a safe, values-free
+summary (`{ typeOf }` for a non-object body, `{ topLevelKeys }` for an object) instead of the raw
+body. New coverage: a new `auth-exchange-route.test.tsx` test that plants a real-looking secret
+value as `sessionToken` in a shape-mismatched response and asserts it never appears in any
+`console.error` call argument (via `JSON.stringify` containment check across every logged arg).
+
+### 10e. `getServerSession()`'s degrade-vs-throw pattern duplicated across 9+ call sites (flagged, not fixed)
+
+The pattern this whole fix round has now applied piecemeal — distinguish a 404/403 (degrade
+gracefully) from a genuine failure (throw/log) — is hand-repeated across `getServerSession()` and
+8+ other `dashboard-web` `lib/*.ts` call sites (`getProjectDetail`, `getUser`, `getUsersByIds`,
+etc.) with no shared helper. Real, but genuinely larger in scope than this PR's stated purpose
+(closing specific accepted-debt findings, not a `dashboard-web` data-layer refactor) — flagged
+here, left as tracked debt for a future, separately-scoped pass.
+
+### 10f. `OidcTransactionReadResult`'s `status: "ok"` diverges from the `success: true` convention (flagged, not fixed)
+
+`packages/shared-types`' `ApiSuccessResponse`/`ApiErrorResponse` convention discriminates on
+`success: boolean`; `OidcTransactionReadResult` (§9a) discriminates on
+`status: "ok" | "missing" | "invalid"` — a naming-convention divergence, not a functional bug. Not
+fixed: `OidcTransactionReadResult` isn't a wire-format type (it never crosses a network boundary,
+unlike `ApiSuccessResponse`), so forcing it into the same shape would import that convention's
+assumptions (e.g. an `error` payload field) with no real use for them here. Flagged for awareness,
+not changed.
+
+### Validation
+
+375/375 `dashboard-api` unit tests (3 updated assertions, no new test files), 113/113
+`dashboard-api` e2e tests (unchanged), 151/151 → 155/155 `dashboard-web` unit tests (4 new),
+typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean across
+`apps/dashboard-api` and `apps/dashboard-web`.

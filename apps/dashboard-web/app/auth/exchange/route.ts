@@ -55,6 +55,61 @@ function isSecureCookieEnabled(): boolean {
   return process.env.SESSION_COOKIE_SECURE !== "false";
 }
 
+type SessionExchangeSuccessBody = ApiSuccessResponse<{
+  sessionToken: string;
+  expiresAt: string;
+  cookieName: string;
+}>;
+
+/**
+ * `response.json()` succeeding only proves the body is *valid JSON* — not that it has the shape
+ * this route expects. Destructuring `body.data` straight off an unvalidated `unknown` would throw
+ * if `dashboard-api` ever returned a differently-shaped 200 (a future API-contract drift, or a
+ * proxy/CDN substituting its own JSON body), crashing this route with an uncaught exception
+ * instead of a clean redirect to `/auth/error` — the exact failure mode every other branch in this
+ * file already guards against.
+ *
+ * Checks `success`/`correlationId` too, not just `data`'s leaf fields — the type predicate claims
+ * the full `SessionExchangeSuccessBody` shape, so leaving those two unchecked would let later code
+ * trust them as compiler-guaranteed-present when they were never actually validated. `expiresAt`
+ * is also checked for being a *parseable* date, not just a string — an unparseable value would
+ * otherwise flow into `new Date(expiresAt).getTime()` as `NaN`, silently degrading the session
+ * cookie's `Max-Age` to an invalid value instead of failing loudly here.
+ */
+function isSessionExchangeSuccessBody(value: unknown): value is SessionExchangeSuccessBody {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const { success, data, correlationId } = value as Record<string, unknown>;
+  if (success !== true || typeof correlationId !== "string") {
+    return false;
+  }
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+  const { sessionToken, expiresAt, cookieName } = data as Record<string, unknown>;
+  return (
+    typeof sessionToken === "string" &&
+    typeof expiresAt === "string" &&
+    !Number.isNaN(new Date(expiresAt).getTime()) &&
+    typeof cookieName === "string"
+  );
+}
+
+/**
+ * A safe, values-free summary of a response body that failed `isSessionExchangeSuccessBody` — logs
+ * enough to diagnose *what* was missing/wrong-shaped without ever printing field values. The
+ * shape-mismatch case this guards is the one path in this file where the response body could, on a
+ * future backend drift, still carry a real `sessionToken` alongside the one field that changed —
+ * logging the raw body here would risk that live credential landing in server logs.
+ */
+function describeUnexpectedBody(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) {
+    return { typeOf: typeof value };
+  }
+  return { topLevelKeys: Object.keys(value) };
+}
+
 export async function GET(request: Request): Promise<Response> {
   const code = new URL(request.url).searchParams.get("code");
   if (!code) {
@@ -91,6 +146,14 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   if (!response.ok) {
+    // A bare `response.status === 400` check assumes every 400 from `POST /auth/exchange` means
+    // "invalid/expired code" (`SessionController#exchange`'s `BadRequestException`). That holds
+    // today only because `sessionExchangeSchema` (`session-exchange.dto.ts`) is a single required
+    // `code: z.string().min(1)` field, and `code` is already guarded non-empty above — so the
+    // ZodValidationPipe's own 400 path can't currently be reached from this caller. If that DTO
+    // ever grows a second field, a validation-error 400 would silently masquerade as "expired"
+    // here too. Not fixed now — distinguishing them needs a real backend contract change (e.g. a
+    // distinct error code in the response body), its own separate, not-yet-requested scope.
     return response.status === 400
       ? redirectToAuthError(request, "expired")
       : redirectToAuthError(
@@ -100,7 +163,7 @@ export async function GET(request: Request): Promise<Response> {
         );
   }
 
-  let body: ApiSuccessResponse<{ sessionToken: string; expiresAt: string; cookieName: string }>;
+  let body: unknown;
   try {
     body = await response.json();
   } catch (error) {
@@ -109,6 +172,14 @@ export async function GET(request: Request): Promise<Response> {
       "error",
       "auth/exchange: POST /auth/exchange returned a malformed response body",
       error,
+    );
+  }
+  if (!isSessionExchangeSuccessBody(body)) {
+    return redirectToAuthError(
+      request,
+      "error",
+      "auth/exchange: POST /auth/exchange returned an unexpected response shape",
+      describeUnexpectedBody(body),
     );
   }
   const { sessionToken, expiresAt, cookieName } = body.data;

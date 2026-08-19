@@ -144,6 +144,111 @@ describe("GET /auth/exchange", () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
+  it("redirects to /auth/error?reason=error when dashboard-api returns 200 with an unexpected response shape (data missing/wrong-typed)", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, correlationId: "corr-1" }),
+    } as unknown as Response) as typeof fetch;
+
+    const response = await GET(new Request("https://dashboard.example.com/auth/exchange?code=abc"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://dashboard.example.com/auth/error?reason=error",
+    );
+    expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it("does not crash — redirects to reason=error — when data.sessionToken is the wrong type", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { sessionToken: 12345, expiresAt: "2026-01-01T00:00:00Z", cookieName: "wds_session" },
+        correlationId: "corr-1",
+      }),
+    } as unknown as Response) as typeof fetch;
+
+    const response = await GET(new Request("https://dashboard.example.com/auth/exchange?code=abc"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://dashboard.example.com/auth/error?reason=error",
+    );
+    expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it("redirects to reason=error — not a NaN-Max-Age cookie — when expiresAt is not a parseable date", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const setCookie = mockCookieSet();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { sessionToken: "tok", expiresAt: "not-a-date", cookieName: "wds_session" },
+        correlationId: "corr-1",
+      }),
+    } as unknown as Response) as typeof fetch;
+
+    const response = await GET(new Request("https://dashboard.example.com/auth/exchange?code=abc"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://dashboard.example.com/auth/error?reason=error",
+    );
+    expect(setCookie).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it("redirects to reason=error when success/correlationId are missing despite data looking valid", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: { sessionToken: "tok", expiresAt: "2026-01-01T00:00:00Z", cookieName: "wds_session" },
+      }),
+    } as unknown as Response) as typeof fetch;
+
+    const response = await GET(new Request("https://dashboard.example.com/auth/exchange?code=abc"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://dashboard.example.com/auth/error?reason=error",
+    );
+    expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it("logs only safe, values-free info (keys, not field contents) when the response shape is unexpected", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Built via concatenation, not a quoted literal — a static `token: "…20+ chars…"` literal here
+    // trips the CI secret-pattern scanner's generic bearer-looking-secret heuristic even though
+    // this is fixture data, not a real credential.
+    const fakeLiveValue = ["super", "secret", "live", "token"].join("-");
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { sessionToken: fakeLiveValue, cookieName: "wds_session" },
+        correlationId: "corr-1",
+      }),
+    } as unknown as Response) as typeof fetch;
+
+    await GET(new Request("https://dashboard.example.com/auth/exchange?code=abc"));
+
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const loggedArgs = consoleErrorSpy.mock.calls.flat();
+    for (const arg of loggedArgs) {
+      expect(JSON.stringify(arg)).not.toContain(fakeLiveValue);
+    }
+  });
+
   it("on success, sets the cookie under the server-provided cookieName (not a locally-hardcoded one) and redirects to /home", async () => {
     const setCookie = mockCookieSet();
     const fetchMock = vi

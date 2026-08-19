@@ -150,6 +150,40 @@ describe("GoogleAuthController — currentUrl construction (integration)", () =>
    * "expired" masked the real cause and made that incident briefly ambiguous before the logs
    * settled it — see docs/implementation/session-exchange.md.
    */
+  /**
+   * Regression coverage for the sibling of the `sessionExchange.issue()` masking bug fixed above:
+   * a missing OIDC transaction cookie (genuinely expired/never-arrived) and a present-but-malformed
+   * one (a real anomaly) both used to collapse into the identical `reason=expired` redirect with no
+   * distinction and no logging for the malformed case. See `oidc-transaction.ts`'s
+   * `OidcTransactionReadResult` and `docs/implementation/session-exchange.md`.
+   */
+  it("with no OIDC transaction cookie at all, redirects to /auth/error?reason=expired", async () => {
+    app = await buildApp(true);
+
+    const response = await request(app.getHttpServer()).get(
+      "/auth/google/callback?code=abc&state=s",
+    );
+
+    expect(handleCallback).not.toHaveBeenCalled();
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe(`${env.WEB_APP_ORIGIN}/auth/error?reason=expired`);
+  });
+
+  it("with a malformed OIDC transaction cookie, redirects to /auth/error?reason=error, not reason=expired", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    app = await buildApp(true);
+
+    const response = await request(app.getHttpServer())
+      .get("/auth/google/callback?code=abc&state=s")
+      .set("Cookie", `${env.OIDC_TRANSACTION_COOKIE_NAME}=not-valid-json{`);
+
+    expect(handleCallback).not.toHaveBeenCalled();
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe(`${env.WEB_APP_ORIGIN}/auth/error?reason=error`);
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    consoleErrorSpy.mockRestore();
+  });
+
   it("on a failure to issue the exchange code, redirects to /auth/error?reason=error without staging a session cookie", async () => {
     app = await buildApp(
       true,
