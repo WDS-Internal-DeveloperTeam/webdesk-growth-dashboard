@@ -1158,8 +1158,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     divergences from the approved mockup (sidebar theme, module-grid column count) on the live
     page, leading to a follow-up fix.
 25. **`dashboard-web` sidebar & module-grid fix — built, fully validated, code-reviewed,
-    security-reviewed; review packet published for second-role human review, not yet second-role
-    reviewed, gated, or merged (2026-08-19).** Not started automatically — after item 24 went live,
+    security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"); not yet gated or
+    merged (2026-08-19).** Not started automatically — after item 24 went live,
     the user pointed at two real screenshots (the live production page vs. the approved "Home
     Visual Directions" mockup) and said directly: the module grid should show 4 tiles, not 5, and
     the sidebar doesn't match the mockup's dark theme. Fixed both, reusing existing tokens: the
@@ -1195,10 +1195,11 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     handling, new endpoint, or dependency in scope). A review packet (published as a Claude
     artifact — code review + security review findings, fixes, and validation evidence, with a
     decision section) was then prepared for the required second-role human review, since the
-    implementing agent cannot also be its own reviewer (ADR-0010). See
-    `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`. **Awaiting the
-    second-role reviewer's decision** — a gate decision and merge authorization remain separate,
-    not-yet-requested next steps.
+    implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
+    returned "Approved as-is,"** accepting the 2 open PLAUSIBLE code-review findings as tracked
+    debt. See `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s
+    "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
+    next steps.
 
 ## Recent decisions
 
@@ -3480,9 +3481,14 @@ build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
   review + security review findings, fixes, and validation evidence, with a decision section) was
   then prepared for the required second-role human review, since the implementing agent cannot
   also be its own reviewer (ADR-0010). See
-  `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`. **Awaiting the
-  second-role reviewer's decision** — a gate decision and merge authorization remain separate,
-  not-yet-requested next steps.
+  `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`.
+- `[2026-08-19]` **Required second-role human review complete for
+  `dashboard-web-sidebar-grid-fix` (PR #40).** The review packet (code review + security review
+  findings, fixes, and the 2 open tracked-debt items, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE
+  code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 

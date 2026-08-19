@@ -1,9 +1,10 @@
 # dashboard-web Sidebar & Module-Grid Fix — Approval Checklist
 
 **Status:** Code review complete (3/3 CONFIRMED findings fixed, 1/3 PLAUSIBLE findings fixed, 2
-PLAUSIBLE left as tracked debt). Security review complete (0 findings above threshold). Review
-packet published for the required second-role human review — **awaiting reviewer decision**. Gate
-decision and merge authorization remain separate, not-yet-requested next steps.
+PLAUSIBLE left as tracked debt). Security review complete (0 findings above threshold). **Required
+second-role human review complete (2026-08-19, Jitesh D, "Approved as-is")**, accepting the 2 open
+PLAUSIBLE code-review findings as tracked debt. A gate decision and merge authorization remain
+separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -34,20 +35,23 @@ this slice can be requested.
   reasoning in the review packet and in `docs/implementation/dashboard-web-visual-refresh.md` §9,
   not glossed over.
 
-## Required second-role human review — PENDING
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (3/3 CONFIRMED + 1/3 PLAUSIBLE fixed, 2 PLAUSIBLE accepted as tracked
-      debt) — reviewer: **pending**.
-- [ ] Security-review findings (0 above threshold) — reviewer: **pending**.
+- [x] Code-review findings (3/3 CONFIRMED + 1/3 PLAUSIBLE fixed, 2 PLAUSIBLE accepted as tracked
+      debt) — reviewed by: **Jitesh D**, 2026-08-19, **Approved as-is**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-19,
+      **Approved as-is**.
 
 ## Sign-off
 
-_Not yet complete — awaiting the second-role reviewer's decision on the published review packet._
+**Second-role human review: complete.** A gate decision and merge authorization remain separate,
+not-yet-requested next steps, per this project's standing discipline of keeping the review and the
+gate decision distinct.
 
-| Field                         | Value   |
-| ----------------------------- | ------- |
-| Reviewer (second-role review) | Pending |
-| Review date                   | Pending |
-| Decision                      | Pending |
-| Scope reviewed                | Pending |
-| Disputes raised               | Pending |
+| Field                         | Value                                                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                                                                |
+| Review date                   | 2026-08-19                                                                                                                                                                              |
+| Decision                      | Approved as-is                                                                                                                                                                          |
+| Scope reviewed                | Full code-review disposition (3 CONFIRMED + 1 PLAUSIBLE fixed, 2 PLAUSIBLE accepted as tracked debt) and full security-review disposition (0 findings), via the published review packet |
+| Disputes raised               | None recorded — the 2 open PLAUSIBLE findings accepted as tracked debt, not requested to be fixed                                                                                       |
