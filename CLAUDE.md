@@ -1081,8 +1081,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     the user then said the UI "still looks simple" even with the widget grid live, leading to the
     whole-app visual refresh.
 24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated,
-    code-reviewed, security-reviewed, review packet published for second-role human review; not
-    yet second-role reviewed, gated, or merged (2026-08-19).** Not started automatically — after seeing item
+    code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is");
+    not yet gated or merged (2026-08-19).** Not started automatically — after seeing item
     23's widget grid live-rendered, the user said the UI "still looks simple." Rather than guess
     again in code, drafted 3 full visual directions (Current, "Enterprise Plus," "Modern SaaS") as
     a design canvas — a real mockup of the actual Home page content in each direction, not abstract
@@ -3332,6 +3332,13 @@ build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
   `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`. **Awaiting the
   second-role reviewer's decision** — a gate decision and merge authorization remain separate,
   not-yet-requested next steps.
+- `[2026-08-19]` **Required second-role human review complete for
+  `dashboard-web-home-widget-grid` (PR #39).** The review packet (code review + security review
+  findings, fixes, and the 2 open tracked-debt items, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE
+  code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
