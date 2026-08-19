@@ -113,13 +113,16 @@
 /* Light surface (not the dark headerBackground fill the header uses) — reverted from a dark
    sidebar built to match the approved "Enterprise Plus" design canvas mockup, per the user's own
    direct, later feedback (a reference screenshot, not a production report — this branch never
-   deployed): keep the sidebar light, compact instead of roomy. surfaceRaised (pure white) reads
-   as a distinct panel against the slightly warmer `background` the main content area sits on. */
+   deployed): keep the sidebar light. surfaceRaised (pure white) reads as a distinct panel against
+   the slightly warmer `background` the main content area sits on. Outer inset widened from
+   `space-sm` to `space-md` to match the roomier rail margin in the Vercel dashboard nav reference
+   the user pointed at — the selection pill now sits with real breathing room from the sidebar's
+   own edge, not flush against it. */
 .sidebar {
   grid-area: sidebar;
   border-right: 1px solid var(--webdesk-dashboard-color-border);
   background: var(--webdesk-dashboard-color-surface-raised);
-  padding: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-md);
   overflow-y: auto;
 }
 
@@ -138,21 +141,27 @@
   padding: var(--webdesk-dashboard-space-2xs) var(--webdesk-dashboard-space-sm);
 }
 
+/* Gap between rows widened from `space-2xs` to `space-xs` (matching the Vercel reference's clear
+   per-row separation) — each row now reads as its own distinct target instead of a dense block. */
 .navList {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--webdesk-dashboard-space-2xs);
+  gap: var(--webdesk-dashboard-space-xs);
 }
 
+/* Vertical padding widened from `space-xs` to `space-sm` (matching the Vercel reference's ~36-40px
+   row height) and the corner radius bumped from `sm` to `md` (8px) — the same rounder pill used
+   throughout the Vercel dashboard nav, giving the selection state real presence instead of a thin
+   sliver. */
 .sidebarLink {
   display: flex;
   align-items: center;
   gap: var(--webdesk-dashboard-space-sm);
-  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
-  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  border-radius: var(--webdesk-dashboard-radius-md);
   color: var(--webdesk-dashboard-color-foreground-muted);
   text-decoration: none;
   font-size: var(--webdesk-dashboard-font-size-sm);
