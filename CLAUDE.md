@@ -844,9 +844,15 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     complete** — Jitesh D, decision "Approved as-is," accepting the `POST /auth/exchange`
     origin-guard gap as tracked debt. See
     `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
-    section. **A gate decision and merge authorization remain separate, not-yet-requested next
-    steps.** Migration `00046` has not been run against the real production
-    database.
+    section. **The gate (G4-session-exchange) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit
+    `1cd89adf973cd13f499170a79ba8601e0a9a56cb` on branch `fix-cross-domain-session-exchange` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-session-exchange`) and the approval checklist's "Sign-off" section. **This gate approval
+    does not itself authorize merging PR #35, a production deployment, or running migration
+    `00046` against the real production database** — merge remains its own separate,
+    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -2640,6 +2646,17 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   architectural fix. See
   `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-18]` **The gate (G4-session-exchange) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit
+  `1cd89adf973cd13f499170a79ba8601e0a9a56cb` on branch `fix-cross-domain-session-exchange` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-session-exchange`) and
+  `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #35, a production
+  deployment, or running migration `00046` against the real production database** — merge
+  remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

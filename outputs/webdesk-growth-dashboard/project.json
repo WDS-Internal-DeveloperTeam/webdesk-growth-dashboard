@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-team-approver-management",
+    "current_gate": "G4-session-exchange",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-18T00:00:00Z",
-    "version": 27
+    "version": 29
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -288,6 +288,20 @@
       "approved_commit": "91a0a160559d2998e508130fc9a88a51222a7175",
       "record": "docs/project-state/dashboard-web-team-approver-management-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #34 or a production deployment — merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-session-exchange",
+      "type": "qa-security-gate",
+      "scope": "fix-cross-domain-session-exchange",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-18T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Cross-domain session-exchange fix for Google SSO login (branch fix-cross-domain-session-exchange, PR #35). Fixes a real production bug: dashboard-api's Google OIDC callback set its session cookie and redirected straight to WEB_APP_ORIGIN's root, but that cookie is host-only to dashboard-api's own *.vercel.app domain (no Domain attribute, no shared parent domain with dashboard-web's separate project) — it was never actually sent on the browser's subsequent navigation to dashboard-web, so every login silently looped back to /auth/sign-in. Not a SameSite bug — SameSite=None is already correct for the cross-site requests this app makes to dashboard-api; the broken case is the browser's own top-level navigation away from it. Fixed with a session-exchange mechanism: a short-lived (60s), single-use, opaque exchange code (migration 00046, session_exchange_codes) redeemed server-to-server against a new POST /auth/exchange endpoint, minting dashboard-web its own independent first-party session (not a relay of the original raw token). Independent code review (high effort, 8-angle finder pass) surfaced 11 candidates, 10 CONFIRMED — most severe: splitting one login into two independent sessions meant 'Sign out' only ever revoked the rarely-used dashboard-api-side session, never the dashboard-web-side one getServerSession() actually authenticates every page against; fixed with a new DELETE /auth/session route in dashboard-web forwarding the whole Cookie header to dashboard-api's /auth/logout with an explicit Origin header. 9 of 10 CONFIRMED findings fixed and re-validated (also: an unguarded exchange-code issue() call that could leak a raw 500 with a session cookie already staged; the active session being stamped with the exchange call's own ipHash/userAgent instead of the real browser's; a missing auth_events record for the session actually in use; an unguarded response.json(); a cookie-name drift risk between the two apps; a hardcoded secure:true with no local-dev override; a duplicated redirect-to-error literal; an extra DB round-trip in redeem()). The 10th (POST /auth/exchange has no OriginCheckGuard/shared secret beyond the code's own entropy/single-use/60s TTL) was left as accepted, tracked debt, flagged explicitly for the second-role reviewer. Security review (run separately, against the fixed branch) found 0 findings above threshold — one candidate (best-effort logout not checking response.ok before clearing the local cookie) was identified and adversarially verified, rejected at 2/10 confidence. Final numbers: 370/370 dashboard-api unit tests, 143/143 dashboard-web unit tests, real-disposable-database integration and e2e coverage for every fix (including a logout-via-forwarded-cookie regression test), migration 00046 up/down round-trip clean, typecheck/lint/next build/nest build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-18, decision 'Approved as-is', accepting the origin-guard gap as tracked debt, no disputes raised) was already complete before this gate was requested — see docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md and its 'Sign-off' section. The emergency-admin TOTP login path has the identical underlying cross-domain bug via a different mechanism but was deliberately left unfixed here — recorded as a known, separate, not-yet-authorized follow-up.",
+      "approved_commit": "1cd89adf973cd13f499170a79ba8601e0a9a56cb",
+      "record": "docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #35, a production deployment, or running migration 00046 against the real production database — each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -1067,6 +1081,38 @@
       },
       "project_version_before": 26,
       "project_version_after": 27
+    },
+    {
+      "timestamp": "2026-08-18T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "reviewed the Cross-Domain Session Exchange (PR #35) review packet and returned 'Approved as-is'",
+      "details": {
+        "scope": "Full code-review disposition (10 CONFIRMED findings, 9 fixed and re-validated, 1 accepted as tracked debt — POST /auth/exchange's lack of an OriginCheckGuard/shared secret) and full security-review disposition (0 findings above threshold), for branch fix-cross-domain-session-exchange, reviewed via a published review packet (code review + security review findings, fixes, and validation evidence, with an explicit decision section for the accepted-debt item).",
+        "result": "Satisfies ADR-0010's separation-of-duties requirement for this slice — the implementing agent could not also be its own reviewer. Recorded in docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md's 'Sign-off' section. A gate decision and merge authorization remained separate, not-yet-requested next steps at the time of this review.",
+        "reviewed_commit": "ed3cfcab2faea2f142d3267c291d367271e6e803",
+        "branch": "fix-cross-domain-session-exchange",
+        "pr": 35
+      },
+      "project_version_before": 27,
+      "project_version_after": 28
+    },
+    {
+      "timestamp": "2026-08-18T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-session-exchange for fix-cross-domain-session-exchange (PR #35) — decision: CONFIRM",
+      "details": {
+        "gate": "G4-session-exchange",
+        "scope": "fix-cross-domain-session-exchange",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-18, decision 'Approved as-is', no disputes) was already complete before this gate was requested — same pattern as every prior gate in this project's history.",
+        "approved_commit": "1cd89adf973cd13f499170a79ba8601e0a9a56cb",
+        "record": "docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md and this entry's sibling in project.json's gates[]",
+        "not_yet_done": "This gate approval does not itself authorize merging PR #35, a production deployment, or running migration 00046 against the real production database — each remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+      },
+      "project_version_before": 28,
+      "project_version_after": 29
     }
   ]
 }

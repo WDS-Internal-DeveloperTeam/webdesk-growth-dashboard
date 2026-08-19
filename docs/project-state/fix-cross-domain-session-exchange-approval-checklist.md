@@ -2,8 +2,9 @@
 
 **Status:** Required second-role human review complete (2026-08-18, Jitesh D, **Approved as-is** —
 accepting the one open code-review finding, `POST /auth/exchange`'s lack of an `OriginCheckGuard`/
-shared secret, as tracked debt rather than requesting the bigger architectural fix). A gate decision
-and merge authorization remain separate, not-yet-requested next steps.
+shared secret, as tracked debt rather than requesting the bigger architectural fix). **The gate
+(G4-session-exchange) is approved** — WebDesk Solution, decision CONFIRM, 2026-08-18. Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -49,9 +50,10 @@ this slice can be requested.
 
 ## Sign-off
 
-**Second-role human review: complete.** Gate decision and merge authorization remain separate,
-not-yet-requested next steps, per this project's standing discipline of keeping review, gate, and
-merge as three distinct, explicitly-requested actions.
+**Second-role human review: complete. Gate G4-session-exchange: approved.** Both were their own
+separate, explicit human step, per every prior phase's own pattern of keeping the review and the
+gate decision distinct — the gate was requested, and approved, only after the review above was
+already recorded as complete. Merge authorization remains a separate, not-yet-requested next step.
 
 | Field                         | Value                                                                                                                                                                         |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -62,7 +64,16 @@ merge as three distinct, explicitly-requested actions.
 | Open item accepted as-is      | `POST /auth/exchange` has no `OriginCheckGuard`/shared secret beyond the exchange code's own entropy/single-use/60s TTL — see `docs/implementation/session-exchange.md` §4/§6 |
 | Disputes raised               | None recorded                                                                                                                                                                 |
 
-| Role                          | Name     | Decision          | Date       |
-| ----------------------------- | -------- | ----------------- | ---------- |
-| Reviewer (second-role review) | Jitesh D | ☑ Approved as-is  | 2026-08-18 |
-| Approver (gate decision)      | —        | Not yet requested | —          |
+| Field                    | Value                                                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-session-exchange                                                                                                                                                            |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                               |
+| Gate date                | 2026-08-18                                                                                                                                                                     |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                              |
+| Approved commit          | `1cd89adf973cd13f499170a79ba8601e0a9a56cb` on branch `fix-cross-domain-session-exchange` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
+| Scope                    | `fix-cross-domain-session-exchange` (PR #35) only. Merge authorization is a separate, not-yet-requested next step.                                                             |
+
+| Role                          | Name             | Decision         | Date       |
+| ----------------------------- | ---------------- | ---------------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved as-is | 2026-08-18 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM        | 2026-08-18 |
