@@ -839,9 +839,13 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     redirect flow) for a narrow (~60s, single-use) exploit window. Re-validated: 370/370
     `dashboard-api` unit tests, 143/143 `dashboard-web` unit tests, new integration/e2e coverage
     for every fix, typecheck/lint/build/prettier all clean. See
-    `docs/implementation/session-exchange.md` §5 for the full account. **Still not yet
-    security-reviewed, second-role human reviewed, gated, or merged** — each a separate,
-    not-yet-requested next step. Migration `00046` has not been run against the real production
+    `docs/implementation/session-exchange.md` §5 for the full account. **Update (2026-08-18):
+    security review complete (0 findings above threshold) and required second-role human review
+    complete** — Jitesh D, decision "Approved as-is," accepting the `POST /auth/exchange`
+    origin-guard gap as tracked debt. See
+    `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
+    section. **A gate decision and merge authorization remain separate, not-yet-requested next
+    steps.** Migration `00046` has not been run against the real production
     database.
 
 ## Recent decisions
@@ -2613,6 +2617,29 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   build/prettier all clean. See `docs/implementation/session-exchange.md`'s "Independent code
   review" section for the full account. Not yet security-reviewed, second-role human reviewed,
   gated, or merged.
+- `[2026-08-18]` **Security review run on `fix-cross-domain-session-exchange` (PR #35), separately
+  from the code review, against the fixed branch.** One candidate identified (the new
+  `DELETE /auth/session` route clears the local cookie and reports success even if the
+  server-side revoke call to `dashboard-api` fails or is unreachable) and adversarially
+  verified — rejected at 2/10 confidence: exploiting it requires an attacker to already hold a
+  leaked raw session token _and_ a coincidental `dashboard-api` outage at the exact moment of
+  logout, neither attacker-triggerable; it's a standard best-effort "cookie-clear is the primary
+  signal" logout pattern that only narrows, never removes, the pre-existing TTL-bounded exposure
+  every session already has. **0 findings above threshold.** Also confirmed clean: the new route's
+  `Cookie`/`Origin` forwarding (no cross-site forgery path — no CORS wildcard, `SameSite=Lax`
+  cookie, `DELETE` requires a preflight `dashboard-web` never satisfies for foreign origins);
+  exchange-code crypto and atomic redemption; the new `ipHash`/`userAgent` storage (same shape as
+  existing `sessions`/`auth_events` columns, no new PII exposure class); `GoogleAuthController#callback`'s
+  reordered flow (no auth-bypass/session-fixation shape); and the `cookieName` echoed back in
+  `POST /auth/exchange`'s response (sourced solely from trusted server-side config). A review
+  packet (published as a Claude artifact — code review + security review findings, fixes, and
+  validation evidence, with an explicit decision section for the one accepted-debt item) was
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting
+  the `POST /auth/exchange` origin-guard gap as tracked debt rather than requesting the bigger
+  architectural fix. See
+  `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
