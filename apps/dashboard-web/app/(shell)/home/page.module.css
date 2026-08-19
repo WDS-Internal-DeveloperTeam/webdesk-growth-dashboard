@@ -1,0 +1,32 @@
+/* Explicit, breakpoint-driven column counts instead of `auto-fill`/`minmax` — the previous
+   `repeat(auto-fill, minmax(280px, 1fr))` approach only reaches 4 columns once the actual
+   available content width (viewport minus the 260px sidebar and 64px of `.main` padding) hits
+   `ContentContainer`'s 1280px cap, i.e. only at viewport widths ≳1492px. On common laptop
+   resolutions (1366×768, 1440×900) it silently rendered 3 columns, not 4. `repeat(N, minmax(0,
+   1fr))` has no per-column minimum floor, so it guarantees exactly N columns at each breakpoint
+   regardless of how narrow the container is — trading a hard per-card width floor for a
+   deterministic column count, which is what this grid actually needs. Breakpoints match
+   `breakpointTokens` exactly (enforced by `scripts/check-css-tokens.mjs`). */
+.moduleGrid {
+  display: grid;
+  gap: var(--webdesk-dashboard-space-md);
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 480px) {
+  .moduleGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .moduleGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .moduleGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

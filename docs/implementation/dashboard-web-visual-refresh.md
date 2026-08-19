@@ -370,3 +370,63 @@ confirmed via `getComputedStyle` that the sidebar background is exactly `surface
 (`rgb(238, 240, 255)`/`rgb(67, 56, 202)`), inactive links are `foregroundMuted`
 (`rgb(107, 97, 81)`), and `.sidebarLink`'s computed padding is `4px 8px` (was `8px` uniform before
 this change) — and confirmed zero error-boundary text with all 39 icons still rendering.
+
+## 9. Independent code review (2026-08-19)
+
+Medium effort, 8-angle finder pass against the full PR #40 diff (net of both §7/§8 commits). 6
+findings survived verification (3 CONFIRMED, 3 PLAUSIBLE). All 8 angles independently converged on
+the same two underlying issues, which meaningfully increased confidence in both.
+
+**Most severe (CONFIRMED), and the only one with real functional impact**: the module grid's
+`repeat(auto-fill, minmax(280px, 1fr))` fix from §7 only actually reaches 4 columns once the
+available content width hits `ContentContainer`'s 1280px cap — which, accounting for the 260px
+sidebar and 64px of `.main` padding, needs a viewport of roughly **1492px or wider**. At common
+laptop resolutions (1366×768, 1440×900) it silently rendered **3** columns, not 4 — the exact
+undershoot bug §7 was built to fix, just relocated to a lower number. This was missed by §7's own
+live verification, which only checked 1280px and 1920px viewports (both ≥1280px in container terms
+either by exact match or the 1280px cap), never a mid-range width like 1440px where the gap
+actually shows. Independently recomputed the arithmetic with Python before trusting the finding.
+
+Fixed by replacing the `auto-fill`/`minmax` approach with an explicit, breakpoint-driven CSS
+Module (new `app/(shell)/home/page.module.css`): `repeat(N, minmax(0, 1fr))` at each of
+`breakpointTokens`' four values (480/768/1024/1280px, enforced by `check-css-tokens.mjs`) — 1
+column below 480px, 2 from 480px, 3 from 1024px, 4 from 1280px. `minmax(0, 1fr)` has no per-column
+minimum floor, so exactly N columns render at each breakpoint regardless of how narrow the
+container is, trading a hard per-card width floor for a deterministic column count — the more
+robust pattern the altitude-angle finder recommended over hand-tuning a magic pixel value to one
+specific container width. Verified live at the exact boundary: 1279px viewport → 3 columns,
+1280px → 4 columns, 1440px → 4 columns (previously 3).
+
+**Two CONFIRMED documentation-consistency findings**, both converged on independently by 3–4 of
+the 8 angles: (1) the `.clusterLabel` contrast-ratio comment stated stale, wrong numbers —
+`foregroundSubtle` claimed "2.45:1" (contradicting `tokens.ts`'s own documented 3.88:1 for the
+identical pair) and `foregroundMuted` claimed "passes (7+:1)" (the real figure is 6.08:1,
+independently recomputed with the real WCAG relative-luminance formula and confirmed live via
+`getComputedStyle`) — fixed by correcting both numbers and resolving the cross-file contradiction.
+(2) The §8 "compact" pass hardcoded `2px`/`1px` padding/gap literals instead of a spacing token —
+unlike every other value in this file, and invisible to `check-css-tokens.mjs`, which only checks
+`@media` breakpoints and transition durations, never spacing literals — fixed by adding a real
+`spacingTokens["2xs"]` tier (`0.125rem`/2px, matching the existing `"2xl"`/`"3xl"` naming
+convention) to `packages/ui/src/tokens.ts` and using it consistently across `.clusterLabel`
+padding, `.navGroupLabel` padding, and `.navList` gap.
+
+One PLAUSIBLE finding fixed: the `.sidebar` comment's phrase "after seeing the dark-sidebar
+direction live" could be misread as a production incident, given this project's own CLAUDE.md
+vocabulary — reworded to make explicit this was a local dev-preview render on an unmerged branch,
+never deployed.
+
+Two PLAUSIBLE findings left as tracked, out-of-scope debt, not fixed: (1) the new
+`spacingTokens["2xs"]` (2px) is a _third_, numerically different "tight spacing" value alongside an
+existing, undocumented `gap: 0.1rem` (1.6px) convention already used identically in
+`project-roster-section.module.css` and `user-picker.module.css` — full reconciliation into one
+real compact-density system is a larger, separate task than this scoped fix, not silently glossed
+over. (2) `tests/unit/app-shell.test.tsx` has zero computed-style assertions for any of the sidebar
+colors/spacing this branch touches, so a future custom-property typo would only be caught by a live
+render — a genuine, pre-existing testing gap, not something this diff introduced or is obligated to
+close on its own.
+
+Re-validated after all fixes: 79/79 `packages/ui` unit tests (1 updated — the `spacingTokens` key
+list), 162/162 `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs` (now checking 9
+CSS Module files, up from 8)/`next build`/prettier all clean across both packages. Live-verified
+the boundary behavior directly in the Browser pane (1279px → 3 columns, 1280px → 4 columns, 1440px
+→ 4 columns) rather than trusting the arithmetic alone.

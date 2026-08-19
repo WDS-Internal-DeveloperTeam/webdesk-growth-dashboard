@@ -99,6 +99,8 @@ export const typographyTokens = {
 
 export const spacingTokens = {
   none: "0",
+  /** Below `xs` — for compact/dense list rows only (e.g. sidebar nav labels), not general use. */
+  "2xs": "0.125rem",
   xs: "0.25rem",
   sm: "0.5rem",
   md: "1rem",

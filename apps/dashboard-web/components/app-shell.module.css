@@ -97,21 +97,24 @@
 
 .clusterLabel {
   display: block;
-  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm) 2px;
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm)
+    var(--webdesk-dashboard-space-2xs);
   font-size: var(--webdesk-dashboard-font-size-xs);
   font-weight: var(--webdesk-dashboard-font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  /* --webdesk-dashboard-color-foreground-subtle is only 2.45:1 against this light surface at this
-     font size — under WCAG AA's 4.5:1, a real violation axe-core caught once the shell was first
-     scanned on an authenticated route. foreground-muted passes (7+:1). */
+  /* --webdesk-dashboard-color-foreground-subtle is 3.88:1 against this light surface — under WCAG
+     AA's 4.5:1, a real violation axe-core caught once the shell was first scanned on an
+     authenticated route (matches `tokens.ts`'s own doc comment on `foregroundSubtle`).
+     foreground-muted passes at 6.08:1. */
   color: var(--webdesk-dashboard-color-foreground-muted);
 }
 
-/* Light surface (not the dark headerBackground fill the header uses) — the user's own explicit
-   direction after seeing the dark-sidebar direction live: keep the sidebar light, compact instead
-   of roomy. surfaceRaised (pure white) reads as a distinct panel against the slightly warmer
-   `background` the main content area sits on. */
+/* Light surface (not the dark headerBackground fill the header uses) — reverted from a dark
+   sidebar built to match the approved "Enterprise Plus" design canvas mockup, per the user's own
+   direct, later feedback (a reference screenshot, not a production report — this branch never
+   deployed): keep the sidebar light, compact instead of roomy. surfaceRaised (pure white) reads
+   as a distinct panel against the slightly warmer `background` the main content area sits on. */
 .sidebar {
   grid-area: sidebar;
   border-right: 1px solid var(--webdesk-dashboard-color-border);
@@ -132,7 +135,7 @@
   letter-spacing: 0.04em;
   /* See .clusterLabel above — same light sidebar surface, same token. */
   color: var(--webdesk-dashboard-color-foreground-muted);
-  padding: 2px var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-2xs) var(--webdesk-dashboard-space-sm);
 }
 
 .navList {
@@ -141,7 +144,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--webdesk-dashboard-space-2xs);
 }
 
 .sidebarLink {

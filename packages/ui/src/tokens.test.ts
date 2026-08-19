@@ -32,6 +32,7 @@ describe("design tokens (Phase 1F application-shell foundation)", () => {
   it("exposes spacing tokens", () => {
     expect(Object.keys(spacingTokens)).toEqual([
       "none",
+      "2xs",
       "xs",
       "sm",
       "md",
