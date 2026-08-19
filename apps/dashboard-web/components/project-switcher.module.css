@@ -7,22 +7,24 @@
 .label {
   font-size: var(--webdesk-dashboard-font-size-xs);
   font-weight: var(--webdesk-dashboard-font-weight-medium);
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  color: var(--webdesk-dashboard-color-header-foreground-muted);
   white-space: nowrap;
 }
 
+/* Only ever rendered inside the header (single call site, `AppShell`) — styled against the
+   header's own dark palette rather than the light content-area tokens. */
 .select {
   font-size: var(--webdesk-dashboard-font-size-sm);
-  color: var(--webdesk-dashboard-color-foreground);
-  background: var(--webdesk-dashboard-color-surface);
-  border: 1px solid var(--webdesk-dashboard-color-border);
+  color: var(--webdesk-dashboard-color-header-foreground);
+  background: var(--webdesk-dashboard-color-header-control-background);
+  border: 1px solid var(--webdesk-dashboard-color-header-border);
   border-radius: var(--webdesk-dashboard-radius-sm);
   padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
   max-width: 14rem;
 }
 
 .select:disabled {
-  color: var(--webdesk-dashboard-color-foreground-subtle);
+  color: var(--webdesk-dashboard-color-header-foreground-muted);
   cursor: not-allowed;
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Bell, HelpCircle, Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -11,18 +12,24 @@ import {
 import {
   Avatar,
   Badge,
+  colorTokens,
   CommandMenu,
   Drawer,
   Dropdown,
   IconButton,
-  initialsFor,
   NotConfiguredState,
   Tooltip,
 } from "@webdesk/ui";
+import { moduleIcon } from "@/lib/module-icons";
 import type { ServerSessionProfile } from "@/lib/server-session";
 import type { ServerSessionSystemStatus } from "@/lib/server-session";
 import { ProjectSwitcher } from "./project-switcher";
 import styles from "./app-shell.module.css";
+
+/** Header icon buttons sit on the dark `headerBackground` fill — the shared `IconButton`'s
+ *  `ghost` variant defaults to `colorTokens.foreground` (near-black), invisible there, so every
+ *  header icon overrides it explicitly to the header's own muted foreground. */
+const headerIconStyle: React.CSSProperties = { color: colorTokens.headerForegroundMuted };
 
 export interface AppShellProps {
   readonly me: ServerSessionProfile;
@@ -246,15 +253,22 @@ export function AppShell({
             aria-controls="primary-navigation"
             onClick={() => setMobileNavOpen((open) => !open)}
           >
-            <span aria-hidden="true">☰</span>
+            <Menu aria-hidden="true" size={18} />
             <span style={{ marginLeft: "0.5rem" }}>Menu</span>
           </button>
           {!isTabletRange ? (
             <IconButton
               label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              icon={<span aria-hidden="true">{isCollapsed ? "»" : "«"}</span>}
+              icon={
+                isCollapsed ? (
+                  <PanelLeftOpen aria-hidden="true" size={18} />
+                ) : (
+                  <PanelLeftClose aria-hidden="true" size={18} />
+                )
+              }
               onClick={toggleCollapsed}
               className={styles.collapseToggle}
+              style={headerIconStyle}
             />
           ) : null}
           <Link href="/home" className={styles.brand}>
@@ -275,19 +289,22 @@ export function AppShell({
           ) : null}
           <IconButton
             label="Search (Ctrl+K)"
-            icon={<span aria-hidden="true">🔍</span>}
+            icon={<Search aria-hidden="true" size={18} />}
             onClick={() => setIsSearchOpen(true)}
+            style={headerIconStyle}
           />
           <IconButton
             label="Notifications"
-            icon={<span aria-hidden="true">🔔</span>}
+            icon={<Bell aria-hidden="true" size={18} />}
             onClick={() => setIsNotificationsOpen(true)}
+            style={headerIconStyle}
           />
           {helpRoute ? (
             <IconButton
               label="Help"
-              icon={<span aria-hidden="true">?</span>}
+              icon={<HelpCircle aria-hidden="true" size={18} />}
               onClick={() => router.push(helpRoute)}
+              style={headerIconStyle}
             />
           ) : null}
           <Dropdown
@@ -323,6 +340,7 @@ export function AppShell({
               ).map(({ clusterLabel, entry }) => {
                 const isActive = pathname === entry.route || pathname.startsWith(`${entry.route}/`);
                 const label = entry.displayName ?? entry.name;
+                const Icon = moduleIcon(entry.iconReference);
                 return (
                   <li key={entry.key}>
                     {clusterLabel && !isIconOnly ? (
@@ -336,7 +354,7 @@ export function AppShell({
                           aria-current={isActive ? "page" : undefined}
                           aria-label={label}
                         >
-                          <span aria-hidden="true">{initialsFor(label)}</span>
+                          <Icon aria-hidden="true" size={18} />
                         </Link>
                       </Tooltip>
                     ) : (
@@ -346,6 +364,7 @@ export function AppShell({
                         aria-current={isActive ? "page" : undefined}
                         onClick={() => setMobileNavOpen(false)}
                       >
+                        <Icon aria-hidden="true" size={18} className={styles.sidebarLinkIcon} />
                         {label}
                       </Link>
                     )}

@@ -23,6 +23,17 @@ body {
   );
 }
 
+/* Display typeface for every heading, applied globally rather than per-component so the whole
+   app picks it up at once (design canvas "Enterprise Plus" direction). */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--webdesk-dashboard-font-family-display, inherit);
+}
+
 :focus-visible {
   outline: 2px solid var(--webdesk-dashboard-color-focus-ring, #2563eb);
   outline-offset: 2px;

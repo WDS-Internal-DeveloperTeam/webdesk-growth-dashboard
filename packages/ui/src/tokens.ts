@@ -6,25 +6,40 @@
  * by design). This is the application-shell foundation only — not the
  * full, separately-authorized website Design Token Library module.
  *
- * Values are deliberately neutral (brief §8: "use clean neutral
- * foundations rather than inventing a complete brand redesign" where
- * visual detail isn't yet approved) — a real brand pass is a future,
- * separately-authorized design task, not this phase's job.
+ * Values reflect the "Enterprise Plus" visual direction (a real indigo
+ * brand accent, warm neutral surfaces, a filled dark header, Sora +
+ * Public Sans typography) chosen 2026-08-19 from three mockups presented
+ * on a design canvas — see `docs/implementation/dashboard-web-visual-refresh.md`.
+ * Supersedes the original Phase 1F "clean neutral foundations" placeholder
+ * palette. Semantic colors (danger/warning/success/info and their
+ * surfaces) are deliberately UNCHANGED — they carry meaning, not brand,
+ * and this refresh only restyles the brand-facing tokens.
  */
 
 export const colorTokens = {
-  background: "#ffffff",
-  surface: "#f8fafc",
+  background: "#faf8f4",
+  surface: "#f5f1e9",
   surfaceRaised: "#ffffff",
-  border: "#e2e8f0",
-  borderStrong: "#cbd5e1",
-  foreground: "#0f172a",
-  foregroundMuted: "#475569",
-  foregroundSubtle: "#94a3b8",
-  primary: "#0f172a",
+  border: "#ece5d8",
+  borderStrong: "#ddd2ba",
+  foreground: "#1f1a12",
+  foregroundMuted: "#6b6151",
+  /** 3.88:1 against `surfaceRaised` — below the 4.5:1 AA text threshold (a real improvement over
+   *  the prior value's 2.56:1, but still not AA-safe for small body text). Matches this codebase's
+   *  existing discipline (see `app-shell.module.css`'s own comments): never use this token where
+   *  AA-compliant text is required — use `foregroundMuted` there instead. Reserved for large/bold
+   *  text, decorative or non-text use. */
+  foregroundSubtle: "#8a8071",
+  primary: "#1f1a12",
   primaryForeground: "#ffffff",
-  accent: "#2563eb",
+  accent: "#4338ca",
+  /** Paired with `accent` in gradients (avatar, accent rules) — never used alone as a text/surface
+   *  color, so it carries no independent contrast obligation of its own. */
+  accentSecondary: "#7c3aed",
   accentForeground: "#ffffff",
+  /** Light accent tint for active nav states and icon badges — 6.98:1 with `accent` as the
+   *  foreground on top of it. */
+  accentTint: "#eef0ff",
   danger: "#dc2626",
   dangerSurface: "#fef2f2",
   warning: "#d97706",
@@ -34,13 +49,36 @@ export const colorTokens = {
   info: "#0284c7",
   infoSurface: "#f0f9ff",
   muted: "#6b7280",
-  mutedSurface: "#f1f5f9",
-  focusRing: "#2563eb",
+  mutedSurface: "#f2efe9",
+  focusRing: "#4338ca",
+  /** The filled dark header (Enterprise Plus direction) — used only by the header bar and its
+   *  own controls (`AppShell`, `ProjectSwitcher`), never by page content, which stays on the light
+   *  `background`/`surfaceRaised` pair above. */
+  headerBackground: "#201a3d",
+  /** 16.45:1 on `headerBackground`. */
+  headerForeground: "#ffffff",
+  /** 6.80:1 on `headerBackground` — clears AA for real text (the header's muted labels), not just
+   *  decorative use. */
+  headerForegroundMuted: "#a79fe0",
+  headerBorder: "#332a5c",
+  /** Fill for header-hosted controls (the Project Switcher pill) — sits between `headerBackground`
+   *  and `headerBorder` in lightness so those controls read as distinct, raised elements. */
+  headerControlBackground: "#2b2454",
 } as const;
 
 export const typographyTokens = {
+  /** Self-hosted via `next/font/google` in the root layout (`apps/dashboard-web/app/layout.tsx`),
+   *  which sets the `--font-public-sans` custom property on `<html>` — the fallback stack after it
+   *  only ever applies before that stylesheet loads, or if a future consumer renders outside the
+   *  root layout's font-variable scope. */
   fontFamilyBase:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    'var(--font-public-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  /** Headings and large numerals only (design canvas "Enterprise Plus" direction) — applied
+   *  globally to `h1`/`h2`/`h3` in `globals.css` rather than per-component, so every heading across
+   *  the app gets it without touching each component individually. Same self-hosting note as
+   *  `fontFamilyBase` above, via `--font-sora`. */
+  fontFamilyDisplay:
+    'var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   fontFamilyMono:
     'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   fontSizeXs: "0.75rem",
@@ -91,14 +129,21 @@ export const radiusTokens = {
   sm: "0.25rem",
   md: "0.5rem",
   lg: "0.75rem",
+  /** Raised-card rounding (design canvas "Enterprise Plus" direction) — deliberately its own step
+   *  above `lg` rather than a bump to `md`/`lg` themselves, so small controls (buttons, inputs)
+   *  keep their existing, tighter rounding. */
+  xl: "1rem",
   full: "9999px",
 } as const;
 
 export const shadowTokens = {
   none: "none",
   sm: "0 1px 2px 0 rgb(15 23 42 / 0.06)",
-  md: "0 2px 8px 0 rgb(15 23 42 / 0.08)",
-  lg: "0 8px 24px 0 rgb(15 23 42 / 0.12)",
+  /** Two-layer shadow (design canvas "Enterprise Plus" direction) — a tight contact shadow plus a
+   *  soft ambient one, warm-toned (`rgba(32,26,61,…)`, matching `headerBackground`) rather than
+   *  the previous flat slate tone. `Card` (`structural.tsx`) uses this. */
+  md: "0 1px 3px rgba(32,26,61,0.05), 0 8px 20px -8px rgba(32,26,61,0.10)",
+  lg: "0 4px 6px rgba(32,26,61,0.06), 0 16px 32px -12px rgba(32,26,61,0.16)",
 } as const;
 
 export const focusTokens = {

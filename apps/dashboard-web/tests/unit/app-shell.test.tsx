@@ -268,7 +268,7 @@ describe("AppShell", () => {
   });
 
   describe("sidebar collapse toggle", () => {
-    it("switches the nav links to icon-only monograms and back", () => {
+    it("switches the nav links to icon-only (module icon, no label text) and back", () => {
       render(
         <AppShell
           me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
@@ -281,7 +281,9 @@ describe("AppShell", () => {
       );
       expect(screen.getByRole("link", { name: "Home" })).toHaveTextContent("Home");
       fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
-      expect(screen.getByRole("link", { name: "Home" })).toHaveTextContent("H");
+      const collapsedLink = screen.getByRole("link", { name: "Home" });
+      expect(collapsedLink).not.toHaveTextContent("Home");
+      expect(collapsedLink.querySelector("svg")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Expand sidebar" }));
       expect(screen.getByRole("link", { name: "Home" })).toHaveTextContent("Home");
     });

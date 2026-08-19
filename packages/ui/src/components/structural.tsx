@@ -81,7 +81,10 @@ export function initialsFor(name: string): string {
   return (first + last).toUpperCase();
 }
 
-/** Initials-only — no photo/avatar-image capability exists anywhere in this app yet. */
+/** Initials-only — no photo/avatar-image capability exists anywhere in this app yet. A gradient
+ *  fill (design canvas "Enterprise Plus" direction) rather than a flat muted surface — `accent`/
+ *  `accentSecondary` are both dark enough that white initials text clears AA against either end
+ *  of the gradient. */
 export function Avatar({ name, size = "md" }: AvatarProps): ReactNode {
   const dimension = AVATAR_DIMENSION[size];
   return (
@@ -96,8 +99,8 @@ export function Avatar({ name, size = "md" }: AvatarProps): ReactNode {
         width: dimension,
         height: dimension,
         borderRadius: radiusTokens.full,
-        background: colorTokens.mutedSurface,
-        color: colorTokens.foregroundMuted,
+        background: `linear-gradient(135deg, ${colorTokens.accentSecondary}, ${colorTokens.accent})`,
+        color: colorTokens.accentForeground,
         fontSize: typographyTokens.fontSizeXs,
         fontWeight: typographyTokens.fontWeightSemibold,
         flexShrink: 0,
@@ -120,8 +123,8 @@ export function Card({ children, padded = true }: CardProps): ReactNode {
       style={{
         background: colorTokens.surfaceRaised,
         border: `${borderTokens.widthThin} solid ${colorTokens.border}`,
-        borderRadius: radiusTokens.md,
-        boxShadow: shadowTokens.sm,
+        borderRadius: radiusTokens.xl,
+        boxShadow: shadowTokens.md,
         padding: padded ? spacingTokens.lg : 0,
       }}
     >

@@ -1077,7 +1077,43 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     review, security review, second-role human review, a gate decision, and merge authorization
     are each their own separate, not-yet-requested next step, unchanged from this project's
     standing discipline. `/projects` (also flagged by the same gap-analysis doc) remains a
-    separate, not-yet-requested follow-up.
+    separate, not-yet-requested follow-up. **Superseded/extended same-branch by item 24 below** —
+    the user then said the UI "still looks simple" even with the widget grid live, leading to the
+    whole-app visual refresh.
+24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated, not
+    yet reviewed, gated, or merged (2026-08-19).** Not started automatically — after seeing item
+    23's widget grid live-rendered, the user said the UI "still looks simple." Rather than guess
+    again in code, drafted 3 full visual directions (Current, "Enterprise Plus," "Modern SaaS") as
+    a design canvas — a real mockup of the actual Home page content in each direction, not abstract
+    swatches — and asked the user to pick one. **The user picked Enterprise Plus**, then, asked
+    whether to scope it to the Home page alone or the whole app (the mockup's header/sidebar are
+    shared components, not Home-page-specific), **chose the whole app**. Built on the same branch
+    (`dashboard-web-home-widget-grid`), on top of item 23's still-unreviewed commit: new
+    `packages/ui` design tokens (a real indigo/violet brand accent replacing the generic blue, warm
+    off-white surfaces, Sora+Public Sans typography self-hosted via `next/font/google`, richer
+    card radius/shadow — semantic colors deliberately unchanged), a dark filled header + tinted
+    active-nav sidebar state in `AppShell`, and — closing a real, previously-undiscovered gap —
+    `lucide-react` wired up against the `iconReference` field every one of the 43 real modules has
+    carried since migration `00035` but that no icon library ever existed to consume, now used for
+    real per-module icons in both the sidebar and the Home page's module grid. Every new color
+    pair was checked against the real WCAG contrast formula before being chosen, not eyeballed —
+    see `docs/implementation/dashboard-web-visual-refresh.md` for the exact ratios. 157/157
+    `dashboard-web` + 79/79 `packages/ui` unit tests (one existing assertion updated for the
+    deliberate icon-not-monogram collapsed-sidebar behavior, not a regression),
+    typecheck/lint/`next build`/prettier all clean across both packages, `pnpm audit` 0
+    vulnerabilities. **15/15 Playwright tests passing, including both authenticated-shell WCAG 2.2
+    AA axe-core scans** — zero automatically-detectable violations from the new dark header, tinted
+    nav state, or icon usage. **Live-rendered in the Browser pane**, not just typechecked/built
+    blind — confirmed the actual dark header/warm background/indigo accents/real icons/large
+    Project Health numerals render correctly, and separately confirmed via a programmatic DOM
+    `.click()` that the sidebar collapse toggle's own logic was never broken (an early real-browser
+    click landing oddly was a Browser-pane automation-tool quirk, not a code bug — ruled out
+    explicitly rather than assumed). See `docs/implementation/dashboard-web-visual-refresh.md` for
+    the full as-built record. Not yet reviewed, gated, or merged — code review, security review,
+    second-role human review, a gate decision, and merge authorization are each their own separate,
+    not-yet-requested next step, unchanged from this project's standing discipline. Since this
+    branch/PR is still unreviewed, both items 23 and 24's changes will go through that full cycle
+    together as one unit, not separately.
 
 ## Recent decisions
 
@@ -3207,6 +3243,25 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   this project's own sanctioned test-only session bypass. See "Active tasks" item 23 and
   `docs/implementation/dashboard-web-home-widget-grid.md` for the full account. Pushed as branch
   `dashboard-web-home-widget-grid` — not yet reviewed, gated, or merged.
+- `[2026-08-19]` **User said the UI "still looks simple" even with the widget grid live** — "the
+  UX is good but the UI must be good in look." Rather than iterate blindly in code a third time,
+  drafted 3 full visual directions as a design canvas (real mockups of the actual Home page
+  content — Current, "Enterprise Plus," "Modern SaaS" — not abstract color swatches) and asked the
+  user to pick one directly. **The user picked Enterprise Plus.** Before building, flagged that
+  the mockup's header/sidebar are shared components every page renders through, not something
+  Home-specific, and asked whether to scope the change to Home only or the whole app — **the user
+  chose the whole app.** Built on the same branch as item 23 (still unreviewed): new `packages/ui`
+  design tokens (indigo/violet accent, warm surfaces, Sora+Public Sans via `next/font/google`,
+  richer card radius/shadow), a dark header + tinted active-nav sidebar in `AppShell`, and real
+  per-module icons via a newly-added `lucide-react` dependency wired against the `iconReference`
+  field every module has carried since migration `00035` with no icon library to consume it until
+  now. Every new color pair checked against the real WCAG formula, not eyeballed. 157/157
+  `dashboard-web` + 79/79 `packages/ui` unit tests, 15/15 Playwright tests (including both
+  authenticated-shell axe-core scans, 0 violations), typecheck/lint/build/prettier clean,
+  `pnpm audit` 0 vulnerabilities. Live-rendered in the Browser pane to confirm the actual output,
+  not just typechecked blind. See "Active tasks" item 24 and
+  `docs/implementation/dashboard-web-visual-refresh.md` for the full account. Not yet reviewed,
+  gated, or merged — will go through that cycle together with item 23 as one unit.
 
 ## Open client blockers
 

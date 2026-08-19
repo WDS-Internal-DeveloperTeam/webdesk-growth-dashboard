@@ -1,3 +1,4 @@
+import { Activity, AlertTriangle, ClipboardList, GitBranch, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   Badge,
@@ -7,10 +8,12 @@ import {
   EmptyState,
   NotConfiguredState,
   PageHeader,
+  radiusTokens,
   spacingTokens,
   typographyTokens,
 } from "@webdesk/ui";
 import { formatTimestamp } from "@/lib/format-timestamp";
+import { moduleIcon } from "@/lib/module-icons";
 import { moduleImplementationStatusBadge } from "@/lib/modules";
 import { getServerSession } from "@/lib/server-session";
 
@@ -35,10 +38,9 @@ const WIDGET_GRID_STYLE: React.CSSProperties = {
 
 const WIDGET_TITLE_STYLE: React.CSSProperties = {
   fontSize: typographyTokens.fontSizeLg,
-  fontWeight: typographyTokens.fontWeightSemibold,
+  fontWeight: typographyTokens.fontWeightBold,
   color: colorTokens.foreground,
   margin: 0,
-  marginBottom: spacingTokens.md,
 };
 
 const SECTION_TITLE_STYLE: React.CSSProperties = {
@@ -47,16 +49,63 @@ const SECTION_TITLE_STYLE: React.CSSProperties = {
   marginBottom: spacingTokens.sm,
 };
 
+/** The tinted-circle icon treatment (design canvas "Enterprise Plus" direction) — shared by
+ *  widget-card headers and module-grid rows below. */
+function IconBadge({
+  icon: Icon,
+  background,
+  foreground,
+  size = 40,
+}: {
+  readonly icon: LucideIcon;
+  readonly background: string;
+  readonly foreground: string;
+  readonly size?: number;
+}) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radiusTokens.md,
+        background,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Icon aria-hidden="true" size={Math.round(size * 0.45)} color={foreground} />
+    </div>
+  );
+}
+
 function WidgetCard({
   title,
+  icon,
   children,
 }: {
   readonly title: string;
+  readonly icon: LucideIcon;
   readonly children: React.ReactNode;
 }) {
   return (
     <Card>
-      <h3 style={WIDGET_TITLE_STYLE}>{title}</h3>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: spacingTokens.md,
+          marginBottom: spacingTokens.md,
+        }}
+      >
+        <IconBadge
+          icon={icon}
+          background={colorTokens.accentTint}
+          foreground={colorTokens.accent}
+        />
+        <h3 style={WIDGET_TITLE_STYLE}>{title}</h3>
+      </div>
       {children}
     </Card>
   );
@@ -68,12 +117,12 @@ const PROJECT_STATUS_LABEL: Readonly<Record<(typeof PROJECT_STATUS_ORDER)[number
   paused: "Paused",
   archived: "Archived",
 };
-const PROJECT_STATUS_BUCKET: Readonly<
-  Record<(typeof PROJECT_STATUS_ORDER)[number], "healthy" | "attention" | "neutral">
+const PROJECT_STATUS_NUMERAL_COLOR: Readonly<
+  Record<(typeof PROJECT_STATUS_ORDER)[number], string>
 > = {
-  active: "healthy",
-  paused: "attention",
-  archived: "neutral",
+  active: colorTokens.success,
+  paused: colorTokens.warning,
+  archived: colorTokens.foregroundSubtle,
 };
 
 export default async function HomePage() {
@@ -96,21 +145,38 @@ export default async function HomePage() {
       <PageHeader title={`Welcome, ${session.me.displayName}`} />
 
       <div style={WIDGET_GRID_STYLE}>
-        <WidgetCard title="Project Health">
+        <WidgetCard title="Project Health" icon={Activity}>
           {projects.length === 0 ? (
             <EmptyState
               title="No projects yet"
               description="Project health will appear here once at least one project exists."
             />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.sm }}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: spacingTokens.sm }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.md }}>
+              <div style={{ display: "flex", gap: spacingTokens.xl }}>
                 {projectCountsByStatus.map(({ status, count }) => (
-                  <Badge
-                    key={status}
-                    bucket={PROJECT_STATUS_BUCKET[status]}
-                    label={`${count} ${PROJECT_STATUS_LABEL[status]}`}
-                  />
+                  <div key={status}>
+                    <div
+                      style={{
+                        fontFamily: typographyTokens.fontFamilyDisplay,
+                        fontSize: typographyTokens.fontSize2xl,
+                        fontWeight: typographyTokens.fontWeightBold,
+                        color: PROJECT_STATUS_NUMERAL_COLOR[status],
+                        lineHeight: typographyTokens.lineHeightTight,
+                      }}
+                    >
+                      {count}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: typographyTokens.fontSizeXs,
+                        fontWeight: typographyTokens.fontWeightSemibold,
+                        color: colorTokens.foregroundMuted,
+                      }}
+                    >
+                      {PROJECT_STATUS_LABEL[status]}
+                    </div>
+                  </div>
                 ))}
               </div>
               <p
@@ -127,21 +193,21 @@ export default async function HomePage() {
           )}
         </WidgetCard>
 
-        <WidgetCard title="My Work">
+        <WidgetCard title="My Work" icon={ClipboardList}>
           <EmptyState
             title="No task assignments yet"
             description="Per-user work assignments aren't tracked by any module yet."
           />
         </WidgetCard>
 
-        <WidgetCard title="Critical Findings">
+        <WidgetCard title="Critical Findings" icon={AlertTriangle}>
           <EmptyState
             title="No findings tracked yet"
             description="Scan and security-findings modules aren't built yet."
           />
         </WidgetCard>
 
-        <WidgetCard title="Git/Release Status">
+        <WidgetCard title="Git/Release Status" icon={GitBranch}>
           {systemStatus.release ? (
             <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.sm }}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: spacingTokens.sm }}>
@@ -210,37 +276,47 @@ export default async function HomePage() {
         >
           {navigation.map((module) => {
             const { bucket, label } = moduleImplementationStatusBadge(module.implementationStatus);
+            const Icon = moduleIcon(module.iconReference);
             return (
-              <Card key={module.key}>
+              <Card key={module.key} padded={false}>
                 <div
                   style={{
                     display: "flex",
-                    flexDirection: "column",
-                    gap: spacingTokens.sm,
+                    alignItems: "center",
+                    gap: spacingTokens.md,
+                    padding: `${spacingTokens.sm} ${spacingTokens.md}`,
                   }}
                 >
-                  <Link
-                    href={module.route}
-                    style={{
-                      fontWeight: typographyTokens.fontWeightMedium,
-                      color: colorTokens.foreground,
-                      textDecoration: "none",
-                    }}
-                  >
-                    {module.displayName ?? module.name}
-                  </Link>
-                  <Badge bucket={bucket} label={label} />
-                  {module.featureStatus ? (
-                    <p
+                  <IconBadge
+                    icon={Icon}
+                    background={colorTokens.accentTint}
+                    foreground={colorTokens.accent}
+                    size={36}
+                  />
+                  <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.xs }}>
+                    <Link
+                      href={module.route}
                       style={{
-                        fontSize: typographyTokens.fontSizeXs,
-                        color: colorTokens.foregroundMuted,
-                        margin: 0,
+                        fontWeight: typographyTokens.fontWeightSemibold,
+                        color: colorTokens.foreground,
+                        textDecoration: "none",
                       }}
                     >
-                      {module.featureStatus}
-                    </p>
-                  ) : null}
+                      {module.displayName ?? module.name}
+                    </Link>
+                    <Badge bucket={bucket} label={label} />
+                    {module.featureStatus ? (
+                      <p
+                        style={{
+                          fontSize: typographyTokens.fontSizeXs,
+                          color: colorTokens.foregroundMuted,
+                          margin: 0,
+                        }}
+                      >
+                        {module.featureStatus}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </Card>
             );
