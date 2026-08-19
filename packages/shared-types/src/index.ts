@@ -139,6 +139,18 @@ export type SessionRevocationReason =
   "user-initiated" | "role-change" | "admin-forced" | "security-incident" | "expired";
 
 /**
+ * The `reason` query param `dashboard-web`'s `/auth/error` page renders, set by two independent
+ * redirect sites (`dashboard-api`'s `GoogleAuthController#callback`, and `dashboard-web`'s own
+ * `/auth/exchange` route). Shared here, not declared separately in each app, specifically so the
+ * two apps can't silently drift on the value set — the exact failure mode that let a real backend
+ * error get mislabeled `expired` until docs/implementation/session-exchange.md's error-masking fix.
+ * `expired` means a genuinely expired/invalid state (OIDC transaction cookie, exchange code, or
+ * the backend's `400`); `access_denied` means Google rejected the account; `error` is everything
+ * else (a real backend/network failure).
+ */
+export type AuthErrorReason = "expired" | "access_denied" | "error";
+
+/**
  * Phase 1D — RBAC (ADR-0010). API-facing shape for a role — deliberately
  * omits internal timestamps a client has no use for, same reasoning as
  * `AuthenticatedUser` never including a raw session token.

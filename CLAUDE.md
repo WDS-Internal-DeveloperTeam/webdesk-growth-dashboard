@@ -2836,6 +2836,27 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   error-masking fix is now genuinely live in production.** The 5 open PLAUSIBLE findings accepted
   as tracked debt during second-role review remain recorded in
   `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md` for future reference.
+- `[2026-08-19]` **Fixed one of PR #36's 5 accepted-debt findings: the `AuthErrorReason`
+  shared-type duplication.** Branch `fix-auth-error-reason-shared-type`, off `main` at `924ebb0`.
+  Under the explicit "fix the shared-type duplication finding" instruction. Promoted a single
+  `AuthErrorReason` type (`"expired" | "access_denied" | "error"`) into `packages/shared-types`,
+  matching the existing precedent for cross-app-consistent literal unions (`AuthMethod`,
+  `HealthStatus`, `SessionRevocationReason`) and this feature's own earlier `cookieName`
+  echo-back pattern. `GoogleAuthController` (`dashboard-api`) now routes all three redirects
+  through a new typed `redirectToAuthError()` helper instead of hand-written template strings;
+  `dashboard-web`'s `/auth/exchange` route imports the shared type instead of a local copy;
+  `/auth/error`'s `REASON_MESSAGES` is now typed `Record<AuthErrorReason, string>` (not
+  `Record<string, string>`) via a new `isKnownReason()` type guard, so this file won't compile if
+  a reason is ever added to the union without a matching message — closing the "future reason
+  silently falls through" risk the original review flagged. No behavior change for any real
+  request — type-safety-only. See `docs/implementation/session-exchange.md` §8. Validated:
+  370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests (real disposable
+  database), 143/143 `dashboard-web` unit tests, `dashboard-worker` typecheck (a third,
+  unrelated consumer of `packages/shared-types`, confirmed unaffected), typecheck/lint/
+  `next build`/`nest build`/`pnpm exec prettier --check` all clean. Not yet reviewed, gated, or
+  merged — pushed as its own branch; code review, security review, second-role human review, a
+  gate decision, and merge authorization are each their own separate, not-yet-requested next
+  step, unchanged from this project's standing discipline.
 
 ## Open client blockers
 

@@ -279,3 +279,37 @@ database, including the updated `GoogleAuthController` regression test now asser
 `reason=expired` to `reason=error` for the misconfiguration/network-failure/non-400-status/
 malformed-body cases, and one left unchanged for the genuine 400 case), typecheck/lint/
 `next build`/`nest build`/`pnpm exec prettier --check` all clean.
+
+## 8. Shared-type fix for the reason taxonomy (2026-08-19)
+
+PR #36's own second-role review accepted, as tracked debt, that the `expired`/`access_denied`/
+`error` taxonomy §7 introduced was still declared independently in two places — a local
+`AuthErrorReason` type in `dashboard-web`'s `/auth/exchange` route, and bare untyped string
+literals in `dashboard-api`'s `GoogleAuthController` — with no compiler tie between the two apps.
+That's the exact structural shape (two independently-deployed apps agreeing on a value by
+convention only) that let the original masking bug happen in the first place.
+
+**Fixed** by promoting a single `AuthErrorReason` type into `packages/shared-types` (all three
+values: `expired` | `access_denied` | `error`), matching the existing precedent this monorepo
+already has for cross-app-consistent literal unions (`AuthMethod`, `HealthStatus`,
+`SessionRevocationReason`) and this same feature's own earlier `cookieName` echo-back pattern:
+
+- `GoogleAuthController` now imports the shared type and routes all three redirects through a new
+  private `redirectToAuthError(res, reason: AuthErrorReason)` helper, instead of three separate
+  hand-written template strings.
+- `dashboard-web`'s `/auth/exchange` route imports the shared type instead of declaring its own
+  local copy; `redirectToAuthError()`'s signature and behavior are otherwise unchanged.
+- `dashboard-web`'s `/auth/error` page now types `REASON_MESSAGES` as `Record<AuthErrorReason,
+string>` (not `Record<string, string>`) — TypeScript will refuse to compile this file if a reason
+  is ever added to the shared union without a matching message here, closing the "future reason
+  silently falls through to the generic message" risk the shared-type review flagged. Since
+  `reason` itself is still untrusted input from `searchParams`, indexing is done through a new
+  `isKnownReason()` type guard rather than a direct index, preserving the existing safe-fallback
+  behavior for an unrecognized value.
+
+No behavior change for any real request — this is a type-safety-only refactor. Validated:
+370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests (real disposable database),
+143/143 `dashboard-web` unit tests, `dashboard-worker` typecheck (a third, unrelated consumer of
+`packages/shared-types`, confirmed unaffected), typecheck/lint/`next build`/`nest build`/
+`pnpm exec prettier --check` all clean across `packages/shared-types`, `apps/dashboard-api`, and
+`apps/dashboard-web`.

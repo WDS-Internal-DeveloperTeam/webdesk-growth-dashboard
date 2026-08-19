@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import type { ApiSuccessResponse } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, AuthErrorReason } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "../../../lib/auth";
 
 /**
@@ -20,16 +20,17 @@ import { getApiBaseUrl } from "../../../lib/auth";
  */
 
 /**
+ * `reason` is typed against the shared `AuthErrorReason` union (`packages/shared-types`), not a
+ * locally-declared one — this route and `GoogleAuthController#callback` (`dashboard-api`, the
+ * other producer of this value) previously agreed on the value set by convention only, which is
+ * exactly the drift risk that let a real backend error get mislabeled `expired` during a
+ * 2026-08-19 production incident. See docs/implementation/session-exchange.md.
+ *
  * `reason=expired` is reserved for cases that genuinely mean "the exchange code itself is
  * invalid/expired" (a missing `code` param, or the backend's `400` response) — everything else
  * (misconfiguration, network failure, an unexpected non-2xx status, a malformed response body) is
- * a real error, not an expiry, and gets `reason=error` instead. Before this distinction existed,
- * every failure path here showed the same "Your sign-in attempt expired" message, which masked a
- * real backend 500 as a routine expired-code case during a 2026-08-19 production incident — see
- * docs/implementation/session-exchange.md.
+ * a real error, not an expiry, and gets `reason=error` instead.
  */
-type AuthErrorReason = "expired" | "error";
-
 function redirectToAuthError(
   request: Request,
   reason: AuthErrorReason,

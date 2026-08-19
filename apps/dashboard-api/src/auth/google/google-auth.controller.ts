@@ -1,6 +1,7 @@
 import { Controller, Get, HttpStatus, Inject, Req, Res } from "@nestjs/common";
 import { ApiExcludeEndpoint } from "@nestjs/swagger";
 import type { Request, Response } from "express";
+import type { AuthErrorReason } from "@webdesk/shared-types";
 import { AUTH_ENV } from "../config/auth.constants.js";
 import type { AuthEnv } from "../config/auth-env.js";
 import { getIpHash, getUserAgent } from "../common/request-context.util.js";
@@ -38,6 +39,16 @@ export class GoogleAuthController {
     @Inject(AUTH_ENV) private readonly env: AuthEnv,
   ) {}
 
+  /**
+   * `reason` is typed against the shared `AuthErrorReason` union (`packages/shared-types`) rather
+   * than a bare string, so this controller and `dashboard-web`'s own `/auth/error` page (the only
+   * consumer of this value) can't silently drift on the set of values in play — see
+   * `docs/implementation/session-exchange.md` for the incident this closes the recurrence risk on.
+   */
+  private redirectToAuthError(res: Response, reason: AuthErrorReason): void {
+    res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=${reason}`);
+  }
+
   @Get("start")
   @ApiExcludeEndpoint()
   async start(@Res() res: Response): Promise<void> {
@@ -53,7 +64,7 @@ export class GoogleAuthController {
     clearOidcTransactionCookie(res, this.env);
 
     if (!transaction) {
-      res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=expired`);
+      this.redirectToAuthError(res, "expired");
       return;
     }
 
@@ -66,7 +77,7 @@ export class GoogleAuthController {
     });
 
     if (!result.ok) {
-      res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=access_denied`);
+      this.redirectToAuthError(res, "access_denied");
       return;
     }
 
@@ -86,7 +97,7 @@ export class GoogleAuthController {
       });
     } catch (error) {
       console.error("GoogleAuthController#callback: failed to issue session-exchange code", error);
-      res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=error`);
+      this.redirectToAuthError(res, "error");
       return;
     }
 
