@@ -331,3 +331,42 @@ direct DOM check found zero `"Something went wrong"` error-boundary text and 39 
 elements rendered — this matches the same class of Browser-pane automation-tool quirk this project's own history has
 already ruled out once before (item 24's own build, a stale/misbehaving click event — see
 `CLAUDE.md`), not a fresh bug.
+
+## 8. Reversal: sidebar reverted to light theme, made compact (2026-08-19)
+
+Immediately after §7 shipped, the user pasted a reference screenshot of the sidebar and said
+directly: keep it light — not dark — and make it compact. A genuine direction change from §7's own
+dark-sidebar fix (itself built to match the design canvas mockup), not a bug report; followed the
+user's own explicit, most-recent instruction over the earlier mockup-matching one.
+
+Reverted §7's `.sidebar`/`.clusterLabel`/`.navGroupLabel`/`.sidebarLink`/`.sidebarLink:hover`/
+`.sidebarLinkActive` color changes back off the `header*` tokens — `.sidebar` now uses
+`colorTokens.surfaceRaised` (pure white, `#ffffff`) rather than either the dark `headerBackground`
+or the original pre-refresh `surface` (`#f5f1e9`, a warm cream) — `surfaceRaised` reads as a
+distinct white panel against the slightly warmer `background` the main content sits on, matching
+the crisp white look in the user's reference screenshot. `.sidebarLinkActive` reverts to
+`accentTint`/`accent` (the same light-lavender-highlight-plus-indigo-text pairing from before §7,
+which the reference screenshot shows exactly). Removed the `.sidebarLink:focus-visible` override
+§7 added — no longer needed once the sidebar is back on a light surface, since the original
+generic `:focus-visible` rule's `focusRing` color already has good contrast there. Reverted
+`colorTokens.accentTint`'s doc comment back to noting it IS used for the sidebar's active-nav
+state again.
+
+For "compact": tightened every spacing value that controls the sidebar's vertical density rather
+than shrinking type (font sizes deliberately untouched, to stay legible) — `.sidebar` padding
+`space-md` → `space-sm`; `.navGroup` margin-bottom `space-lg` → `space-md`; `.navGroupLabel`/
+`.clusterLabel` vertical padding cut to 2px; `.navList` item gap `2px` → `1px`; `.sidebarLink`
+padding `space-sm` (uniform 0.5rem) → `space-xs space-sm` (0.25rem vertical, 0.5rem horizontal) —
+this last one is the main lever, since it directly sets each nav row's height. Net effect,
+confirmed live: the full 15-module navigation tree (every group, every cluster header) now fits
+inside the viewport with no sidebar scrolling needed at a typical 900px-tall window, where it
+previously required scrolling past "Settings."
+
+Validated: 79/79 `packages/ui` unit tests, 162/162 `dashboard-web` unit tests (unchanged — again no
+class names, DOM structure, or props touched, only CSS custom-property values), typecheck/lint/
+`check-css-tokens.mjs`/`next build`/prettier all clean. Live-rendered in the Browser pane again —
+confirmed via `getComputedStyle` that the sidebar background is exactly `surfaceRaised`
+(`rgb(255, 255, 255)`), the active nav item's background/text are exactly `accentTint`/`accent`
+(`rgb(238, 240, 255)`/`rgb(67, 56, 202)`), inactive links are `foregroundMuted`
+(`rgb(107, 97, 81)`), and `.sidebarLink`'s computed padding is `4px 8px` (was `8px` uniform before
+this change) — and confirmed zero error-boundary text with all 39 icons still rendering.
