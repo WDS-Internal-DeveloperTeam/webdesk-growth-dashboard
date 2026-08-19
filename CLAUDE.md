@@ -971,6 +971,41 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
     unauthenticated visitor, confirming the session gate is intact. **The `AuthErrorReason`
     shared-type fix is now genuinely live in production.**
+22. **Remaining PR #36 accepted-debt items closed in one consolidated batch — built, fully
+    validated, not yet reviewed, gated, or merged (2026-08-19).** Not started automatically —
+    built directly on the explicit "fix the sibling OIDC-cookie branch... and if anything
+    remaining then please do it all together" instruction: rather than repeating the full
+    code-review → security-review → second-role-review → gate → merge cycle once per item, every
+    remaining open item from PR #36's and PR #37's own accepted-debt lists was checked and, where
+    real, fixed together in a single branch. Two real bugs fixed: (1) the sibling of the
+    `sessionExchange.issue()` masking bug — `GoogleAuthController#callback`'s `if (!transaction)`
+    branch collapsed "no OIDC transaction cookie sent" (genuinely expired) and "cookie sent but
+    malformed/invalid" (a real anomaly) into the identical `reason=expired` redirect with zero
+    logging for the malformed case; fixed by widening `readOidcTransactionCookie`'s return type
+    to a discriminated `OidcTransactionReadResult`, so only the genuinely-missing case stays
+    `reason=expired`/unlogged and the malformed case now logs and redirects `reason=error`. (2) An
+    unguarded `body.data` destructure in `dashboard-web`'s `/auth/exchange` route that would throw
+    an uncaught exception instead of a clean error redirect if `dashboard-api` ever returned a
+    differently-shaped 200; fixed with a new `isSessionExchangeSuccessBody()` type guard. Two more
+    items were reviewed and closed without a code change: the "400 always means expired"
+    assumption is now documented directly as a code comment recording its fragility bound (only
+    holds because the exchange-code DTO is a single required field today), and the `reason=error`
+    bucket's single generic user-facing message was confirmed already diagnosable operator-side
+    via each cause's own distinct server-side log line. PR #37's own 3 open accepted-debt items
+    were also re-checked and confirmed as genuinely not needing a change (each already
+    cross-referenced or already the better behavior). See
+    `docs/implementation/session-exchange.md` §9 for the full account, including which items got
+    real fixes vs. which were reviewed and closed with no code change. New tests:
+    `oidc-transaction.spec.ts` (5 new unit tests), 2 new `google-auth.controller.e2e-spec.ts` e2e
+    tests, 2 new `auth-exchange-route.test.tsx` tests. Validated: 375/375 `dashboard-api` unit
+    tests (5 new), 113/113 `dashboard-api` e2e tests (2 new, real disposable database), 28/28
+    `packages/database` integration tests (unaffected), 151/151 `dashboard-web` unit tests (2
+    new), typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean. Pushed
+    as branch `fix-remaining-session-exchange-debt`. Code review, security review, second-role
+    human review, a gate decision, and merge authorization are each their own separate,
+    not-yet-requested next step, unchanged from this project's standing discipline — but bundled
+    together as ONE pass across this whole batch, per the explicit instruction, not repeated per
+    item.
 
 ## Recent decisions
 
@@ -2984,6 +3019,41 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
   unauthenticated visitor, confirming the session gate is intact. **The `AuthErrorReason`
   shared-type fix is now genuinely live in production.**
+- `[2026-08-19]` **Closed the remaining PR #36 accepted-debt items in one consolidated batch**,
+  under the explicit "fix the sibling OIDC-cookie branch... and if anything remaining then please
+  do it all together, it is wasting time after fixing one issue and go through the long process
+  and then do it same for the next issue" instruction — every remaining open item from both PR
+  #36's and PR #37's own accepted-debt lists was checked and, where real, fixed together in a
+  single branch (`fix-remaining-session-exchange-debt`), so the code-review → security-review →
+  second-role-review → gate → merge cycle runs once for the whole batch instead of once per item.
+  Two real bugs fixed: (1) `GoogleAuthController#callback`'s `if (!transaction)` branch — the
+  sibling of the already-fixed `sessionExchange.issue()` masking bug — collapsed "no OIDC
+  transaction cookie sent" (genuinely expired) and "cookie sent but malformed/invalid" (a real
+  anomaly) into the identical `reason=expired` redirect with zero logging for the malformed case;
+  fixed by widening `readOidcTransactionCookie` (`oidc-transaction.ts`) to a discriminated
+  `OidcTransactionReadResult` (`"missing" | "invalid" | "ok"`), so only the genuinely-missing case
+  stays unlogged `reason=expired` and the malformed case now logs and redirects `reason=error`.
+  (2) An unguarded `body.data` destructure in `dashboard-web`'s `/auth/exchange` route that would
+  throw an uncaught exception instead of a clean error redirect on a future API-contract drift;
+  fixed with a new `isSessionExchangeSuccessBody()` type guard. Two items reviewed and closed with
+  no code change: the "backend 400 always means expired" assumption is now documented directly as
+  a code comment recording exactly why it currently holds and when it would stop holding; the
+  `reason=error` bucket's single generic user-facing message was confirmed already diagnosable
+  operator-side via each cause's own distinct server-side log line, so no change was needed there
+  either. PR #37's own 3 open accepted-debt items were also re-checked and confirmed genuinely not
+  needing a change. See `docs/implementation/session-exchange.md` §9 for the full account. New
+  tests: `oidc-transaction.spec.ts` (5 new unit tests covering all three
+  `readOidcTransactionCookie` outcomes), 2 new `google-auth.controller.e2e-spec.ts` e2e tests
+  (missing-cookie and malformed-cookie paths), 2 new `auth-exchange-route.test.tsx` tests
+  (`data`-less and wrong-typed response bodies). Validated: 375/375 `dashboard-api` unit tests (5
+  new), 113/113 `dashboard-api` e2e tests (2 new, real disposable database), 28/28
+  `packages/database` integration tests (unaffected, confirmed still green), 151/151
+  `dashboard-web` unit tests (2 new), typecheck/lint/`next build`/`nest build`/
+  `pnpm exec prettier --check` all clean. Pushed as branch `fix-remaining-session-exchange-debt`.
+  Not yet reviewed, gated, or merged — code review, security review, second-role human review, a
+  gate decision, and merge authorization remain each their own separate, not-yet-requested next
+  step, but — per the explicit instruction — bundled as ONE pass across this whole batch, not
+  repeated per item.
 
 ## Open client blockers
 

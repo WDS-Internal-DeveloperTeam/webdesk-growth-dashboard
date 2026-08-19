@@ -358,3 +358,95 @@ directly — the generic/no-reason path, each known reason's specific message, a
 falling back to the generic message while logging exactly once, and the `constructor` prototype-key
 case specifically. Re-validated: 149/149 `dashboard-web` unit tests (6 new), typecheck/lint/
 `next build`/`pnpm exec prettier --check` all clean.
+
+## 9. Remaining PR #36 accepted-debt items closed together (2026-08-19)
+
+PR #36's second-role review accepted 5 findings as tracked debt. Item 1 (the `AuthErrorReason`
+shared-type duplication) was closed separately by PR #37/§8 above. This section closes the
+remaining items in a single batch, under the explicit "fix the sibling OIDC-cookie branch ... and
+if anything remaining then please do it all together" instruction — one branch, one validation
+pass, one review cycle for all of them, rather than repeating the full review/gate/merge process
+per item.
+
+### 9a. Sibling OIDC-cookie masking bug (fixed)
+
+`GoogleAuthController#callback`'s `if (!transaction)` branch collapsed two genuinely different
+states into the identical `reason=expired` redirect with zero logging:
+
+- **Missing** — no OIDC transaction cookie was sent at all. Genuinely expired/never-arrived (the
+  cookie's own `maxAge` elapsed, or the browser never carried it back). Not an anomaly.
+- **Invalid** — a cookie WAS sent but `readOidcTransactionCookie` couldn't parse it as JSON, or it
+  parsed but didn't match `OidcTransaction`'s shape. A real anomaly — corruption, a stale/foreign
+  cookie, or a future schema change to the cookie's own shape — the exact sibling of the
+  `sessionExchange.issue()` masking bug §7 already fixed once in this same file.
+
+**Fixed** by widening `readOidcTransactionCookie`'s return type from `OidcTransaction | null` to a
+discriminated `OidcTransactionReadResult` (`{status: "missing"} | {status: "invalid"} |
+{status: "ok", transaction: OidcTransaction}`, `oidc-transaction.ts`). The controller now branches
+on `status`: `"missing"` still redirects `reason=expired` with no log (the routine case);
+`"invalid"` now redirects `reason=error` and logs `"OIDC transaction cookie present but
+malformed/invalid"` server-side, so a real anomaly is diagnosable instead of silently masquerading
+as an everyday expiry. New coverage: `oidc-transaction.spec.ts` (5 unit tests covering all three
+`readOidcTransactionCookie` outcomes) and 2 new `google-auth.controller.e2e-spec.ts` e2e tests
+(missing cookie → `reason=expired`, no log; malformed cookie → `reason=error`, logged exactly
+once).
+
+### 9b. Unguarded `body.data` destructure in `dashboard-web`'s `/auth/exchange` route (fixed)
+
+`response.json()` succeeding only proves the body is valid JSON, not that it has the shape this
+route expects — `const { sessionToken, expiresAt, cookieName } = body.data;` would throw an
+uncaught `TypeError` if `dashboard-api` ever returned a differently-shaped 200 (a future
+API-contract drift, or a proxy/CDN substituting its own body), crashing this route instead of
+cleanly redirecting to `/auth/error` like every other failure branch already does. **Fixed** with a
+new `isSessionExchangeSuccessBody()` type guard validating `data.sessionToken`/`expiresAt`/
+`cookieName` are all present and string-typed before destructuring; an unexpected shape now
+redirects `reason=error` and logs the malformed body, instead of crashing. New coverage: 2 new
+`auth-exchange-route.test.tsx` tests (a `data`-less 200 body, and a wrong-typed `sessionToken`).
+
+### 9c. Undocumented "backend 400 always means expired" assumption (documented, not changed)
+
+The route's `response.status === 400 ? "expired" : "error"` branch assumes every 400 from
+`POST /auth/exchange` means "invalid/expired code." That holds today only because
+`sessionExchangeSchema` (`session-exchange.dto.ts`) is a single required `code: z.string().min(1)`
+field, and this route already guards `code` non-empty before ever calling the backend — so the
+`ZodValidationPipe`'s own validation-failure 400 path can't currently be reached from this caller.
+If that DTO ever grows a second field, a validation-error 400 would silently masquerade as
+"expired" here too. **Not fixed** — distinguishing the two 400 causes needs a real backend contract
+change (e.g. a distinct error code in the response body), its own separate, not-yet-requested
+scope. The assumption and its fragility bound are now recorded directly as a code comment at the
+branch itself, closing the "undocumented" half of the finding without inventing new backend scope.
+
+### 9d. `reason=error` bucket collapsing 5 failure classes into one message (reviewed, no change needed)
+
+Reviewed directly rather than left silently unaddressed: `dashboard-web`'s `/auth/error` page shows
+one identical generic message for every `reason=error` cause (misconfiguration, network failure,
+`issue()` failure, non-2xx status, malformed/unexpected response body) — but each of those 5 causes
+already logs its own distinct, specific message server-side (visible in Vercel runtime logs) at the
+point it's raised. The _user-facing_ message stays deliberately generic per knowledge/05's
+no-information-leakage framing; the _operator-facing_ diagnosability this finding was really about
+already exists via those per-cause log lines. No code change made.
+
+### PR #37's own 3 accepted-debt items — reviewed, no change needed
+
+Also checked against this same "make sure nothing remains" instruction, since they're still open,
+tracked debt from the most recent prior review
+(`docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`):
+
+- **`reason=""` behavior change** — only reachable via a hand-typed `/auth/error?reason=` URL, no
+  real application redirect ever sends an empty string, and the current behavior (generic message)
+  is strictly better than the old blank-message one. No change needed.
+- **`redirectToAuthError` name collision** — the two functions live in genuinely separate
+  runtimes/files, both already cross-reference each other by path in their own doc comments, and
+  renaming either would touch working, well-tested code for a pure grep-ergonomics gain. No change
+  needed.
+- **Incident narrative duplicated across 4 files' doc comments** — each comment also carries
+  genuinely distinct local context (why _this_ file's usage needs the shared type), closer to
+  normal per-usage-site documentation than harmful duplication. No change needed.
+
+### Validation
+
+370/370 → 375/375 `dashboard-api` unit tests (5 new), 111/111 → 113/113 `dashboard-api` e2e tests
+(2 new, real disposable database), 28/28 `packages/database` integration tests (unaffected,
+confirmed still green), 149/149 → 151/151 `dashboard-web` unit tests (2 new), typecheck/lint/
+`next build`/`nest build`/`pnpm exec prettier --check` all clean across `apps/dashboard-api` and
+`apps/dashboard-web`.

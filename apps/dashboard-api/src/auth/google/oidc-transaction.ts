@@ -44,17 +44,34 @@ export function setOidcTransactionCookie(
   });
 }
 
-export function readOidcTransactionCookie(req: Request, env: AuthEnv): OidcTransaction | null {
+/**
+ * `"missing"` (no cookie sent at all) is the genuinely-expired case — the cookie's own `maxAge`
+ * elapsed, or the browser never carried it back (e.g. a bookmarked/replayed callback URL).
+ * `"invalid"` (a cookie WAS sent but doesn't parse as JSON, or doesn't match `OidcTransaction`'s
+ * shape) is a different, real anomaly — corruption, a `SameSite`/proxy quirk delivering a stale or
+ * foreign cookie, or a future schema change to this cookie's own shape — and the caller should
+ * treat it as a genuine error, not silently fold it into "expired" (see
+ * `GoogleAuthController#callback`'s use of this distinction, and
+ * `docs/implementation/session-exchange.md` §9 for the incident class this closes).
+ */
+export type OidcTransactionReadResult =
+  | { readonly status: "missing" }
+  | { readonly status: "invalid" }
+  | { readonly status: "ok"; readonly transaction: OidcTransaction };
+
+export function readOidcTransactionCookie(req: Request, env: AuthEnv): OidcTransactionReadResult {
   const cookies = req.cookies as Record<string, string | undefined> | undefined;
   const raw = cookies?.[env.OIDC_TRANSACTION_COOKIE_NAME];
   if (!raw) {
-    return null;
+    return { status: "missing" };
   }
   try {
     const parsed: unknown = JSON.parse(raw);
-    return isOidcTransaction(parsed) ? parsed : null;
+    return isOidcTransaction(parsed)
+      ? { status: "ok", transaction: parsed }
+      : { status: "invalid" };
   } catch {
-    return null;
+    return { status: "invalid" };
   }
 }
 

@@ -60,13 +60,26 @@ export class GoogleAuthController {
   @Get("callback")
   @ApiExcludeEndpoint()
   async callback(@Req() req: Request, @Res() res: Response): Promise<void> {
-    const transaction = readOidcTransactionCookie(req, this.env);
+    const transactionResult = readOidcTransactionCookie(req, this.env);
     clearOidcTransactionCookie(res, this.env);
 
-    if (!transaction) {
+    if (transactionResult.status === "missing") {
+      // Genuinely expired/never-arrived — no cookie was sent at all. Not an anomaly, not logged.
       this.redirectToAuthError(res, "expired");
       return;
     }
+    if (transactionResult.status === "invalid") {
+      // A cookie WAS sent but didn't parse or match the expected shape — a real anomaly (the
+      // sibling of the sessionExchange.issue() masking bug this same file already fixed once),
+      // not a routine expiry. Logged and labeled reason=error so it doesn't silently masquerade
+      // as "you waited too long," same reasoning as every other reason=error branch below.
+      console.error(
+        "GoogleAuthController#callback: OIDC transaction cookie present but malformed/invalid",
+      );
+      this.redirectToAuthError(res, "error");
+      return;
+    }
+    const transaction = transactionResult.transaction;
 
     const ipHash = getIpHash(req);
     const userAgent = getUserAgent(req);
