@@ -17,12 +17,12 @@ import styles from "../auth.module.css";
  * callers of this page (`GoogleAuthController#callback` in `dashboard-api`
  * and this app's own `/auth/exchange` route) now distinguish them.
  */
+const DEFAULT_MESSAGE = "Something went wrong while signing you in.";
 const REASON_MESSAGES: Record<string, string> = {
   access_denied: "We couldn't sign you in with that Google account.",
   expired: "Your sign-in attempt expired. Please try again.",
-  error: "Something went wrong while signing you in.",
+  error: DEFAULT_MESSAGE,
 };
-const DEFAULT_MESSAGE = "Something went wrong while signing you in.";
 
 export default async function AuthErrorPage({
   searchParams,
