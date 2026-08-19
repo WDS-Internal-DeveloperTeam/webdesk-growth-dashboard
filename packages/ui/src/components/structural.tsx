@@ -81,7 +81,10 @@ export function initialsFor(name: string): string {
   return (first + last).toUpperCase();
 }
 
-/** Initials-only — no photo/avatar-image capability exists anywhere in this app yet. */
+/** Initials-only — no photo/avatar-image capability exists anywhere in this app yet. A gradient
+ *  fill (design canvas "Enterprise Plus" direction) rather than a flat muted surface — `accent`/
+ *  `accentSecondary` are both dark enough that white initials text clears AA against either end
+ *  of the gradient. */
 export function Avatar({ name, size = "md" }: AvatarProps): ReactNode {
   const dimension = AVATAR_DIMENSION[size];
   return (
@@ -96,8 +99,8 @@ export function Avatar({ name, size = "md" }: AvatarProps): ReactNode {
         width: dimension,
         height: dimension,
         borderRadius: radiusTokens.full,
-        background: colorTokens.mutedSurface,
-        color: colorTokens.foregroundMuted,
+        background: `linear-gradient(135deg, ${colorTokens.accentSecondary}, ${colorTokens.accent})`,
+        color: colorTokens.accentForeground,
         fontSize: typographyTokens.fontSizeXs,
         fontWeight: typographyTokens.fontWeightSemibold,
         flexShrink: 0,
@@ -120,12 +123,82 @@ export function Card({ children, padded = true }: CardProps): ReactNode {
       style={{
         background: colorTokens.surfaceRaised,
         border: `${borderTokens.widthThin} solid ${colorTokens.border}`,
-        borderRadius: radiusTokens.md,
-        boxShadow: shadowTokens.sm,
+        borderRadius: radiusTokens.xl,
+        boxShadow: shadowTokens.md,
         padding: padded ? spacingTokens.lg : 0,
       }}
     >
       {children}
+    </div>
+  );
+}
+
+export interface IconBadgeProps {
+  /** A pre-rendered icon element (e.g. `<Activity size={18} color={colorTokens.accent} />`), NOT
+   *  a component reference — this component (like `IconButton` elsewhere in this file) lives in a
+   *  `"use client"` module, and a bare function/component reference can't cross the Server→Client
+   *  serialization boundary when a Server Component (e.g. a Next.js page) renders this. Size and
+   *  color are the caller's responsibility for the same reason: they're baked into the element
+   *  before it crosses that boundary, not computed here from a raw component. */
+  readonly icon: ReactNode;
+  readonly background?: string;
+  readonly size?: number;
+}
+
+/** The tinted-circle icon treatment (design canvas "Enterprise Plus" direction) — a sized,
+ *  centered, tinted-background box holding one icon. Structurally the same shape `Avatar` above
+ *  uses for initials; this is its icon-content sibling. Shared by widget-card headers and
+ *  module-grid rows (`dashboard-web`'s Home page) — promoted here, not kept page-local, so any
+ *  future consumer (the sidebar's per-module icons, a future record-detail page) can reuse the
+ *  same treatment instead of hand-rolling a near-duplicate. */
+export function IconBadge({
+  icon,
+  background = colorTokens.accentTint,
+  size = 40,
+}: IconBadgeProps): ReactNode {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radiusTokens.md,
+        background,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      {icon}
+    </div>
+  );
+}
+
+export interface FactProps {
+  readonly label: string;
+  readonly children: ReactNode;
+}
+
+/** A single "label: value" metadata row (`<dt>`/`<dd>` pair) — reused across record-detail
+ *  sections and summary widgets. Label color is `foregroundMuted`, not `foregroundSubtle` — at
+ *  this row's label size (`fontSizeXs`, bold), `foregroundSubtle` falls under the WCAG AA 4.5:1
+ *  text-contrast threshold (see its own doc comment in `tokens.ts`); `foregroundMuted` clears it. */
+export function Fact({ label, children }: FactProps): ReactNode {
+  return (
+    <div style={{ margin: 0 }}>
+      <dt
+        style={{
+          fontSize: typographyTokens.fontSizeXs,
+          color: colorTokens.foregroundMuted,
+          fontWeight: typographyTokens.fontWeightSemibold,
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
+          margin: 0,
+        }}
+      >
+        {label}
+      </dt>
+      <dd style={{ fontSize: typographyTokens.fontSizeMd, margin: "0.15rem 0 0" }}>{children}</dd>
     </div>
   );
 }

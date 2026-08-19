@@ -37,8 +37,8 @@
   justify-content: space-between;
   gap: var(--webdesk-dashboard-space-md);
   padding-inline: var(--webdesk-dashboard-space-lg);
-  border-bottom: 1px solid var(--webdesk-dashboard-color-border);
-  background: var(--webdesk-dashboard-color-surface-raised);
+  border-bottom: 1px solid var(--webdesk-dashboard-color-header-border);
+  background: var(--webdesk-dashboard-color-header-background);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -47,7 +47,7 @@
 .brand {
   font-weight: var(--webdesk-dashboard-font-weight-semibold);
   font-size: var(--webdesk-dashboard-font-size-md);
-  color: var(--webdesk-dashboard-color-foreground);
+  color: var(--webdesk-dashboard-color-header-foreground);
   text-decoration: none;
 }
 
@@ -62,17 +62,18 @@
   align-items: center;
   gap: var(--webdesk-dashboard-space-sm);
   font-size: var(--webdesk-dashboard-font-size-sm);
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  color: var(--webdesk-dashboard-color-header-foreground);
 }
 
 .navToggle {
   display: none;
-  border: 1px solid var(--webdesk-dashboard-color-border);
-  background: var(--webdesk-dashboard-color-surface);
+  border: 1px solid var(--webdesk-dashboard-color-header-border);
+  background: var(--webdesk-dashboard-color-header-control-background);
   border-radius: var(--webdesk-dashboard-radius-sm);
   padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
-  color: var(--webdesk-dashboard-color-foreground);
+  color: var(--webdesk-dashboard-color-header-foreground);
   cursor: pointer;
+  align-items: center;
 }
 
 .navToggle:focus-visible,
@@ -143,12 +144,18 @@
 }
 
 .sidebarLink {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
   padding: var(--webdesk-dashboard-space-sm);
   border-radius: var(--webdesk-dashboard-radius-sm);
   color: var(--webdesk-dashboard-color-foreground-muted);
   text-decoration: none;
   font-size: var(--webdesk-dashboard-font-size-sm);
+}
+
+.sidebarLinkIcon {
+  flex-shrink: 0;
 }
 
 .sidebarLink:hover {
@@ -157,9 +164,9 @@
 }
 
 .sidebarLinkActive {
-  background: var(--webdesk-dashboard-color-muted-surface);
-  color: var(--webdesk-dashboard-color-foreground);
-  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  background: var(--webdesk-dashboard-color-accent-tint);
+  color: var(--webdesk-dashboard-color-accent);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
 }
 
 .main {

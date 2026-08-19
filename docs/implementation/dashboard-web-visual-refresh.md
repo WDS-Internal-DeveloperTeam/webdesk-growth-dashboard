@@ -1,0 +1,266 @@
+# `dashboard-web` Visual Refresh — "Enterprise Plus" (as-built)
+
+**Status:** Built and fully validated. Updates the actual, shared design tokens and shell
+components every authenticated page renders through — not a page-local change.
+
+## 1. Why
+
+After the Home page widget grid (PR #39) shipped, the user reported the result still looked "very
+very simple" — a fair reaction, since the widget grid was built exactly to spec against the
+already-approved "Clean Enterprise" design system, which is genuinely restrained by design (thin
+borders, minimal color, muted status pills). Rather than guess at a fix in code, three full visual
+directions were drafted as a design canvas (Current, "Enterprise Plus," "Modern SaaS") and shown
+side by side. The user picked **Enterprise Plus** and, when asked whether to scope the change to
+the Home page alone or the whole app, chose **the whole app** — since the header and sidebar are
+shared components every page renders through, and a Home-page-only reskin would have looked
+inconsistent with the rest of the app.
+
+## 2. What changed
+
+### Design tokens (`packages/ui/src/tokens.ts`)
+
+- **Color**: warm off-white background (`#faf8f4`, was pure white), warm-toned borders/surfaces, a
+  real indigo brand accent (`#4338ca`, was a generic blue `#2563eb`) plus a violet
+  `accentSecondary` (`#7c3aed`) for gradients, a light `accentTint` for active states and icon
+  badges, and a dedicated dark `header*` token set (`headerBackground #201a3d`,
+  `headerForeground`, `headerForegroundMuted`, `headerBorder`, `headerControlBackground`) used only
+  by the header bar and its own controls — page content stays on the light palette. **Semantic
+  colors (danger/warning/success/info and their surfaces) are deliberately unchanged** — they carry
+  meaning, not brand.
+- **Typography**: a new `fontFamilyDisplay` token (Sora) alongside the existing `fontFamilyBase`
+  (now Public Sans, was a bare system-font stack), both self-hosted via `next/font/google` in the
+  root layout (no runtime request to Google, no layout shift) and referenced by CSS custom property
+  (`var(--font-public-sans)`/`var(--font-sora)`). The display font is applied to every `h1`–`h6`
+  globally in `globals.css`, not per-component, so the whole app picks it up from one change.
+- **Radius/shadow**: a new `radiusTokens.xl` (16px) for raised cards, kept separate from `md`/`lg`
+  so small controls (buttons, inputs) keep their existing tighter rounding; `shadowTokens.md`/`lg`
+  became two-layer, warm-toned shadows.
+
+Every color/contrast pair was computed against the real WCAG 2.1 relative-luminance formula before
+being chosen (not eyeballed) — see the inline doc comments on `colorTokens.foregroundSubtle` and
+`headerForegroundMuted` for the exact ratios and which ones are (and are deliberately are not) AA
+text-safe, matching this codebase's existing discipline after two prior real contrast bugs.
+
+### Shared components (`packages/ui`)
+
+- `Card` now uses `radiusTokens.xl`/`shadowTokens.md` (was `md`/`sm`) — every card across the whole
+  app (Home widgets, module grid, project detail sections, forms, etc.) picks this up automatically
+  since it's the one shared component.
+- `Avatar` now renders a gradient fill (`accentSecondary` → `accent`) instead of a flat muted
+  surface — white initials text clears AA against either end of the gradient (5.7:1 / 7.9:1).
+
+### Real icons, finally wired up (`lucide-react`)
+
+Every one of the 43 real seeded modules has carried a Lucide-convention `iconReference` string
+(`"book-open"`, `"layout-grid"`, etc.) since migration `00035` — the icon _data_ has existed since
+Phase 1F, but no icon library was ever installed to consume it (`docs/implementation/dashboard-web-home-widget-grid.md`
+didn't need it; this refresh does). Added `lucide-react` as a `dashboard-web` dependency and a new
+`lib/module-icons.tsx` mapping all 43 known values to their real icon component (verified against
+the installed package version, not assumed), falling back to `LayoutGrid` for an unknown/null
+value. Used in: the sidebar (every nav item, both expanded and icon-only-collapsed — replacing the
+`initialsFor()` monogram fallback), and the Home page's module grid (an icon-tinted-circle per
+card, replacing the previous plain-text-only row).
+
+### Application shell (`components/app-shell.tsx` + `.module.css`)
+
+- Header: filled dark background (`headerBackground`), light text/icons throughout. Every emoji
+  icon (🔍, 🔔, «/») replaced with real `lucide-react` icons (`Search`, `Bell`, `HelpCircle`,
+  `Menu`, `PanelLeftOpen`/`PanelLeftClose`) — matching this project's own "never use emoji as
+  icons" discipline.
+- Sidebar: active nav item now gets the `accentTint`/`accent` pair (a tinted pill) instead of the
+  generic `mutedSurface`; every link (expanded and collapsed) shows its module's real icon.
+- `ProjectSwitcher` (rendered only inside the header) restyled against the header's own dark
+  palette rather than the light content-area tokens, since it's a single-call-site component.
+
+### Home page (`app/(shell)/home/page.tsx`)
+
+- Each widget card gained an icon-tinted-circle badge next to its title (`Activity`, `ClipboardList`,
+  `AlertTriangle`, `GitBranch` — fixed icons, since these aren't real modules with their own
+  `iconReference`).
+- Project Health's status counts moved from small badge pills to large `fontFamilyDisplay` numerals
+  (green/amber/subtle-grey by status) — still real counts, still `EmptyState` when there are zero
+  projects, no fabricated data.
+- Module grid cards gained the same icon-tinted-circle treatment, using each module's real
+  `iconReference` via the new `lib/module-icons.tsx` helper.
+
+## 3. What was deliberately not touched
+
+- No RBAC/permission/module-registry schema change — this is presentation-layer only.
+- No dark mode (still not V1, per the original approved design direction — this refresh changes
+  the light palette, not whether a dark one exists).
+- `/projects` and other business pages inherit the token/`Card`/typography changes automatically
+  (they already consume the same shared tokens and components) but were not otherwise redesigned —
+  no new icon or layout treatment was added to them specifically.
+- The native `<select>` project-switcher control's own dropdown-options popup is unstyled browser
+  chrome (light, regardless of the trigger's dark styling) — no cross-browser way to restyle it
+  fully, not a bug.
+
+## 4. Validation
+
+- `pnpm --filter @webdesk/ui run build`/`lint`/`test` — clean, 79/79 unit tests passing (no
+  hardcoded-value assertions broke — the token tests check structure/keys, not exact colors).
+- `pnpm --filter @webdesk/dashboard-web run typecheck`/`lint` — clean.
+- `pnpm --filter @webdesk/dashboard-web run test -- --run` — 157/157 passing. One existing
+  assertion updated (`app-shell.test.tsx`'s collapse-toggle test previously asserted a monogram
+  letter "H"; now asserts the real icon SVG is present instead — the same deliberate behavior
+  change, not a regression).
+- `pnpm --filter @webdesk/dashboard-web run build` (`next build`) — clean; fonts fetched and
+  self-hosted successfully at build time.
+- `pnpm --filter @webdesk/dashboard-web run test:integration` (Playwright) — **15/15 passing,
+  including both authenticated-shell WCAG 2.2 AA axe-core scans** (header/sidebar/library
+  clustering, and the collapsed-sidebar state) — zero automatically-detectable violations from the
+  new dark header, tinted active-nav state, or icon usage.
+- `pnpm audit` — 0 vulnerabilities (including the new `lucide-react` dependency).
+- **Live-rendered in the Browser pane** via this project's sanctioned test-only session bypass —
+  confirmed the dark header, warm background, indigo accents, real per-item sidebar/module icons,
+  and large Project Health numerals all render as intended; confirmed the sidebar collapse toggle
+  still works correctly (a real click-target quirk in the browser-automation tool itself — not a
+  code bug — was ruled out by confirming a programmatic `.click()` on the real DOM button correctly
+  toggled `localStorage` and the rendered icon-only state).
+
+## 5. Files changed
+
+- `packages/ui/src/tokens.ts` — palette, typography, radius, shadow tokens.
+- `packages/ui/src/components/structural.tsx` — `Card`, `Avatar`.
+- `apps/dashboard-web/app/layout.tsx` — `next/font/google` wiring.
+- `apps/dashboard-web/app/globals.css` — global heading display-font rule.
+- `apps/dashboard-web/components/app-shell.tsx` + `.module.css` — dark header, real icons, tinted
+  active nav state.
+- `apps/dashboard-web/components/project-switcher.module.css` — header-dark-palette restyle.
+- `apps/dashboard-web/lib/module-icons.tsx` — new file, the `iconReference` → `lucide-react` map.
+- `apps/dashboard-web/app/(shell)/home/page.tsx` — icon badges, display-font numerals.
+- `apps/dashboard-web/package.json` — new `lucide-react` dependency.
+- `apps/dashboard-web/tests/unit/app-shell.test.tsx` — one assertion updated for the new
+  icon-not-monogram collapsed behavior.
+
+## 6. Independent code review (2026-08-19)
+
+This project's own `code-review` skill ran against the full PR #39 diff (both the Home widget grid
+and this visual refresh) at high effort — 8 finder angles, 1-vote verification per deduped
+candidate. 9 findings survived verification (7 CONFIRMED, 2 PLAUSIBLE); all 7 CONFIRMED findings
+were fixed per the explicit "fix the confirmed findings" instruction, the 2 PLAUSIBLE ones left as
+tracked debt (both real but low-severity, and one — an unguarded status lookup — matches an
+already-accepted pattern on sibling functions elsewhere in this codebase, confirmed by the verifier
+itself, not a new deviation this PR introduced).
+
+### 6a. Typography CSS custom properties were double-prefixed — the whole point of the font
+
+refresh silently didn't apply (fixed)
+
+The single most severe finding: `toCssCustomProperties()` (`packages/ui/src/tokens.ts`) builds
+each property name as `` `--webdesk-dashboard-${group}-${kebabKey}` ``. Every `typographyTokens`
+key already starts with "font" (`fontFamilyBase`, `fontSizeXs`, …), and the group label for that
+token set is also `"font"` — so the generator produced doubled names like
+`--webdesk-dashboard-font-font-family-base`, never the single-prefixed name every CSS consumer in
+the app (correctly) references. **Verified against the actual compiled `.next` output**: the
+shipped CSS read `font-family:var(--webdesk-dashboard-font-family-base,-apple-system,...)` and
+never resolved to `var(--font-public-sans)` — every heading and all body text app-wide was silently
+rendering system fonts, not the new Sora/Public Sans this whole PR exists to ship. This bug
+pre-dates this PR (the function itself was untouched) and was invisible before, since the old
+`fontFamilyBase` value had no `var()` reference at all, so the broken lookup's fallback happened to
+already equal the intended appearance — this PR is the first time the mismatch changes visible
+output. Fixed by skipping the redundant prefix whenever the kebab-cased key already starts with the
+group name, for any group (not hardcoded to "font" specifically, so any future token group with the
+same self-prefixing shape is covered too). **Re-verified live**: `getComputedStyle(document.body)`
+now resolves to `"Public Sans", "Public Sans Fallback", -apple-system, ...` and
+`getComputedStyle(document.querySelector("h1"))` resolves to `Sora, "Sora Fallback", ...` — fonts
+now genuinely apply.
+
+### 6b. "Deployed" label showed cold-start time, not deploy time (fixed)
+
+`systemStatus.release.deployedAt` was sourced from `/health`'s `processStartedAt` — a serverless
+Function instance's cold-start (module-load) time, not a real deploy timestamp. Confirmed via the
+field's own original doc comment (`packages/configuration/src/build-metadata.ts`), which already
+warned against exactly this mislabeling. Under this project's Vercel Functions architecture (warm-
+instance reuse, no permanent worker), two users hitting different instances of the same deployment
+could see two different "Deployed" times, neither necessarily accurate. Fixed by renaming the field
+to `instanceStartedAt` (both in `ServerSessionSystemStatus` and its construction site) and the UI
+label to "Instance started", with a doc comment recording the full reasoning so a future reader
+doesn't reintroduce the same mislabeling.
+
+### 6c–6d. Two reuse gaps closed by promoting shared components (fixed)
+
+The Home page's Project Health widget had its own `PROJECT_STATUS_LABEL`/
+`PROJECT_STATUS_NUMERAL_COLOR` maps duplicating `lib/projects.ts`'s existing `projectStatusBadge()`
+— now reuses it directly (`statusTokens[projectStatusBadge(status).token]` for the numeral color,
+confirmed to resolve to the identical values the hand-rolled map used). The Git/Release Status
+widget hand-rolled three `dt`/`dd` metadata rows duplicating the Project Detail page's existing
+local `Fact` component — `Fact` is now promoted to `packages/ui/src/components/structural.tsx` and
+both pages import the shared version; the Project Detail page's local copy (and its now-redundant
+`factStyle`/`factLabelStyle`/`factValueStyle`) were removed. Promoting `Fact` also incidentally
+closed a real, live WCAG AA contrast gap in its original implementation — its label used
+`foregroundSubtle` (a raw CSS var string) at 12px bold, which doesn't clear the 4.5:1 threshold;
+the shared version uses `colorTokens.foregroundMuted` instead, matching this token's own documented
+usage discipline.
+
+### 6e. `IconBadge` promoted to `packages/ui` (fixed) — and a real RSC bug found and fixed along
+
+the way
+
+`IconBadge`'s own doc comment already framed it as a reusable "Enterprise Plus" pattern, and it
+structurally duplicated `Avatar`'s shape (a sized, centered, tinted-background box) — yet lived
+unexported inside `home/page.tsx`, unreachable from the sidebar's own per-module icons in the same
+PR. Promoted to `packages/ui/src/components/structural.tsx` alongside `Card`/`Badge`/`Avatar`.
+
+Doing so surfaced a real bug the original page-local version never hit: `structural.tsx` is a
+`"use client"` module, so passing a raw `lucide-react` component **reference** (e.g.
+`icon={Activity}`) from `home/page.tsx` (a Server Component) across that boundary is invalid —
+React Server Components can serialize rendered elements, not bare functions, and the app crashed
+with `Functions cannot be passed directly to Client Components`. Fixed by changing `IconBadge`'s
+`icon` prop from a component-reference type to `ReactNode` — matching the existing, already-correct
+convention this codebase's own `IconButton` already uses (`icon={<Search size={18} />}`, not
+`icon={Search}`) — so callers construct the sized/colored icon element themselves (still
+server-side, before it crosses the boundary) rather than handing `IconBadge` a bare function.
+Caught by live-rendering the actual page in the Browser pane, not just typecheck/build (which don't
+catch RSC serialization-boundary violations — they're a runtime-only class of error).
+
+### 6f. `ICON_MAP` had no compile-time link to real `iconReference` values (fixed, partially)
+
+`ICON_MAP` (`lib/module-icons.tsx`) was typed as a generic `Record<string, LucideIcon>`, not tied
+to any literal union, with 43 hand-copied keys matching the backend seed data by convention only —
+unlike the sibling `MODULE_STATUS_BADGE` (`lib/modules.ts`), which is keyed by a real literal union
+so TypeScript enforces every value has an entry. A full fix would mean turning
+`ModuleRegistrySummary.iconReference` (`packages/shared-types`) into a literal-backed type shared
+across both apps — a schema-level change out of scope for this frontend-only PR. Fixed the reachable
+half instead: `moduleIcon()` now logs (`console.error`) when it falls back for a genuinely
+unrecognized value (not for the routine `null` case), so a future drift is visible in server logs
+instead of silently absorbed — the same "future value silently falls through" class of gap this
+project has caught and fixed elsewhere (e.g. `AuthErrorReason`'s `isKnownReason()`). Added
+`tests/unit/module-icons.test.tsx` covering the known-icon path, the null case (no log), and the
+unrecognized-value case (logged).
+
+### 6g. Icon-only sidebar lost its guaranteed per-module distinctiveness (fixed)
+
+The collapsed/icon-only sidebar previously showed `initialsFor(label)`, guaranteeing every module
+looked visually distinct even with no other information available. Replacing it with
+`moduleIcon()`'s real icon meant any module with an unmapped `iconReference` would fall back to one
+shared generic icon, indistinguishable from every other unmapped module (currently a forward-looking
+risk only — all 43 real seeded modules are covered today). Fixed by widening `moduleIcon()`'s return
+shape to `{ Icon, isFallback }`; the sidebar's icon-only branch now renders the module's own
+monogram (`initialsFor(label)`) when `isFallback` is true, and the real icon otherwise — restoring
+the distinctiveness guarantee for the fallback case specifically, while the expanded (labeled) view
+keeps using the icon regardless of fallback status, since the label text already differentiates
+there.
+
+### Left as tracked debt (2 PLAUSIBLE findings, not fixed)
+
+- `moduleImplementationStatusBadge()`'s unguarded lookup could theoretically crash the Home page on
+  an out-of-union `implementationStatus` value — currently unreachable (the backend enforces a
+  matching Postgres ENUM), and the verifier confirmed this exact unguarded-lookup shape is already
+  established, accepted debt on sibling functions elsewhere in this codebase (`projectStatusBadge`,
+  `roadmapItemStatusBadge`) — not a new deviation this PR introduced.
+- `globals.css`'s `:focus-visible` fallback literal (`#2563eb`) is stale relative to the new
+  `colorTokens.focusRing` (`#4338ca`) — real drift, but no currently-reachable path triggers the
+  fallback (the real custom property is injected synchronously in every render path), and the same
+  class of intentionally-stale fallback already exists elsewhere in the same file.
+
+### Re-validation after fixes
+
+79/79 `packages/ui` unit tests, 162/162 `dashboard-web` unit tests (4 new — `module-icons.test.tsx`
+— plus 2 updated assertions for the icon-not-monogram-in-icon-only-mode behavior and the
+`instanceStartedAt` rename), 15/15 Playwright tests (both authenticated-shell axe-core scans still
+0 violations), typecheck/lint/`next build`/prettier all clean across both packages, `pnpm audit` 0
+vulnerabilities. Live-rendered in the Browser pane again after every fix, not just re-typechecked —
+confirmed real Sora/Public Sans fonts resolve via `getComputedStyle`, the widget/module-grid icon
+badges render correctly (no RSC boundary crash), and 39 real `<svg>` icons render on the page
+with no error-boundary text.

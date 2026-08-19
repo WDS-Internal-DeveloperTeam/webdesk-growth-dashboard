@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModuleRegistrySummary, ProjectSummary } from "@webdesk/shared-types";
 import { AppShell } from "../../components/app-shell.js";
 import { fixtureModule } from "../../lib/e2e-test-session.js";
@@ -30,6 +30,16 @@ function projectSummary(overrides: Partial<ProjectSummary> & { id: string }): Pr
 }
 
 describe("AppShell", () => {
+  // AppShell reads/writes the sidebar-collapsed flag via window.localStorage on mount and on
+  // toggle. jsdom's localStorage persists across tests in the same file with no reset of its own,
+  // so a test that collapses the sidebar and doesn't explicitly expand it again before finishing
+  // leaves every later test in this file starting from an already-collapsed state — a real,
+  // previously-hit source of cascading test failures (a fully-collapsed shell hides cluster
+  // labels and swaps "Collapse sidebar" for "Expand sidebar", breaking unrelated assertions).
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   const navigation: ModuleRegistrySummary[] = [
     navEntry({ key: "home", displayName: "Home", route: "/home", navigationGroup: "home" }),
     navEntry({
@@ -268,11 +278,20 @@ describe("AppShell", () => {
   });
 
   describe("sidebar collapse toggle", () => {
-    it("switches the nav links to icon-only monograms and back", () => {
+    it("switches the nav links to icon-only (module icon, no label text) and back", () => {
+      const navigationWithRealIcon: ModuleRegistrySummary[] = [
+        navEntry({
+          key: "home",
+          displayName: "Home",
+          route: "/home",
+          navigationGroup: "home",
+          iconReference: "home",
+        }),
+      ];
       render(
         <AppShell
           me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
-          navigation={navigation}
+          navigation={navigationWithRealIcon}
           projects={[]}
           initialProjectId={null}
         >
@@ -281,9 +300,37 @@ describe("AppShell", () => {
       );
       expect(screen.getByRole("link", { name: "Home" })).toHaveTextContent("Home");
       fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
-      expect(screen.getByRole("link", { name: "Home" })).toHaveTextContent("H");
+      const collapsedLink = screen.getByRole("link", { name: "Home" });
+      expect(collapsedLink).not.toHaveTextContent("Home");
+      expect(collapsedLink.querySelector("svg")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Expand sidebar" }));
       expect(screen.getByRole("link", { name: "Home" })).toHaveTextContent("Home");
+    });
+
+    it("falls back to the module's own monogram (not a shared generic icon) in icon-only mode when it has no mapped iconReference", () => {
+      const navigationNoIcon: ModuleRegistrySummary[] = [
+        navEntry({
+          key: "unmapped_module",
+          displayName: "Unmapped Module",
+          route: "/unmapped-module",
+          navigationGroup: "home",
+          iconReference: null,
+        }),
+      ];
+      render(
+        <AppShell
+          me={{ id: "u1", email: "jane@example.com", displayName: "Jane Doe" }}
+          navigation={navigationNoIcon}
+          projects={[]}
+          initialProjectId={null}
+        >
+          <p>Page content</p>
+        </AppShell>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+      const collapsedLink = screen.getByRole("link", { name: "Unmapped Module" });
+      expect(collapsedLink.querySelector("svg")).not.toBeInTheDocument();
+      expect(collapsedLink).toHaveTextContent("UM");
     });
   });
 
@@ -433,7 +480,7 @@ describe("AppShell", () => {
           navigation={navigation}
           projects={[]}
           initialProjectId={null}
-          systemStatus={{ environment: "production", isDegraded: false }}
+          systemStatus={{ environment: "production", isDegraded: false, release: null }}
         >
           <p>Page content</p>
         </AppShell>,
@@ -449,7 +496,7 @@ describe("AppShell", () => {
           navigation={navigation}
           projects={[]}
           initialProjectId={null}
-          systemStatus={{ environment: "staging", isDegraded: false }}
+          systemStatus={{ environment: "staging", isDegraded: false, release: null }}
         >
           <p>Page content</p>
         </AppShell>,
@@ -464,7 +511,7 @@ describe("AppShell", () => {
           navigation={navigation}
           projects={[]}
           initialProjectId={null}
-          systemStatus={{ environment: "production", isDegraded: true }}
+          systemStatus={{ environment: "production", isDegraded: true, release: null }}
         >
           <p>Page content</p>
         </AppShell>,

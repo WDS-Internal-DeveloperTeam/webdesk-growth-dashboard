@@ -1047,6 +1047,111 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     remains its own separate, not-yet-requested authorization, per this project's standing
     "no auto-merge" rule — but bundled together as ONE review pass across this whole batch, per
     the explicit instruction, not repeated per item.
+23. **`dashboard-web` Home page widget grid — built, fully validated, not yet reviewed, gated, or
+    merged (2026-08-19).** Not started automatically — the user reported the live Home page looked
+    "very very simple" (screenshot attached); a scoping investigation (a dedicated research agent)
+    found this wasn't a case of the approved design system being too plain, but of the Home page
+    never having been wired up to it at all — it was still hand-rolled `<ul><li>` markup with
+    inline `style={{ border: ... }}`, exactly the gap
+    `docs/design/dashboard-ui/16-existing-shell-gap-analysis.md` §2 already names, and
+    `docs/design/dashboard-ui/15-representative-screen-specifications.md` §1 already specifies a
+    real widget-grid layout for this exact screen that was approved but never implemented. The
+    user chose "wire up what already exists." Built: four `Card`-based widgets (Project Health —
+    real project-status counts via `Badge`; My Work and Critical Findings — honest `EmptyState`,
+    no per-user task or scan-findings data source exists yet; Git/Release Status — real deploy
+    metadata newly surfaced from `/health`'s `build` block, previously fetched by
+    `getServerSession()` and discarded) per the approved §15.1 spec, and a rebuilt module grid
+    using `Card`+`Badge` (a new `moduleImplementationStatusBadge()` helper,
+    `lib/modules.ts`, maps the real 9-value `implementationStatus` enum onto the existing 5-bucket
+    status vocabulary, `docs/design/dashboard-ui/10-status-and-workflow-system.md` §1) instead of
+    plain bordered list items. `ServerSessionSystemStatus` gained a `release` field
+    (version/commit/deploy-time), sourced from data already being fetched — no new backend
+    endpoint. 157/157 `dashboard-web` unit tests (3 new), typecheck/lint/`next build`/prettier all
+    clean. **Live-rendered, not just typechecked/built blind**: the authenticated shell was
+    actually rendered in the Browser pane using this project's own sanctioned test-only session
+    bypass (`lib/e2e-test-session.ts`, the same mechanism the automated WCAG suite uses, inert in
+    every real deployment) — confirmed real `Card` widgets with shadows, colored `Badge` pills, and
+    the module grid rendering correctly, no console errors beyond an expected local HMR artifact.
+    See `docs/implementation/dashboard-web-home-widget-grid.md` for the full as-built record.
+    Pushed as branch `dashboard-web-home-widget-grid`. Not yet reviewed, gated, or merged — code
+    review, security review, second-role human review, a gate decision, and merge authorization
+    are each their own separate, not-yet-requested next step, unchanged from this project's
+    standing discipline. `/projects` (also flagged by the same gap-analysis doc) remains a
+    separate, not-yet-requested follow-up. **Superseded/extended same-branch by item 24 below** —
+    the user then said the UI "still looks simple" even with the widget grid live, leading to the
+    whole-app visual refresh.
+24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated,
+    code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"),
+    and gated (G4-visual-refresh, WebDesk Solution, CONFIRM); not yet merged (2026-08-19).** Not started automatically — after seeing item
+    23's widget grid live-rendered, the user said the UI "still looks simple." Rather than guess
+    again in code, drafted 3 full visual directions (Current, "Enterprise Plus," "Modern SaaS") as
+    a design canvas — a real mockup of the actual Home page content in each direction, not abstract
+    swatches — and asked the user to pick one. **The user picked Enterprise Plus**, then, asked
+    whether to scope it to the Home page alone or the whole app (the mockup's header/sidebar are
+    shared components, not Home-page-specific), **chose the whole app**. Built on the same branch
+    (`dashboard-web-home-widget-grid`), on top of item 23's still-unreviewed commit: new
+    `packages/ui` design tokens (a real indigo/violet brand accent replacing the generic blue, warm
+    off-white surfaces, Sora+Public Sans typography self-hosted via `next/font/google`, richer
+    card radius/shadow — semantic colors deliberately unchanged), a dark filled header + tinted
+    active-nav sidebar state in `AppShell`, and — closing a real, previously-undiscovered gap —
+    `lucide-react` wired up against the `iconReference` field every one of the 43 real modules has
+    carried since migration `00035` but that no icon library ever existed to consume, now used for
+    real per-module icons in both the sidebar and the Home page's module grid. Every new color
+    pair was checked against the real WCAG contrast formula before being chosen, not eyeballed —
+    see `docs/implementation/dashboard-web-visual-refresh.md` for the exact ratios. 157/157
+    `dashboard-web` + 79/79 `packages/ui` unit tests (one existing assertion updated for the
+    deliberate icon-not-monogram collapsed-sidebar behavior, not a regression),
+    typecheck/lint/`next build`/prettier all clean across both packages, `pnpm audit` 0
+    vulnerabilities. **15/15 Playwright tests passing, including both authenticated-shell WCAG 2.2
+    AA axe-core scans** — zero automatically-detectable violations from the new dark header, tinted
+    nav state, or icon usage. **Live-rendered in the Browser pane**, not just typechecked/built
+    blind — confirmed the actual dark header/warm background/indigo accents/real icons/large
+    Project Health numerals render correctly, and separately confirmed via a programmatic DOM
+    `.click()` that the sidebar collapse toggle's own logic was never broken (an early real-browser
+    click landing oddly was a Browser-pane automation-tool quirk, not a code bug — ruled out
+    explicitly rather than assumed). See `docs/implementation/dashboard-web-visual-refresh.md` for
+    the full as-built record. **Independent code review then ran** (high effort, 8 finder angles,
+    against the full PR #39 diff covering both item 23 and this item) — 9 findings survived
+    verification (7 CONFIRMED, 2 PLAUSIBLE). All 7 CONFIRMED fixed: most severe, `toCssCustomProperties()`
+    (pre-existing, untouched by this PR) double-prefixed every typography CSS custom property
+    (`--webdesk-dashboard-font-font-family-base`, never the single-prefixed name every CSS consumer
+    actually referenced), so the new Sora/Public Sans fonts silently never applied anywhere — fixed
+    generically (skip the redundant prefix when the kebab key already starts with the group name),
+    verified live via `getComputedStyle`. Also fixed: the Git/Release Status widget's "Deployed"
+    label actually showed serverless cold-start time, not deploy time (renamed to "Instance
+    started" with a doc comment recording why); two reuse gaps (Project Health's status label/color
+    duplicating `projectStatusBadge()`; the Git/Release widget's fact rows duplicating the Project
+    Detail page's existing `Fact` component — now promoted to `packages/ui` and reused by both,
+    incidentally closing a live WCAG AA contrast gap in `Fact`'s original label styling); `IconBadge`
+    promoted to `packages/ui` (surfacing and fixing a real React-Server-Components bug along the
+    way — passing a raw icon component reference across the client-component boundary crashed the
+    page; fixed by switching to the `ReactNode` convention `IconButton` already uses elsewhere);
+    `moduleIcon()` now logs an unrecognized `iconReference` instead of silently absorbing it; and
+    the icon-only sidebar's per-module distinctiveness guarantee restored for modules with no
+    mapped icon (falls back to the module's own monogram, not one shared generic icon). 2 PLAUSIBLE
+    findings left as tracked debt (an unguarded status-badge lookup already accepted as debt on
+    sibling functions elsewhere in this codebase; a stale, currently-unreachable CSS fallback hex).
+    Re-validated: 162/162 `dashboard-web` unit tests (4 new), 79/79 `packages/ui` unit tests, 15/15
+    Playwright tests (both authenticated-shell axe-core scans still 0 violations),
+    typecheck/lint/`next build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
+    `docs/implementation/dashboard-web-visual-refresh.md` §6 for the full account. **Security
+    review then run separately, against the fixed branch (commit `a71d2bc`) — 0 findings above
+    threshold.** Confirmed: no new user input reaches a dangerous sink (icon references, module
+    status, project status, and release metadata are all backend-sourced from already-RBAC-gated
+    responses, not attacker-controlled input); no `dangerouslySetInnerHTML` or other unsafe-render
+    method introduced; the new `moduleIcon()` log call carries only a registry icon-name key, never
+    PII; no auth/session/cookie/`OriginCheckGuard`/`PermissionGuard` logic touched —
+    presentation-only on already-authenticated, already-permission-filtered data; the
+    `deployedAt` → `instanceStartedAt` rename is a labeling correction, not a new exposure;
+    `next/font/google` self-hosts both font files at build time with no new runtime third-party
+    call. **A review packet (published as a Claude artifact — code review + security review
+    findings, fixes, and validation evidence, with a decision section) was then prepared for the
+    required second-role human review, since the implementing agent cannot also be its own
+    reviewer (ADR-0010).** See `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`.
+    **Awaiting the second-role reviewer's decision** — a gate decision and merge authorization
+    remain separate, not-yet-requested next steps. Since this branch/PR is still unreviewed on
+    those fronts, both items 23 and 24's changes will go through that remaining cycle together as
+    one unit, not separately.
 
 ## Recent decisions
 
@@ -3161,6 +3266,88 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   section. **This gate approval does not itself authorize merging PR #38 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-19]` **User reported the live Home page (`/home`) looked "very very simple"** (a
+  screenshot of the production page — flat-bordered list items, no color, no visual hierarchy).
+  Rather than assume the approved "Clean Enterprise" design system itself was too plain, ran a
+  dedicated research agent to check whether the page was actually using it — found it wasn't: the
+  Home page still imported none of the ~30 `packages/ui` components PR #33 added, and
+  `docs/design/dashboard-ui/15-representative-screen-specifications.md` §1 already specifies a
+  real widget-grid layout for exactly this screen, approved but never implemented; the design
+  system's own `16-existing-shell-gap-analysis.md` §2 already names this page as one of two still
+  on stale inline styling. Presented this diagnosis and asked how to scope the fix (Home only,
+  Home + `/projects`, or a bigger visual-direction change); **the user chose "wire up what already
+  exists."** Built the four-widget grid (Project Health/My Work/Critical Findings/Git-Release-
+  Status) and rebuilt the module grid with `Card`/`Badge`, live-verified in the Browser pane via
+  this project's own sanctioned test-only session bypass. See "Active tasks" item 23 and
+  `docs/implementation/dashboard-web-home-widget-grid.md` for the full account. Pushed as branch
+  `dashboard-web-home-widget-grid` — not yet reviewed, gated, or merged.
+- `[2026-08-19]` **User said the UI "still looks simple" even with the widget grid live** — "the
+  UX is good but the UI must be good in look." Rather than iterate blindly in code a third time,
+  drafted 3 full visual directions as a design canvas (real mockups of the actual Home page
+  content — Current, "Enterprise Plus," "Modern SaaS" — not abstract color swatches) and asked the
+  user to pick one directly. **The user picked Enterprise Plus.** Before building, flagged that
+  the mockup's header/sidebar are shared components every page renders through, not something
+  Home-specific, and asked whether to scope the change to Home only or the whole app — **the user
+  chose the whole app.** Built on the same branch as item 23 (still unreviewed): new `packages/ui`
+  design tokens (indigo/violet accent, warm surfaces, Sora+Public Sans via `next/font/google`,
+  richer card radius/shadow), a dark header + tinted active-nav sidebar in `AppShell`, and real
+  per-module icons via a newly-added `lucide-react` dependency wired against the `iconReference`
+  field every module has carried since migration `00035` with no icon library to consume it until
+  now. Every new color pair checked against the real WCAG formula, not eyeballed. 157/157
+  `dashboard-web` + 79/79 `packages/ui` unit tests, 15/15 Playwright tests (including both
+  authenticated-shell axe-core scans, 0 violations), typecheck/lint/build/prettier clean,
+  `pnpm audit` 0 vulnerabilities. Live-rendered in the Browser pane to confirm the actual output,
+  not just typechecked blind. See "Active tasks" item 24 and
+  `docs/implementation/dashboard-web-visual-refresh.md` for the full account. Not yet reviewed,
+  gated, or merged — will go through that cycle together with item 23 as one unit.
+- `[2026-08-19]` **Independent code review run on `dashboard-web-home-widget-grid` (PR #39), high
+  effort — 8-angle finder pass against the full diff covering both items 23 and 24.** 9 findings
+  survived verification (7 CONFIRMED, 2 PLAUSIBLE). All 7 CONFIRMED fixed per explicit "fix the
+  confirmed findings" instruction — most severe, `toCssCustomProperties()` (pre-existing,
+  untouched by this PR) double-prefixed every typography CSS custom property, so the new
+  Sora/Public Sans fonts silently never applied anywhere in the app; fixed generically and
+  verified live via `getComputedStyle`. Also fixed: the Git/Release widget's "Deployed" label
+  actually showing serverless cold-start time (renamed to "Instance started"); two reuse gaps
+  (`projectStatusBadge()`, a duplicated `Fact` component now promoted to `packages/ui`); a real
+  React-Server-Components crash from promoting `IconBadge` into a `"use client"` file (fixed by
+  switching its `icon` prop to `ReactNode`); `moduleIcon()` now logging an unrecognized
+  `iconReference`; and the icon-only sidebar's per-module distinctiveness restored via a monogram
+  fallback. 2 PLAUSIBLE findings left as tracked debt. Re-validated: 162/162 `dashboard-web` unit
+  tests (4 new), 79/79 `packages/ui` unit tests, 15/15 Playwright tests, typecheck/lint/`next
+build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
+  `docs/implementation/dashboard-web-visual-refresh.md` §6 for the full account.
+- `[2026-08-19]` **Security review run on `dashboard-web-home-widget-grid` (PR #39), separately
+  from the code review, against the fixed branch (commit `a71d2bc`).** 0 findings above threshold
+  — confirmed no new user input reaches a dangerous sink (icon references, module status, project
+  status, and release metadata are all backend-sourced from already-RBAC-gated responses); no
+  `dangerouslySetInnerHTML` or other unsafe-render method introduced; the new `moduleIcon()` log
+  call carries only a registry icon-name key, never PII; no auth/session/cookie/
+  `OriginCheckGuard`/`PermissionGuard` logic touched (presentation-only on already-authenticated,
+  already-permission-filtered data); the `deployedAt` → `instanceStartedAt` rename is a labeling
+  correction, not a new exposure; `next/font/google` self-hosts both font files at build time with
+  no new runtime third-party call. A review packet (published as a Claude artifact — code review +
+  security review findings, fixes, and validation evidence, with a decision section) was then
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`. **Awaiting the
+  second-role reviewer's decision** — a gate decision and merge authorization remain separate,
+  not-yet-requested next steps.
+- `[2026-08-19]` **Required second-role human review complete for
+  `dashboard-web-home-widget-grid` (PR #39).** The review packet (code review + security review
+  findings, fixes, and the 2 open tracked-debt items, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE
+  code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-visual-refresh) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `9eb8f28` on branch
+  `dashboard-web-home-widget-grid` — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` (`current_gate` now `G4-visual-refresh`) and
+  `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #39 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

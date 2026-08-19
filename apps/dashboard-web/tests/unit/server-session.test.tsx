@@ -98,3 +98,89 @@ describe("getServerSession — /projects resilience", () => {
     expect(projectsUrl).toMatch(/[?&]limit=\d+/);
   });
 });
+
+/**
+ * Coverage for the Home page's Git/Release Status widget data source: `/health`'s `build` block,
+ * parsed into `systemStatus.release`. Real backend behavior (`apps/dashboard-api/src/health/*`)
+ * always returns a full `build` object — `undefined` here only models environments that predate
+ * build-metadata wiring or a genuinely malformed response, not an expected steady-state case.
+ */
+describe("getServerSession — systemStatus.release", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = API_BASE_URL;
+    mockCookieHeader("sid=abc123");
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it("populates release from /health's build block", async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (url.includes("/health")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: "ok",
+            service: "dashboard-api",
+            timestamp: "2026-01-01T00:00:00Z",
+            build: {
+              version: "1.2.3",
+              commitSha: "abcdef1234567890",
+              commitShaShort: "abcdef1",
+              environment: "production",
+              deploymentId: "dep-1",
+              processStartedAt: "2026-01-01T00:00:00Z",
+            },
+          }),
+        } as Response);
+      }
+      if (url.includes("/projects")) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.includes("/me/navigation")) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      return Promise.resolve(jsonResponse(meFixture()));
+    }) as typeof fetch;
+
+    const session = await getServerSession();
+
+    expect(session?.systemStatus.release).toEqual({
+      version: "1.2.3",
+      commitShaShort: "abcdef1",
+      instanceStartedAt: "2026-01-01T00:00:00Z",
+    });
+  });
+
+  it("leaves release: null when /health returns no build block", async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (url.includes("/health")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: "ok",
+            service: "dashboard-api",
+            timestamp: "2026-01-01T00:00:00Z",
+          }),
+        } as Response);
+      }
+      if (url.includes("/projects")) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.includes("/me/navigation")) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      return Promise.resolve(jsonResponse(meFixture()));
+    }) as typeof fetch;
+
+    const session = await getServerSession();
+
+    expect(session?.systemStatus.release).toBeNull();
+  });
+});

@@ -216,7 +216,7 @@ const E2E_FIXTURE_SESSION: ServerSession = {
   },
   navigation: E2E_FIXTURE_NAVIGATION,
   projects: E2E_FIXTURE_PROJECTS,
-  systemStatus: { environment: null, isDegraded: false },
+  systemStatus: { environment: null, isDegraded: false, release: null },
 };
 
 export function getE2eFixtureSession(): ServerSession {
