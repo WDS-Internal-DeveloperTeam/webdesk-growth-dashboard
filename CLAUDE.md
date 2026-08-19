@@ -910,9 +910,9 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     section. **The gate (G4-error-masking-fix) and "Merge PR #36" were then each separately
     requested and completed** — see the dedicated 2026-08-19 "Recent decisions" entries below for
     both. **This slice is now genuinely live in production.**
-21. **`AuthErrorReason` shared-type fix — built, fully validated, code-reviewed, not yet
-    security-reviewed, gated, or merged (2026-08-19).** Closes one of item 20's 5 accepted-debt
-    findings. Not started
+21. **`AuthErrorReason` shared-type fix — built, fully validated, code-reviewed,
+    security-reviewed, review packet prepared, not yet second-role reviewed, gated, or merged
+    (2026-08-19).** Closes one of item 20's 5 accepted-debt findings. Not started
     automatically — built directly on the explicit "fix the shared-type duplication finding"
     instruction. The `reason` taxonomy for `/auth/error` (`expired`/`access_denied`/`error`) was
     previously declared independently in `dashboard-api` (bare untyped strings) and
@@ -945,9 +945,18 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     `apps/dashboard-web/tests/unit/auth-error-page.test.tsx` (6 new tests) covering both fixes
     directly. Re-validated: 149/149 `dashboard-web` unit tests, typecheck/lint/`next build`/
     `pnpm exec prettier --check` all clean. See `docs/implementation/session-exchange.md` §8a for
-    the full account. Security review, second-role human review, a gate decision, and merge
-    authorization are each their own separate, not-yet-requested next step, unchanged from this
-    project's standing discipline.
+    the full account. **A separate `security-review` skill run then found 0 findings above
+    threshold** — the one candidate (the new `console.error` logging the raw, attacker-controlled
+    `reason` value) was filtered out at confidence 1/10 under the standing "log spoofing is not a
+    vulnerability" exclusion; the producing side of every redirect still only ever passes a fixed,
+    typed literal, and the rendering side never outputs raw `reason`, only a fixed message via
+    React JSX. A review packet (published as a Claude artifact — code review + security review
+    findings, fixes, and the 3 open items, with an explicit decision section) was prepared for the
+    required second-role human review, since the implementing agent cannot also be its own
+    reviewer (ADR-0010). See
+    `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`. Second-role human
+    review, a gate decision, and merge authorization are each their own separate, not-yet-requested
+    next step, unchanged from this project's standing discipline.
 
 ## Recent decisions
 
@@ -2897,6 +2906,43 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   yet reviewed, gated, or merged — code review, security review, second-role human review, a
   gate decision, and merge authorization are each their own separate, not-yet-requested next
   step, unchanged from this project's standing discipline.
+- `[2026-08-19]` **Independent code review run on `fix-auth-error-reason-shared-type` (PR #37),
+  high effort — 8 finder angles, then all findings verified.** 7 candidates survived dedup (2
+  CONFIRMED, 3 PLAUSIBLE, 2 REFUTED). Both CONFIRMED findings fixed per explicit "fix the confirmed
+  findings" instruction: `isKnownReason()` used the `in` operator, which walks the prototype
+  chain, so `?reason=constructor` on the public, unauthenticated `/auth/error` page resolved to an
+  inherited `Object.prototype` function value instead of a string, crashing the page render when
+  rendered as a JSX child — fixed with `Object.hasOwn()`; and the unrecognized-reason fallback
+  logged nothing, undercutting the fix's own goal of catching cross-deploy drift between
+  `dashboard-api` and `dashboard-web`'s independently-deployed Vercel projects — fixed with a
+  `console.error` on that path only. The 2 REFUTED findings (widening `dashboard-web`'s
+  route-local `AuthErrorReason` from 2 values to 3 — an acceptable, even necessary side effect of
+  the actual fix; and the new `redirectToAuthError` being a private class method rather than a
+  standalone function — the more idiomatic NestJS pattern given it needs `this.env`) were dropped.
+  The 3 PLAUSIBLE findings (a narrow `reason=""` behavior change reachable only via a hand-typed
+  URL; a `redirectToAuthError` name collision between the new `dashboard-api` controller method
+  and the pre-existing `dashboard-web` route function; and the incident narrative restated across
+  all 4 changed files' doc comments) were left open, not silently dropped. Added
+  `apps/dashboard-web/tests/unit/auth-error-page.test.tsx` (6 new tests). Re-validated: 149/149
+  `dashboard-web` unit tests, typecheck/lint/`next build`/`pnpm exec prettier --check` all clean.
+  See `docs/implementation/session-exchange.md` §8a for the full account.
+- `[2026-08-19]` **Security review run on `fix-auth-error-reason-shared-type` (PR #37), separately
+  from the code review.** 0 findings above threshold. One candidate — the new `console.error` call
+  logging the raw, attacker-controlled `reason` query-param value with no sanitization
+  (`apps/dashboard-web/app/auth/error/page.tsx:60`) — was identified and independently filtered
+  out at confidence 1/10, squarely under the standing "log spoofing / outputting unsanitized user
+  input to logs is not a vulnerability" exclusion: no secondary sink exists (never rendered, never
+  persisted, never used in a control-flow decision), and the attacker already knows the value
+  being logged since it's their own query param. Also confirmed clean: the producing side
+  (`redirectToAuthError()` in both apps) passes only fixed, compile-time-checked literals at every
+  call site — never raw user input — so no injection or open-redirect risk exists via the `reason`
+  param; and the rendering side never outputs raw `reason`, only one of three hardcoded strings via
+  React JSX (auto-escaped, no `dangerouslySetInnerHTML`). A review packet (published as a Claude
+  artifact — code review + security review findings, fixes, and the 3 open items, with an explicit
+  decision section) was prepared for the required second-role human review, since the implementing
+  agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`. Second-role human
+  review, a gate decision, and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
