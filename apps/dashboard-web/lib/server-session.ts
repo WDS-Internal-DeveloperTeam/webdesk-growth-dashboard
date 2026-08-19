@@ -31,6 +31,15 @@ export interface ServerSessionProfile {
 export interface ServerSessionSystemStatus {
   readonly environment: string | null;
   readonly isDegraded: boolean;
+  /** From `/health`'s `build` block — real deploy metadata for the Home page's Git/Release Status
+   *  widget. `null` together (never partially populated) when `/health` didn't return a `build`
+   *  block at all, e.g. the E2E test fixture and any environment that predates build-metadata
+   *  wiring. */
+  readonly release: {
+    readonly version: string;
+    readonly commitShaShort: string;
+    readonly deployedAt: string;
+  } | null;
 }
 
 export interface ServerSession {
@@ -99,7 +108,11 @@ async function fetchProjectSummaries(
   return ((await response.json()) as ApiSuccessResponse<readonly ProjectSummary[]>).data;
 }
 
-const DEFAULT_SYSTEM_STATUS: ServerSessionSystemStatus = { environment: null, isDegraded: false };
+const DEFAULT_SYSTEM_STATUS: ServerSessionSystemStatus = {
+  environment: null,
+  isDegraded: false,
+  release: null,
+};
 
 /**
  * Header environment/system-status indicators (`04-navigation-system.md`
@@ -125,6 +138,13 @@ async function fetchSystemStatus(apiBaseUrl: string): Promise<ServerSessionSyste
   return {
     environment: body.build?.environment ?? null,
     isDegraded: body.status !== "ok",
+    release: body.build
+      ? {
+          version: body.build.version,
+          commitShaShort: body.build.commitShaShort,
+          deployedAt: body.build.processStartedAt,
+        }
+      : null,
   };
 }
 

@@ -1047,6 +1047,37 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     remains its own separate, not-yet-requested authorization, per this project's standing
     "no auto-merge" rule — but bundled together as ONE review pass across this whole batch, per
     the explicit instruction, not repeated per item.
+23. **`dashboard-web` Home page widget grid — built, fully validated, not yet reviewed, gated, or
+    merged (2026-08-19).** Not started automatically — the user reported the live Home page looked
+    "very very simple" (screenshot attached); a scoping investigation (a dedicated research agent)
+    found this wasn't a case of the approved design system being too plain, but of the Home page
+    never having been wired up to it at all — it was still hand-rolled `<ul><li>` markup with
+    inline `style={{ border: ... }}`, exactly the gap
+    `docs/design/dashboard-ui/16-existing-shell-gap-analysis.md` §2 already names, and
+    `docs/design/dashboard-ui/15-representative-screen-specifications.md` §1 already specifies a
+    real widget-grid layout for this exact screen that was approved but never implemented. The
+    user chose "wire up what already exists." Built: four `Card`-based widgets (Project Health —
+    real project-status counts via `Badge`; My Work and Critical Findings — honest `EmptyState`,
+    no per-user task or scan-findings data source exists yet; Git/Release Status — real deploy
+    metadata newly surfaced from `/health`'s `build` block, previously fetched by
+    `getServerSession()` and discarded) per the approved §15.1 spec, and a rebuilt module grid
+    using `Card`+`Badge` (a new `moduleImplementationStatusBadge()` helper,
+    `lib/modules.ts`, maps the real 9-value `implementationStatus` enum onto the existing 5-bucket
+    status vocabulary, `docs/design/dashboard-ui/10-status-and-workflow-system.md` §1) instead of
+    plain bordered list items. `ServerSessionSystemStatus` gained a `release` field
+    (version/commit/deploy-time), sourced from data already being fetched — no new backend
+    endpoint. 157/157 `dashboard-web` unit tests (3 new), typecheck/lint/`next build`/prettier all
+    clean. **Live-rendered, not just typechecked/built blind**: the authenticated shell was
+    actually rendered in the Browser pane using this project's own sanctioned test-only session
+    bypass (`lib/e2e-test-session.ts`, the same mechanism the automated WCAG suite uses, inert in
+    every real deployment) — confirmed real `Card` widgets with shadows, colored `Badge` pills, and
+    the module grid rendering correctly, no console errors beyond an expected local HMR artifact.
+    See `docs/implementation/dashboard-web-home-widget-grid.md` for the full as-built record.
+    Pushed as branch `dashboard-web-home-widget-grid`. Not yet reviewed, gated, or merged — code
+    review, security review, second-role human review, a gate decision, and merge authorization
+    are each their own separate, not-yet-requested next step, unchanged from this project's
+    standing discipline. `/projects` (also flagged by the same gap-analysis doc) remains a
+    separate, not-yet-requested follow-up.
 
 ## Recent decisions
 
@@ -3161,6 +3192,21 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   section. **This gate approval does not itself authorize merging PR #38 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-19]` **User reported the live Home page (`/home`) looked "very very simple"** (a
+  screenshot of the production page — flat-bordered list items, no color, no visual hierarchy).
+  Rather than assume the approved "Clean Enterprise" design system itself was too plain, ran a
+  dedicated research agent to check whether the page was actually using it — found it wasn't: the
+  Home page still imported none of the ~30 `packages/ui` components PR #33 added, and
+  `docs/design/dashboard-ui/15-representative-screen-specifications.md` §1 already specifies a
+  real widget-grid layout for exactly this screen, approved but never implemented; the design
+  system's own `16-existing-shell-gap-analysis.md` §2 already names this page as one of two still
+  on stale inline styling. Presented this diagnosis and asked how to scope the fix (Home only,
+  Home + `/projects`, or a bigger visual-direction change); **the user chose "wire up what already
+  exists."** Built the four-widget grid (Project Health/My Work/Critical Findings/Git-Release-
+  Status) and rebuilt the module grid with `Card`/`Badge`, live-verified in the Browser pane via
+  this project's own sanctioned test-only session bypass. See "Active tasks" item 23 and
+  `docs/implementation/dashboard-web-home-widget-grid.md` for the full account. Pushed as branch
+  `dashboard-web-home-widget-grid` — not yet reviewed, gated, or merged.
 
 ## Open client blockers
 

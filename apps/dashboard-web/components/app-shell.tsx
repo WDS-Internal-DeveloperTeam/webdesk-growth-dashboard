@@ -164,7 +164,7 @@ export function AppShell({
   navigation,
   projects,
   initialProjectId,
-  systemStatus = { environment: null, isDegraded: false },
+  systemStatus = { environment: null, isDegraded: false, release: null },
   children,
 }: AppShellProps): ReactNode {
   const pathname = usePathname();

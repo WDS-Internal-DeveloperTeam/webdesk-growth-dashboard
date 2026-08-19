@@ -433,7 +433,7 @@ describe("AppShell", () => {
           navigation={navigation}
           projects={[]}
           initialProjectId={null}
-          systemStatus={{ environment: "production", isDegraded: false }}
+          systemStatus={{ environment: "production", isDegraded: false, release: null }}
         >
           <p>Page content</p>
         </AppShell>,
@@ -449,7 +449,7 @@ describe("AppShell", () => {
           navigation={navigation}
           projects={[]}
           initialProjectId={null}
-          systemStatus={{ environment: "staging", isDegraded: false }}
+          systemStatus={{ environment: "staging", isDegraded: false, release: null }}
         >
           <p>Page content</p>
         </AppShell>,
@@ -464,7 +464,7 @@ describe("AppShell", () => {
           navigation={navigation}
           projects={[]}
           initialProjectId={null}
-          systemStatus={{ environment: "production", isDegraded: true }}
+          systemStatus={{ environment: "production", isDegraded: true, release: null }}
         >
           <p>Page content</p>
         </AppShell>,
