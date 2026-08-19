@@ -66,7 +66,7 @@ describe("GET /auth/exchange", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("redirects to /auth/error?reason=expired when NEXT_PUBLIC_API_BASE_URL is not configured", async () => {
+  it("redirects to /auth/error?reason=error when NEXT_PUBLIC_API_BASE_URL is not configured", async () => {
     delete process.env.NEXT_PUBLIC_API_BASE_URL;
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const fetchMock = vi.fn();
@@ -76,13 +76,13 @@ describe("GET /auth/exchange", () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "https://dashboard.example.com/auth/error?reason=expired",
+      "https://dashboard.example.com/auth/error?reason=error",
     );
     expect(fetchMock).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
-  it("redirects to /auth/error?reason=expired when POST /auth/exchange rejects with a network error", async () => {
+  it("redirects to /auth/error?reason=error when POST /auth/exchange rejects with a network error", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     global.fetch = vi.fn().mockRejectedValue(new Error("network error")) as typeof fetch;
 
@@ -90,7 +90,7 @@ describe("GET /auth/exchange", () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "https://dashboard.example.com/auth/error?reason=expired",
+      "https://dashboard.example.com/auth/error?reason=error",
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
@@ -110,7 +110,7 @@ describe("GET /auth/exchange", () => {
     );
   });
 
-  it("logs an unexpected non-400 failure status but still redirects to the generic error page", async () => {
+  it("redirects to /auth/error?reason=error (not 'expired') and logs an unexpected non-400 failure status", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     global.fetch = vi
       .fn()
@@ -119,10 +119,13 @@ describe("GET /auth/exchange", () => {
     const response = await GET(new Request("https://dashboard.example.com/auth/exchange?code=abc"));
 
     expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://dashboard.example.com/auth/error?reason=error",
+    );
     expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("500"));
   });
 
-  it("redirects to /auth/error?reason=expired when dashboard-api returns a 200 with a malformed body", async () => {
+  it("redirects to /auth/error?reason=error when dashboard-api returns a 200 with a malformed body", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -136,7 +139,7 @@ describe("GET /auth/exchange", () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
-      "https://dashboard.example.com/auth/error?reason=expired",
+      "https://dashboard.example.com/auth/error?reason=error",
     );
     expect(consoleErrorSpy).toHaveBeenCalled();
   });

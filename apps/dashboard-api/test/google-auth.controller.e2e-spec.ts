@@ -143,8 +143,14 @@ describe("GoogleAuthController — currentUrl construction (integration)", () =>
    * (e.g. a DB error) would leak a raw JSON 500 body while a valid session cookie was already
    * staged on the response. Fixed by issuing the code FIRST, guarded — this proves both halves of
    * the fix: a clean redirect (not a raw 500) and no `Set-Cookie` header on the failure response.
+   *
+   * `reason=error`, not `reason=expired` — this is a real backend failure (the exact shape of the
+   * 2026-08-19 production incident, where a login raced migration 00046 and the INSERT hit
+   * Postgres `42P01` "undefined_table"), not an actually-expired OIDC transaction. Labeling it
+   * "expired" masked the real cause and made that incident briefly ambiguous before the logs
+   * settled it — see docs/implementation/session-exchange.md.
    */
-  it("on a failure to issue the exchange code, redirects to /auth/error?reason=expired without staging a session cookie", async () => {
+  it("on a failure to issue the exchange code, redirects to /auth/error?reason=error without staging a session cookie", async () => {
     app = await buildApp(
       true,
       { ok: true, user: { id: "u1" }, rawToken: "raw-session-token" },
@@ -161,7 +167,7 @@ describe("GoogleAuthController — currentUrl construction (integration)", () =>
       );
 
     expect(response.status).toBe(302);
-    expect(response.headers.location).toBe(`${env.WEB_APP_ORIGIN}/auth/error?reason=expired`);
+    expect(response.headers.location).toBe(`${env.WEB_APP_ORIGIN}/auth/error?reason=error`);
     const setCookie = (response.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
     expect(setCookie.some((cookie) => cookie.startsWith(`${env.SESSION_COOKIE_NAME}=`))).toBe(
       false,

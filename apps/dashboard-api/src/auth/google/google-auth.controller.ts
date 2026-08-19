@@ -72,8 +72,10 @@ export class GoogleAuthController {
 
     // Issued BEFORE the cookie is set (and guarded), not after — so a failure here (e.g. a
     // transient DB error) can never leave the browser holding a valid session cookie alongside a
-    // raw, unstyled 500 response; it cleanly redirects to the same /auth/error page every other
-    // failure in this method uses instead.
+    // raw, unstyled 500 response. Redirects with reason=error, NOT reason=expired — this is a real
+    // backend failure (e.g. the 2026-08-19 incident: a login raced migration 00046, so the INSERT
+    // hit Postgres 42P01 "undefined_table"), not an actually-expired OIDC transaction, and labeling
+    // it "expired" masked the real cause from the user and made the incident harder to triage.
     let exchangeCode: string;
     try {
       exchangeCode = await this.sessionExchange.issue({
@@ -84,7 +86,7 @@ export class GoogleAuthController {
       });
     } catch (error) {
       console.error("GoogleAuthController#callback: failed to issue session-exchange code", error);
-      res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=expired`);
+      res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=error`);
       return;
     }
 

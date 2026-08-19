@@ -864,6 +864,33 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     exact bug this slice was built to fix. One real incident occurred along the way, diagnosed and
     resolved same-day: see the 2026-08-19 "Recent decisions" entry below. **The cross-domain
     session-exchange fix for Google SSO login is now genuinely live and working in production.**
+20. **`/auth/exchange` error-masking fix — built, fully validated, not yet reviewed, gated, or
+    merged (2026-08-19).** `docs/implementation/session-exchange.md` §7 records the full account.
+    Not started automatically — built directly on the explicit "fix the /auth/exchange error
+    masking" instruction, following item 19's incident diagnosis, which surfaced that every
+    failure path in the session-exchange flow (both `GoogleAuthController#callback`'s
+    `sessionExchange.issue()` catch block in `dashboard-api` and `dashboard-web`'s `/auth/exchange`
+    route's `redirectToAuthError()` helper) redirected to `/auth/error?reason=expired` regardless
+    of the real failure class — a genuine backend 500 showed the identical message as an
+    actually-expired code, which is exactly what made that incident briefly ambiguous. Fixed by
+    splitting the reason taxonomy into `expired` (a missing OIDC transaction cookie, a missing
+    exchange-code param, or the backend's genuine `400` "invalid/expired code" response — all
+    unchanged) and a new `error` value (everything else: `issue()` failures, misconfigured
+    `NEXT_PUBLIC_API_BASE_URL`, network failures, unexpected non-2xx statuses, malformed response
+    bodies). `apps/dashboard-web/app/auth/error/page.tsx`'s `REASON_MESSAGES` gained an explicit
+    `error` entry rather than relying on the unrecognized-reason fallback. Diagnostics-only — no
+    change to `dashboard-api`'s session cookie, `SameSite`, `OriginCheckGuard`, or what actually
+    succeeds/fails, only which message the user sees and what gets logged. Updated the one existing
+    test whose expectation this changed (`google-auth.controller.e2e-spec.ts`'s `issue()`-failure
+    regression test, now asserting `reason=error`) and 3 of the `dashboard-web`
+    `auth-exchange-route.test.tsx` cases (misconfiguration/network-failure/non-400-status/
+    malformed-body, all now asserting `reason=error`); left the missing-code and genuine-400 cases
+    unchanged. Validated: 370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests
+    (real disposable local Postgres, `DATABASE_SSL=false`), 143/143 `dashboard-web` unit tests,
+    typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean. Pushed as
+    branch `fix-auth-exchange-error-masking`. Code review, security review, second-role human
+    review, a gate decision, and merge authorization are each their own separate, not-yet-requested
+    next step, unchanged from this project's standing discipline.
 
 ## Recent decisions
 
@@ -2715,6 +2742,24 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   not-yet-requested scope. **The cross-domain session-exchange fix for Google SSO login is now
   fully verified working end-to-end in production** — closing the original bug this whole PR #35
   effort was built to fix.
+- `[2026-08-19]` **Built the `/auth/exchange` error-masking fix**, under the explicit "fix the
+  /auth/exchange error masking" instruction. Branch `fix-auth-exchange-error-masking`, off `main`
+  at `f9bb065`. Split the `reason` taxonomy used by `/auth/error` into `expired` (genuinely
+  expired/invalid: missing OIDC transaction cookie, missing exchange code, backend `400`) and a
+  new `error` (everything else: `GoogleAuthController#callback`'s `sessionExchange.issue()`
+  failures — the exact shape of the incident just diagnosed — misconfiguration, network failures,
+  unexpected non-2xx statuses, malformed response bodies), across both `dashboard-api`'s
+  `GoogleAuthController` and `dashboard-web`'s `/auth/exchange` route. See
+  `docs/implementation/session-exchange.md` §7 for the full account. Diagnostics-only: no change
+  to session-cookie handling, `SameSite`, `OriginCheckGuard`, or actual success/failure outcomes —
+  only which message the user sees and what gets logged. Updated the one existing test whose
+  expectation this changed (`google-auth.controller.e2e-spec.ts`) and 3 of `dashboard-web`'s
+  `auth-exchange-route.test.tsx` cases; left the missing-code and genuine-400 cases unchanged.
+  Full validation: 370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests (real
+  disposable local Postgres), 143/143 `dashboard-web` unit tests, typecheck/lint/`next build`/
+  `nest build`/`pnpm exec prettier --check` all clean. Pushed as its own branch — not yet reviewed,
+  gated, or merged; code review, security review, second-role human review, a gate decision, and
+  merge authorization are each their own separate, not-yet-requested next step.
 
 ## Open client blockers
 

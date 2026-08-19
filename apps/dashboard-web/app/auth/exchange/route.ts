@@ -19,11 +19,27 @@ import { getApiBaseUrl } from "../../../lib/auth";
  * redirect `GoogleAuthController#callback` itself issues immediately after minting it.
  */
 
-function redirectToAuthError(request: Request, logMessage?: string, logError?: unknown): Response {
+/**
+ * `reason=expired` is reserved for cases that genuinely mean "the exchange code itself is
+ * invalid/expired" (a missing `code` param, or the backend's `400` response) — everything else
+ * (misconfiguration, network failure, an unexpected non-2xx status, a malformed response body) is
+ * a real error, not an expiry, and gets `reason=error` instead. Before this distinction existed,
+ * every failure path here showed the same "Your sign-in attempt expired" message, which masked a
+ * real backend 500 as a routine expired-code case during a 2026-08-19 production incident — see
+ * docs/implementation/session-exchange.md.
+ */
+type AuthErrorReason = "expired" | "error";
+
+function redirectToAuthError(
+  request: Request,
+  reason: AuthErrorReason,
+  logMessage?: string,
+  logError?: unknown,
+): Response {
   if (logMessage) {
     console.error(logMessage, ...(logError !== undefined ? [logError] : []));
   }
-  return NextResponse.redirect(new URL("/auth/error?reason=expired", request.url));
+  return NextResponse.redirect(new URL(`/auth/error?reason=${reason}`, request.url));
 }
 
 /**
@@ -41,7 +57,7 @@ function isSecureCookieEnabled(): boolean {
 export async function GET(request: Request): Promise<Response> {
   const code = new URL(request.url).searchParams.get("code");
   if (!code) {
-    return redirectToAuthError(request);
+    return redirectToAuthError(request, "expired");
   }
 
   let apiBaseUrl: string;
@@ -50,6 +66,7 @@ export async function GET(request: Request): Promise<Response> {
   } catch (error) {
     return redirectToAuthError(
       request,
+      "error",
       "auth/exchange: NEXT_PUBLIC_API_BASE_URL is not configured",
       error,
     );
@@ -64,16 +81,22 @@ export async function GET(request: Request): Promise<Response> {
       cache: "no-store",
     });
   } catch (error) {
-    return redirectToAuthError(request, "auth/exchange: POST /auth/exchange request failed", error);
+    return redirectToAuthError(
+      request,
+      "error",
+      "auth/exchange: POST /auth/exchange request failed",
+      error,
+    );
   }
 
   if (!response.ok) {
-    return redirectToAuthError(
-      request,
-      response.status === 400
-        ? undefined
-        : `auth/exchange: POST /auth/exchange returned status ${response.status}`,
-    );
+    return response.status === 400
+      ? redirectToAuthError(request, "expired")
+      : redirectToAuthError(
+          request,
+          "error",
+          `auth/exchange: POST /auth/exchange returned status ${response.status}`,
+        );
   }
 
   let body: ApiSuccessResponse<{ sessionToken: string; expiresAt: string; cookieName: string }>;
@@ -82,6 +105,7 @@ export async function GET(request: Request): Promise<Response> {
   } catch (error) {
     return redirectToAuthError(
       request,
+      "error",
       "auth/exchange: POST /auth/exchange returned a malformed response body",
       error,
     );
