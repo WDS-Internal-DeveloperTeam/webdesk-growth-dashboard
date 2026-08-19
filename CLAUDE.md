@@ -911,7 +911,7 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     requested and completed** — see the dedicated 2026-08-19 "Recent decisions" entries below for
     both. **This slice is now genuinely live in production.**
 21. **`AuthErrorReason` shared-type fix — built, fully validated, code-reviewed,
-    security-reviewed, second-role human reviewed, not yet gated or merged (2026-08-19).** Closes
+    security-reviewed, second-role human reviewed, gated, not yet merged (2026-08-19).** Closes
     one of item 20's 5 accepted-debt findings. Not started
     automatically — built directly on the explicit "fix the shared-type duplication finding"
     instruction. The `reason` taxonomy for `/auth/error` (`expired`/`access_denied`/`error`) was
@@ -956,8 +956,15 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting all 3
     open findings as tracked debt rather than requesting fixes — see
     `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`'s "Sign-off"
-    section. A gate decision and merge authorization remain separate, not-yet-requested next
-    steps, unchanged from this project's standing discipline.
+    section. **The gate (G4-shared-type-fix) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit
+    `b9cae0f8f645640f1aead0d39f219e851fe71a02` on branch `fix-auth-error-reason-shared-type` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-shared-type-fix`) and the approval checklist's "Sign-off" section. **This gate approval
+    does not itself authorize merging PR #37 or a production deployment** — merge remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule
+    (same pattern as every prior gate).
 
 ## Recent decisions
 
@@ -2951,6 +2958,16 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   debt rather than requesting fixes. See
   `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-shared-type-fix) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit
+  `b9cae0f8f645640f1aead0d39f219e851fe71a02` on branch `fix-auth-error-reason-shared-type` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-shared-type-fix`) and
+  `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #37 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
