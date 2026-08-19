@@ -911,8 +911,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     requested and completed** — see the dedicated 2026-08-19 "Recent decisions" entries below for
     both. **This slice is now genuinely live in production.**
 21. **`AuthErrorReason` shared-type fix — built, fully validated, code-reviewed,
-    security-reviewed, second-role human reviewed, gated, not yet merged (2026-08-19).** Closes
-    one of item 20's 5 accepted-debt findings. Not started
+    security-reviewed, second-role human reviewed, gated, merged, and live in production
+    (2026-08-19).** Closes one of item 20's 5 accepted-debt findings. Not started
     automatically — built directly on the explicit "fix the shared-type duplication finding"
     instruction. The `reason` taxonomy for `/auth/error` (`expired`/`access_denied`/`error`) was
     previously declared independently in `dashboard-api` (bare untyped strings) and
@@ -961,10 +961,16 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     was already complete before the gate was requested), approved commit
     `b9cae0f8f645640f1aead0d39f219e851fe71a02` on branch `fix-auth-error-reason-shared-type` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
-    `G4-shared-type-fix`) and the approval checklist's "Sign-off" section. **This gate approval
-    does not itself authorize merging PR #37 or a production deployment** — merge remains its own
-    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule
-    (same pattern as every prior gate).
+    `G4-shared-type-fix`) and the approval checklist's "Sign-off" section. **"Merge PR #37" was
+    then separately requested and executed** — merged with a real merge commit (not squash/
+    rebase), matching every prior merge in this project's history — merge commit
+    `013c620ce55172741daac7a82553fc8933758726`, all 14 CI checks green beforehand. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly, not just via CI's
+    own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+013c620ce55172741daac7a82553fc8933758726`, confirming the exact merged commit is what's serving;
+    `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+    unauthenticated visitor, confirming the session gate is intact. **The `AuthErrorReason`
+    shared-type fix is now genuinely live in production.**
 
 ## Recent decisions
 
@@ -2968,6 +2974,16 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   section. **This gate approval does not itself authorize merging PR #37 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-19]` **"Merge PR #37" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `013c620ce55172741daac7a82553fc8933758726`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+013c620ce55172741daac7a82553fc8933758726`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The `AuthErrorReason`
+  shared-type fix is now genuinely live in production.**
 
 ## Open client blockers
 

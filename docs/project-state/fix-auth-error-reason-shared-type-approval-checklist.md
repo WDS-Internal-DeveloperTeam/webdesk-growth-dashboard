@@ -1,9 +1,10 @@
 # `AuthErrorReason` Shared-Type Fix — Approval Checklist
 
 **Status:** Required second-role human review complete (2026-08-19, Jitesh D, **Approved as-is** —
-accepting all 3 open code-review findings as tracked debt rather than requesting fixes). **The gate
-(G4-shared-type-fix) is approved** — WebDesk Solution, decision CONFIRM, 2026-08-19. Merge
-authorization remains a separate, not-yet-requested next step.
+accepting all 3 open code-review findings as tracked debt rather than requesting fixes). The gate
+(G4-shared-type-fix) was approved — WebDesk Solution, decision CONFIRM, 2026-08-19. **PR #37 was
+then merged** — merge commit `013c620ce55172741daac7a82553fc8933758726` — and both Vercel projects
+were verified live at that exact commit. **This slice is now genuinely live in production.**
 
 ## Completion condition
 
