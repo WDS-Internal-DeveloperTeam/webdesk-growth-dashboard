@@ -31,14 +31,23 @@ export interface ServerSessionProfile {
 export interface ServerSessionSystemStatus {
   readonly environment: string | null;
   readonly isDegraded: boolean;
-  /** From `/health`'s `build` block — real deploy metadata for the Home page's Git/Release Status
-   *  widget. `null` together (never partially populated) when `/health` didn't return a `build`
-   *  block at all, e.g. the E2E test fixture and any environment that predates build-metadata
-   *  wiring. */
+  /** From `/health`'s `build` block — real build/runtime metadata for the Home page's Git/Release
+   *  Status widget. `null` together (never partially populated) when `/health` didn't return a
+   *  `build` block at all, e.g. the E2E test fixture and any environment that predates
+   *  build-metadata wiring.
+   *
+   *  `instanceStartedAt` is deliberately NOT called `deployedAt` — it's `processStartedAt` from
+   *  `/health` (module-load time of this one serverless Function instance), not a real deploy
+   *  timestamp. In this project's Vercel Functions architecture (warm-instance reuse, no
+   *  permanent worker), a warm instance can keep serving long after a newer deploy shipped
+   *  elsewhere, and a fresh cold start (autoscaling, not a deploy) can happen long after the real
+   *  deploy — so two callers hitting different instances of the *same* deployment can see two
+   *  different values here, and neither is guaranteed to match when the code actually shipped.
+   *  Labeling it "Deployed" would overclaim precision this value doesn't have. */
   readonly release: {
     readonly version: string;
     readonly commitShaShort: string;
-    readonly deployedAt: string;
+    readonly instanceStartedAt: string;
   } | null;
 }
 
@@ -142,7 +151,7 @@ async function fetchSystemStatus(apiBaseUrl: string): Promise<ServerSessionSyste
       ? {
           version: body.build.version,
           commitShaShort: body.build.commitShaShort,
-          deployedAt: body.build.processStartedAt,
+          instanceStartedAt: body.build.processStartedAt,
         }
       : null,
   };

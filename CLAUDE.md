@@ -1080,8 +1080,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     separate, not-yet-requested follow-up. **Superseded/extended same-branch by item 24 below** —
     the user then said the UI "still looks simple" even with the widget grid live, leading to the
     whole-app visual refresh.
-24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated, not
-    yet reviewed, gated, or merged (2026-08-19).** Not started automatically — after seeing item
+24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated,
+    code-reviewed, not yet security-reviewed, gated, or merged (2026-08-19).** Not started automatically — after seeing item
     23's widget grid live-rendered, the user said the UI "still looks simple." Rather than guess
     again in code, drafted 3 full visual directions (Current, "Enterprise Plus," "Modern SaaS") as
     a design canvas — a real mockup of the actual Home page content in each direction, not abstract
@@ -1109,11 +1109,35 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     `.click()` that the sidebar collapse toggle's own logic was never broken (an early real-browser
     click landing oddly was a Browser-pane automation-tool quirk, not a code bug — ruled out
     explicitly rather than assumed). See `docs/implementation/dashboard-web-visual-refresh.md` for
-    the full as-built record. Not yet reviewed, gated, or merged — code review, security review,
+    the full as-built record. **Independent code review then ran** (high effort, 8 finder angles,
+    against the full PR #39 diff covering both item 23 and this item) — 9 findings survived
+    verification (7 CONFIRMED, 2 PLAUSIBLE). All 7 CONFIRMED fixed: most severe, `toCssCustomProperties()`
+    (pre-existing, untouched by this PR) double-prefixed every typography CSS custom property
+    (`--webdesk-dashboard-font-font-family-base`, never the single-prefixed name every CSS consumer
+    actually referenced), so the new Sora/Public Sans fonts silently never applied anywhere — fixed
+    generically (skip the redundant prefix when the kebab key already starts with the group name),
+    verified live via `getComputedStyle`. Also fixed: the Git/Release Status widget's "Deployed"
+    label actually showed serverless cold-start time, not deploy time (renamed to "Instance
+    started" with a doc comment recording why); two reuse gaps (Project Health's status label/color
+    duplicating `projectStatusBadge()`; the Git/Release widget's fact rows duplicating the Project
+    Detail page's existing `Fact` component — now promoted to `packages/ui` and reused by both,
+    incidentally closing a live WCAG AA contrast gap in `Fact`'s original label styling); `IconBadge`
+    promoted to `packages/ui` (surfacing and fixing a real React-Server-Components bug along the
+    way — passing a raw icon component reference across the client-component boundary crashed the
+    page; fixed by switching to the `ReactNode` convention `IconButton` already uses elsewhere);
+    `moduleIcon()` now logs an unrecognized `iconReference` instead of silently absorbing it; and
+    the icon-only sidebar's per-module distinctiveness guarantee restored for modules with no
+    mapped icon (falls back to the module's own monogram, not one shared generic icon). 2 PLAUSIBLE
+    findings left as tracked debt (an unguarded status-badge lookup already accepted as debt on
+    sibling functions elsewhere in this codebase; a stale, currently-unreachable CSS fallback hex).
+    Re-validated: 162/162 `dashboard-web` unit tests (4 new), 79/79 `packages/ui` unit tests, 15/15
+    Playwright tests (both authenticated-shell axe-core scans still 0 violations),
+    typecheck/lint/`next build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
+    `docs/implementation/dashboard-web-visual-refresh.md` §6 for the full account. Security review,
     second-role human review, a gate decision, and merge authorization are each their own separate,
-    not-yet-requested next step, unchanged from this project's standing discipline. Since this
-    branch/PR is still unreviewed, both items 23 and 24's changes will go through that full cycle
-    together as one unit, not separately.
+    not-yet-requested next step. Since this branch/PR is still unreviewed on those fronts, both
+    items 23 and 24's changes will go through that remaining cycle together as one unit, not
+    separately.
 
 ## Recent decisions
 

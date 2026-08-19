@@ -257,7 +257,16 @@ export function toCssCustomProperties(): Readonly<Record<string, string>> {
   for (const [group, tokens] of groups) {
     for (const [key, value] of Object.entries(tokens)) {
       const kebabKey = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-      properties[`--webdesk-dashboard-${group}-${kebabKey}`] = String(value);
+      // Every `typographyTokens` key already starts with "font" (fontFamilyBase, fontSizeXs, …),
+      // so blindly prepending the group name again produced doubled names like
+      // `--webdesk-dashboard-font-font-family-base` — which no CSS consumer in this app ever
+      // referenced (every one, correctly, expects the single-prefixed name). That silently broke
+      // every font-family/font-size/font-weight custom-property lookup across the whole app; only
+      // exposed once real, visually distinct fonts were wired up (this PR), since the old fallback
+      // stack happened to already match the intended appearance. Skip the redundant prefix
+      // whenever the kebab-cased key already starts with the group name, for any group.
+      const propertyKey = kebabKey.startsWith(`${group}-`) ? kebabKey : `${group}-${kebabKey}`;
+      properties[`--webdesk-dashboard-${propertyKey}`] = String(value);
     }
   }
   return properties;

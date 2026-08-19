@@ -6,15 +6,18 @@ import {
   colorTokens,
   ContentContainer,
   EmptyState,
+  Fact,
+  IconBadge,
   NotConfiguredState,
   PageHeader,
-  radiusTokens,
   spacingTokens,
+  statusTokens,
   typographyTokens,
 } from "@webdesk/ui";
 import { formatTimestamp } from "@/lib/format-timestamp";
 import { moduleIcon } from "@/lib/module-icons";
 import { moduleImplementationStatusBadge } from "@/lib/modules";
+import { projectStatusBadge, type ProjectStatusFilter } from "@/lib/projects";
 import { getServerSession } from "@/lib/server-session";
 
 /**
@@ -49,40 +52,9 @@ const SECTION_TITLE_STYLE: React.CSSProperties = {
   marginBottom: spacingTokens.sm,
 };
 
-/** The tinted-circle icon treatment (design canvas "Enterprise Plus" direction) — shared by
- *  widget-card headers and module-grid rows below. */
-function IconBadge({
-  icon: Icon,
-  background,
-  foreground,
-  size = 40,
-}: {
-  readonly icon: LucideIcon;
-  readonly background: string;
-  readonly foreground: string;
-  readonly size?: number;
-}) {
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: radiusTokens.md,
-        background,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <Icon aria-hidden="true" size={Math.round(size * 0.45)} color={foreground} />
-    </div>
-  );
-}
-
 function WidgetCard({
   title,
-  icon,
+  icon: Icon,
   children,
 }: {
   readonly title: string;
@@ -99,11 +71,10 @@ function WidgetCard({
           marginBottom: spacingTokens.md,
         }}
       >
-        <IconBadge
-          icon={icon}
-          background={colorTokens.accentTint}
-          foreground={colorTokens.accent}
-        />
+        {/* `WidgetCard` itself runs server-side (no "use client"), so taking a component
+            reference here and rendering it into a real element is safe — the element (not the
+            bare function) is what actually crosses into `IconBadge`'s client boundary below. */}
+        <IconBadge icon={<Icon aria-hidden="true" size={18} color={colorTokens.accent} />} />
         <h3 style={WIDGET_TITLE_STYLE}>{title}</h3>
       </div>
       {children}
@@ -111,19 +82,7 @@ function WidgetCard({
   );
 }
 
-const PROJECT_STATUS_ORDER = ["active", "paused", "archived"] as const;
-const PROJECT_STATUS_LABEL: Readonly<Record<(typeof PROJECT_STATUS_ORDER)[number], string>> = {
-  active: "Active",
-  paused: "Paused",
-  archived: "Archived",
-};
-const PROJECT_STATUS_NUMERAL_COLOR: Readonly<
-  Record<(typeof PROJECT_STATUS_ORDER)[number], string>
-> = {
-  active: colorTokens.success,
-  paused: colorTokens.warning,
-  archived: colorTokens.foregroundSubtle,
-};
+const PROJECT_STATUS_ORDER: readonly ProjectStatusFilter[] = ["active", "paused", "archived"];
 
 export default async function HomePage() {
   const session = await getServerSession();
@@ -154,30 +113,33 @@ export default async function HomePage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.md }}>
               <div style={{ display: "flex", gap: spacingTokens.xl }}>
-                {projectCountsByStatus.map(({ status, count }) => (
-                  <div key={status}>
-                    <div
-                      style={{
-                        fontFamily: typographyTokens.fontFamilyDisplay,
-                        fontSize: typographyTokens.fontSize2xl,
-                        fontWeight: typographyTokens.fontWeightBold,
-                        color: PROJECT_STATUS_NUMERAL_COLOR[status],
-                        lineHeight: typographyTokens.lineHeightTight,
-                      }}
-                    >
-                      {count}
+                {projectCountsByStatus.map(({ status, count }) => {
+                  const { token, label } = projectStatusBadge(status);
+                  return (
+                    <div key={status}>
+                      <div
+                        style={{
+                          fontFamily: typographyTokens.fontFamilyDisplay,
+                          fontSize: typographyTokens.fontSize2xl,
+                          fontWeight: typographyTokens.fontWeightBold,
+                          color: statusTokens[token],
+                          lineHeight: typographyTokens.lineHeightTight,
+                        }}
+                      >
+                        {count}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: typographyTokens.fontSizeXs,
+                          fontWeight: typographyTokens.fontWeightSemibold,
+                          color: colorTokens.foregroundMuted,
+                        }}
+                      >
+                        {label}
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: typographyTokens.fontSizeXs,
-                        fontWeight: typographyTokens.fontWeightSemibold,
-                        color: colorTokens.foregroundMuted,
-                      }}
-                    >
-                      {PROJECT_STATUS_LABEL[status]}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <p
                 style={{
@@ -219,21 +181,27 @@ export default async function HomePage() {
                   <Badge bucket="informational" label={systemStatus.environment} />
                 ) : null}
               </div>
-              <dl style={{ margin: 0, fontSize: typographyTokens.fontSizeSm }}>
-                <div style={{ display: "flex", gap: spacingTokens.xs }}>
-                  <dt style={{ color: colorTokens.foregroundMuted }}>Version</dt>
-                  <dd style={{ margin: 0 }}>{systemStatus.release.version}</dd>
-                </div>
-                <div style={{ display: "flex", gap: spacingTokens.xs }}>
-                  <dt style={{ color: colorTokens.foregroundMuted }}>Commit</dt>
-                  <dd style={{ margin: 0, fontFamily: typographyTokens.fontFamilyMono }}>
+              <dl
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacingTokens.sm,
+                  margin: 0,
+                }}
+              >
+                <Fact label="Version">{systemStatus.release.version}</Fact>
+                <Fact label="Commit">
+                  <span style={{ fontFamily: typographyTokens.fontFamilyMono }}>
                     {systemStatus.release.commitShaShort}
-                  </dd>
-                </div>
-                <div style={{ display: "flex", gap: spacingTokens.xs }}>
-                  <dt style={{ color: colorTokens.foregroundMuted }}>Deployed</dt>
-                  <dd style={{ margin: 0 }}>{formatTimestamp(systemStatus.release.deployedAt)}</dd>
-                </div>
+                  </span>
+                </Fact>
+                {/* Not "Deployed" — this is when this one serverless Function instance's process
+                    started (cold start), which can diverge from the real deploy time under
+                    Vercel's warm-instance-reuse model. See ServerSessionSystemStatus.release's own
+                    doc comment (lib/server-session.ts) for the full reasoning. */}
+                <Fact label="Instance started">
+                  {formatTimestamp(systemStatus.release.instanceStartedAt)}
+                </Fact>
               </dl>
             </div>
           ) : (
@@ -276,7 +244,7 @@ export default async function HomePage() {
         >
           {navigation.map((module) => {
             const { bucket, label } = moduleImplementationStatusBadge(module.implementationStatus);
-            const Icon = moduleIcon(module.iconReference);
+            const { Icon } = moduleIcon(module.iconReference);
             return (
               <Card key={module.key} padded={false}>
                 <div
@@ -288,9 +256,7 @@ export default async function HomePage() {
                   }}
                 >
                   <IconBadge
-                    icon={Icon}
-                    background={colorTokens.accentTint}
-                    foreground={colorTokens.accent}
+                    icon={<Icon aria-hidden="true" size={16} color={colorTokens.accent} />}
                     size={36}
                   />
                   <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.xs }}>

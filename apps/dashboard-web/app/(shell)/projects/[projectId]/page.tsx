@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
-import { ContentContainer, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
+import { ContentContainer, Fact, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
 import { ProjectApproversSection } from "@/components/project-approvers-section";
 import { ProjectStatusActions } from "@/components/project-status-actions";
 import { ProjectTeamSection } from "@/components/project-team-section";
@@ -208,15 +207,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   );
 }
 
-function Fact({ label, children }: { readonly label: string; readonly children: ReactNode }) {
-  return (
-    <div style={factStyle}>
-      <dt style={factLabelStyle}>{label}</dt>
-      <dd style={factValueStyle}>{children}</dd>
-    </div>
-  );
-}
-
 const sectionStyle: React.CSSProperties = {
   marginBottom: "2rem",
 };
@@ -232,24 +222,6 @@ const dlStyle: React.CSSProperties = {
   gridTemplateColumns: "repeat(auto-fill, minmax(14rem, 1fr))",
   gap: "0.75rem 1.5rem",
   margin: "0 0 0.75rem",
-};
-
-const factStyle: React.CSSProperties = {
-  margin: 0,
-};
-
-const factLabelStyle: React.CSSProperties = {
-  fontSize: "0.75rem",
-  color: "var(--webdesk-dashboard-color-foreground-subtle)",
-  fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  margin: 0,
-};
-
-const factValueStyle: React.CSSProperties = {
-  fontSize: "0.9375rem",
-  margin: "0.15rem 0 0",
 };
 
 const monoStyle: React.CSSProperties = {

@@ -53,6 +53,16 @@ import {
  * "Enterprise Plus" direction's icon-per-nav-item/icon-per-module treatment needed — the data
  * was already there, `lucide-react` was the missing piece.
  */
+/**
+ * `keyof typeof ICON_MAP` (derived below, not hand-declared) gives internal-only compile-time
+ * exhaustiveness for this file's own logic — `Object.keys`/lookups against `ICON_MAP` stay
+ * type-checked against its real key set. It does NOT close the gap against the real wire type:
+ * `ModuleRegistrySummary.iconReference` (`packages/shared-types`) is `string | null`, not a
+ * literal union, because it's real backend data with no compiler-enforced tie to this frontend
+ * map — a schema-level fix (turning the database column into a literal-backed type shared across
+ * both apps) is its own separate, not-yet-requested scope. `moduleIcon()` below closes the other
+ * half of that gap at runtime: an unrecognized value is logged, not silently absorbed.
+ */
 const ICON_MAP: Readonly<Record<string, LucideIcon>> = {
   home: Home,
   briefcase: Briefcase,
@@ -99,8 +109,29 @@ const ICON_MAP: Readonly<Record<string, LucideIcon>> = {
   "shield-alert": ShieldAlert,
 };
 
+export interface ModuleIconResult {
+  readonly Icon: LucideIcon;
+  /** `true` when `iconReference` was `null` or didn't match any known value, so the caller can
+   *  decide how to handle the fallback case itself — e.g. the sidebar's icon-only collapsed state
+   *  falls back further, to a per-module monogram, so a module with no matching icon still looks
+   *  visually distinct from every other module rather than collapsing onto one shared generic
+   *  icon. */
+  readonly isFallback: boolean;
+}
+
 /** Falls back to `LayoutGrid` for a module whose `iconReference` is `null` or not one of the 43
- *  known values — never throws, since this reads real backend data across a network boundary. */
-export function moduleIcon(iconReference: string | null): LucideIcon {
-  return (iconReference && ICON_MAP[iconReference]) || LayoutGrid;
+ *  known values — never throws, since this reads real backend data across a network boundary.
+ *  Logs the miss (once it actually happens, not preemptively) so a future/renamed backend value
+ *  this map hasn't caught up with is visible in server logs instead of silently degrading
+ *  everywhere with no trace — the same "future value silently falls through" class of gap this
+ *  project has caught and fixed elsewhere (e.g. `AuthErrorReason`'s `isKnownReason()`). */
+export function moduleIcon(iconReference: string | null): ModuleIconResult {
+  if (iconReference) {
+    const Icon = ICON_MAP[iconReference];
+    if (Icon) {
+      return { Icon, isFallback: false };
+    }
+    console.error(`moduleIcon: unrecognized iconReference "${iconReference}", using fallback`);
+  }
+  return { Icon: LayoutGrid, isFallback: true };
 }

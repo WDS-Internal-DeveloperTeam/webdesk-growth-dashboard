@@ -17,6 +17,7 @@ import {
   Drawer,
   Dropdown,
   IconButton,
+  initialsFor,
   NotConfiguredState,
   Tooltip,
 } from "@webdesk/ui";
@@ -340,7 +341,7 @@ export function AppShell({
               ).map(({ clusterLabel, entry }) => {
                 const isActive = pathname === entry.route || pathname.startsWith(`${entry.route}/`);
                 const label = entry.displayName ?? entry.name;
-                const Icon = moduleIcon(entry.iconReference);
+                const { Icon, isFallback } = moduleIcon(entry.iconReference);
                 return (
                   <li key={entry.key}>
                     {clusterLabel && !isIconOnly ? (
@@ -354,7 +355,14 @@ export function AppShell({
                           aria-current={isActive ? "page" : undefined}
                           aria-label={label}
                         >
-                          <Icon aria-hidden="true" size={18} />
+                          {isFallback ? (
+                            // No real icon mapped for this module — fall back to its own
+                            // monogram rather than the shared generic icon, so it stays visually
+                            // distinct from every other unmapped module in icon-only mode.
+                            <span aria-hidden="true">{initialsFor(label)}</span>
+                          ) : (
+                            <Icon aria-hidden="true" size={18} />
+                          )}
                         </Link>
                       </Tooltip>
                     ) : (

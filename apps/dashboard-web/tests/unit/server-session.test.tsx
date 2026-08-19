@@ -153,7 +153,7 @@ describe("getServerSession — systemStatus.release", () => {
     expect(session?.systemStatus.release).toEqual({
       version: "1.2.3",
       commitShaShort: "abcdef1",
-      deployedAt: "2026-01-01T00:00:00Z",
+      instanceStartedAt: "2026-01-01T00:00:00Z",
     });
   });
 
