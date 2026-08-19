@@ -972,7 +972,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     unauthenticated visitor, confirming the session gate is intact. **The `AuthErrorReason`
     shared-type fix is now genuinely live in production.**
 22. **Remaining PR #36 accepted-debt items closed in one consolidated batch — built, fully
-    validated, not yet reviewed, gated, or merged (2026-08-19).** Not started automatically —
+    validated, code-reviewed, not yet security-reviewed, gated, or merged (2026-08-19).** Not
+    started automatically —
     built directly on the explicit "fix the sibling OIDC-cookie branch... and if anything
     remaining then please do it all together" instruction: rather than repeating the full
     code-review → security-review → second-role-review → gate → merge cycle once per item, every
@@ -1001,8 +1002,32 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     tests (5 new), 113/113 `dashboard-api` e2e tests (2 new, real disposable database), 28/28
     `packages/database` integration tests (unaffected), 151/151 `dashboard-web` unit tests (2
     new), typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean. Pushed
-    as branch `fix-remaining-session-exchange-debt`. Code review, security review, second-role
-    human review, a gate decision, and merge authorization are each their own separate,
+    as branch `fix-remaining-session-exchange-debt`, opened as
+    [PR #38](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/38).
+    **Independent code review then ran** (high effort, 8 finder angles) — 6 candidates verified
+    (3 CONFIRMED, 3 PLAUSIBLE). 4 fixed in the same round (all 3 CONFIRMED plus 1 cheap
+    PLAUSIBLE): a `NaN` `expiresAt` silently degraded the session cookie to session-only (the
+    Edge Runtime cookie serializer emits a literal `Max-Age=NaN` header that browsers then
+    ignore, rather than throwing) — fixed by extending `isSessionExchangeSuccessBody`'s
+    validation to reject an unparseable `expiresAt`; the new "invalid" OIDC-cookie status still
+    had no diagnostic detail distinguishing a JSON-parse failure from a shape mismatch — fixed
+    with a new `reason: "parse" | "shape"` field; `isSessionExchangeSuccessBody` claimed the full
+    response shape but never actually validated `success`/`correlationId`, an unsound type
+    predicate — fixed with explicit checks for both; and the shape-mismatch log branch logged the
+    raw response body, which could leak a live session token on a future contract drift — fixed
+    with a new `describeUnexpectedBody()` helper that logs only safe, values-free summary info.
+    2 findings left flagged, not fixed, as genuinely out of this PR's scope: `getServerSession()`'s
+    degrade-vs-throw pattern is now hand-repeated across 9+ `dashboard-web` call sites with no
+    shared helper (a real but much larger `dashboard-web` data-layer refactor), and
+    `OidcTransactionReadResult`'s `status: "ok"` discriminant diverges from
+    `ApiSuccessResponse`'s `success: true` convention (a naming-convention divergence, not a
+    functional bug — `OidcTransactionReadResult` never crosses a wire boundary, so forcing the
+    wire-format convention onto it would import unused assumptions). See
+    `docs/implementation/session-exchange.md` §10 for the full account. Re-validated: 375/375
+    `dashboard-api` unit tests (3 updated assertions), 113/113 `dashboard-api` e2e tests
+    (unchanged), 155/155 `dashboard-web` unit tests (4 new), typecheck/lint/`next build`/
+    `nest build`/`pnpm exec prettier --check` all clean. Security review, second-role human
+    review, a gate decision, and merge authorization are each their own separate,
     not-yet-requested next step, unchanged from this project's standing discipline — but bundled
     together as ONE pass across this whole batch, per the explicit instruction, not repeated per
     item.
@@ -3049,11 +3074,46 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   new), 113/113 `dashboard-api` e2e tests (2 new, real disposable database), 28/28
   `packages/database` integration tests (unaffected, confirmed still green), 151/151
   `dashboard-web` unit tests (2 new), typecheck/lint/`next build`/`nest build`/
-  `pnpm exec prettier --check` all clean. Pushed as branch `fix-remaining-session-exchange-debt`.
-  Not yet reviewed, gated, or merged — code review, security review, second-role human review, a
+  `pnpm exec prettier --check` all clean. Pushed as branch `fix-remaining-session-exchange-debt`,
+  opened as
+  [PR #38](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/38). Not
+  yet reviewed, gated, or merged — code review, security review, second-role human review, a
   gate decision, and merge authorization remain each their own separate, not-yet-requested next
   step, but — per the explicit instruction — bundled as ONE pass across this whole batch, not
   repeated per item.
+- `[2026-08-19]` **Independent code review run on `fix-remaining-session-exchange-debt` (PR #38),
+  high effort — 8 finder angles, 1-vote verification.** 6 candidates survived dedup (3 CONFIRMED,
+  3 PLAUSIBLE). 4 fixed in this same round per the "move forward now" authorization to proceed
+  through code review then security review as one pass: (1) a `NaN` `expiresAt` — `data.expiresAt`
+  was checked for being a `string` but not a _parseable_ date — flowed through
+  `Math.max(0, Math.floor(...))` (any `NaN` argument to `Math.max` propagates) into
+  `cookieStore.set(..., { maxAge: NaN })`; this doesn't throw — Next.js's Edge Runtime
+  `@edge-runtime/cookies` only checks `typeof maxAge === "number"`, and `typeof NaN === "number"`
+  is `true`, so it emits a literal `Max-Age=NaN` header that every mainstream browser then ignores
+  per RFC 6265, silently degrading the new session cookie to session-only; fixed by extending
+  `isSessionExchangeSuccessBody`'s validation to reject an unparseable `expiresAt` before any
+  cookie is set. (2) The new "invalid" OIDC-transaction-cookie status (from the prior fix round)
+  still collapsed a JSON-parse failure and a shape mismatch into one undifferentiated case with no
+  way for the log line to say which happened; fixed with a new `reason: "parse" | "shape"` field
+  on `OidcTransactionReadResult`'s `"invalid"` variant. (3) `isSessionExchangeSuccessBody` claimed
+  the full response shape (`success`/`correlationId` included, via `ApiSuccessResponse<T>`) but
+  only ever validated `data`'s leaf fields — an unsound type predicate that let unchecked fields be
+  trusted as compiler-guaranteed-present; fixed with explicit `success !== true`/
+  `typeof correlationId !== "string"` checks. (4, PLAUSIBLE) the shape-mismatch log branch logged
+  the raw response body directly, which could leak a live, redeemable session token on a future
+  backend contract drift; fixed with a new `describeUnexpectedBody()` helper logging only a safe,
+  values-free summary (`typeOf` or `topLevelKeys`, never field values). 2 findings left flagged,
+  not fixed, as genuinely larger in scope than this PR: `getServerSession()`'s degrade-vs-throw
+  pattern is now hand-repeated across 9+ `dashboard-web` call sites with no shared helper (a real
+  `dashboard-web` data-layer refactor, out of scope for a debt-closure PR); and
+  `OidcTransactionReadResult`'s `status: "ok"` discriminant diverges from the codebase's
+  `ApiSuccessResponse`/`success: true` convention (a naming-convention observation, not a
+  functional bug — this type never crosses a wire boundary, so importing that convention's
+  wire-format assumptions has no real use here). See `docs/implementation/session-exchange.md`
+  §10 for the full account. Re-validated: 375/375 `dashboard-api` unit tests (3 updated
+  assertions), 113/113 `dashboard-api` e2e tests (unchanged), 155/155 `dashboard-web` unit tests
+  (4 new), typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean across
+  both apps. Security review remains the next step, per the same "one pass" plan.
 
 ## Open client blockers
 

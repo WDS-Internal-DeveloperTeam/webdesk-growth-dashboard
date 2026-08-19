@@ -52,11 +52,16 @@ export function setOidcTransactionCookie(
  * foreign cookie, or a future schema change to this cookie's own shape — and the caller should
  * treat it as a genuine error, not silently fold it into "expired" (see
  * `GoogleAuthController#callback`'s use of this distinction, and
- * `docs/implementation/session-exchange.md` §9 for the incident class this closes).
+ * `docs/implementation/session-exchange.md` §9 for the incident class this closes). `reason`
+ * distinguishes the two ways a cookie can be "invalid" — `"parse"` (not valid JSON at all, most
+ * likely truncation/corruption in transit) vs. `"shape"` (valid JSON, wrong/missing fields, most
+ * likely a real schema-drift bug) — so the caller's log line can actually say which one happened,
+ * instead of a single undifferentiated "malformed" that leaves on-call unable to tell transport
+ * corruption from a real code bug.
  */
 export type OidcTransactionReadResult =
   | { readonly status: "missing" }
-  | { readonly status: "invalid" }
+  | { readonly status: "invalid"; readonly reason: "parse" | "shape" }
   | { readonly status: "ok"; readonly transaction: OidcTransaction };
 
 export function readOidcTransactionCookie(req: Request, env: AuthEnv): OidcTransactionReadResult {
@@ -65,14 +70,15 @@ export function readOidcTransactionCookie(req: Request, env: AuthEnv): OidcTrans
   if (!raw) {
     return { status: "missing" };
   }
+  let parsed: unknown;
   try {
-    const parsed: unknown = JSON.parse(raw);
-    return isOidcTransaction(parsed)
-      ? { status: "ok", transaction: parsed }
-      : { status: "invalid" };
+    parsed = JSON.parse(raw);
   } catch {
-    return { status: "invalid" };
+    return { status: "invalid", reason: "parse" };
   }
+  return isOidcTransaction(parsed)
+    ? { status: "ok", transaction: parsed }
+    : { status: "invalid", reason: "shape" };
 }
 
 export function clearOidcTransactionCookie(res: Response, env: AuthEnv): void {

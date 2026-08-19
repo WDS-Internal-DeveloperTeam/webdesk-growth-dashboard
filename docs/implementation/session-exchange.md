@@ -450,3 +450,86 @@ tracked debt from the most recent prior review
 confirmed still green), 149/149 → 151/151 `dashboard-web` unit tests (2 new), typecheck/lint/
 `next build`/`nest build`/`pnpm exec prettier --check` all clean across `apps/dashboard-api` and
 `apps/dashboard-web`.
+
+## 10. Independent code review on the consolidated batch (PR #38, 2026-08-19)
+
+This project's own `code-review` skill ran against the consolidated branch above
+(`fix-remaining-session-exchange-debt`, PR #38) at high effort (8 finder angles, 1-vote
+verification). 6 candidates survived dedup — 3 CONFIRMED, 3 PLAUSIBLE. 4 fixed in this same round
+(3 CONFIRMED + 1 cheap PLAUSIBLE), 2 left as flagged, tracked debt (both genuinely larger in scope
+than this PR's stated purpose), matching the same "bundle it, don't repeat the cycle per finding"
+instruction that produced this whole consolidated PR in the first place.
+
+### 10a. `NaN` `expiresAt` silently degrades the session cookie to session-only (fixed)
+
+`isSessionExchangeSuccessBody` (§9b) validated `expiresAt` was a `string`, but not that it was a
+_parseable_ date. An unparseable value flowed into
+`Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))` —
+`Math.max`'s `NaN` propagation means the whole expression evaluates to `NaN`, so
+`cookieStore.set(cookieName, sessionToken, { maxAge: NaN, ... })` was reached. This doesn't throw:
+Next.js's Edge Runtime `@edge-runtime/cookies` package's `stringifyCookie` only checks
+`typeof maxAge === "number"` before emitting it, and `typeof NaN === "number"` is `true` — so it
+emits a literal `Max-Age=NaN` header, which every mainstream browser then ignores per RFC 6265,
+silently degrading the newly-issued session cookie to session-only (cleared on browser close)
+instead of failing loudly. **Fixed** by extending `isSessionExchangeSuccessBody`'s validation to
+`!Number.isNaN(new Date(expiresAt).getTime())`, so an unparseable `expiresAt` now fails the type
+guard entirely and redirects `reason=error` before any cookie is ever set. New coverage: a new
+`auth-exchange-route.test.tsx` test asserting `setCookie` is never called when `expiresAt` isn't a
+parseable date.
+
+### 10b. Invalid-cookie log line still had no diagnostic detail (fixed)
+
+§9a's `"invalid"` status collapsed a JSON-parse failure and a shape-mismatch failure into one
+undifferentiated case, so the resulting log line couldn't say which one actually happened —
+exactly the "something's wrong but not what" gap this whole fix round exists to close, just one
+level deeper. **Fixed** by widening `OidcTransactionReadResult`'s `"invalid"` variant with a
+`reason: "parse" | "shape"` field, and updating `GoogleAuthController#callback`'s log line to
+include it. `oidc-transaction.spec.ts`'s three "invalid" test cases updated to assert the specific
+`reason`.
+
+### 10c. `isSessionExchangeSuccessBody` didn't actually validate `success`/`correlationId` (fixed)
+
+The type predicate claimed the full `SessionExchangeSuccessBody` shape (including `success: true`
+and `correlationId: string`, inherited from `ApiSuccessResponse<T>`) but only checked `data`'s leaf
+fields, letting `success`/`correlationId` be trusted as compiler-guaranteed-present without ever
+being validated — an unsound predicate. **Fixed** by adding explicit `success !== true` /
+`typeof correlationId !== "string"` checks before the `data` checks. New coverage: a new
+`auth-exchange-route.test.tsx` test asserting a 200 response with valid-looking `data` but a
+missing `success`/`correlationId` still redirects `reason=error`.
+
+### 10d. Shape-mismatch log could leak a live session token (fixed, PLAUSIBLE)
+
+§9b's shape-mismatch branch logged the raw response body directly. On a future backend response-
+contract drift, that body could still carry a real, redeemable `sessionToken` alongside the one
+field that actually changed — the raw log would then write a live credential into Vercel's log
+storage. **Fixed** with a new `describeUnexpectedBody()` helper that logs only a safe, values-free
+summary (`{ typeOf }` for a non-object body, `{ topLevelKeys }` for an object) instead of the raw
+body. New coverage: a new `auth-exchange-route.test.tsx` test that plants a real-looking secret
+value as `sessionToken` in a shape-mismatched response and asserts it never appears in any
+`console.error` call argument (via `JSON.stringify` containment check across every logged arg).
+
+### 10e. `getServerSession()`'s degrade-vs-throw pattern duplicated across 9+ call sites (flagged, not fixed)
+
+The pattern this whole fix round has now applied piecemeal — distinguish a 404/403 (degrade
+gracefully) from a genuine failure (throw/log) — is hand-repeated across `getServerSession()` and
+8+ other `dashboard-web` `lib/*.ts` call sites (`getProjectDetail`, `getUser`, `getUsersByIds`,
+etc.) with no shared helper. Real, but genuinely larger in scope than this PR's stated purpose
+(closing specific accepted-debt findings, not a `dashboard-web` data-layer refactor) — flagged
+here, left as tracked debt for a future, separately-scoped pass.
+
+### 10f. `OidcTransactionReadResult`'s `status: "ok"` diverges from the `success: true` convention (flagged, not fixed)
+
+`packages/shared-types`' `ApiSuccessResponse`/`ApiErrorResponse` convention discriminates on
+`success: boolean`; `OidcTransactionReadResult` (§9a) discriminates on
+`status: "ok" | "missing" | "invalid"` — a naming-convention divergence, not a functional bug. Not
+fixed: `OidcTransactionReadResult` isn't a wire-format type (it never crosses a network boundary,
+unlike `ApiSuccessResponse`), so forcing it into the same shape would import that convention's
+assumptions (e.g. an `error` payload field) with no real use for them here. Flagged for awareness,
+not changed.
+
+### Validation
+
+375/375 `dashboard-api` unit tests (3 updated assertions, no new test files), 113/113
+`dashboard-api` e2e tests (unchanged), 151/151 → 155/155 `dashboard-web` unit tests (4 new),
+typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean across
+`apps/dashboard-api` and `apps/dashboard-web`.

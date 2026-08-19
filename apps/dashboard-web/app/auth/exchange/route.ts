@@ -68,12 +68,22 @@ type SessionExchangeSuccessBody = ApiSuccessResponse<{
  * proxy/CDN substituting its own JSON body), crashing this route with an uncaught exception
  * instead of a clean redirect to `/auth/error` — the exact failure mode every other branch in this
  * file already guards against.
+ *
+ * Checks `success`/`correlationId` too, not just `data`'s leaf fields — the type predicate claims
+ * the full `SessionExchangeSuccessBody` shape, so leaving those two unchecked would let later code
+ * trust them as compiler-guaranteed-present when they were never actually validated. `expiresAt`
+ * is also checked for being a *parseable* date, not just a string — an unparseable value would
+ * otherwise flow into `new Date(expiresAt).getTime()` as `NaN`, silently degrading the session
+ * cookie's `Max-Age` to an invalid value instead of failing loudly here.
  */
 function isSessionExchangeSuccessBody(value: unknown): value is SessionExchangeSuccessBody {
   if (typeof value !== "object" || value === null) {
     return false;
   }
-  const data = (value as { data?: unknown }).data;
+  const { success, data, correlationId } = value as Record<string, unknown>;
+  if (success !== true || typeof correlationId !== "string") {
+    return false;
+  }
   if (typeof data !== "object" || data === null) {
     return false;
   }
@@ -81,8 +91,23 @@ function isSessionExchangeSuccessBody(value: unknown): value is SessionExchangeS
   return (
     typeof sessionToken === "string" &&
     typeof expiresAt === "string" &&
+    !Number.isNaN(new Date(expiresAt).getTime()) &&
     typeof cookieName === "string"
   );
+}
+
+/**
+ * A safe, values-free summary of a response body that failed `isSessionExchangeSuccessBody` — logs
+ * enough to diagnose *what* was missing/wrong-shaped without ever printing field values. The
+ * shape-mismatch case this guards is the one path in this file where the response body could, on a
+ * future backend drift, still carry a real `sessionToken` alongside the one field that changed —
+ * logging the raw body here would risk that live credential landing in server logs.
+ */
+function describeUnexpectedBody(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) {
+    return { typeOf: typeof value };
+  }
+  return { topLevelKeys: Object.keys(value) };
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -154,7 +179,7 @@ export async function GET(request: Request): Promise<Response> {
       request,
       "error",
       "auth/exchange: POST /auth/exchange returned an unexpected response shape",
-      body,
+      describeUnexpectedBody(body),
     );
   }
   const { sessionToken, expiresAt, cookieName } = body.data;

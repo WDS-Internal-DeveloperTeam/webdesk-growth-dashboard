@@ -72,9 +72,12 @@ export class GoogleAuthController {
       // A cookie WAS sent but didn't parse or match the expected shape — a real anomaly (the
       // sibling of the sessionExchange.issue() masking bug this same file already fixed once),
       // not a routine expiry. Logged and labeled reason=error so it doesn't silently masquerade
-      // as "you waited too long," same reasoning as every other reason=error branch below.
+      // as "you waited too long," same reasoning as every other reason=error branch below. The
+      // logged reason ("parse" vs "shape") distinguishes transport corruption from a real
+      // schema-drift bug — collapsing both into one undifferentiated message would reproduce the
+      // exact "something's wrong but not what" gap this whole fix exists to close.
       console.error(
-        "GoogleAuthController#callback: OIDC transaction cookie present but malformed/invalid",
+        `GoogleAuthController#callback: OIDC transaction cookie present but malformed/invalid (${transactionResult.reason})`,
       );
       this.redirectToAuthError(res, "error");
       return;

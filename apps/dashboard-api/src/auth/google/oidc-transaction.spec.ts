@@ -26,22 +26,24 @@ describe("readOidcTransactionCookie", () => {
     });
   });
 
-  it("returns status: 'invalid' — not 'missing' — for a cookie that isn't valid JSON", () => {
+  it("returns status: 'invalid', reason: 'parse' — not 'missing' — for a cookie that isn't valid JSON", () => {
     expect(readOidcTransactionCookie(requestWithCookie("not-json{"), env)).toEqual({
       status: "invalid",
+      reason: "parse",
     });
   });
 
-  it("returns status: 'invalid' — not 'missing' — for a cookie that parses but is missing required fields", () => {
+  it("returns status: 'invalid', reason: 'shape' — not 'missing' — for a cookie that parses but is missing required fields", () => {
     expect(
       readOidcTransactionCookie(requestWithCookie(JSON.stringify({ state: "s" })), env),
-    ).toEqual({ status: "invalid" });
+    ).toEqual({ status: "invalid", reason: "shape" });
   });
 
-  it("returns status: 'invalid' for a cookie whose fields are the wrong type", () => {
+  it("returns status: 'invalid', reason: 'shape' for a cookie whose fields are the wrong type", () => {
     const malformed = { state: 1, nonce: "n", codeVerifier: "v" };
     expect(readOidcTransactionCookie(requestWithCookie(JSON.stringify(malformed)), env)).toEqual({
       status: "invalid",
+      reason: "shape",
     });
   });
 });
