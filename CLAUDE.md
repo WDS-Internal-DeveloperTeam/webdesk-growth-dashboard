@@ -1158,9 +1158,10 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     divergences from the approved mockup (sidebar theme, module-grid column count) on the live
     page, leading to a follow-up fix.
 25. **`dashboard-web` sidebar & module-grid fix — built, fully validated, code-reviewed,
-    security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"), and gated
-    (G4-sidebar-grid-fix, WebDesk Solution, CONFIRM); not yet merged (2026-08-19).** Not started
-    automatically — after item 24 went live,
+    security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"), gated
+    (G4-sidebar-grid-fix, WebDesk Solution, CONFIRM), and merged (PR #40, merge commit
+    `bd9743966a8b2406eac7656ccb0e8d502463acde`) — now genuinely live in production
+    (2026-08-19).** Not started automatically — after item 24 went live,
     the user pointed at two real screenshots (the live production page vs. the approved "Home
     Visual Directions" mockup) and said directly: the module grid should show 4 tiles, not 5, and
     the sidebar doesn't match the mockup's dark theme. Fixed both, reusing existing tokens: the
@@ -1202,9 +1203,13 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     Solution, decision CONFIRM, approved commit `c49904a` on branch
     `dashboard-web-sidebar-grid-fix` — see
     `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section.
-    **This gate approval does not itself authorize merging PR #40 or a production deployment** —
-    merge remains its own separate, not-yet-requested authorization, per this project's standing
-    "no auto-merge" rule.
+    **"Merge PR #40" was then separately requested and executed** — merge commit
+    `bd9743966a8b2406eac7656ccb0e8d502463acde`, all 14 CI checks green beforehand. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correctly redirects an
+    unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` sidebar & module-grid fix is
+    now genuinely live in production.**
 
 ## Recent decisions
 
@@ -3503,6 +3508,16 @@ build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
   **This gate approval does not itself authorize merging PR #40 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-19]` **"Merge PR #40" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `bd9743966a8b2406eac7656ccb0e8d502463acde`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/home` correctly redirects an unauthenticated visitor to `/auth/sign-in`,
+  confirming the session gate is intact. **The `dashboard-web` sidebar & module-grid fix is now
+  genuinely live in production.**
 
 ## Open client blockers
 

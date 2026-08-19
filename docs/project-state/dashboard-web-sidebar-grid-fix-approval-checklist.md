@@ -6,7 +6,12 @@ second-role human review complete (2026-08-19, Jitesh D, "Approved as-is"), acce
 PLAUSIBLE code-review findings as tracked debt. The gate (G4-sidebar-grid-fix) was approved —
 WebDesk Solution, decision CONFIRM, 2026-08-19, approved commit `c49904a` on branch
 `dashboard-web-sidebar-grid-fix` — see `outputs/webdesk-growth-dashboard/project.json`'s
-`gates[]`. Merge authorization remains a separate, not-yet-requested next step.
+`gates[]`. **"Merge PR #40" was then separately requested and executed** — merge commit
+`bd9743966a8b2406eac7656ccb0e8d502463acde`, all 14 CI checks green beforehand. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly — `dashboard-api`'s `/health`
+returned `build.commitSha == bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s
+`/home` correctly redirects an unauthenticated visitor to `/auth/sign-in`. **The dashboard-web
+sidebar & module-grid fix is now genuinely live in production.**
 
 ## Completion condition
 
