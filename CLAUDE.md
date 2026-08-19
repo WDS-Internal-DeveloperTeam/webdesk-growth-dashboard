@@ -911,8 +911,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     requested and completed** — see the dedicated 2026-08-19 "Recent decisions" entries below for
     both. **This slice is now genuinely live in production.**
 21. **`AuthErrorReason` shared-type fix — built, fully validated, code-reviewed,
-    security-reviewed, review packet prepared, not yet second-role reviewed, gated, or merged
-    (2026-08-19).** Closes one of item 20's 5 accepted-debt findings. Not started
+    security-reviewed, second-role human reviewed, not yet gated or merged (2026-08-19).** Closes
+    one of item 20's 5 accepted-debt findings. Not started
     automatically — built directly on the explicit "fix the shared-type duplication finding"
     instruction. The `reason` taxonomy for `/auth/error` (`expired`/`access_denied`/`error`) was
     previously declared independently in `dashboard-api` (bare untyped strings) and
@@ -953,10 +953,11 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     React JSX. A review packet (published as a Claude artifact — code review + security review
     findings, fixes, and the 3 open items, with an explicit decision section) was prepared for the
     required second-role human review, since the implementing agent cannot also be its own
-    reviewer (ADR-0010). See
-    `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`. Second-role human
-    review, a gate decision, and merge authorization are each their own separate, not-yet-requested
-    next step, unchanged from this project's standing discipline.
+    reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting all 3
+    open findings as tracked debt rather than requesting fixes — see
+    `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`'s "Sign-off"
+    section. A gate decision and merge authorization remain separate, not-yet-requested next
+    steps, unchanged from this project's standing discipline.
 
 ## Recent decisions
 
@@ -2943,6 +2944,13 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   agent cannot also be its own reviewer (ADR-0010). See
   `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`. Second-role human
   review, a gate decision, and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **Required second-role human review complete for
+  `fix-auth-error-reason-shared-type` (PR #37).** The review packet (code review + security review
+  findings, fixes, and the 3 open items, with an explicit decision section) was reviewed. **Jitesh
+  D reviewed it and returned "Approved as-is,"** accepting all 3 open PLAUSIBLE findings as tracked
+  debt rather than requesting fixes. See
+  `docs/project-state/fix-auth-error-reason-shared-type-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
