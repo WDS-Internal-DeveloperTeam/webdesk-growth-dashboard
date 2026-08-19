@@ -857,13 +857,13 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     `dashboard-api`'s `/health` returned `build.commitSha ==
 2c53a526fc61e91c13b0a385ef9d895adc948896`, confirming the exact merged commit is what's serving;
     `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
-    unauthenticated visitor, confirming the session gate is intact. **The cross-domain
-    session-exchange fix for Google SSO login is now genuinely live in production** — closing out
-    this slice's full build-to-production arc. Migration `00046` (`session_exchange_codes`) has
-    not yet been run against the real production database — until it is, any real login attempt
-    hitting the new `/auth/exchange` code path will fail at the database layer; this remains a
-    separate, not-yet-requested next step, per this project's standing credential-handling
-    discipline (the user runs production migrations themselves, in their own terminal).
+    unauthenticated visitor, confirming the session gate is intact. Migration `00046`
+    (`session_exchange_codes`) was then run against production (user ran it themselves, same
+    credential-handling discipline as every prior production migration). **The real Google SSO
+    login was then verified end-to-end in production and completed successfully** — closing the
+    exact bug this slice was built to fix. One real incident occurred along the way, diagnosed and
+    resolved same-day: see the 2026-08-19 "Recent decisions" entry below. **The cross-domain
+    session-exchange fix for Google SSO login is now genuinely live and working in production.**
 
 ## Recent decisions
 
@@ -2685,6 +2685,36 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   it is; running it remains a separate, not-yet-requested next step, per this project's standing
   credential-handling discipline (the user runs production migrations themselves, in their own
   terminal).
+- `[2026-08-19]` **Migration `00046` run against production, then a real, same-day incident
+  diagnosed and resolved: a Google SSO login attempted before the migration had actually landed
+  failed with the generic "Your sign-in attempt expired" message.** User ran
+  `pnpm --filter @webdesk/database run migrate` themselves (`prod-db.env` sourced in their own
+  terminal, same discipline as every prior production migration) — output confirmed
+  `Applied 1 migration(s): 00046-create-session-exchange-codes`. A real sign-in attempt
+  immediately after reported "Sign-in failed — Your sign-in attempt expired. Please try again."
+  Diagnosed directly from live Vercel runtime logs (via the user's own authenticated Chrome
+  session on their Mac mini, paired through the extension's device-pairing flow — the sandboxed
+  Browser pane has no Vercel login, same pattern as every prior live-log diagnosis this project has
+  needed): two `GoogleAuthController#callback` errors at `10:07:37`/`10:07:44` UTC —
+  `failed to issue session-exchange code`, a real Postgres `42P01` (`undefined_table`) error on
+  `INSERT INTO "session_exchange_codes"`. **Root cause: the login attempt raced the migration** —
+  it happened before `00046` had actually applied, so the table didn't exist yet at that exact
+  moment; not a bug in the session-exchange code itself. No further errors were logged after
+  `10:07:44`, and the very next real sign-in attempt (after the migration had genuinely landed)
+  **completed successfully**, confirmed directly by the user. **A real, separate gap was found
+  along the way and flagged, not fixed**: `dashboard-web`'s `/auth/exchange` route
+  (`app/auth/exchange/route.ts`) currently maps _every_ failure — a missing code, a misconfigured
+  `NEXT_PUBLIC_API_BASE_URL`, a network failure reaching `dashboard-api`, a malformed response
+  body, and any non-2xx status from `POST /auth/exchange` **including a genuine backend 500** — to
+  the same generic `reason=expired` message via its `redirectToAuthError()` helper. Only the
+  `400` case (`redeem()` returning `null`, a genuinely invalid/expired code) actually means what
+  the message says; every other case is a real error being mislabeled as an expired code, which is
+  exactly what made this incident briefly ambiguous before the logs settled it. Recorded here as
+  known, tracked debt — not fixed under this diagnosis, since fixing it means changing
+  `route.ts`'s error taxonomy (e.g. distinct `reason` values per failure class), its own separate,
+  not-yet-requested scope. **The cross-domain session-exchange fix for Google SSO login is now
+  fully verified working end-to-end in production** — closing the original bug this whole PR #35
+  effort was built to fix.
 
 ## Open client blockers
 
