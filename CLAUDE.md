@@ -1081,7 +1081,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     the user then said the UI "still looks simple" even with the widget grid live, leading to the
     whole-app visual refresh.
 24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated,
-    code-reviewed, not yet security-reviewed, gated, or merged (2026-08-19).** Not started automatically — after seeing item
+    code-reviewed, security-reviewed, review packet published for second-role human review; not
+    yet second-role reviewed, gated, or merged (2026-08-19).** Not started automatically — after seeing item
     23's widget grid live-rendered, the user said the UI "still looks simple." Rather than guess
     again in code, drafted 3 full visual directions (Current, "Enterprise Plus," "Modern SaaS") as
     a design canvas — a real mockup of the actual Home page content in each direction, not abstract
@@ -1133,11 +1134,24 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     Re-validated: 162/162 `dashboard-web` unit tests (4 new), 79/79 `packages/ui` unit tests, 15/15
     Playwright tests (both authenticated-shell axe-core scans still 0 violations),
     typecheck/lint/`next build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
-    `docs/implementation/dashboard-web-visual-refresh.md` §6 for the full account. Security review,
-    second-role human review, a gate decision, and merge authorization are each their own separate,
-    not-yet-requested next step. Since this branch/PR is still unreviewed on those fronts, both
-    items 23 and 24's changes will go through that remaining cycle together as one unit, not
-    separately.
+    `docs/implementation/dashboard-web-visual-refresh.md` §6 for the full account. **Security
+    review then run separately, against the fixed branch (commit `a71d2bc`) — 0 findings above
+    threshold.** Confirmed: no new user input reaches a dangerous sink (icon references, module
+    status, project status, and release metadata are all backend-sourced from already-RBAC-gated
+    responses, not attacker-controlled input); no `dangerouslySetInnerHTML` or other unsafe-render
+    method introduced; the new `moduleIcon()` log call carries only a registry icon-name key, never
+    PII; no auth/session/cookie/`OriginCheckGuard`/`PermissionGuard` logic touched —
+    presentation-only on already-authenticated, already-permission-filtered data; the
+    `deployedAt` → `instanceStartedAt` rename is a labeling correction, not a new exposure;
+    `next/font/google` self-hosts both font files at build time with no new runtime third-party
+    call. **A review packet (published as a Claude artifact — code review + security review
+    findings, fixes, and validation evidence, with a decision section) was then prepared for the
+    required second-role human review, since the implementing agent cannot also be its own
+    reviewer (ADR-0010).** See `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`.
+    **Awaiting the second-role reviewer's decision** — a gate decision and merge authorization
+    remain separate, not-yet-requested next steps. Since this branch/PR is still unreviewed on
+    those fronts, both items 23 and 24's changes will go through that remaining cycle together as
+    one unit, not separately.
 
 ## Recent decisions
 
@@ -3286,6 +3300,38 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   not just typechecked blind. See "Active tasks" item 24 and
   `docs/implementation/dashboard-web-visual-refresh.md` for the full account. Not yet reviewed,
   gated, or merged — will go through that cycle together with item 23 as one unit.
+- `[2026-08-19]` **Independent code review run on `dashboard-web-home-widget-grid` (PR #39), high
+  effort — 8-angle finder pass against the full diff covering both items 23 and 24.** 9 findings
+  survived verification (7 CONFIRMED, 2 PLAUSIBLE). All 7 CONFIRMED fixed per explicit "fix the
+  confirmed findings" instruction — most severe, `toCssCustomProperties()` (pre-existing,
+  untouched by this PR) double-prefixed every typography CSS custom property, so the new
+  Sora/Public Sans fonts silently never applied anywhere in the app; fixed generically and
+  verified live via `getComputedStyle`. Also fixed: the Git/Release widget's "Deployed" label
+  actually showing serverless cold-start time (renamed to "Instance started"); two reuse gaps
+  (`projectStatusBadge()`, a duplicated `Fact` component now promoted to `packages/ui`); a real
+  React-Server-Components crash from promoting `IconBadge` into a `"use client"` file (fixed by
+  switching its `icon` prop to `ReactNode`); `moduleIcon()` now logging an unrecognized
+  `iconReference`; and the icon-only sidebar's per-module distinctiveness restored via a monogram
+  fallback. 2 PLAUSIBLE findings left as tracked debt. Re-validated: 162/162 `dashboard-web` unit
+  tests (4 new), 79/79 `packages/ui` unit tests, 15/15 Playwright tests, typecheck/lint/`next
+build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
+  `docs/implementation/dashboard-web-visual-refresh.md` §6 for the full account.
+- `[2026-08-19]` **Security review run on `dashboard-web-home-widget-grid` (PR #39), separately
+  from the code review, against the fixed branch (commit `a71d2bc`).** 0 findings above threshold
+  — confirmed no new user input reaches a dangerous sink (icon references, module status, project
+  status, and release metadata are all backend-sourced from already-RBAC-gated responses); no
+  `dangerouslySetInnerHTML` or other unsafe-render method introduced; the new `moduleIcon()` log
+  call carries only a registry icon-name key, never PII; no auth/session/cookie/
+  `OriginCheckGuard`/`PermissionGuard` logic touched (presentation-only on already-authenticated,
+  already-permission-filtered data); the `deployedAt` → `instanceStartedAt` rename is a labeling
+  correction, not a new exposure; `next/font/google` self-hosts both font files at build time with
+  no new runtime third-party call. A review packet (published as a Claude artifact — code review +
+  security review findings, fixes, and validation evidence, with a decision section) was then
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`. **Awaiting the
+  second-role reviewer's decision** — a gate decision and merge authorization remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
