@@ -1026,11 +1026,20 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     `docs/implementation/session-exchange.md` §10 for the full account. Re-validated: 375/375
     `dashboard-api` unit tests (3 updated assertions), 113/113 `dashboard-api` e2e tests
     (unchanged), 155/155 `dashboard-web` unit tests (4 new), typecheck/lint/`next build`/
-    `nest build`/`pnpm exec prettier --check` all clean. Security review, second-role human
-    review, a gate decision, and merge authorization are each their own separate,
-    not-yet-requested next step, unchanged from this project's standing discipline — but bundled
-    together as ONE pass across this whole batch, per the explicit instruction, not repeated per
-    item.
+    `nest build`/`pnpm exec prettier --check` all clean. **A separate `security-review` skill run
+    then found 0 findings above threshold** — both changed areas confirmed to preserve prior
+    security-relevant behavior exactly while adding diagnostics/validation that didn't exist
+    before; no new bypass, no weakened check, no attacker-controlled data reaching a redirect
+    target, query, or unsafe render sink. A review packet (published as a Claude artifact — the
+    consolidated-batch account, the round-2 code-review findings/fixes, the security-review
+    disposition, and validation evidence, with a decision section) was prepared for the required
+    second-role human review, since the implementing agent cannot also be its own reviewer
+    (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open
+    PLAUSIBLE code-review findings as tracked debt rather than requesting fixes — see
+    `docs/project-state/fix-remaining-session-exchange-debt-approval-checklist.md`'s "Sign-off"
+    section. A gate decision and merge authorization remain separate, not-yet-requested next
+    steps, unchanged from this project's standing discipline — but bundled together as ONE pass
+    across this whole batch, per the explicit instruction, not repeated per item.
 
 ## Recent decisions
 
@@ -3114,6 +3123,27 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   assertions), 113/113 `dashboard-api` e2e tests (unchanged), 155/155 `dashboard-web` unit tests
   (4 new), typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean across
   both apps. Security review remains the next step, per the same "one pass" plan.
+- `[2026-08-19]` **Security review run on `fix-remaining-session-exchange-debt` (PR #38),
+  separately from the code review.** 0 findings above threshold. Confirmed both changed areas
+  preserve prior security-relevant behavior exactly while adding diagnostics/validation that
+  didn't exist before: the `"missing"` vs `"invalid"` OIDC-cookie split both still redirect to
+  `/auth/error` in every case (no bypass, state/nonce/PKCE verification untouched);
+  `isSessionExchangeSuccessBody()` only adds a runtime check that didn't exist before (the prior
+  code trusted an unchecked TS cast); `describeUnexpectedBody()` deliberately avoids logging raw
+  response-body values that could carry a live, redeemable session token on a future contract
+  drift; the exchange-code redemption path's atomic single-use conditional-UPDATE and 60s TTL are
+  untouched. Two informational, not-a-vulnerability observations were considered and excluded per
+  standing review criteria (the type guard not rejecting empty-string `sessionToken`/`cookieName`
+  — no realistic exploit, the response originates from this route's own trusted server-to-server
+  call; and the "invalid" branch logging a fixed diagnostic plus a two-value enum — log-spoofing
+  class). A review packet (published as a Claude artifact — the consolidated-batch account, the
+  round-2 code-review findings/fixes, the security-review disposition, and validation evidence,
+  with a decision section) was prepared for the required second-role human review, since the
+  implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
+  returned "Approved as-is,"** accepting the 2 open PLAUSIBLE code-review findings as tracked
+  debt rather than requesting fixes before merge — see
+  `docs/project-state/fix-remaining-session-exchange-debt-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
