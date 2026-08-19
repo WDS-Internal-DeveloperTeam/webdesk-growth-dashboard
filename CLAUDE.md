@@ -907,8 +907,32 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting all
     5 open findings as tracked debt rather than requesting fixes before merge — see
     `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md`'s "Sign-off"
-    section. A gate decision and merge authorization remain separate, not-yet-requested next
-    steps.
+    section. **The gate (G4-error-masking-fix) and "Merge PR #36" were then each separately
+    requested and completed** — see the dedicated 2026-08-19 "Recent decisions" entries below for
+    both. **This slice is now genuinely live in production.**
+21. **`AuthErrorReason` shared-type fix — built, fully validated, not yet reviewed, gated, or
+    merged (2026-08-19).** Closes one of item 20's 5 accepted-debt findings. Not started
+    automatically — built directly on the explicit "fix the shared-type duplication finding"
+    instruction. The `reason` taxonomy for `/auth/error` (`expired`/`access_denied`/`error`) was
+    previously declared independently in `dashboard-api` (bare untyped strings) and
+    `dashboard-web` (a local type) with nothing tying the two apps together — exactly the drift
+    risk that let a real backend error get mislabeled `expired` during the 2026-08-19 incident
+    item 19 fixed. Promoted a single `AuthErrorReason` type into `packages/shared-types`,
+    matching the existing `AuthMethod`/`HealthStatus`/`SessionRevocationReason` precedent.
+    `GoogleAuthController` now routes all three redirects through a typed
+    `redirectToAuthError()` helper; `dashboard-web`'s `/auth/exchange` route imports the shared
+    type instead of a local copy; `/auth/error`'s `REASON_MESSAGES` is now typed
+    `Record<AuthErrorReason, string>` via a new `isKnownReason()` guard, so the file won't
+    compile if a reason is ever added without a matching message. No behavior change for any
+    real request — type-safety-only refactor. See `docs/implementation/session-exchange.md` §8.
+    Validated: 370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests (real
+    disposable database), 143/143 `dashboard-web` unit tests, `dashboard-worker` typecheck
+    (unaffected), typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all
+    clean. Pushed as branch `fix-auth-error-reason-shared-type`, opened as
+    [PR #37](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/37).
+    Code review, security review, second-role human review, a gate decision, and merge
+    authorization are each their own separate, not-yet-requested next step, unchanged from this
+    project's standing discipline.
 
 ## Recent decisions
 
@@ -2853,8 +2877,9 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests (real disposable
   database), 143/143 `dashboard-web` unit tests, `dashboard-worker` typecheck (a third,
   unrelated consumer of `packages/shared-types`, confirmed unaffected), typecheck/lint/
-  `next build`/`nest build`/`pnpm exec prettier --check` all clean. Not yet reviewed, gated, or
-  merged — pushed as its own branch; code review, security review, second-role human review, a
+  `next build`/`nest build`/`pnpm exec prettier --check` all clean. Pushed and opened as
+  [PR #37](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/37). Not
+  yet reviewed, gated, or merged — code review, security review, second-role human review, a
   gate decision, and merge authorization are each their own separate, not-yet-requested next
   step, unchanged from this project's standing discipline.
 
