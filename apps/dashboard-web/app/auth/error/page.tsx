@@ -30,8 +30,14 @@ const REASON_MESSAGES: Record<AuthErrorReason, string> = {
   error: DEFAULT_MESSAGE,
 };
 
+/**
+ * `Object.hasOwn`, not the `in` operator — `in` walks the prototype chain, so a `reason` value
+ * that happens to match an inherited `Object.prototype` key (`constructor`, `toString`, etc.)
+ * would otherwise pass this guard and resolve to a function value on the lookup below, crashing
+ * this page's render.
+ */
 function isKnownReason(value: string): value is AuthErrorReason {
-  return value in REASON_MESSAGES;
+  return Object.hasOwn(REASON_MESSAGES, value);
 }
 
 export default async function AuthErrorPage({
@@ -40,7 +46,20 @@ export default async function AuthErrorPage({
   searchParams: Promise<{ reason?: string }>;
 }) {
   const { reason } = await searchParams;
-  const message = reason && isKnownReason(reason) ? REASON_MESSAGES[reason] : DEFAULT_MESSAGE;
+  let message = DEFAULT_MESSAGE;
+  if (reason) {
+    if (isKnownReason(reason)) {
+      message = REASON_MESSAGES[reason];
+    } else {
+      // Logged, not just silently shown as DEFAULT_MESSAGE — a reason value neither app's build
+      // recognizes is exactly what cross-deploy drift between dashboard-api and dashboard-web
+      // (two independently-deployed Vercel projects) would look like, and the shared
+      // AuthErrorReason type only guarantees same-commit agreement, not same-real-time-deployed
+      // agreement. Without this, that event would be as invisible as the one that caused the
+      // 2026-08-19 incident this whole reason taxonomy exists to make diagnosable.
+      console.error(`auth/error: received unrecognized reason "${reason}"`);
+    }
+  }
 
   return (
     <main className={styles.page}>

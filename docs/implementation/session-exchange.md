@@ -313,3 +313,48 @@ No behavior change for any real request — this is a type-safety-only refactor.
 `packages/shared-types`, confirmed unaffected), typecheck/lint/`next build`/`nest build`/
 `pnpm exec prettier --check` all clean across `packages/shared-types`, `apps/dashboard-api`, and
 `apps/dashboard-web`.
+
+### 8a. Independent code review (2026-08-19)
+
+High effort (8 finder angles, 1-vote verification) on branch `fix-auth-error-reason-shared-type` —
+7 candidates survived dedup, 2 CONFIRMED, 3 PLAUSIBLE, 2 REFUTED. Both CONFIRMED findings fixed:
+
+- **`isKnownReason()`'s `value in REASON_MESSAGES` walked the object's prototype chain.** A
+  `reason` value matching an inherited `Object.prototype` key (`constructor`, `toString`, etc.)
+  passed the guard, and `REASON_MESSAGES[reason]` then resolved to the inherited function value —
+  rendered as `{message}` in JSX, React throws ("Functions are not valid as a React child"),
+  crashing the one page whose job is to fail gracefully. `/auth/error` is public and unauthenticated
+  (`?reason=constructor` needs no login flow to reach). Pre-dated this branch (the old
+  `REASON_MESSAGES[reason]` bracket lookup had the identical hole), but this branch is what touched
+  this exact code and wrapped it in a function that reads as an authoritative safety guard without
+  actually closing it. **Fixed** with `Object.hasOwn(REASON_MESSAGES, value)` instead of `in`.
+- **The unknown-reason fallback logged nothing.** `AuthErrorReason` only guarantees agreement
+  between `dashboard-api` and `dashboard-web` at the same commit — the two are independently-
+  deployed Vercel projects with independent deploy timing (this project has real precedent for that
+  gap, e.g. Phase 1E's migrations landing ~1.5 days after their gated merge). If a future reason
+  value is ever added and one app redeploys before the other, a real user in that window would hit
+  a reason value the other app's build doesn't recognize — and it would silently show
+  `DEFAULT_MESSAGE` with zero signal, reproducing the exact "invisible until someone digs through
+  raw Vercel logs" cost of the original 2026-08-19 incident. **Fixed** with a `console.error` on the
+  unrecognized-reason fallback path (only when `reason` is present and unrecognized — not on every
+  ordinary "no reason" render).
+
+3 PLAUSIBLE findings left open, not fixed (per the "fix the confirmed findings" instruction): a
+narrow behavior change for `reason=""` (blank message → generic message; only reachable via a
+hand-typed URL, no real caller ever sends an empty string, and the new behavior is strictly better);
+a `redirectToAuthError` name collision between the new `dashboard-api` controller method and the
+pre-existing `dashboard-web` route function (different signatures, different runtimes, both files'
+doc comments already cross-reference each other); and the same incident-narrative explanation
+restated across all 4 changed files' doc comments (real but low-severity — each also carries
+genuinely distinct local context, closer to normal per-usage-site documentation than harmful
+duplication). 2 findings were REFUTED: widening `dashboard-web`'s route-local `AuthErrorReason`
+from 2 values to 3 (an acceptable, even necessary side effect of the actual fix — a narrower local
+subtype would just recreate the duplication this branch exists to eliminate); and the new
+`redirectToAuthError` being a private class method rather than a standalone function (the more
+idiomatic NestJS pattern here, given it needs `this.env`).
+
+Added a new `apps/dashboard-web/tests/unit/auth-error-page.test.tsx` (6 tests) covering both fixes
+directly — the generic/no-reason path, each known reason's specific message, an unrecognized reason
+falling back to the generic message while logging exactly once, and the `constructor` prototype-key
+case specifically. Re-validated: 149/149 `dashboard-web` unit tests (6 new), typecheck/lint/
+`next build`/`pnpm exec prettier --check` all clean.

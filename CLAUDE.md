@@ -910,8 +910,9 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     section. **The gate (G4-error-masking-fix) and "Merge PR #36" were then each separately
     requested and completed** — see the dedicated 2026-08-19 "Recent decisions" entries below for
     both. **This slice is now genuinely live in production.**
-21. **`AuthErrorReason` shared-type fix — built, fully validated, not yet reviewed, gated, or
-    merged (2026-08-19).** Closes one of item 20's 5 accepted-debt findings. Not started
+21. **`AuthErrorReason` shared-type fix — built, fully validated, code-reviewed, not yet
+    security-reviewed, gated, or merged (2026-08-19).** Closes one of item 20's 5 accepted-debt
+    findings. Not started
     automatically — built directly on the explicit "fix the shared-type duplication finding"
     instruction. The `reason` taxonomy for `/auth/error` (`expired`/`access_denied`/`error`) was
     previously declared independently in `dashboard-api` (bare untyped strings) and
@@ -930,7 +931,21 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     (unaffected), typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all
     clean. Pushed as branch `fix-auth-error-reason-shared-type`, opened as
     [PR #37](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/37).
-    Code review, security review, second-role human review, a gate decision, and merge
+    **Independent code review then ran** (high effort, 8 finder angles) — 7 candidates verified
+    individually (2 CONFIRMED, 3 PLAUSIBLE, 2 REFUTED). Both CONFIRMED findings fixed: the new
+    `isKnownReason()` guard used the `in` operator, which walks the prototype chain, so
+    `?reason=constructor` on the public, unauthenticated `/auth/error` page resolved to a function
+    value and crashed the page render — fixed with `Object.hasOwn()`; and the unrecognized-reason
+    fallback logged nothing, undercutting the fix's own goal of catching cross-deploy drift between
+    `dashboard-api` and `dashboard-web`'s independent Vercel deploys — fixed with a `console.error`
+    on that path only. The 3 PLAUSIBLE findings (a narrow `reason=""` behavior change reachable
+    only via a hand-typed URL, a `redirectToAuthError` name collision across the two apps with
+    different signatures, and the incident narrative restated across all 4 changed files' doc
+    comments) were left open, not silently dropped. Added
+    `apps/dashboard-web/tests/unit/auth-error-page.test.tsx` (6 new tests) covering both fixes
+    directly. Re-validated: 149/149 `dashboard-web` unit tests, typecheck/lint/`next build`/
+    `pnpm exec prettier --check` all clean. See `docs/implementation/session-exchange.md` §8a for
+    the full account. Security review, second-role human review, a gate decision, and merge
     authorization are each their own separate, not-yet-requested next step, unchanged from this
     project's standing discipline.
 
