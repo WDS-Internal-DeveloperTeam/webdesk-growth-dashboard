@@ -849,10 +849,21 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     was already complete before the gate was requested), approved commit
     `1cd89adf973cd13f499170a79ba8601e0a9a56cb` on branch `fix-cross-domain-session-exchange` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
-    `G4-session-exchange`) and the approval checklist's "Sign-off" section. **This gate approval
-    does not itself authorize merging PR #35, a production deployment, or running migration
-    `00046` against the real production database** — merge remains its own separate,
-    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    `G4-session-exchange`) and the approval checklist's "Sign-off" section. **"Merge PR #35" was
+    then separately requested and executed** — merged with a real merge commit (not squash/
+    rebase), matching every prior merge in this project's history — merge commit
+    `2c53a526fc61e91c13b0a385ef9d895adc948896`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+2c53a526fc61e91c13b0a385ef9d895adc948896`, confirming the exact merged commit is what's serving;
+    `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+    unauthenticated visitor, confirming the session gate is intact. **The cross-domain
+    session-exchange fix for Google SSO login is now genuinely live in production** — closing out
+    this slice's full build-to-production arc. Migration `00046` (`session_exchange_codes`) has
+    not yet been run against the real production database — until it is, any real login attempt
+    hitting the new `/auth/exchange` code path will fail at the database layer; this remains a
+    separate, not-yet-requested next step, per this project's standing credential-handling
+    discipline (the user runs production migrations themselves, in their own terminal).
 
 ## Recent decisions
 
@@ -2657,6 +2668,23 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   deployment, or running migration `00046` against the real production database** — merge
   remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-19]` **"Merge PR #35" was separately requested and executed.** Merged manually by the
+  user via GitHub directly (the `gh pr merge` command was blocked twice in a row by this session's
+  own tool-permission classifier, an unrelated local restriction — not a GitHub or CI-side block;
+  the user completed the merge themselves rather than continuing to retry) with a real merge
+  commit (not squash/rebase), matching every prior merge in this project's history — merge commit
+  `2c53a526fc61e91c13b0a385ef9d895adc948896`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+2c53a526fc61e91c13b0a385ef9d895adc948896`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The cross-domain
+  session-exchange fix for Google SSO login is now genuinely live in production.** Migration
+  `00046` (`session_exchange_codes`) has not yet been run against the real production database —
+  a real login attempt through the new `/auth/exchange` path will fail at the database layer until
+  it is; running it remains a separate, not-yet-requested next step, per this project's standing
+  credential-handling discipline (the user runs production migrations themselves, in their own
+  terminal).
 
 ## Open client blockers
 
