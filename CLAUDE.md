@@ -1037,9 +1037,16 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open
     PLAUSIBLE code-review findings as tracked debt rather than requesting fixes — see
     `docs/project-state/fix-remaining-session-exchange-debt-approval-checklist.md`'s "Sign-off"
-    section. A gate decision and merge authorization remain separate, not-yet-requested next
-    steps, unchanged from this project's standing discipline — but bundled together as ONE pass
-    across this whole batch, per the explicit instruction, not repeated per item.
+    section. **The gate (G4-session-exchange-debt-closure) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `11aa6d0` on branch `fix-remaining-session-exchange-debt` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-session-exchange-debt-closure`) and the approval checklist's "Sign-off" section. **This
+    gate approval does not itself authorize merging PR #38 or a production deployment** — merge
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule — but bundled together as ONE review pass across this whole batch, per
+    the explicit instruction, not repeated per item.
 
 ## Recent decisions
 
@@ -3144,6 +3151,16 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   debt rather than requesting fixes before merge — see
   `docs/project-state/fix-remaining-session-exchange-debt-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-session-exchange-debt-closure) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `11aa6d0` on branch `fix-remaining-session-exchange-debt` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-session-exchange-debt-closure`) and
+  `docs/project-state/fix-remaining-session-exchange-debt-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #38 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
