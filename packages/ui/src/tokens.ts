@@ -37,8 +37,10 @@ export const colorTokens = {
    *  color, so it carries no independent contrast obligation of its own. */
   accentSecondary: "#7c3aed",
   accentForeground: "#ffffff",
-  /** Light accent tint for active nav states and icon badges — 6.98:1 with `accent` as the
-   *  foreground on top of it. */
+  /** Light accent tint for icon badges and other light-surface accents — 6.98:1 with `accent` as
+   *  the foreground on top of it. NOT used for the sidebar's active-nav state, which sits on the
+   *  dark `headerBackground` fill and uses `accent` itself instead (see `app-shell.module.css`'s
+   *  `.sidebarLinkActive`) — this near-white tint would render as a stark, out-of-place box there. */
   accentTint: "#eef0ff",
   danger: "#dc2626",
   dangerSurface: "#fef2f2",

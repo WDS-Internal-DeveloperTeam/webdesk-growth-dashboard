@@ -238,7 +238,9 @@ export default async function HomePage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            // 280px keeps this at 4 columns (not 5) at the 1280px ContentContainer max-width:
+            // floor((1280 + 16) / (280 + 16)) = 4.
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
             gap: spacingTokens.md,
           }}
         >

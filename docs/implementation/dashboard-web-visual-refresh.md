@@ -264,3 +264,70 @@ vulnerabilities. Live-rendered in the Browser pane again after every fix, not ju
 confirmed real Sora/Public Sans fonts resolve via `getComputedStyle`, the widget/module-grid icon
 badges render correctly (no RSC boundary crash), and 39 real `<svg>` icons render on the page
 with no error-boundary text.
+
+## 7. Post-merge fix: sidebar background and module-grid column count (2026-08-19)
+
+After PR #39 merged and went live, the user reported two real divergences from the approved
+design canvas mockup, pointing at a live screenshot vs. the "Home Visual Directions" canvas
+screenshot side by side:
+
+1. **The sidebar stayed on the light `surface` fill** instead of the dark `headerBackground` fill
+   the approved mockup shows — item 24's own build only made the header dark and gave the sidebar's
+   active-nav item a light `accentTint` highlight, but never actually matched the mockup's
+   continuous dark rail spanning header + sidebar together. A genuine build-vs-mockup gap, not
+   caught by the code review (which checks logic/correctness, not pixel fidelity against the design
+   canvas) or the axe-core accessibility scans (which check contrast, not brand-direction
+   adherence).
+2. **The "Available to you" module grid rendered 5 columns at desktop width, not 4** — an
+   `auto-fill, minmax(240px, 1fr)` grid against the 1280px `ContentContainer` max-width computes to
+   `floor((1280+16)/(240+16)) = 5` columns; the mockup's tiles are visibly roomier.
+
+Both fixed directly, reusing existing tokens rather than inventing new ones:
+
+- **Module grid**: `minmax(240px, 1fr)` → `minmax(280px, 1fr)` in
+  `app/(shell)/home/page.tsx`'s module-grid `gridTemplateColumns` — `floor((1280+16)/(280+16)) = 4`
+  at the `ContentContainer` cap, with a comment recording the arithmetic so a future minmax edit
+  doesn't silently reintroduce 5. `ContentContainer` never exceeds 1280px, so this is a real cap,
+  not a lucky value at one specific viewport.
+- **Sidebar**: `app-shell.module.css`'s `.sidebar` now uses `colorTokens.headerBackground`/
+  `headerBorder` (the same fill/border the header already uses) instead of `surface`/`border`.
+  `.sidebarLink` and the `.navGroupLabel`/`.clusterLabel` labels now use `headerForegroundMuted`
+  (documented in `tokens.ts` as 6.80:1 against `headerBackground`, real AA-safe text, not just
+  decorative) instead of the light-surface `foregroundMuted`. `.sidebarLink:hover` now uses
+  `headerControlBackground`/`headerForeground` instead of the light-surface `mutedSurface`/
+  `foreground`. `.sidebarLinkActive` switches from `accentTint` (a near-white tint meant for light
+  surfaces — it would render as a stark white box on a dark sidebar) to `accent` itself: a real,
+  clearly-visible indigo highlight against `headerBackground` (~2.1:1 luminance contrast between
+  the two dark surfaces, vs. only ~1.16:1 if `headerControlBackground` had been reused instead —
+  checked both before choosing `accent`), with `headerForeground` (white) text at 7.9:1 contrast,
+  comfortably over AA. `colorTokens.accentTint`'s own doc comment updated to record it's no longer
+  used for the sidebar's active-nav state.
+- **A real accessibility regression this change would otherwise have introduced, caught and fixed
+  in the same pass**: the shared `:focus-visible` rule (`.navToggle`/`.sidebarLink`/`.brand`/
+  `.skipLink`) outlines with `colorTokens.focusRing` (`accent`, `#4338ca`) — fine against every
+  surface it was originally written for, but only ~2.1:1 against the sidebar's new dark
+  `headerBackground`, under WCAG 2.2 SC 1.4.11's 3:1 non-text-contrast minimum for a focus
+  indicator. Added a `.sidebarLink:focus-visible { outline-color: headerForeground }` override
+  (white clears every sidebar surface — background, hover fill, and the active `accent` fill alike,
+  at 7.9:1–16.4:1) rather than leaving the regression in place.
+
+Validated: 79/79 `packages/ui` unit tests, 162/162 `dashboard-web` unit tests (all pre-existing,
+none needed updating — this PR touches only inline styles and CSS custom-property references, no
+class names, DOM structure, or component props), `eslint`/`check-css-tokens.mjs`
+(the token-lint script that ties `@media`/color literals back to real tokens)/typecheck/`next
+build`/prettier all clean, `pnpm audit` unaffected. Live-rendered in the Browser pane (the
+sanctioned `lib/e2e-test-session.ts` bypass, `PLAYWRIGHT_E2E_TEST_MODE=1` set temporarily in
+`.env.local` and removed again afterward) — confirmed via `getComputedStyle` that the sidebar
+background is exactly `headerBackground` (`rgb(32, 26, 61)`), the active nav item's background is
+exactly `accent` (`rgb(67, 56, 202)`) with white text, inactive links are `headerForegroundMuted`
+(`rgb(167, 159, 224)`), and the module grid computes to exactly 4 columns at desktop width — all
+matching the design values directly, not eyeballed from a screenshot. A stale, unrelated console
+error (`IconBadge`/RSC "Functions cannot be passed" from item 24's already-fixed bug) reappeared in
+`read_console_messages`' output even after a full dev-server restart and a `.next` cache wipe,
+with identical HMR chunk ids across restarts — ruled out as a real regression rather than assumed
+fixed: the source code's `IconBadge` call sites in `home/page.tsx` were re-read and confirmed
+unchanged (still pass rendered `<Icon .../>` elements, never a raw component reference), and a
+direct DOM check found zero `"Something went wrong"` error-boundary text and 39 real `<svg>`
+elements rendered — this matches the same class of Browser-pane automation-tool quirk this project's own history has
+already ruled out once before (item 24's own build, a stale/misbehaving click event — see
+`CLAUDE.md`), not a fresh bug.

@@ -103,16 +103,16 @@
   font-weight: var(--webdesk-dashboard-font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  /* --webdesk-dashboard-color-foreground-subtle is only 2.45:1 against this surface at this
-     font size — under WCAG AA's 4.5:1, a real violation axe-core caught once the shell was
-     first scanned on an authenticated route. foreground-muted passes (7+:1). */
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  /* The sidebar sits on the same dark headerBackground fill as the header (design canvas
+     "Enterprise Plus" direction) — headerForegroundMuted is the token documented (tokens.ts) as
+     6.80:1 against that surface, clearing AA for real text, not just decorative use. */
+  color: var(--webdesk-dashboard-color-header-foreground-muted);
 }
 
 .sidebar {
   grid-area: sidebar;
-  border-right: 1px solid var(--webdesk-dashboard-color-border);
-  background: var(--webdesk-dashboard-color-surface);
+  border-right: 1px solid var(--webdesk-dashboard-color-header-border);
+  background: var(--webdesk-dashboard-color-header-background);
   padding: var(--webdesk-dashboard-space-md);
   overflow-y: auto;
 }
@@ -127,10 +127,8 @@
   font-weight: var(--webdesk-dashboard-font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  /* --webdesk-dashboard-color-foreground-subtle is only 2.45:1 against this surface at this
-     font size — under WCAG AA's 4.5:1, a real violation axe-core caught once the shell was
-     first scanned on an authenticated route. foreground-muted passes (7+:1). */
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  /* See .clusterLabel above — same dark sidebar surface, same token. */
+  color: var(--webdesk-dashboard-color-header-foreground-muted);
   padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
 }
 
@@ -149,7 +147,7 @@
   gap: var(--webdesk-dashboard-space-sm);
   padding: var(--webdesk-dashboard-space-sm);
   border-radius: var(--webdesk-dashboard-radius-sm);
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  color: var(--webdesk-dashboard-color-header-foreground-muted);
   text-decoration: none;
   font-size: var(--webdesk-dashboard-font-size-sm);
 }
@@ -159,14 +157,26 @@
 }
 
 .sidebarLink:hover {
-  background: var(--webdesk-dashboard-color-muted-surface);
-  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-header-control-background);
+  color: var(--webdesk-dashboard-color-header-foreground);
 }
 
+/* accent (not accentTint, which is a near-white tint meant for the light surfaces elsewhere in
+   this app) — accentTint would render as a stark white box on this dark sidebar. accent itself
+   gives a clearly-distinct indigo highlight against headerBackground (~2.1:1 luminance contrast
+   between the two surfaces) while keeping headerForeground text at 7.9:1, comfortably over AA. */
 .sidebarLinkActive {
-  background: var(--webdesk-dashboard-color-accent-tint);
-  color: var(--webdesk-dashboard-color-accent);
+  background: var(--webdesk-dashboard-color-accent);
+  color: var(--webdesk-dashboard-color-header-foreground);
   font-weight: var(--webdesk-dashboard-font-weight-semibold);
+}
+
+/* The generic :focus-visible rule below (shared with .brand/.navToggle/.skipLink) uses
+   --webdesk-dashboard-color-focus-ring, which is only ~2.1:1 against this dark sidebar —
+   under WCAG 2.2 SC 1.4.11's 3:1 non-text-contrast minimum. headerForeground (white) clears it
+   against every sidebar surface (background, hover fill, and the active accent fill alike). */
+.sidebarLink:focus-visible {
+  outline-color: var(--webdesk-dashboard-color-header-foreground);
 }
 
 .main {
