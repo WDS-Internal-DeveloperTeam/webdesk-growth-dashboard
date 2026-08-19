@@ -115,6 +115,7 @@ export interface SessionInfo {
 export type AuthEventType =
   | "sso_login_succeeded"
   | "sso_login_rejected"
+  | "session_exchange_redeemed"
   | "emergency_login_succeeded"
   | "emergency_login_failed"
   | "emergency_totp_failed"

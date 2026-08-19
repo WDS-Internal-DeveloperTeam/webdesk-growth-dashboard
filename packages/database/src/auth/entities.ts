@@ -70,6 +70,21 @@ export interface RecoveryRequestEntity extends BaseEntity {
   readonly decisionNote: string | null;
 }
 
+/** Created-once-then-redeemed-once — no `updatedAt`, so this deliberately does not extend `BaseEntity` (same shape as `AuthEventEntity` below). */
+export interface SessionExchangeCodeEntity {
+  readonly id: string;
+  readonly userId: string;
+  readonly authMethod: AuthMethod;
+  /** SHA-256 hex of the raw opaque code — the raw code itself is never persisted. */
+  readonly codeHash: string;
+  readonly expiresAt: string;
+  readonly redeemedAt: string | null;
+  /** Captured from the real browser request at issue time — see the migration's own doc comment. */
+  readonly ipHash: string | null;
+  readonly userAgent: string | null;
+  readonly createdAt: string;
+}
+
 /** Append-only — no `updatedAt`, so this deliberately does not extend `BaseEntity`. */
 export interface AuthEventEntity {
   readonly id: string;

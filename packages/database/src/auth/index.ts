@@ -7,3 +7,4 @@ export { SessionRepository } from "./session.repository.js";
 export { AuthLockoutStateRepository } from "./auth-lockout-state.repository.js";
 export { RecoveryRequestRepository } from "./recovery-request.repository.js";
 export { AuthEventRepository } from "./auth-event.repository.js";
+export { SessionExchangeCodeRepository } from "./session-exchange-code.repository.js";

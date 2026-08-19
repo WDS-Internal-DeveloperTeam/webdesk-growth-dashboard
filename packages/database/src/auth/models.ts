@@ -17,6 +17,7 @@ export interface AuthModels {
   readonly AuthLockoutState: ModelStatic<Model>;
   readonly RecoveryRequest: ModelStatic<Model>;
   readonly AuthEvent: ModelStatic<Model>;
+  readonly SessionExchangeCode: ModelStatic<Model>;
 }
 
 const cache = new WeakMap<Sequelize, AuthModels>();
@@ -164,6 +165,26 @@ export function getAuthModels(sequelize: Sequelize = getConnection()): AuthModel
     },
   );
 
+  const SessionExchangeCode = sequelize.define(
+    "SessionExchangeCode",
+    {
+      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+      userId: { type: DataTypes.UUID, allowNull: false },
+      authMethod: { type: DataTypes.ENUM("google_sso", "emergency_local"), allowNull: false },
+      codeHash: { type: DataTypes.STRING(64), allowNull: false, unique: true },
+      expiresAt: { type: DataTypes.DATE, allowNull: false },
+      redeemedAt: { type: DataTypes.DATE, allowNull: true },
+      ipHash: { type: DataTypes.STRING(64), allowNull: true },
+      userAgent: { type: DataTypes.STRING(512), allowNull: true },
+    },
+    {
+      tableName: "session_exchange_codes",
+      underscored: true,
+      timestamps: true,
+      updatedAt: false,
+    },
+  );
+
   const models: AuthModels = {
     User,
     ExternalAuthIdentity,
@@ -172,6 +193,7 @@ export function getAuthModels(sequelize: Sequelize = getConnection()): AuthModel
     AuthLockoutState,
     RecoveryRequest,
     AuthEvent,
+    SessionExchangeCode,
   };
   cache.set(sequelize, models);
   return models;

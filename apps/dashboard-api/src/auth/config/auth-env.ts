@@ -65,6 +65,14 @@ export const authEnvSchema = z.object({
   OIDC_TRANSACTION_MAX_AGE_SECONDS: z.coerce.number().int().min(60).max(900).default(300),
 
   /**
+   * The session-exchange code bridging `dashboard-api`'s own session cookie (host-only to its
+   * domain, see `session/cookie.util.ts`) across to `dashboard-web`'s separate domain after
+   * login. Short by design, same reasoning as `OIDC_TRANSACTION_MAX_AGE_SECONDS` — it only ever
+   * needs to survive one top-level redirect hop.
+   */
+  SESSION_EXCHANGE_CODE_MAX_AGE_SECONDS: z.coerce.number().int().min(15).max(300).default(60),
+
+  /**
    * 32-byte (64 hex char) AES-256-GCM key for encrypting TOTP secrets at
    * rest (NODE-103, knowledge/05). An unconfirmed setup-time input for real
    * deployments; every test in this repo generates its own throwaway key.

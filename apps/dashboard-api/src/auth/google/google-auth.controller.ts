@@ -6,6 +6,8 @@ import type { AuthEnv } from "../config/auth-env.js";
 import { getIpHash, getUserAgent } from "../common/request-context.util.js";
 import { setSessionCookie } from "../session/cookie.util.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
+import { SessionExchangeService } from "../session/session-exchange.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime, see google-auth.service.ts's note.
 import { GoogleAuthService } from "./google-auth.service.js";
 import {
   clearOidcTransactionCookie,
@@ -17,15 +19,22 @@ import {
  * Google Workspace OIDC — `dashboard-web` never handles OAuth tokens
  * directly (docs/contracts/google-workspace-auth-contract.md "Trust
  * boundary"): it links or top-level-redirects the browser here, and this
- * controller redirects back to `WEB_APP_ORIGIN` when the flow is done, with
- * the session cookie already set. Excluded from the OpenAPI document
- * (`@ApiExcludeEndpoint`) — these are browser-redirect endpoints, not a
- * JSON API surface.
+ * controller redirects back to `WEB_APP_ORIGIN` when the flow is done.
+ * Excluded from the OpenAPI document (`@ApiExcludeEndpoint`) — these are
+ * browser-redirect endpoints, not a JSON API surface.
+ *
+ * The callback sets `dashboard-api`'s own session cookie (still needed for
+ * direct browser-mediated `credentials: "include"` fetches to `dashboard-api`
+ * from mutation UIs) **and** redirects through a session-exchange code
+ * rather than straight to `WEB_APP_ORIGIN`'s root — that cookie is host-only
+ * to `dashboard-api`'s own domain and would never reach `dashboard-web`'s
+ * separate domain otherwise. See `docs/implementation/session-exchange.md`.
  */
 @Controller("auth/google")
 export class GoogleAuthController {
   constructor(
     private readonly googleAuth: GoogleAuthService,
+    private readonly sessionExchange: SessionExchangeService,
     @Inject(AUTH_ENV) private readonly env: AuthEnv,
   ) {}
 
@@ -48,10 +57,12 @@ export class GoogleAuthController {
       return;
     }
 
+    const ipHash = getIpHash(req);
+    const userAgent = getUserAgent(req);
     const currentUrl = new URL(req.originalUrl, `${req.protocol}://${req.get("host") ?? ""}`);
     const result = await this.googleAuth.handleCallback(currentUrl, transaction, {
-      ipHash: getIpHash(req),
-      userAgent: getUserAgent(req),
+      ipHash,
+      userAgent,
     });
 
     if (!result.ok) {
@@ -59,7 +70,28 @@ export class GoogleAuthController {
       return;
     }
 
+    // Issued BEFORE the cookie is set (and guarded), not after — so a failure here (e.g. a
+    // transient DB error) can never leave the browser holding a valid session cookie alongside a
+    // raw, unstyled 500 response; it cleanly redirects to the same /auth/error page every other
+    // failure in this method uses instead.
+    let exchangeCode: string;
+    try {
+      exchangeCode = await this.sessionExchange.issue({
+        userId: result.user.id,
+        authMethod: "google_sso",
+        ipHash,
+        userAgent,
+      });
+    } catch (error) {
+      console.error("GoogleAuthController#callback: failed to issue session-exchange code", error);
+      res.redirect(HttpStatus.FOUND, `${this.env.WEB_APP_ORIGIN}/auth/error?reason=expired`);
+      return;
+    }
+
     setSessionCookie(res, result.rawToken, this.env);
-    res.redirect(HttpStatus.FOUND, this.env.WEB_APP_ORIGIN);
+    res.redirect(
+      HttpStatus.FOUND,
+      `${this.env.WEB_APP_ORIGIN}/auth/exchange?code=${encodeURIComponent(exchangeCode)}`,
+    );
   }
 }

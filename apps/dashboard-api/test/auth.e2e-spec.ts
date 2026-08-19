@@ -5,6 +5,7 @@ import {
   buildMigrator,
   closeConnection,
   EmergencyAdminCredentialRepository,
+  SessionRepository,
   UserRepository,
 } from "@webdesk/database";
 import * as client from "openid-client";
@@ -20,6 +21,8 @@ import { AuthModule } from "../src/auth/auth.module.js";
 import { OIDC_CONFIGURATION } from "../src/auth/config/auth.constants.js";
 import { hashPassword } from "../src/auth/crypto/password.js";
 import { encryptTotpSecret } from "../src/auth/crypto/totp-encryption.js";
+import { hashSessionToken } from "../src/auth/crypto/session-token.js";
+import { SessionExchangeService } from "../src/auth/session/session-exchange.service.js";
 import cookieParser from "cookie-parser";
 import type { NextFunction, Response } from "express";
 
@@ -57,6 +60,8 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
   let app: INestApplication;
   let users: UserRepository;
   let credentials: EmergencyAdminCredentialRepository;
+  let sessionExchange: SessionExchangeService;
+  let sessions: SessionRepository;
   const totpSecret = "JBSWY3DPEHPK3PXP";
   const password = "correct-horse-battery-staple-1!";
 
@@ -92,6 +97,8 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
 
     users = new UserRepository();
     credentials = new EmergencyAdminCredentialRepository();
+    sessionExchange = moduleRef.get(SessionExchangeService);
+    sessions = new SessionRepository();
 
     const user = await users.create({
       email: "emergency.e2e@webdesksolution.com",
@@ -282,6 +289,146 @@ describe("Phase 1C auth endpoints (e2e, real disposable database)", () => {
       );
       expect(response.status).toBe(302);
       expect(response.headers.location).toBe(`${WEB_APP_ORIGIN}/auth/error?reason=expired`);
+    });
+  });
+
+  /**
+   * `POST /auth/exchange` — the server-to-server leg `dashboard-web`'s own exchange route calls
+   * to redeem a session-exchange code (docs/implementation/session-exchange.md). Exercised here
+   * against the real `SessionExchangeService`/repository/database, not mocked — the Google OIDC
+   * callback's own success path is covered separately (mocked) in
+   * `google-auth.controller.e2e-spec.ts`, since driving a real token exchange here would require
+   * real network access to Google.
+   */
+  describe("POST /auth/exchange", () => {
+    it("redeems a valid code into a brand-new, independently-valid session, exactly once", async () => {
+      const user = await users.create({
+        email: "exchange.e2e@webdesksolution.com",
+        displayName: "Exchange E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({ userId: user.id, authMethod: "google_sso" });
+
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+
+      expect(response.status).toBe(200);
+      expect(typeof response.body.data.sessionToken).toBe("string");
+      expect(response.body.data.sessionToken.length).toBeGreaterThan(0);
+      // cookieName is env.SESSION_COOKIE_NAME echoed back — dashboard-web's exchange route sets
+      // its cookie under THIS value, not a separately-hardcoded constant of its own.
+      expect(response.body.data.cookieName).toBe("wds_session");
+
+      // The minted session is real and independently valid — proven via a second agent that never
+      // touched the original login cookie, using only the exchanged raw token.
+      const verifyAgent = request.agent(app.getHttpServer());
+      const sessionCheck = await verifyAgent
+        .get("/auth/session")
+        .set(
+          "Cookie",
+          `${response.body.data.cookieName as string}=${response.body.data.sessionToken as string}`,
+        );
+      expect(sessionCheck.status).toBe(200);
+      expect(sessionCheck.body.data.user.email).toBe("exchange.e2e@webdesksolution.com");
+
+      // Single-use: redeeming the same raw code again must fail.
+      const secondAttempt = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      expect(secondAttempt.status).toBe(400);
+    });
+
+    it("stamps the redeemed session with the ipHash/userAgent captured at issue time, not the exchange request's own", async () => {
+      const user = await users.create({
+        email: "exchange.forensics.e2e@webdesksolution.com",
+        displayName: "Exchange Forensics E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({
+        userId: user.id,
+        authMethod: "google_sso",
+        ipHash: "real-browser-ip-hash",
+        userAgent: "real-browser-user-agent",
+      });
+
+      // The exchange POST itself carries no such headers — the redeemed session must not pick up
+      // whatever supertest/Express derives for THIS request.
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      expect(response.status).toBe(200);
+
+      const session = await sessions.findByTokenHash(
+        hashSessionToken(response.body.data.sessionToken as string),
+      );
+      expect(session?.ipHash).toBe("real-browser-ip-hash");
+      expect(session?.userAgent).toBe("real-browser-user-agent");
+    });
+
+    it("rejects an unknown code with a generic 400, no session issued", async () => {
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: "this-code-was-never-issued" });
+      expect(response.status).toBe(400);
+    });
+
+    it("rejects a missing code at the validation layer", async () => {
+      const response = await request(app.getHttpServer()).post("/auth/exchange").send({});
+      expect(response.status).toBe(400);
+    });
+
+    it("requires no Origin header — this is a server-to-server call, not a browser-mediated one", async () => {
+      const user = await users.create({
+        email: "exchange.no-origin.e2e@webdesksolution.com",
+        displayName: "Exchange No Origin E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({ userId: user.id, authMethod: "google_sso" });
+
+      const response = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      expect(response.status).toBe(200);
+    });
+  });
+
+  /**
+   * Proves the mechanism `dashboard-web`'s own `DELETE /auth/session` route relies on
+   * (`apps/dashboard-web/app/auth/session/route.ts`, see `docs/implementation/session-exchange.md`):
+   * a session token that arrived via a manually-constructed `Cookie` header (not the browser's own
+   * jar, e.g. forwarded server-to-server) is still found and revoked by `POST /auth/logout`,
+   * exactly like a browser-held cookie would be — the guard only cares about a real `Origin`.
+   */
+  describe("POST /auth/logout via a forwarded (non-browser-jar) Cookie header", () => {
+    it("revokes the session and the token stops working, exactly like a browser-held cookie would", async () => {
+      const user = await users.create({
+        email: "logout.forwarded.e2e@webdesksolution.com",
+        displayName: "Logout Forwarded E2E",
+        accountStatus: "active",
+      });
+      const rawCode = await sessionExchange.issue({ userId: user.id, authMethod: "google_sso" });
+      const exchangeResponse = await request(app.getHttpServer())
+        .post("/auth/exchange")
+        .send({ code: rawCode });
+      const cookieName = exchangeResponse.body.data.cookieName as string;
+      const sessionToken = exchangeResponse.body.data.sessionToken as string;
+
+      const preLogoutCheck = await request(app.getHttpServer())
+        .get("/auth/session")
+        .set("Cookie", `${cookieName}=${sessionToken}`);
+      expect(preLogoutCheck.status).toBe(200);
+
+      const logoutResponse = await request(app.getHttpServer())
+        .post("/auth/logout")
+        .set("Cookie", `${cookieName}=${sessionToken}`)
+        .set("Origin", WEB_APP_ORIGIN as string);
+      expect(logoutResponse.status).toBe(200);
+
+      const postLogoutCheck = await request(app.getHttpServer())
+        .get("/auth/session")
+        .set("Cookie", `${cookieName}=${sessionToken}`);
+      expect(postLogoutCheck.status).toBe(401);
     });
   });
 });

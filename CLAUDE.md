@@ -768,6 +768,91 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
       session gate is intact. **The Team management + Approver assignment UI is now genuinely live
       in production.** Gaps (4) sub-resource editing and (5) current-project context propagation
       remain not started.
+19. **Cross-domain session-exchange fix for Google SSO login — built, fully validated, not yet
+    reviewed, gated, or merged (2026-08-18).** `docs/implementation/session-exchange.md` records
+    the full account. Not started automatically — the user reported that signing in with Google
+    appeared to work at Google's consent screen but then looped back to the sign-in page instead
+    of reaching the authenticated app; diagnosed directly by reading
+    `apps/dashboard-api/src/auth/session/cookie.util.ts` and
+    `apps/dashboard-web/lib/server-session.ts`, then the fix was implemented under the user's
+    explicit "yes please" authorization. Real root cause: `dashboard-api`'s Google OIDC callback
+    set its session cookie and redirected straight to `WEB_APP_ORIGIN`'s root, but that cookie is
+    host-only to `dashboard-api`'s own `*.vercel.app` domain (no `Domain` attribute, no shared
+    parent domain with `dashboard-web`'s separate `*.vercel.app` project) — it was never actually
+    sent on the browser's subsequent navigation to `dashboard-web`, so every login silently landed
+    the visitor back at `/auth/sign-in`. **Not a `SameSite` bug** — `SameSite=None` is already
+    correct for the genuinely cross-site requests this app makes _to_ `dashboard-api`; the broken
+    case is the browser's own top-level navigation _away from_ `dashboard-api`, which that cookie
+    could never reach regardless of `SameSite`. Went undetected since the authenticated shell was
+    built (Phase 1F, 2026-08-14) because every prior "verified live" deployment check only tested
+    the _unauthenticated_ redirect, and the Playwright a11y suite uses a test-only session bypass
+    specifically because a real SSO login can't run in CI — so the real cross-domain cookie path
+    was never actually exercised by any check, human or automated, until now. Fixed with a new
+    session-exchange mechanism: the Google callback now mints a short-lived (60s), single-use,
+    opaque exchange code (migration `00046`, `session_exchange_codes`, hashed like the existing
+    session token, atomic conditional-`UPDATE` redemption mirroring
+    `IdempotencyKeyRepository.reserve()`) and redirects to a new `dashboard-web` Route Handler
+    (`app/auth/exchange/route.ts`, the first one in this app), which redeems it server-to-server
+    against a new `POST /auth/exchange` endpoint and sets `dashboard-web`'s own first-party
+    `wds_session` cookie. `SessionExchangeService#redeem()` deliberately mints a **second,
+    independent session** via the existing `SessionService.issue()` rather than relaying the
+    original raw token (which is never persisted anywhere to relay in the first place).
+    `dashboard-api`'s own session cookie is unchanged — still needed for direct browser-mediated
+    mutation fetches. A related, explicitly out-of-scope gap was found and flagged, not fixed: the
+    emergency-admin TOTP page has the identical underlying bug via a different mechanism (a
+    client-side `fetch` + `router.push`, not a server redirect) — recorded as a known adjacent gap
+    for a separate, not-yet-authorized fix. Full validation: 6 new `dashboard-api` unit tests
+    (`session-exchange.service.spec.ts`), 5 new `packages/database` integration tests (real
+    disposable database — create/redeem, single-use enforcement, expiry enforcement, migration
+    up/down round-trip), 5 new `dashboard-api` e2e tests (real disposable database — a redeemed
+    code mints a genuinely independent working session verified via a separate `supertest` agent,
+    single-use enforcement over real HTTP, a successful-callback redirect-through-`/auth/exchange`
+    regression test), 6 new `dashboard-web` unit tests (the route handler's every branch) — 369/369
+    `dashboard-api` unit tests, 140/140 `dashboard-web` unit tests, all passing; typecheck/lint/
+    `next build`/`nest build`/`pnpm exec prettier --check` all clean across `packages/database`,
+    `packages/shared-types`, `apps/dashboard-api`, and `apps/dashboard-web`. Built on branch
+    `fix-cross-domain-session-exchange`, off `main` at `32e5bba` (the PR #34 merge commit). Pushed
+    and opened as
+    [PR #35](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/35).
+    **Update (2026-08-18): independent code review complete, 9 of 10 CONFIRMED findings fixed.**
+    High effort (8 finder angles, 1-vote verification) — 11 candidates surfaced, all verified
+    (10 CONFIRMED, 1 PLAUSIBLE, 0 refuted). Most severe: splitting one login into two independent
+    sessions meant "Sign out" only ever revoked the rarely-used `dashboard-api`-side session, never
+    the `dashboard-web`-side one `getServerSession()` actually authenticates every page against —
+    fixed with a new `DELETE /auth/session` route in `dashboard-web` that forwards the whole
+    incoming `Cookie` header (not a name-keyed lookup) to `dashboard-api`'s `/auth/logout` with an
+    explicit `Origin` header, called alongside the existing dashboard-api logout call. Also fixed:
+    an unguarded exchange-code `issue()` call that could leak a raw `500` with a session cookie
+    already staged; the actively-used session being stamped with the server-to-server exchange
+    call's own `ipHash`/`userAgent` instead of the real browser's (migration `00046` amended,
+    not superseded, since it hadn't shipped anywhere yet — new `ip_hash`/`user_agent` columns);
+    a missing `auth_events` record for the session actually in use (new `session_exchange_redeemed`
+    vocabulary entry); an unguarded `response.json()` in the exchange route; the cookie name
+    `dashboard-web` writes under being a separately-hardcoded constant kept in sync with
+    `dashboard-api`'s own env var purely by convention (now echoed back in `POST /auth/exchange`'s
+    response instead); a hardcoded `secure: true` with no local-dev override; a 4x-duplicated
+    redirect-to-error literal; and an extra DB round-trip in `redeem()` (now uses Sequelize's
+    `returning: true`). **One finding left as accepted, tracked debt, flagged explicitly for the
+    second-role reviewer**: `POST /auth/exchange` has no `OriginCheckGuard`/shared secret beyond
+    the code's own entropy/single-use/60s TTL, and the code traverses a real, Vercel-logged URL on
+    every login — closing it properly means a materially bigger architectural change (a POST-based
+    redirect flow) for a narrow (~60s, single-use) exploit window. Re-validated: 370/370
+    `dashboard-api` unit tests, 143/143 `dashboard-web` unit tests, new integration/e2e coverage
+    for every fix, typecheck/lint/build/prettier all clean. See
+    `docs/implementation/session-exchange.md` §5 for the full account. **Update (2026-08-18):
+    security review complete (0 findings above threshold) and required second-role human review
+    complete** — Jitesh D, decision "Approved as-is," accepting the `POST /auth/exchange`
+    origin-guard gap as tracked debt. See
+    `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
+    section. **The gate (G4-session-exchange) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit
+    `1cd89adf973cd13f499170a79ba8601e0a9a56cb` on branch `fix-cross-domain-session-exchange` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-session-exchange`) and the approval checklist's "Sign-off" section. **This gate approval
+    does not itself authorize merging PR #35, a production deployment, or running migration
+    `00046` against the real production database** — merge remains its own separate,
+    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -2494,6 +2579,84 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The
   `dashboard-web` Team management + Approver assignment UI is now genuinely live in production.**
   No business-module implementation work starts automatically as a result of this merge.
+- `[2026-08-18]` **Diagnosed and fixed a real production authentication bug**: the user reported
+  that Google Workspace SSO login appeared to succeed at Google's own consent screen but then
+  looped back to `/auth/sign-in` instead of reaching the authenticated app. Diagnosed directly
+  against the deployed app (via the user's own Chrome session, then confirmed by reading
+  `cookie.util.ts`/`server-session.ts`) as a genuine cross-domain cookie-scoping bug:
+  `dashboard-api`'s Google OIDC callback set its session cookie and redirected straight to
+  `WEB_APP_ORIGIN`'s root, but that cookie is host-only to `dashboard-api`'s own domain (no
+  `Domain` attribute, no shared parent domain between the two separate `*.vercel.app` projects) —
+  it was never actually sent on the subsequent navigation to `dashboard-web`. Not a `SameSite`
+  bug — `SameSite=None` is already correct for the cross-site requests this app makes _to_
+  `dashboard-api`; the broken case is the browser's own top-level navigation _away from_ it, which
+  that cookie could never reach. Explained 3 candidate fixes and asked directly which to
+  implement; the user replied "yes please" to the recommended session-exchange approach. Built and
+  fully validated on branch `fix-cross-domain-session-exchange` — see "Active tasks" item 19 above
+  and `docs/implementation/session-exchange.md` for the complete account. Pushed and opened as
+  [PR #35](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/35).
+- `[2026-08-18]` **Independent code review run on `fix-cross-domain-session-exchange` (PR #35),
+  high effort — 8-angle finder pass, then all 10 CONFIRMED findings verified individually.** Most
+  severe: splitting one Google SSO login into two independent sessions meant "Sign out" only ever
+  revoked the rarely-used `dashboard-api`-side session — the `dashboard-web`-side one
+  `getServerSession()` actually authenticates every page against was never touched, so a user
+  clicking "Sign out" remained effectively signed in for up to 7 days. Fixed with a new
+  `DELETE /auth/session` route in `dashboard-web` that forwards the whole incoming `Cookie` header
+  to `dashboard-api`'s `/auth/logout` with an explicit `Origin` header, called alongside the
+  existing dashboard-api logout call. 9 of 10 CONFIRMED findings fixed per explicit "fix the
+  confirmed findings" instruction (also: an unguarded exchange-code `issue()` call that could leak
+  a raw `500` with a session cookie already staged; the actively-used session being stamped with
+  the server-to-server exchange call's own `ipHash`/`userAgent` instead of the real browser's,
+  fixed by capturing forensic data at issue time and storing it on the amended migration `00046`;
+  a missing `auth_events` record for the session actually in use, via a new
+  `session_exchange_redeemed` vocabulary entry; an unguarded `response.json()`; a cookie-name
+  drift risk between the two independently-deployed apps, closed by having `POST /auth/exchange`
+  echo back the authoritative name instead of `dashboard-web` guessing its own; a hardcoded
+  `secure: true` with no local-dev override; a 4x-duplicated redirect-to-error literal; and an
+  extra DB round-trip in `redeem()`). The 10th — `POST /auth/exchange` having no
+  `OriginCheckGuard`/shared secret beyond the code's own entropy/single-use/60s TTL — was left as
+  **accepted, tracked debt**, flagged explicitly for the second-role reviewer's own judgment,
+  since closing it properly means a materially bigger architectural change (a POST-based redirect
+  flow) for a narrow exploit window. Re-validated: 370/370 `dashboard-api` unit tests, 143/143
+  `dashboard-web` unit tests, new integration/e2e coverage for every fix (including a real
+  logout-via-forwarded-cookie regression test proving the new route's mechanism), typecheck/lint/
+  build/prettier all clean. See `docs/implementation/session-exchange.md`'s "Independent code
+  review" section for the full account. Not yet security-reviewed, second-role human reviewed,
+  gated, or merged.
+- `[2026-08-18]` **Security review run on `fix-cross-domain-session-exchange` (PR #35), separately
+  from the code review, against the fixed branch.** One candidate identified (the new
+  `DELETE /auth/session` route clears the local cookie and reports success even if the
+  server-side revoke call to `dashboard-api` fails or is unreachable) and adversarially
+  verified — rejected at 2/10 confidence: exploiting it requires an attacker to already hold a
+  leaked raw session token _and_ a coincidental `dashboard-api` outage at the exact moment of
+  logout, neither attacker-triggerable; it's a standard best-effort "cookie-clear is the primary
+  signal" logout pattern that only narrows, never removes, the pre-existing TTL-bounded exposure
+  every session already has. **0 findings above threshold.** Also confirmed clean: the new route's
+  `Cookie`/`Origin` forwarding (no cross-site forgery path — no CORS wildcard, `SameSite=Lax`
+  cookie, `DELETE` requires a preflight `dashboard-web` never satisfies for foreign origins);
+  exchange-code crypto and atomic redemption; the new `ipHash`/`userAgent` storage (same shape as
+  existing `sessions`/`auth_events` columns, no new PII exposure class); `GoogleAuthController#callback`'s
+  reordered flow (no auth-bypass/session-fixation shape); and the `cookieName` echoed back in
+  `POST /auth/exchange`'s response (sourced solely from trusted server-side config). A review
+  packet (published as a Claude artifact — code review + security review findings, fixes, and
+  validation evidence, with an explicit decision section for the one accepted-debt item) was
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting
+  the `POST /auth/exchange` origin-guard gap as tracked debt rather than requesting the bigger
+  architectural fix. See
+  `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-18]` **The gate (G4-session-exchange) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit
+  `1cd89adf973cd13f499170a79ba8601e0a9a56cb` on branch `fix-cross-domain-session-exchange` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-session-exchange`) and
+  `docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #35, a production
+  deployment, or running migration `00046` against the real production database** — merge
+  remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

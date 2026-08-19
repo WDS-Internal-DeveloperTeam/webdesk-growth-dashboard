@@ -5,6 +5,7 @@ import {
   EmergencyAdminCredentialRepository,
   ExternalAuthIdentityRepository,
   RecoveryRequestRepository,
+  SessionExchangeCodeRepository,
   SessionRepository,
   UserRepository,
 } from "@webdesk/database";
@@ -14,6 +15,7 @@ import {
   EMERGENCY_ADMIN_CREDENTIAL_REPOSITORY,
   EXTERNAL_AUTH_IDENTITY_REPOSITORY,
   RECOVERY_REQUEST_REPOSITORY,
+  SESSION_EXCHANGE_CODE_REPOSITORY,
   SESSION_REPOSITORY,
   USER_REPOSITORY,
 } from "./config/auth.constants.js";
@@ -39,4 +41,8 @@ export const authRepositoryProviders: Provider[] = [
   { provide: AUTH_LOCKOUT_STATE_REPOSITORY, useFactory: () => new AuthLockoutStateRepository() },
   { provide: RECOVERY_REQUEST_REPOSITORY, useFactory: () => new RecoveryRequestRepository() },
   { provide: AUTH_EVENT_REPOSITORY, useFactory: () => new AuthEventRepository() },
+  {
+    provide: SESSION_EXCHANGE_CODE_REPOSITORY,
+    useFactory: () => new SessionExchangeCodeRepository(),
+  },
 ];

@@ -7,6 +7,7 @@ import { RateLimitService } from "./common/rate-limit.service.js";
 import { OriginCheckGuard } from "./common/origin-check.guard.js";
 import { SeparationOfDutiesService } from "./common/separation-of-duties.service.js";
 import { SessionService } from "./session/session.service.js";
+import { SessionExchangeService } from "./session/session-exchange.service.js";
 import { SessionGuard } from "./session/session.guard.js";
 import { SessionController } from "./session/session.controller.js";
 import { MeController } from "./me.controller.js";
@@ -55,6 +56,7 @@ import { RecoveryService } from "./recovery/recovery.service.js";
     },
     SeparationOfDutiesService,
     SessionService,
+    SessionExchangeService,
     SessionGuard,
     GoogleAuthService,
     EmergencyAdminService,
