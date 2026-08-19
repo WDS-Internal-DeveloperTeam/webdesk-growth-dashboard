@@ -235,3 +235,47 @@ files (`auth-session-route.test.tsx`, `logout-page.test.tsx`, and expanded
   `pnpm --filter @webdesk/database run migrate` themselves in their own terminal, per this
   project's standing credential-handling discipline, only after this branch is reviewed, gated,
   and merged.
+
+## 7. Production incident (2026-08-19) and the error-masking fix
+
+After PR #35 merged and migration `00046` ran, a real Google SSO sign-in attempted in the brief
+window before the migration had actually landed failed with "Sign-in failed — Your sign-in
+attempt expired. Please try again." Diagnosed directly from live Vercel runtime logs (via the
+user's own authenticated Chrome session): `GoogleAuthController#callback` logged
+`failed to issue session-exchange code`, a Postgres `42P01` (`undefined_table`) error on
+`INSERT INTO "session_exchange_codes"` — the login raced the migration, not a defect in the
+session-exchange code itself. The very next attempt (after the migration had genuinely landed)
+completed successfully.
+
+That diagnosis surfaced a real, separate design gap: every failure path in this flow — both
+`GoogleAuthController#callback`'s `sessionExchange.issue()` catch block (`dashboard-api`) and
+`dashboard-web`'s `/auth/exchange` route's `redirectToAuthError()` helper — redirected to
+`/auth/error?reason=expired` regardless of the actual failure class. A genuine backend 500 (like
+the incident above) showed the exact same message as an actually-expired code, which made the
+incident briefly ambiguous before the logs settled it.
+
+**Fixed** by splitting the taxonomy into two `reason` values, `expired` and `error`:
+
+- `reason=expired` stays reserved for genuinely expired/invalid states: a missing OIDC transaction
+  cookie (`GoogleAuthController#callback`'s pre-existing check, unchanged — this one really is an
+  expiry), a missing `code` query param on `/auth/exchange`, and the backend's `400` response
+  (`SessionController#exchange` throwing `BadRequestException("Invalid or expired exchange
+code")` when `redeem()` returns `null`).
+- `reason=error` now covers every other failure: `sessionExchange.issue()` throwing (the exact
+  shape of this incident), a misconfigured `NEXT_PUBLIC_API_BASE_URL`, a network failure reaching
+  `dashboard-api`, any non-`400` non-2xx status, and a malformed response body.
+
+`apps/dashboard-web/app/auth/error/page.tsx`'s `REASON_MESSAGES` gained an explicit `error` entry
+(`"Something went wrong while signing you in."`, matching the existing `DEFAULT_MESSAGE` text) so
+the mapping stays self-documenting rather than relying on an unrecognized-reason fallback. No
+change to the underlying rejection semantics for genuinely expired/invalid cases, and no change to
+`dashboard-api`'s session cookie, `SameSite`, or `OriginCheckGuard` — this is a diagnostics-only
+fix (which message the user sees, and what gets logged), not a behavior change to what succeeds or
+fails.
+
+Validated: 370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests (real disposable
+database, including the updated `GoogleAuthController` regression test now asserting
+`reason=error`), 143/143 `dashboard-web` unit tests (including 3 tests changed from asserting
+`reason=expired` to `reason=error` for the misconfiguration/network-failure/non-400-status/
+malformed-body cases, and one left unchanged for the genuine 400 case), typecheck/lint/
+`next build`/`nest build`/`pnpm exec prettier --check` all clean.

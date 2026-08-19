@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-session-exchange",
+    "current_gate": "G4-error-masking-fix",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -302,6 +302,20 @@
       "approved_commit": "1cd89adf973cd13f499170a79ba8601e0a9a56cb",
       "record": "docs/project-state/fix-cross-domain-session-exchange-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #35, a production deployment, or running migration 00046 against the real production database \u2014 each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-error-masking-fix",
+      "type": "qa-security-gate",
+      "scope": "fix-auth-exchange-error-masking",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-19T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "/auth/exchange error-masking fix (branch fix-auth-exchange-error-masking, PR #36). Diagnosing a 2026-08-19 sign-in incident (a login racing migration 00046, producing a Postgres 42P01 undefined_table error) surfaced that every failure path in the session-exchange flow -- both GoogleAuthController#callback's sessionExchange.issue() catch block (dashboard-api) and dashboard-web's /auth/exchange route's redirectToAuthError() helper -- redirected to /auth/error?reason=expired regardless of the real failure class, masking a genuine backend error as a routine expired-code case. Fixed by splitting the taxonomy into reason=expired (genuinely expired/invalid: missing OIDC transaction cookie, missing exchange-code param, backend 400) and a new reason=error (everything else). Diagnostics-only -- no change to session cookies, SameSite, OriginCheckGuard, or actual success/failure outcomes, only which message is shown and what gets logged. Independent code review (high effort, 8 finder angles) verified 7 candidates individually: 1 CONFIRMED (REASON_MESSAGES.error duplicating DEFAULT_MESSAGE as a separate literal -- fixed), 5 PLAUSIBLE (shared-type duplication for AuthErrorReason across both apps with no compiler enforcement; a sibling branch in GoogleAuthController#callback that still masks a missing/unparseable OIDC transaction cookie as reason=expired with zero logging; an unguarded body.data destructure that could crash on future API-contract drift, verified not reachable today; the reason=error bucket still collapsing five distinct failure classes into one message; an undocumented, currently-unreachable assumption that a 400 always means expired), 1 REFUTED (dated inline-comment style, verified to match an already-established local convention, dropped). Security review (run separately) found 0 findings above threshold -- confirmed diagnostics-only, no attacker-controlled value flows into the redirect target or the rendered message. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-19, decision 'Approved as-is', accepting all 5 open PLAUSIBLE findings as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md and its 'Sign-off' section.",
+      "approved_commit": "f5ecff611261183e6ae9e03ee4edd6fd5ff3a34e",
+      "record": "docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #36 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -1133,6 +1147,23 @@
       },
       "project_version_before": 29,
       "project_version_after": 30
+    },
+    {
+      "timestamp": "2026-08-19T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-error-masking-fix for fix-auth-exchange-error-masking (PR #36) -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-error-masking-fix",
+        "scope": "fix-auth-exchange-error-masking",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-19, decision 'Approved as-is', accepting all 5 open PLAUSIBLE code-review findings as tracked debt, no disputes) was already complete before this gate was requested -- same pattern as every prior gate in this project's history.",
+        "approved_commit": "f5ecff611261183e6ae9e03ee4edd6fd5ff3a34e",
+        "record": "docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md and this entry's sibling in project.json's gates[]",
+        "not_yet_done": "This gate approval does not itself authorize merging PR #36 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+      },
+      "project_version_before": 30,
+      "project_version_after": 31
     }
   ]
 }

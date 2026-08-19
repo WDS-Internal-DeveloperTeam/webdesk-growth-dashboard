@@ -864,6 +864,51 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     exact bug this slice was built to fix. One real incident occurred along the way, diagnosed and
     resolved same-day: see the 2026-08-19 "Recent decisions" entry below. **The cross-domain
     session-exchange fix for Google SSO login is now genuinely live and working in production.**
+20. **`/auth/exchange` error-masking fix — built, fully validated, code-reviewed, security-reviewed,
+    second-role human reviewed, and gated (2026-08-19); not yet merged.**
+    `docs/implementation/session-exchange.md` §7 records the full account.
+    Not started automatically — built directly on the explicit "fix the /auth/exchange error
+    masking" instruction, following item 19's incident diagnosis, which surfaced that every
+    failure path in the session-exchange flow (both `GoogleAuthController#callback`'s
+    `sessionExchange.issue()` catch block in `dashboard-api` and `dashboard-web`'s `/auth/exchange`
+    route's `redirectToAuthError()` helper) redirected to `/auth/error?reason=expired` regardless
+    of the real failure class — a genuine backend 500 showed the identical message as an
+    actually-expired code, which is exactly what made that incident briefly ambiguous. Fixed by
+    splitting the reason taxonomy into `expired` (a missing OIDC transaction cookie, a missing
+    exchange-code param, or the backend's genuine `400` "invalid/expired code" response — all
+    unchanged) and a new `error` value (everything else: `issue()` failures, misconfigured
+    `NEXT_PUBLIC_API_BASE_URL`, network failures, unexpected non-2xx statuses, malformed response
+    bodies). `apps/dashboard-web/app/auth/error/page.tsx`'s `REASON_MESSAGES` gained an explicit
+    `error` entry rather than relying on the unrecognized-reason fallback. Diagnostics-only — no
+    change to `dashboard-api`'s session cookie, `SameSite`, `OriginCheckGuard`, or what actually
+    succeeds/fails, only which message the user sees and what gets logged. Updated the one existing
+    test whose expectation this changed (`google-auth.controller.e2e-spec.ts`'s `issue()`-failure
+    regression test, now asserting `reason=error`) and 3 of the `dashboard-web`
+    `auth-exchange-route.test.tsx` cases (misconfiguration/network-failure/non-400-status/
+    malformed-body, all now asserting `reason=error`); left the missing-code and genuine-400 cases
+    unchanged. Validated: 370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests
+    (real disposable local Postgres, `DATABASE_SSL=false`), 143/143 `dashboard-web` unit tests,
+    typecheck/lint/`next build`/`nest build`/`pnpm exec prettier --check` all clean. Pushed as
+    branch `fix-auth-exchange-error-masking`, opened as
+    [PR #36](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/36).
+    **Independent code review then ran** (high effort, 8 finder angles) — 7 candidates verified
+    individually (1 CONFIRMED, 5 PLAUSIBLE, 1 REFUTED and dropped — dated inline-comment style
+    matching an already-established local convention, not a real deviation). The CONFIRMED
+    finding (`REASON_MESSAGES.error` duplicating `DEFAULT_MESSAGE` as a separate literal) was
+    fixed and re-validated; the 5 PLAUSIBLE findings (shared-type duplication across apps, a
+    sibling OIDC-cookie branch still masking non-expiry failures, an unguarded `body.data`
+    destructure on future API-contract drift, the `error` bucket still not finely diagnosable,
+    and an undocumented 400-means-expired assumption) were left open, not silently dropped. **A
+    separate `security-review` skill run found 0 findings above threshold** — confirmed
+    diagnostics-only, no attacker-controlled value flows into the redirect target or the rendered
+    message. A review packet (published as a Claude artifact — code review + security review
+    findings, the one fix, and the 5 open items, with an explicit decision section) was prepared
+    for the required second-role human review, since the implementing agent cannot also be its
+    own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting all
+    5 open findings as tracked debt rather than requesting fixes before merge — see
+    `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md`'s "Sign-off"
+    section. A gate decision and merge authorization remain separate, not-yet-requested next
+    steps.
 
 ## Recent decisions
 
@@ -2715,6 +2760,70 @@ Playwright browsers` step (an infra-level browser download) for 40+ minutes; dia
   not-yet-requested scope. **The cross-domain session-exchange fix for Google SSO login is now
   fully verified working end-to-end in production** — closing the original bug this whole PR #35
   effort was built to fix.
+- `[2026-08-19]` **Built the `/auth/exchange` error-masking fix**, under the explicit "fix the
+  /auth/exchange error masking" instruction. Branch `fix-auth-exchange-error-masking`, off `main`
+  at `f9bb065`. Split the `reason` taxonomy used by `/auth/error` into `expired` (genuinely
+  expired/invalid: missing OIDC transaction cookie, missing exchange code, backend `400`) and a
+  new `error` (everything else: `GoogleAuthController#callback`'s `sessionExchange.issue()`
+  failures — the exact shape of the incident just diagnosed — misconfiguration, network failures,
+  unexpected non-2xx statuses, malformed response bodies), across both `dashboard-api`'s
+  `GoogleAuthController` and `dashboard-web`'s `/auth/exchange` route. See
+  `docs/implementation/session-exchange.md` §7 for the full account. Diagnostics-only: no change
+  to session-cookie handling, `SameSite`, `OriginCheckGuard`, or actual success/failure outcomes —
+  only which message the user sees and what gets logged. Updated the one existing test whose
+  expectation this changed (`google-auth.controller.e2e-spec.ts`) and 3 of `dashboard-web`'s
+  `auth-exchange-route.test.tsx` cases; left the missing-code and genuine-400 cases unchanged.
+  Full validation: 370/370 `dashboard-api` unit tests, 111/111 `dashboard-api` e2e tests (real
+  disposable local Postgres), 143/143 `dashboard-web` unit tests, typecheck/lint/`next build`/
+  `nest build`/`pnpm exec prettier --check` all clean. Pushed as branch
+  `fix-auth-exchange-error-masking`, opened as
+  [PR #36](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/36).
+- `[2026-08-19]` **Independent code review run on `fix-auth-exchange-error-masking` (PR #36), high
+  effort — 8 finder angles, deduped to 7 candidates for 1-vote verification.** 1 CONFIRMED, 5
+  PLAUSIBLE, 1 REFUTED (inline dated-incident comments — verified against a repo-wide grep to
+  match an already-established local convention across both apps and packages, not a real
+  deviation, so dropped). Under explicit "fix the confirmed findings" instruction, fixed the one
+  CONFIRMED finding: `REASON_MESSAGES.error` was a hand-typed literal byte-identical to
+  `DEFAULT_MESSAGE` with nothing tying them together — reordered `DEFAULT_MESSAGE`'s declaration
+  above `REASON_MESSAGES` and referenced it directly instead of duplicating the string. The 5
+  PLAUSIBLE findings (shared-type duplication for `AuthErrorReason` across `dashboard-api`/
+  `dashboard-web` with no compiler enforcement — converged on independently by three finder
+  angles; a sibling branch in `GoogleAuthController#callback` that still masks a missing/
+  unparseable OIDC transaction cookie as `reason=expired` with zero logging, the identical bug
+  class this PR fixes elsewhere in the same function; an unguarded `body.data` destructure in
+  `dashboard-web`'s `/auth/exchange` route that could crash instead of showing the new error page
+  if the two apps' response contracts ever briefly drift, verified not reachable with today's
+  matched code; the `reason=error` bucket still collapsing five internally-distinguished failure
+  classes into one identical message; and an undocumented, currently-unreachable assumption that
+  a backend `400` always means "expired") were left open, not silently dropped. Re-validated:
+  143/143 `dashboard-web` unit tests, typecheck/lint/`next build`/prettier all clean.
+- `[2026-08-19]` **Security review run on `fix-auth-exchange-error-masking` (PR #36), separately
+  from the code review.** 0 findings above threshold — confirmed diagnostics-only: the `reason`
+  value on the redirect-emitting side is always one of two fixed string literals, never derived
+  from attacker-controlled input; the `reason` value on the rendering side is user-controlled via
+  `searchParams` but used only as a lookup key into a fixed message map rendered as plain JSX
+  text, no `dangerouslySetInnerHTML`; no new internal error detail newly exposed to the browser;
+  session-cookie/`OriginCheckGuard` logic untouched; no open-redirect surface (the target path is
+  hardcoded, only a constrained two-literal query value changes). A review packet (published as a
+  Claude artifact — code review + security review findings, the one fix, and the 5 open items,
+  with an explicit decision section) was prepared for the required second-role human review,
+  since the implementing agent cannot also be its own reviewer (ADR-0010).
+- `[2026-08-19]` **Required second-role human review complete for `fix-auth-exchange-error-masking`
+  (PR #36).** The review packet was reviewed. **Jitesh D reviewed it and returned "Approved
+  as-is,"** accepting all 5 open PLAUSIBLE findings as tracked debt rather than requesting fixes
+  before merge. See
+  `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-error-masking-fix) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit
+  `f5ecff611261183e6ae9e03ee4edd6fd5ff3a34e` on branch `fix-auth-exchange-error-masking` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-error-masking-fix`) and
+  `docs/project-state/fix-auth-exchange-error-masking-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #36 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
