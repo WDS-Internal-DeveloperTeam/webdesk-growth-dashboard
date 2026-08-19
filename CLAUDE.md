@@ -1158,8 +1158,9 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     divergences from the approved mockup (sidebar theme, module-grid column count) on the live
     page, leading to a follow-up fix.
 25. **`dashboard-web` sidebar & module-grid fix — built, fully validated, code-reviewed,
-    security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"); not yet gated or
-    merged (2026-08-19).** Not started automatically — after item 24 went live,
+    security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"), and gated
+    (G4-sidebar-grid-fix, WebDesk Solution, CONFIRM); not yet merged (2026-08-19).** Not started
+    automatically — after item 24 went live,
     the user pointed at two real screenshots (the live production page vs. the approved "Home
     Visual Directions" mockup) and said directly: the module grid should show 4 tiles, not 5, and
     the sidebar doesn't match the mockup's dark theme. Fixed both, reusing existing tokens: the
@@ -1197,9 +1198,13 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     decision section) was then prepared for the required second-role human review, since the
     implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
     returned "Approved as-is,"** accepting the 2 open PLAUSIBLE code-review findings as tracked
-    debt. See `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s
-    "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
-    next steps.
+    debt. **The gate (G4-sidebar-grid-fix) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM, approved commit `c49904a` on branch
+    `dashboard-web-sidebar-grid-fix` — see
+    `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section.
+    **This gate approval does not itself authorize merging PR #40 or a production deployment** —
+    merge remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -3489,6 +3494,15 @@ build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
   code-review findings as tracked debt rather than requesting fixes. See
   `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section. A
   gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-sidebar-grid-fix) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `c49904a` on branch
+  `dashboard-web-sidebar-grid-fix` — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` (`current_gate` now `G4-sidebar-grid-fix`) and
+  `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #40 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
