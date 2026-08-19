@@ -264,3 +264,169 @@ vulnerabilities. Live-rendered in the Browser pane again after every fix, not ju
 confirmed real Sora/Public Sans fonts resolve via `getComputedStyle`, the widget/module-grid icon
 badges render correctly (no RSC boundary crash), and 39 real `<svg>` icons render on the page
 with no error-boundary text.
+
+## 7. Post-merge fix: sidebar background and module-grid column count (2026-08-19)
+
+After PR #39 merged and went live, the user reported two real divergences from the approved
+design canvas mockup, pointing at a live screenshot vs. the "Home Visual Directions" canvas
+screenshot side by side:
+
+1. **The sidebar stayed on the light `surface` fill** instead of the dark `headerBackground` fill
+   the approved mockup shows — item 24's own build only made the header dark and gave the sidebar's
+   active-nav item a light `accentTint` highlight, but never actually matched the mockup's
+   continuous dark rail spanning header + sidebar together. A genuine build-vs-mockup gap, not
+   caught by the code review (which checks logic/correctness, not pixel fidelity against the design
+   canvas) or the axe-core accessibility scans (which check contrast, not brand-direction
+   adherence).
+2. **The "Available to you" module grid rendered 5 columns at desktop width, not 4** — an
+   `auto-fill, minmax(240px, 1fr)` grid against the 1280px `ContentContainer` max-width computes to
+   `floor((1280+16)/(240+16)) = 5` columns; the mockup's tiles are visibly roomier.
+
+Both fixed directly, reusing existing tokens rather than inventing new ones:
+
+- **Module grid**: `minmax(240px, 1fr)` → `minmax(280px, 1fr)` in
+  `app/(shell)/home/page.tsx`'s module-grid `gridTemplateColumns` — `floor((1280+16)/(280+16)) = 4`
+  at the `ContentContainer` cap, with a comment recording the arithmetic so a future minmax edit
+  doesn't silently reintroduce 5. `ContentContainer` never exceeds 1280px, so this is a real cap,
+  not a lucky value at one specific viewport.
+- **Sidebar**: `app-shell.module.css`'s `.sidebar` now uses `colorTokens.headerBackground`/
+  `headerBorder` (the same fill/border the header already uses) instead of `surface`/`border`.
+  `.sidebarLink` and the `.navGroupLabel`/`.clusterLabel` labels now use `headerForegroundMuted`
+  (documented in `tokens.ts` as 6.80:1 against `headerBackground`, real AA-safe text, not just
+  decorative) instead of the light-surface `foregroundMuted`. `.sidebarLink:hover` now uses
+  `headerControlBackground`/`headerForeground` instead of the light-surface `mutedSurface`/
+  `foreground`. `.sidebarLinkActive` switches from `accentTint` (a near-white tint meant for light
+  surfaces — it would render as a stark white box on a dark sidebar) to `accent` itself: a real,
+  clearly-visible indigo highlight against `headerBackground` (~2.1:1 luminance contrast between
+  the two dark surfaces, vs. only ~1.16:1 if `headerControlBackground` had been reused instead —
+  checked both before choosing `accent`), with `headerForeground` (white) text at 7.9:1 contrast,
+  comfortably over AA. `colorTokens.accentTint`'s own doc comment updated to record it's no longer
+  used for the sidebar's active-nav state.
+- **A real accessibility regression this change would otherwise have introduced, caught and fixed
+  in the same pass**: the shared `:focus-visible` rule (`.navToggle`/`.sidebarLink`/`.brand`/
+  `.skipLink`) outlines with `colorTokens.focusRing` (`accent`, `#4338ca`) — fine against every
+  surface it was originally written for, but only ~2.1:1 against the sidebar's new dark
+  `headerBackground`, under WCAG 2.2 SC 1.4.11's 3:1 non-text-contrast minimum for a focus
+  indicator. Added a `.sidebarLink:focus-visible { outline-color: headerForeground }` override
+  (white clears every sidebar surface — background, hover fill, and the active `accent` fill alike,
+  at 7.9:1–16.4:1) rather than leaving the regression in place.
+
+Validated: 79/79 `packages/ui` unit tests, 162/162 `dashboard-web` unit tests (all pre-existing,
+none needed updating — this PR touches only inline styles and CSS custom-property references, no
+class names, DOM structure, or component props), `eslint`/`check-css-tokens.mjs`
+(the token-lint script that ties `@media`/color literals back to real tokens)/typecheck/`next
+build`/prettier all clean, `pnpm audit` unaffected. Live-rendered in the Browser pane (the
+sanctioned `lib/e2e-test-session.ts` bypass, `PLAYWRIGHT_E2E_TEST_MODE=1` set temporarily in
+`.env.local` and removed again afterward) — confirmed via `getComputedStyle` that the sidebar
+background is exactly `headerBackground` (`rgb(32, 26, 61)`), the active nav item's background is
+exactly `accent` (`rgb(67, 56, 202)`) with white text, inactive links are `headerForegroundMuted`
+(`rgb(167, 159, 224)`), and the module grid computes to exactly 4 columns at desktop width — all
+matching the design values directly, not eyeballed from a screenshot. A stale, unrelated console
+error (`IconBadge`/RSC "Functions cannot be passed" from item 24's already-fixed bug) reappeared in
+`read_console_messages`' output even after a full dev-server restart and a `.next` cache wipe,
+with identical HMR chunk ids across restarts — ruled out as a real regression rather than assumed
+fixed: the source code's `IconBadge` call sites in `home/page.tsx` were re-read and confirmed
+unchanged (still pass rendered `<Icon .../>` elements, never a raw component reference), and a
+direct DOM check found zero `"Something went wrong"` error-boundary text and 39 real `<svg>`
+elements rendered — this matches the same class of Browser-pane automation-tool quirk this project's own history has
+already ruled out once before (item 24's own build, a stale/misbehaving click event — see
+`CLAUDE.md`), not a fresh bug.
+
+## 8. Reversal: sidebar reverted to light theme, made compact (2026-08-19)
+
+Immediately after §7 shipped, the user pasted a reference screenshot of the sidebar and said
+directly: keep it light — not dark — and make it compact. A genuine direction change from §7's own
+dark-sidebar fix (itself built to match the design canvas mockup), not a bug report; followed the
+user's own explicit, most-recent instruction over the earlier mockup-matching one.
+
+Reverted §7's `.sidebar`/`.clusterLabel`/`.navGroupLabel`/`.sidebarLink`/`.sidebarLink:hover`/
+`.sidebarLinkActive` color changes back off the `header*` tokens — `.sidebar` now uses
+`colorTokens.surfaceRaised` (pure white, `#ffffff`) rather than either the dark `headerBackground`
+or the original pre-refresh `surface` (`#f5f1e9`, a warm cream) — `surfaceRaised` reads as a
+distinct white panel against the slightly warmer `background` the main content sits on, matching
+the crisp white look in the user's reference screenshot. `.sidebarLinkActive` reverts to
+`accentTint`/`accent` (the same light-lavender-highlight-plus-indigo-text pairing from before §7,
+which the reference screenshot shows exactly). Removed the `.sidebarLink:focus-visible` override
+§7 added — no longer needed once the sidebar is back on a light surface, since the original
+generic `:focus-visible` rule's `focusRing` color already has good contrast there. Reverted
+`colorTokens.accentTint`'s doc comment back to noting it IS used for the sidebar's active-nav
+state again.
+
+For "compact": tightened every spacing value that controls the sidebar's vertical density rather
+than shrinking type (font sizes deliberately untouched, to stay legible) — `.sidebar` padding
+`space-md` → `space-sm`; `.navGroup` margin-bottom `space-lg` → `space-md`; `.navGroupLabel`/
+`.clusterLabel` vertical padding cut to 2px; `.navList` item gap `2px` → `1px`; `.sidebarLink`
+padding `space-sm` (uniform 0.5rem) → `space-xs space-sm` (0.25rem vertical, 0.5rem horizontal) —
+this last one is the main lever, since it directly sets each nav row's height. Net effect,
+confirmed live: the full 15-module navigation tree (every group, every cluster header) now fits
+inside the viewport with no sidebar scrolling needed at a typical 900px-tall window, where it
+previously required scrolling past "Settings."
+
+Validated: 79/79 `packages/ui` unit tests, 162/162 `dashboard-web` unit tests (unchanged — again no
+class names, DOM structure, or props touched, only CSS custom-property values), typecheck/lint/
+`check-css-tokens.mjs`/`next build`/prettier all clean. Live-rendered in the Browser pane again —
+confirmed via `getComputedStyle` that the sidebar background is exactly `surfaceRaised`
+(`rgb(255, 255, 255)`), the active nav item's background/text are exactly `accentTint`/`accent`
+(`rgb(238, 240, 255)`/`rgb(67, 56, 202)`), inactive links are `foregroundMuted`
+(`rgb(107, 97, 81)`), and `.sidebarLink`'s computed padding is `4px 8px` (was `8px` uniform before
+this change) — and confirmed zero error-boundary text with all 39 icons still rendering.
+
+## 9. Independent code review (2026-08-19)
+
+Medium effort, 8-angle finder pass against the full PR #40 diff (net of both §7/§8 commits). 6
+findings survived verification (3 CONFIRMED, 3 PLAUSIBLE). All 8 angles independently converged on
+the same two underlying issues, which meaningfully increased confidence in both.
+
+**Most severe (CONFIRMED), and the only one with real functional impact**: the module grid's
+`repeat(auto-fill, minmax(280px, 1fr))` fix from §7 only actually reaches 4 columns once the
+available content width hits `ContentContainer`'s 1280px cap — which, accounting for the 260px
+sidebar and 64px of `.main` padding, needs a viewport of roughly **1492px or wider**. At common
+laptop resolutions (1366×768, 1440×900) it silently rendered **3** columns, not 4 — the exact
+undershoot bug §7 was built to fix, just relocated to a lower number. This was missed by §7's own
+live verification, which only checked 1280px and 1920px viewports (both ≥1280px in container terms
+either by exact match or the 1280px cap), never a mid-range width like 1440px where the gap
+actually shows. Independently recomputed the arithmetic with Python before trusting the finding.
+
+Fixed by replacing the `auto-fill`/`minmax` approach with an explicit, breakpoint-driven CSS
+Module (new `app/(shell)/home/page.module.css`): `repeat(N, minmax(0, 1fr))` at each of
+`breakpointTokens`' four values (480/768/1024/1280px, enforced by `check-css-tokens.mjs`) — 1
+column below 480px, 2 from 480px, 3 from 1024px, 4 from 1280px. `minmax(0, 1fr)` has no per-column
+minimum floor, so exactly N columns render at each breakpoint regardless of how narrow the
+container is, trading a hard per-card width floor for a deterministic column count — the more
+robust pattern the altitude-angle finder recommended over hand-tuning a magic pixel value to one
+specific container width. Verified live at the exact boundary: 1279px viewport → 3 columns,
+1280px → 4 columns, 1440px → 4 columns (previously 3).
+
+**Two CONFIRMED documentation-consistency findings**, both converged on independently by 3–4 of
+the 8 angles: (1) the `.clusterLabel` contrast-ratio comment stated stale, wrong numbers —
+`foregroundSubtle` claimed "2.45:1" (contradicting `tokens.ts`'s own documented 3.88:1 for the
+identical pair) and `foregroundMuted` claimed "passes (7+:1)" (the real figure is 6.08:1,
+independently recomputed with the real WCAG relative-luminance formula and confirmed live via
+`getComputedStyle`) — fixed by correcting both numbers and resolving the cross-file contradiction.
+(2) The §8 "compact" pass hardcoded `2px`/`1px` padding/gap literals instead of a spacing token —
+unlike every other value in this file, and invisible to `check-css-tokens.mjs`, which only checks
+`@media` breakpoints and transition durations, never spacing literals — fixed by adding a real
+`spacingTokens["2xs"]` tier (`0.125rem`/2px, matching the existing `"2xl"`/`"3xl"` naming
+convention) to `packages/ui/src/tokens.ts` and using it consistently across `.clusterLabel`
+padding, `.navGroupLabel` padding, and `.navList` gap.
+
+One PLAUSIBLE finding fixed: the `.sidebar` comment's phrase "after seeing the dark-sidebar
+direction live" could be misread as a production incident, given this project's own CLAUDE.md
+vocabulary — reworded to make explicit this was a local dev-preview render on an unmerged branch,
+never deployed.
+
+Two PLAUSIBLE findings left as tracked, out-of-scope debt, not fixed: (1) the new
+`spacingTokens["2xs"]` (2px) is a _third_, numerically different "tight spacing" value alongside an
+existing, undocumented `gap: 0.1rem` (1.6px) convention already used identically in
+`project-roster-section.module.css` and `user-picker.module.css` — full reconciliation into one
+real compact-density system is a larger, separate task than this scoped fix, not silently glossed
+over. (2) `tests/unit/app-shell.test.tsx` has zero computed-style assertions for any of the sidebar
+colors/spacing this branch touches, so a future custom-property typo would only be caught by a live
+render — a genuine, pre-existing testing gap, not something this diff introduced or is obligated to
+close on its own.
+
+Re-validated after all fixes: 79/79 `packages/ui` unit tests (1 updated — the `spacingTokens` key
+list), 162/162 `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs` (now checking 9
+CSS Module files, up from 8)/`next build`/prettier all clean across both packages. Live-verified
+the boundary behavior directly in the Browser pane (1279px → 3 columns, 1280px → 4 columns, 1440px
+→ 4 columns) rather than trusting the arithmetic alone.

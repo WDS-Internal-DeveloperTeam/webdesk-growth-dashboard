@@ -19,6 +19,7 @@ import { moduleIcon } from "@/lib/module-icons";
 import { moduleImplementationStatusBadge } from "@/lib/modules";
 import { projectStatusBadge, type ProjectStatusFilter } from "@/lib/projects";
 import { getServerSession } from "@/lib/server-session";
+import styles from "./page.module.css";
 
 /**
  * Shell-level Home landing page (Phase 1F brief §34, re-skinned per
@@ -235,13 +236,7 @@ export default async function HomePage() {
           Modules are shown based on your own role and permissions. A module appearing here does not
           mean its business functionality is built yet — check its status below.
         </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-            gap: spacingTokens.md,
-          }}
-        >
+        <div className={styles.moduleGrid}>
           {navigation.map((module) => {
             const { bucket, label } = moduleImplementationStatusBadge(module.implementationStatus);
             const { Icon } = moduleIcon(module.iconReference);

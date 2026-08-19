@@ -1146,14 +1146,65 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     presentation-only on already-authenticated, already-permission-filtered data; the
     `deployedAt` → `instanceStartedAt` rename is a labeling correction, not a new exposure;
     `next/font/google` self-hosts both font files at build time with no new runtime third-party
-    call. **A review packet (published as a Claude artifact — code review + security review
+    call. A review packet (published as a Claude artifact — code review + security review
     findings, fixes, and validation evidence, with a decision section) was then prepared for the
     required second-role human review, since the implementing agent cannot also be its own
-    reviewer (ADR-0010).** See `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`.
-    **Awaiting the second-role reviewer's decision** — a gate decision and merge authorization
-    remain separate, not-yet-requested next steps. Since this branch/PR is still unreviewed on
-    those fronts, both items 23 and 24's changes will go through that remaining cycle together as
-    one unit, not separately.
+    reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2
+    open PLAUSIBLE code-review findings as tracked debt. **The gate (G4-visual-refresh) was then
+    separately requested and approved**, and **"Merge PR #39" was then separately requested and
+    executed** — see the header line above and `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`'s
+    "Sign-off" section for the full record. Both items 23 and 24's changes are now genuinely live
+    in production. **Superseded/extended by item 25 below** — the user then found two more real
+    divergences from the approved mockup (sidebar theme, module-grid column count) on the live
+    page, leading to a follow-up fix.
+25. **`dashboard-web` sidebar & module-grid fix — built, fully validated, code-reviewed,
+    security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"), and gated
+    (G4-sidebar-grid-fix, WebDesk Solution, CONFIRM); not yet merged (2026-08-19).** Not started
+    automatically — after item 24 went live,
+    the user pointed at two real screenshots (the live production page vs. the approved "Home
+    Visual Directions" mockup) and said directly: the module grid should show 4 tiles, not 5, and
+    the sidebar doesn't match the mockup's dark theme. Fixed both, reusing existing tokens: the
+    module grid's `minmax(240px, 1fr)` → `minmax(280px, 1fr)` (computing to 4 columns at the
+    1280px `ContentContainer` cap), and the sidebar's background/text/active-state tokens switched
+    from the light `surface`/`accentTint` pair to the header's own dark `headerBackground`/`accent`
+    pair, matching the mockup's continuous dark rail — also catching and fixing a real WCAG 2.2 SC
+    1.4.11 non-text-contrast regression this color change would otherwise have introduced (the
+    shared focus-ring outline color). **Immediately after, the user pasted a reference screenshot
+    and said directly: keep the sidebar light, not dark, and make it compact** — a genuine
+    direction change, not a bug report, followed as the user's own most-recent explicit
+    instruction. Reverted the sidebar's color choice back to light (`surfaceRaised`/`accentTint`,
+    matching the reference screenshot exactly) and tightened every spacing value controlling row
+    density, fitting the full 15-module navigation tree without scrolling at a typical window
+    height. **Independent code review then ran** (medium effort, 8 finder angles) — 6 findings
+    survived verification (3 CONFIRMED, 3 PLAUSIBLE). Most severe: the "4 columns" fix from the
+    first commit didn't actually hold at common laptop resolutions (1366×768, 1440×900 still
+    rendered 3, not 4) since it only reached 4 columns once available content width hit the
+    1280px container cap, needing a viewport of roughly 1492px+ — my own live verification had
+    only checked 1280px and 1920px, missing the mid-range gap. Fixed by replacing the
+    arithmetic-dependent `auto-fill`/`minmax` approach with an explicit, breakpoint-driven CSS
+    Module (`repeat(N, minmax(0, 1fr))` at each of the four real `breakpointTokens` values),
+    verified live at the exact 1279px→3/1280px→4 boundary. Also fixed: a stale, wrong
+    contrast-ratio comment (corrected numbers, independently recomputed with the real WCAG
+    formula) and hardcoded `2px`/`1px` spacing literals that bypassed the token system entirely
+    (fixed by adding a real `spacingTokens["2xs"]` tier). 2 PLAUSIBLE findings left as tracked
+    debt (the new 2px token is a third, numerically inconsistent "tight spacing" value alongside
+    an existing undocumented `0.1rem` convention elsewhere in the app; no computed-style test
+    coverage exists for the sidebar colors/spacing this branch touches — a pre-existing gap, not
+    introduced by this diff). 162/162 `dashboard-web` + 79/79 `packages/ui` unit tests,
+    typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean. **Security review then
+    run separately — 0 findings above threshold** (a pure CSS/token diff with no user input, data
+    handling, new endpoint, or dependency in scope). A review packet (published as a Claude
+    artifact — code review + security review findings, fixes, and validation evidence, with a
+    decision section) was then prepared for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
+    returned "Approved as-is,"** accepting the 2 open PLAUSIBLE code-review findings as tracked
+    debt. **The gate (G4-sidebar-grid-fix) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM, approved commit `c49904a` on branch
+    `dashboard-web-sidebar-grid-fix` — see
+    `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section.
+    **This gate approval does not itself authorize merging PR #40 or a production deployment** —
+    merge remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -3362,6 +3413,96 @@ build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
   `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
   unauthenticated visitor, confirming the session gate is intact. **The `dashboard-web` Home
   widget grid and whole-app visual refresh are now genuinely live in production.**
+- `[2026-08-19]` **User reported two real divergences from the approved "Enterprise Plus" mockup on
+  the now-live Home page**: the sidebar stayed on the light `surface` fill (the mockup shows a
+  continuous dark rail spanning header + sidebar together — item 24's build only made the header
+  dark), and the "Available to you" module grid rendered 5 columns at desktop width, not the
+  mockup's roomier 4. Built directly on branch `dashboard-web-sidebar-grid-fix`, off `main` at
+  `ea9c9b8` (the PR #39 merge commit): the module grid's `minmax(240px, 1fr)` → `minmax(280px,
+1fr)`, and the sidebar's `.sidebar`/`.sidebarLink`/`.navGroupLabel`/`.clusterLabel`/
+  `.sidebarLinkActive` switched from the light `surface`/`accentTint` token pair to the header's own
+  dark `headerBackground`/`accent` pair. Along the way, caught and fixed a real WCAG 2.2 SC 1.4.11
+  non-text-contrast regression this color change would otherwise have introduced (the shared
+  focus-ring outline's contrast against the new dark sidebar dropped to ~2.1:1, under the 3:1
+  minimum) with a targeted `.sidebarLink:focus-visible` override. 162/162 `dashboard-web` + 79/79
+  `packages/ui` unit tests, typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean.
+  Live-verified via `getComputedStyle` that every changed color and the grid's column count matched
+  the intended values exactly. Pushed as branch `dashboard-web-sidebar-grid-fix`, opened as
+  [PR #40](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/40).
+- `[2026-08-19]` **Immediately after, the user pasted a reference screenshot of the sidebar and
+  said directly: keep it light, not dark, and make it compact.** A genuine direction change from
+  the just-shipped dark-sidebar fix, not a bug report — followed as the user's own most-recent
+  explicit instruction over the earlier mockup-matching one. Reverted `.sidebar`/`.clusterLabel`/
+  `.navGroupLabel`/`.sidebarLink`/`.sidebarLink:hover`/`.sidebarLinkActive` back off the `header*`
+  tokens onto light-surface tokens — `.sidebar` now uses `colorTokens.surfaceRaised` (pure white)
+  rather than either the dark `headerBackground` or the original pre-refresh `surface` (a warm
+  cream), reading as a distinct white panel against the slightly warmer `background` the main
+  content sits on; `.sidebarLinkActive` reverts to `accentTint`/`accent`, matching the reference
+  screenshot exactly. Removed the `.sidebarLink:focus-visible` override added the prior commit — no
+  longer needed on a light surface. For "compact," tightened every spacing value controlling the
+  sidebar's vertical density (padding, margins, gaps) rather than shrinking type — the full
+  15-module navigation tree now fits without scrolling at a typical 900px-tall window. 79/79
+  `packages/ui` + 162/162 `dashboard-web` unit tests (unchanged), typecheck/lint/
+  `check-css-tokens.mjs`/`next build`/prettier all clean. Live-verified via `getComputedStyle` that
+  every color and the link padding matched the intended values exactly.
+- `[2026-08-19]` **Independent code review run on `dashboard-web-sidebar-grid-fix` (PR #40),
+  medium effort — 8-angle finder pass against the full diff (net of both commits).** 6 findings
+  survived verification (3 CONFIRMED, 3 PLAUSIBLE) — all 8 angles independently converged on the
+  same two underlying issues, meaningfully increasing confidence in both. Most severe, and the
+  only one with real functional impact: the "4 columns" fix from the first commit only actually
+  reached 4 columns once available content width hit `ContentContainer`'s 1280px cap, needing a
+  viewport of roughly 1492px+ — at common laptop resolutions (1366×768, 1440×900) it silently
+  rendered 3 columns, not 4, the exact undershoot bug it was built to fix, just relocated to a
+  lower number. My own live verification had only checked 1280px and 1920px, never a mid-range
+  width where the gap actually shows. Fixed by replacing the `auto-fill`/`minmax` approach with an
+  explicit, breakpoint-driven CSS Module (new `app/(shell)/home/page.module.css`):
+  `repeat(N, minmax(0, 1fr))` at each of the four real `breakpointTokens` values
+  (480/768/1024/1280px) — no per-column minimum floor, so exactly N columns render at each
+  breakpoint regardless of container width. Verified live at the exact boundary: 1279px → 3
+  columns, 1280px → 4, 1440px → 4 (previously 3). Also fixed: a stale, wrong contrast-ratio comment
+  (`foregroundSubtle` claimed "2.45:1," contradicting `tokens.ts`'s own documented 3.88:1 for the
+  identical pair; `foregroundMuted` claimed "7+:1," the real figure is 6.08:1 — both independently
+  recomputed with the real WCAG formula); hardcoded `2px`/`1px` spacing literals that bypassed the
+  token system entirely, invisible to `check-css-tokens.mjs` (fixed by adding a real
+  `spacingTokens["2xs"]` tier, `0.125rem`/2px, and using it consistently across all three touched
+  sites); and an ambiguous comment ("after seeing the dark-sidebar direction live") that could be
+  misread as a production rollback given this project's own vocabulary conventions — reworded to
+  make explicit this was a local dev-preview render on an unmerged branch, never deployed. 2
+  PLAUSIBLE findings left as tracked debt: the new `spacingTokens["2xs"]` is a third, numerically
+  different "tight spacing" value alongside an existing undocumented `gap: 0.1rem` (1.6px)
+  convention already used in `project-roster-section.module.css` and `user-picker.module.css` (full
+  reconciliation is a larger, separate task); and `app-shell.test.tsx` has no computed-style
+  assertions for any of the sidebar colors/spacing this branch touches (a pre-existing testing gap,
+  not introduced by this diff). Re-validated: 79/79 `packages/ui` unit tests (1 updated —
+  `spacingTokens` key list), 162/162 `dashboard-web` unit tests, typecheck/lint/
+  `check-css-tokens.mjs` (now checking 9 CSS Module files, up from 8)/`next build`/prettier all
+  clean.
+- `[2026-08-19]` **Security review run on `dashboard-web-sidebar-grid-fix` (PR #40), separately
+  from the code review.** 0 findings above threshold — pure CSS Module/design-token/layout changes
+  with no user input, data handling, new endpoint, or dependency anywhere in scope; every value
+  changed (grid columns, colors, spacing) is a static, compile-time constant injected as a CSS
+  custom property, never attacker-influenceable; no `dangerouslySetInnerHTML` or other
+  unsafe-render method anywhere in the diff. A review packet (published as a Claude artifact — code
+  review + security review findings, fixes, and validation evidence, with a decision section) was
+  then prepared for the required second-role human review, since the implementing agent cannot
+  also be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`.
+- `[2026-08-19]` **Required second-role human review complete for
+  `dashboard-web-sidebar-grid-fix` (PR #40).** The review packet (code review + security review
+  findings, fixes, and the 2 open tracked-debt items, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE
+  code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-sidebar-grid-fix) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `c49904a` on branch
+  `dashboard-web-sidebar-grid-fix` — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` (`current_gate` now `G4-sidebar-grid-fix`) and
+  `docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #40 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

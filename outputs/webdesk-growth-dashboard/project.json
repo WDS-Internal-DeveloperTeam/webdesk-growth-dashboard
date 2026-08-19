@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-visual-refresh",
+    "current_gate": "G4-sidebar-grid-fix",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-19T00:00:00Z",
-    "version": 30
+    "version": 31
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -359,6 +359,21 @@
       "record": "docs/project-state/dashboard-web-visual-refresh-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #39 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule.",
       "merge_resolution_note": "RESOLVED 2026-08-19: PR #39 merged to main under explicit 'Merge PR #39' authorization, merge commit 7728830065c0d14a306216209a0f087b64fbddf0, all 14 CI checks green beforehand (one formatting-only fix, 7a085dd, pushed first to correct a prettier table-alignment drift). Both Vercel projects auto-deployed on push to main and were verified live directly (not just via CI's own Vercel status check) -- dashboard-api's /health returned build.commitSha == 7728830065c0d14a306216209a0f087b64fbddf0, confirming the exact merged commit is what's actually serving; dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor, confirming the session gate is intact. This note is appended rather than rewriting the gate's own historical pre-merge text, which accurately reflected the state at gate-approval time."
+    },
+    {
+      "id": "G4-sidebar-grid-fix",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-sidebar-grid-fix",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-19T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web sidebar & module-grid fix (branch dashboard-web-sidebar-grid-fix, PR #40). Three commits reviewed together as one unit. (1) After item 24/PR #39 went live, the user pointed at two real divergences from the approved 'Enterprise Plus' design canvas mockup on the live Home page: the sidebar stayed on the light surface fill instead of the mockup's continuous dark rail, and the module grid rendered 5 columns instead of 4. Fixed by switching the sidebar to the header's own dark headerBackground/accent token pair and widening the grid's minmax floor -- also catching and fixing a real WCAG 2.2 SC 1.4.11 non-text-contrast regression this color change would otherwise have introduced (the shared focus-ring outline). (2) Immediately after, the user pasted a reference screenshot and said directly: keep the sidebar light, not dark, and make it compact -- a genuine direction change, not a bug report, followed as the user's own most-recent explicit instruction. Reverted the sidebar back to the light surfaceRaised/accentTint token pair matching the screenshot exactly, and tightened spacing values controlling row density so the full 15-module navigation tree fits without scrolling. (3) Independent code review (medium effort, 8 finder angles) surfaced 6 findings (3 CONFIRMED, 3 PLAUSIBLE) -- most severe: the '4 columns' fix from commit 1 only actually held once available content width hit ContentContainer's 1280px cap, needing a viewport of roughly 1492px+; at common laptop resolutions (1366x768, 1440x900) it silently rendered 3 columns, not 4, the exact undershoot bug it was built to fix, just relocated to a lower number -- the implementing agent's own live verification had only checked 1280px and 1920px, missing the mid-range gap. Fixed by replacing the auto-fill/minmax approach with an explicit, breakpoint-driven CSS Module (repeat(N, minmax(0, 1fr)) at each real breakpointTokens value), verified live at the exact 1279px-3/1280px-4 boundary. Also fixed: a stale, wrong contrast-ratio comment (corrected, independently recomputed with the real WCAG formula) and hardcoded 2px/1px spacing literals bypassing the token system (fixed by adding a real spacingTokens['2xs'] tier). 2 PLAUSIBLE findings left as tracked debt: the new 2px token is a third, numerically inconsistent 'tight spacing' value alongside an existing undocumented 0.1rem convention elsewhere in the app; and app-shell.test.tsx has no computed-style assertions for the sidebar colors/spacing this branch touches (a pre-existing testing gap, not introduced by this diff). Security review (run separately, against the fixed branch) found 0 findings above threshold -- a pure CSS Module/design-token/layout diff with no user input, data handling, new endpoint, or dependency anywhere in scope; every changed value is a static, compile-time constant, never attacker-influenceable. Final numbers: 162/162 dashboard-web unit tests, 79/79 packages/ui unit tests (1 updated -- spacingTokens key list), typecheck/lint/check-css-tokens.mjs (9 CSS Module files)/next build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-19, decision 'Approved as-is', accepting the 2 open PLAUSIBLE findings as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md and its 'Sign-off' section.",
+      "approved_commit": "c49904a",
+      "record": "docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #40 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule.",
+      "merge_resolution_note": null
     }
   ],
   "budget": {
