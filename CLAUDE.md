@@ -1081,8 +1081,8 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
     the user then said the UI "still looks simple" even with the widget grid live, leading to the
     whole-app visual refresh.
 24. **`dashboard-web` whole-app visual refresh ("Enterprise Plus") — built, fully validated,
-    code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is");
-    not yet gated or merged (2026-08-19).** Not started automatically — after seeing item
+    code-reviewed, security-reviewed, second-role human reviewed (Jitesh D, "Approved as-is"),
+    and gated (G4-visual-refresh, WebDesk Solution, CONFIRM); not yet merged (2026-08-19).** Not started automatically — after seeing item
     23's widget grid live-rendered, the user said the UI "still looks simple." Rather than guess
     again in code, drafted 3 full visual directions (Current, "Enterprise Plus," "Modern SaaS") as
     a design canvas — a real mockup of the actual Home page content in each direction, not abstract
@@ -3339,6 +3339,15 @@ build`/prettier clean, `pnpm audit` 0 vulnerabilities. See
   code-review findings as tracked debt rather than requesting fixes. See
   `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`'s "Sign-off" section. A
   gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-visual-refresh) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `9eb8f28` on branch
+  `dashboard-web-home-widget-grid` — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` (`current_gate` now `G4-visual-refresh`) and
+  `docs/project-state/dashboard-web-visual-refresh-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #39 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

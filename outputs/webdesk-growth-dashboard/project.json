@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-session-exchange-debt-closure",
+    "current_gate": "G4-visual-refresh",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-18T00:00:00Z",
-    "version": 29
+    "updated_at": "2026-08-19T00:00:00Z",
+    "version": 30
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -344,6 +344,20 @@
       "approved_commit": "11aa6d0",
       "record": "docs/project-state/fix-remaining-session-exchange-debt-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #38 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-visual-refresh",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-home-widget-grid",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-19T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web Home widget grid + whole-app visual refresh (branch dashboard-web-home-widget-grid, PR #39). Two changes built in sequence on one branch, reviewed together as one unit. (1) Home widget grid: the live /home page was still hand-rolled <ul><li> markup with inline style={{ border: ... }}, never wired to the packages/ui component library the approved Clean Enterprise design system (PR #33) already built -- rebuilt per the already-approved 15-representative-screen-specifications.md §1 spec (four Card-based widgets, a Card+Badge module grid), no fabricated data (EmptyState where no real source exists). (2) Whole-app visual refresh 'Enterprise Plus': after seeing the widget grid live, the user said the UI 'still looks simple' -- rather than guess again in code, 3 full visual directions were mocked up directly against real Home page content and presented for a direct choice; the user picked Enterprise Plus, then chose to apply it to the whole app (not just Home), since the mockup's header/sidebar are shared components. New indigo/violet accent, warm surfaces, self-hosted Sora+Public Sans typography, richer card shadows/radii, and real per-module icons via lucide-react, closing a gap where all 43 modules carried an iconReference field since migration 00035 with no icon library to consume it. Every new color pair checked against the real WCAG 2.1 contrast formula before being chosen. Independent code review (high effort, 8 finder angles) surfaced 9 candidates, 7 CONFIRMED (all fixed), 2 PLAUSIBLE (left as tracked debt) -- most severe: toCssCustomProperties() (pre-existing, untouched by this PR) double-prefixed every typography CSS custom property, so the new fonts silently never applied anywhere in the app; fixed generically and verified live via getComputedStyle. Also fixed: a mislabeled 'Deployed' field that actually showed serverless cold-start time (renamed to 'Instance started'); two reuse gaps (projectStatusBadge(), a duplicated Fact component promoted to packages/ui); a real React-Server-Components crash from promoting IconBadge into a \"use client\" file, caught only by live-rendering, not typecheck/build (fixed by switching its icon prop to ReactNode); an unlogged unrecognized-iconReference fallback; and the icon-only sidebar's per-module distinctiveness restored via a monogram fallback. The 2 PLAUSIBLE findings (an unguarded status-badge lookup, same shape already accepted as debt on sibling functions; a stale, currently-unreachable focus-ring CSS fallback hex) were left as tracked debt. Security review (run separately, against the fixed branch) found 0 findings above threshold -- no new user input reaches a dangerous sink (all new data is backend-sourced from already-RBAC-gated responses), no dangerouslySetInnerHTML or other unsafe-render method introduced, no auth/session/cookie/OriginCheckGuard/PermissionGuard logic touched, next/font/google self-hosts both font files at build time with no new runtime third-party call. Final numbers: 162/162 dashboard-web unit tests (4 new), 79/79 packages/ui unit tests, 15/15 Playwright tests (including both authenticated-shell axe-core WCAG 2.2 AA scans, 0 violations), typecheck/lint/next build/prettier all clean across both packages, pnpm audit 0 vulnerabilities. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-19, decision 'Approved as-is', accepting the 2 open PLAUSIBLE findings as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-visual-refresh-approval-checklist.md and its 'Sign-off' section.",
+      "approved_commit": "9eb8f28",
+      "record": "docs/project-state/dashboard-web-visual-refresh-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #39 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
