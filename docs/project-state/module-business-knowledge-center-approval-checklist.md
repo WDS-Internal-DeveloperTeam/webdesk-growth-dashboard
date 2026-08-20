@@ -3,7 +3,9 @@
 **Status:** Code review complete (12 candidates verified — 11 CONFIRMED, 1 REFUTED and dropped; 10
 findings kept in the final report per the review's own cap — 9 CONFIRMED + 1 PLAUSIBLE — all fixed
 except the 1 PLAUSIBLE, left as accepted, tracked debt). Security review complete (0 findings above
-threshold). **Awaiting the required second-role human review.**
+threshold). **Required second-role human review complete (2026-08-20, Jitesh D, "Approved as-is"),
+accepting the 1 open PLAUSIBLE code-review finding as tracked debt.** A gate decision and merge
+authorization remain separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -54,15 +56,26 @@ verification and dropped:
    role/grant separation, not actor-identity separation; `ProjectService.changeStatus()` has the
    identical shape and was never flagged across several independent review passes.
 
-## Required second-role human review — PENDING
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (9 CONFIRMED fixed, 1 PLAUSIBLE accepted as tracked debt) — reviewed by:
-      **[pending]**, decision: **[pending]**.
-- [ ] Security-review findings (0 above threshold) — reviewed by: **[pending]**, decision:
-      **[pending]**.
+- [x] Code-review findings (9 CONFIRMED fixed, 1 PLAUSIBLE accepted as tracked debt) — reviewed by:
+      **Jitesh D**, 2026-08-20, **Approved as-is**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-20,
+      **Approved as-is**.
 
 ## Sign-off
 
-**Awaiting the required second-role human review** (ADR-0010 separation-of-duties — the implementing
-agent cannot also be its own reviewer). A gate decision and merge authorization remain separate,
-not-yet-requested next steps.
+**Second-role human review: complete.** The one open PLAUSIBLE code-review finding (no per-record-
+type cap on simultaneous `mandatory`/`advisory` records) was accepted as tracked debt rather than
+requiring a fix before proceeding.
+
+| Field                         | Value                                                                                                                                                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                                                                                                                                         |
+| Review date                   | 2026-08-20                                                                                                                                                                                                                                                       |
+| Decision                      | Approved as-is                                                                                                                                                                                                                                                   |
+| Scope reviewed                | Full code-review disposition (9 findings fixed, 1 accepted as debt) and full security-review disposition (0 findings), per this slice's own review outputs recorded in `docs/implementation/module-business-knowledge-center.md` and the published review packet |
+| Disputes raised               | None recorded                                                                                                                                                                                                                                                    |
+
+A gate decision (G4-business-knowledge-center) and merge authorization remain separate, not-yet-
+requested next steps.
