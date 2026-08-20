@@ -1,7 +1,8 @@
 # Business Knowledge Center — Rich Content & File Attachments — Approval Checklist
 
-**Status:** Built and fully validated. Not yet code-reviewed, security-reviewed, second-role
-human reviewed, gated, or merged.
+**Status:** Built, fully validated, independently code-reviewed (8 of 9 findings fixed, 1
+accepted as tracked debt — see `docs/implementation/business-knowledge-center-rich-content-attachments.md`
+§7). Not yet security-reviewed, second-role human reviewed, gated, or merged.
 
 ## Completion condition
 
@@ -31,7 +32,21 @@ human reviewed, gated, or merged.
 
 ## Independent code review
 
-Not yet run.
+Run at high effort (8 finder angles, 1-vote verification). 9 candidates survived dedup and
+verification (7 CONFIRMED, 2 PLAUSIBLE). Most severe: the file-attachment upload flow pointed
+`@vercel/blob/client`'s `handleUploadUrl` directly at `dashboard-api`, a genuinely cross-origin
+request the session cookie could never reach (no `credentials` option on the Blob SDK, and
+browsers forbid scripts from setting `Cookie` manually) — every real upload would have 401'd in
+production. Fixed with a new same-origin `dashboard-web` proxy Route Handler. 8 of 9 findings
+fixed in total (also: an edit-mode content-clearing bug that stored `'<p></p>'` instead of
+`null`; a missing try/catch in `confirm()` that orphaned the Blob object on a corrupt-file crash;
+a silent editor/state desync on the length-limit guard; a sequential-fetch efficiency gap; a
+redundant `router.refresh()`; a duplicated sanitization allowlist now promoted to
+`packages/validation`; and a real reverse-tabnabbing gap closed via the same promotion). 1
+CONFIRMED finding (no cleanup mechanism for a Blob object orphaned by an interrupted upload)
+left as accepted, tracked debt — a real fix means a cron/reconciliation job, out of proportion
+for a review-fix pass. See `docs/implementation/business-knowledge-center-rich-content-attachments.md`
+§7 for the full account.
 
 ## Independent security review
 

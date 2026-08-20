@@ -1,10 +1,9 @@
 # Business Knowledge Center — Rich Content & File Attachments (as-built)
 
-**Status:** Built, fully validated (real disposable database, real HTTP e2e, real component
-tests, a full `next build`, live-rendered unauthenticated-redirect checks). Not yet
-code-reviewed, security-reviewed, gated, or merged. Branch
-`business-knowledge-center-rich-content-attachments`, off `main` at `31001fa` (the commit
-recording this task package's own scoping).
+**Status:** Built, fully validated, independently code-reviewed (8 of 9 CONFIRMED/PLAUSIBLE
+findings fixed, 1 left as accepted tracked debt — see §7 below). Not yet security-reviewed,
+gated, or merged. Branch `business-knowledge-center-rich-content-attachments`, off `main` at
+`31001fa` (the commit recording this task package's own scoping).
 
 ## 1. Why this exists
 
@@ -224,3 +223,102 @@ undefined` (three real, distinct states — redacted / genuinely empty / real co
 - **Same-session freshly-uploaded preview HTML isn't re-sanitized client-side** — the render-time
   defense-in-depth pass covers the already-server-rendered initial page load; closing this one
   remaining gap would need a browser-safe HTML sanitizer, a real but deferred hardening item.
+
+## 7. Independent code review
+
+Run at high effort (8 finder angles, 1-vote verification). 9 candidates survived dedup and
+verification (7 CONFIRMED, 2 PLAUSIBLE), reported via `ReportFindings`, then all but one fixed
+per the explicit "fix the confirmed findings" instruction.
+
+**Most severe, and the review's own most important catch**: the file-attachment upload flow
+called `@vercel/blob/client`'s `upload()` with `handleUploadUrl` pointing directly at
+`dashboard-api` — a genuinely cross-origin request (the two apps are separate `*.vercel.app`
+deployments, isolated as distinct sites). The Blob client SDK has no `credentials` option and
+browsers forbid scripts from setting a `Cookie` header manually, so that request could never
+carry the session cookie `dashboard-api`'s `SessionGuard`/`OriginCheckGuard`/`PermissionGuard`
+require — **every real upload attempt would have 401'd in production**, the entire feature this
+branch was built to deliver. Verified directly against `@vercel/blob@2.8.0`'s own source
+(`retrieveClientToken()`'s `fetch()` call passes no `credentials` override, defaulting to
+`"same-origin"`, and resolves a relative `handleUploadUrl` against the current page's own
+origin). Fixed with a new same-origin `dashboard-web` Route Handler
+(`app/(shell)/business-knowledge-center/[recordId]/attachments/upload-route/route.ts`) that
+proxies the request server-to-server, forwarding the incoming `Cookie` header and an explicit
+`Origin` header — the same forwarding pattern `app/auth/session/route.ts` already established;
+`handleUploadUrl` now points at this relative, same-origin path instead.
+
+Also fixed:
+
+- **Edit-mode content clearing stored the literal string `'<p></p>'` instead of `null`.** The
+  create-mode payload builder already had an `isContentEmpty` guard omitting `content` when
+  nothing was typed; the edit-mode builder had no equivalent, so emptying the editor and saving
+  sent Tiptap's own empty-document output as real content. The detail page's `record.content ?
+<rich block> : <p>No content</p>` check then rendered a visually blank rich-content block
+  instead of the honest empty state. Fixed at both layers: `updateBusinessKnowledgeRecordSchema`
+  widened from `.optional()` to `.nullish()` (matching `notes`'s own existing shape) so an
+  explicit `null` is a real, distinct client intent from omission (which still means "leave
+  unchanged"); `BusinessKnowledgeRecordsService.update()` now branches on `patch.content ===
+null` to pass `null` straight through rather than sanitizing it; the edit-mode payload now sends
+  `content: isContentEmpty ? null : content`.
+- **`confirm()` had no try/catch around `generateAttachmentPreviewHtml()`**, unlike the two
+  content-type/size validation checks immediately above it, which both call
+  `this.blob.deleteObject()` before throwing a clean `BadRequestException`. A structurally
+  invalid file of an otherwise-allowed MIME type (a truncated upload, a mislabeled file) makes
+  `mammoth`/`ExcelJS` genuinely throw — verified directly against the installed libraries, not
+  assumed — which previously propagated to a raw 500 with the already-uploaded Blob object left
+  permanently orphaned. Fixed by wrapping the call in the same clean-up-before-throw pattern.
+- **The rich-text editor's length-limit guard silently desynced from Tiptap's own internal
+  document.** `onChange={(html) => setContent(html.length <= MAX ? html : content)}` rejected an
+  over-limit update by calling `setContent` with the _unchanged_ value — a React no-op
+  (`Object.is`-equal `setState` never re-renders), so `RichTextEditor`'s own `useEffect` (keyed
+  on `[value, editor]`, the only mechanism correcting Tiptap's document back down) never re-fired.
+  Once triggered, Tiptap silently went uncontrolled with zero feedback. Fixed by removing the
+  guard entirely (`onChange={setContent}`, a plain passthrough — structurally eliminating the
+  divergence, not just patching one symptom of it) and enforcing the real length limit once,
+  clearly, at submit time instead.
+- **A narrow, real reverse-tabnabbing gap** (PLAUSIBLE — the review correctly found the
+  underlying sanitizer gap real but initially misattributed it to Tiptap's own Link toolbar
+  button, which turned out already safe by construction; the actual vector is a raw-HTML paste
+  carrying `target="_blank"` with no safe `rel`). Fixed by adding a `transformTags` rule to the
+  shared sanitizer (see below) that forces `rel="noopener noreferrer nofollow"` onto any `<a>`
+  that carries a `target`, regardless of what `rel` the source HTML supplied.
+- **The Record Detail page fetched the record and its attachments sequentially**, even though
+  the attachments fetch only needs `recordId` (already known from route params) and has no
+  genuine data dependency on the record's own response — the identical shape this project already
+  found and fixed once for the Project Detail page's sub-resource fetches (PR #27). Fixed by
+  firing both concurrently, with the same `tolerateDiscard()` technique (now exported from
+  `lib/business-knowledge.ts`) so a nonexistent record's incidental attachments-fetch rejection
+  stays silenced rather than surfacing as an unhandled-rejection warning.
+- **`BusinessKnowledgeAttachmentsSection` called `router.refresh()` after every mutation**
+  alongside an already-sufficient local state update — the exact redundant-refresh shape this
+  project has now found and fixed multiple times in sibling components (items 12 and 27). No
+  other section of the parent page reads attachment data, so nothing goes stale without the
+  refresh. Removed both calls (and the now-unused `useRouter` import).
+- **The two HTML sanitization allowlists (`dashboard-api` write-time, `dashboard-web` render-time)
+  were byte-identical but independently hand-maintained**, the exact duplication shape this
+  project already found and fixed once for `safeHttpUrlSchema` (`module-projects-backend-closeout`).
+  `packages/validation` already exists, is already consumed by both apps, and already exists
+  specifically to hold definitions both sides must validate identically against. Promoted the
+  allowlist into a new `sanitizeRichTextHtml()` export there (also where the tabnabbing fix above
+  lives, closing both findings with one shared implementation); both apps' own
+  `sanitize-html.util.ts`/`lib/sanitize-html.ts` now just delegate to it. `dashboard-web` gained
+  `@webdesk/validation` as a real dependency (previously missing) and dropped its now-unused
+  direct `sanitize-html`/`@types/sanitize-html` dependencies.
+
+**1 CONFIRMED finding left as accepted, tracked debt**: Vercel Blob's own server-to-server
+`onUploadCompleted` webhook is a genuine no-op (by design — it's called with no session cookie
+and 401s, so this app's real "upload confirmed" signal is the client's own `confirm()` call
+instead), and there is no cleanup/reconciliation mechanism anywhere for a file that finishes
+uploading to Blob storage but whose subsequent `confirm()` call never completes (a closed tab, a
+dropped network connection) — the object sits orphaned in storage indefinitely with zero
+operator visibility. A real fix means building a cron job, TTL-based sweep, or admin tool — a
+materially larger scope than a review-fix pass, matching this project's own established
+precedent for deferring this class of gap (e.g. `POST /auth/exchange`'s accepted-debt
+origin-guard gap in the session-exchange work).
+
+Re-validated after fixes: 430/430 `dashboard-api` unit tests (3 new), 132/132 `dashboard-api` e2e
+tests (real disposable database, unchanged count — every existing test still passes against the
+widened DTO/service signatures), 9/9 `packages/validation` unit tests (5 new, covering the shared
+sanitizer including the new `rel`-forcing behavior), 258/258 `dashboard-web` unit tests (updated
+assertions for the new same-origin upload URL and the removed `router.refresh()` calls),
+typecheck/lint/`next build`/`nest build`/`check-css-tokens.mjs`/prettier all clean across every
+touched package, `pnpm audit` 0 vulnerabilities.

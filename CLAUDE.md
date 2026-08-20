@@ -1503,8 +1503,8 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     "Sign-off" section. **This gate approval does not itself authorize merging PR #44 or a
     production deployment** — merge remains its own separate, not-yet-requested authorization,
     per this project's standing "no auto-merge" rule.
-30. **Business Knowledge Center — Rich Content & File Attachments — built, fully validated, not
-    yet reviewed, gated, or merged (2026-08-20).**
+30. **Business Knowledge Center — Rich Content & File Attachments — built, fully validated,
+    independently code-reviewed, not yet security-reviewed, gated, or merged (2026-08-20).**
     `docs/task-packages/business-knowledge-center-rich-content-attachments.md` records the
     original proposal; `docs/implementation/business-knowledge-center-rich-content-attachments.md`
     records the full as-built account. Built directly on the explicit "go ahead and start building
@@ -1548,10 +1548,50 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       preview-sanitization gap left open). Pushed as branch
       `business-knowledge-center-rich-content-attachments`, opened as
       [PR #45](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/45).
-      Not yet reviewed, gated, or merged —
-      code review, security review, second-role human review, a gate decision, and merge
-      authorization are each their own separate, not-yet-requested next step, unchanged from this
-      project's standing discipline.
+      **Independent code review then ran** (high effort, 8 finder angles) — 9 candidates survived
+      dedup/verification (7 CONFIRMED, 2 PLAUSIBLE). Most severe, and the review's own most
+      important catch: the file-attachment upload flow pointed `@vercel/blob/client`'s
+      `handleUploadUrl` directly at `dashboard-api`, a genuinely cross-origin request that could
+      never carry the session cookie (the Blob SDK has no `credentials` option, and browsers
+      forbid scripts from setting `Cookie` manually) — **every real upload attempt would have
+      401'd in production**, the entire feature this branch was built to deliver. Verified
+      directly against `@vercel/blob@2.8.0`'s own source before fixing, not assumed. Fixed with a
+      new same-origin `dashboard-web` proxy Route Handler
+      (`app/(shell)/business-knowledge-center/[recordId]/attachments/upload-route/route.ts`)
+      forwarding the cookie server-to-server, the same pattern `app/auth/session/route.ts`
+      already established. 8 of 9 findings fixed in total per explicit "fix the confirmed
+      findings" instruction — also: an edit-mode content-clearing bug that stored the literal
+      string `'<p></p>'` instead of `null` (fixed by widening `updateBusinessKnowledgeRecordSchema`'s
+      `content` from `.optional()` to `.nullish()`, matching `notes`'s own shape); a missing
+      try/catch in `confirm()` around preview generation that orphaned the Blob object and raw-500'd
+      on a structurally corrupt file of an allowed MIME type; a silent editor/state desync where
+      the length-limit guard's own rejection logic (`setContent(content)` on overflow) was a React
+      no-op that permanently broke `RichTextEditor`'s sync `useEffect`, fixed by removing the guard
+      entirely and enforcing the limit once at submit time instead; a sequential record/attachments
+      fetch with no genuine data dependency (fixed via the same `tolerateDiscard()` technique PR #27
+      already established, now exported from `lib/business-knowledge.ts`); a redundant
+      `router.refresh()` after an already-sufficient local state update (the same shape items 12
+      and 27 already found in sibling components); a real reverse-tabnabbing gap via raw-HTML paste
+      (the toolbar's own Link button was already safe by construction) closed with a `transformTags`
+      rule forcing a safe `rel` onto any `target`-carrying `<a>`; and the two apps' byte-identical,
+      independently-hand-maintained sanitization allowlists, promoted into a new
+      `sanitizeRichTextHtml()` export in `packages/validation` (the same promotion that also carries
+      the tabnabbing fix) — closing the exact duplication shape this project already found and fixed
+      once for `safeHttpUrlSchema`; `dashboard-web` gained `@webdesk/validation` as a real dependency
+      (previously missing) and dropped its now-unused direct `sanitize-html` dependency. **1
+      CONFIRMED finding left as accepted, tracked debt**: no cleanup/reconciliation mechanism exists
+      for a Blob object left orphaned when a file finishes uploading to storage but its subsequent
+      `confirm()` call never completes (closed tab, dropped network) — a real fix means a cron/TTL
+      sweep or admin tool, out of proportion for a review-fix pass. Re-validated: 430/430
+      `dashboard-api` unit tests (3 new), 132/132 `dashboard-api` e2e tests (real disposable
+      database, unchanged count), 9/9 `packages/validation` unit tests (5 new), 258/258
+      `dashboard-web` unit tests (updated assertions for the new same-origin upload URL and the
+      removed `router.refresh()` calls), typecheck/lint/`next build`/`nest build`/
+      `check-css-tokens.mjs`/prettier all clean, `pnpm audit` 0 vulnerabilities. See
+      `docs/implementation/business-knowledge-center-rich-content-attachments.md` §7 for the full
+      account. Security review, second-role human review, a gate decision, and merge authorization
+      are each their own separate, not-yet-requested next step, unchanged from this project's
+      standing discipline.
 
 ## Recent decisions
 
@@ -4176,6 +4216,34 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   Playwright, all passing; full validation clean; `pnpm audit` 0 vulnerabilities. Pushed as
   branch `business-knowledge-center-rich-content-attachments`. **Not yet reviewed, gated, or
   merged** — each a separate, not-yet-requested next step.
+- `[2026-08-20]` **Independent code review run on `business-knowledge-center-rich-content-attachments`
+  (PR #45), high effort — 8 finder angles, then 8 of 9 findings fixed per explicit "fix the
+  confirmed findings" instruction.** See "Active tasks" item 30 above and
+  `docs/implementation/business-knowledge-center-rich-content-attachments.md` §7 for the full
+  account. Most severe: the file-attachment upload flow pointed `@vercel/blob/client`'s
+  `handleUploadUrl` directly at `dashboard-api` — a genuinely cross-origin request the session
+  cookie could never reach (the Blob client SDK has no `credentials` option, and browsers forbid
+  scripts from setting `Cookie` manually) — every real upload attempt would have 401'd in
+  production, verified directly against the installed SDK's own source before fixing. Fixed with a
+  new same-origin `dashboard-web` proxy Route Handler forwarding the session cookie
+  server-to-server, the same pattern `app/auth/session/route.ts` already established. Also fixed:
+  an edit-mode content-clearing bug storing `'<p></p>'` instead of `null` (the DTO widened to
+  accept an explicit `null`, distinct from omission); a missing try/catch in `confirm()` that
+  orphaned the Blob object on a corrupt-file crash; a silent rich-text-editor/state desync on the
+  length-limit guard (the guard removed entirely, the limit now enforced once at submit time); a
+  sequential record/attachments fetch with no genuine dependency; a redundant `router.refresh()`
+  alongside an already-sufficient local update; and the two apps' duplicated sanitization
+  allowlists, promoted into a new `sanitizeRichTextHtml()` export in `packages/validation` — the
+  same promotion that also closes a real reverse-tabnabbing gap (a `transformTags` rule now forces
+  a safe `rel` onto any `target`-carrying `<a>`). 1 CONFIRMED finding (no cleanup mechanism for a
+  Blob object orphaned by an interrupted upload — closed tab or dropped network between the Blob
+  PUT completing and `confirm()` succeeding) left as accepted, tracked debt — a real fix means a
+  cron/reconciliation job, out of proportion for a review-fix pass. Re-validated: 430/430
+  `dashboard-api` unit tests, 132/132 `dashboard-api` e2e tests (real disposable database), 9/9
+  `packages/validation` unit tests (5 new), 258/258 `dashboard-web` unit tests, typecheck/lint/
+  `next build`/`nest build`/`check-css-tokens.mjs`/prettier all clean across every touched
+  package, `pnpm audit` 0 vulnerabilities. **Not yet security-reviewed, second-role human
+  reviewed, gated, or merged** — each a separate, not-yet-requested next step.
 
 ## Open client blockers
 

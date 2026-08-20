@@ -109,10 +109,22 @@ export class BusinessKnowledgeAttachmentsService {
     }
 
     const checksumSha256 = createHash("sha256").update(object.body).digest("hex");
-    const extractedPreviewHtml = await generateAttachmentPreviewHtml(
-      object.contentType,
-      object.body,
-    );
+    let extractedPreviewHtml: string | null;
+    try {
+      extractedPreviewHtml = await generateAttachmentPreviewHtml(object.contentType, object.body);
+    } catch (error) {
+      // Same clean-up-before-throw pattern as the two validation checks above: an allowed MIME
+      // type with structurally invalid bytes (a truncated upload, a mislabeled file) makes
+      // mammoth/ExcelJS throw here — without this, the exception propagated uncaught to a raw
+      // 500, no attachments row was ever created, and the already-uploaded Blob object was left
+      // permanently orphaned in storage with no cleanup.
+      await this.blob.deleteObject(input.pathname);
+      throw new BadRequestException(
+        `Could not read this file's contents — it may be corrupted or not a valid ` +
+          `${object.contentType} file`,
+        { cause: error },
+      );
+    }
 
     const created = await this.attachments.create({
       recordId,

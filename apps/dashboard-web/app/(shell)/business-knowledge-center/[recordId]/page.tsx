@@ -10,6 +10,7 @@ import {
   getBusinessKnowledgeAttachments,
   getBusinessKnowledgeRecord,
   RECORD_TYPE_LABEL,
+  tolerateDiscard,
 } from "@/lib/business-knowledge";
 import { sanitizeRenderedHtml } from "@/lib/sanitize-html";
 import { getServerSession } from "@/lib/server-session";
@@ -35,6 +36,14 @@ export default async function BusinessKnowledgeDetailPage({
   }
 
   const { recordId } = await params;
+  // Fired concurrently, not gated behind the record fetch — GET .../attachments has no genuine
+  // data dependency on the record's own response (it only needs recordId, already known from the
+  // route params). Only the *decision* to keep or discard the attachments result waits on the
+  // record fetch's outcome, matching getProjectDetail()'s own established pattern: a nonexistent
+  // record makes GET .../attachments itself throw (its list() call 404s internally), so that
+  // rejection is tolerated (silenced, not surfaced) whenever the record turns out not to exist and
+  // the result is never awaited.
+  const attachmentsPromise = tolerateDiscard(getBusinessKnowledgeAttachments(recordId));
   const record = await getBusinessKnowledgeRecord(recordId);
   if (!record) {
     notFound();
@@ -49,7 +58,7 @@ export default async function BusinessKnowledgeDetailPage({
   // Attachments are already redacted server-side for a restricted record (an empty array, not an
   // error — see getBusinessKnowledgeAttachments()'s own doc comment), so no separate isRedacted
   // branch is needed here the way content/notes need one.
-  const attachments = await getBusinessKnowledgeAttachments(recordId);
+  const attachments = await attachmentsPromise;
 
   return (
     <ContentContainer>

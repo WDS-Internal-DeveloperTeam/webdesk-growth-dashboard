@@ -164,6 +164,21 @@ describe("BusinessKnowledgeRecordsService", () => {
       expect(passedContent).not.toContain("onerror");
       expect(passedContent).not.toContain("<img");
     });
+
+    it("passes content: null straight through (clears it) when the patch explicitly sends null", async () => {
+      repository.update.mockResolvedValue(record({ content: null }));
+      await service.update("record-1", { content: null }, "user-2");
+      expect(repository.update).toHaveBeenCalledWith("record-1", {
+        content: null,
+        updatedBy: "user-2",
+      });
+    });
+
+    it("never touches content in the repository patch when the caller omits it entirely", async () => {
+      repository.update.mockResolvedValue(record());
+      await service.update("record-1", { title: "New title" }, "user-2");
+      expect(repository.update.mock.calls[0]?.[1]).not.toHaveProperty("content");
+    });
   });
 
   describe("changeStatus", () => {

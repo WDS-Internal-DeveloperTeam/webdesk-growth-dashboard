@@ -91,6 +91,11 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
       const trimmedNotes = notes.trim();
       const notesValue = trimmedNotes ? trimmedNotes : null;
 
+      if (content.length > CONTENT_MAX_LENGTH) {
+        setError(`Content is too long (max ${CONTENT_MAX_LENGTH.toLocaleString()} characters).`);
+        return;
+      }
+
       const payload =
         props.mode === "create"
           ? {
@@ -106,7 +111,11 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
               title: trimmedTitle,
               // Omit entirely when redacted — never send an empty string in place of content the
               // form never actually loaded, which would silently destroy real confidential content.
-              ...(redacted ? {} : { content, notes: notesValue }),
+              // When visible, an explicit `null` (not omission) is what actually clears existing
+              // content back to "no content" — omitting the key means "leave unchanged" to
+              // updateBusinessKnowledgeRecordSchema, which would otherwise leave a cleared editor's
+              // emptiness un-persisted.
+              ...(redacted ? {} : { content: isContentEmpty ? null : content, notes: notesValue }),
             };
 
       const url =
@@ -199,7 +208,15 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
             <RichTextEditor
               id="content"
               value={content}
-              onChange={(html) => setContent(html.length <= CONTENT_MAX_LENGTH ? html : content)}
+              // Always accept the editor's own output into state, even past CONTENT_MAX_LENGTH —
+              // rejecting the update here by re-setting state to its own unchanged value is a
+              // React no-op (Object.is-equal setState never re-renders), which meant this
+              // component's own value prop never changed either, so RichTextEditor's
+              // useEffect([value, editor]) never re-fired to correct Tiptap's internal document
+              // back down: the editor silently went uncontrolled. The real length limit is now
+              // enforced once, clearly, at submit time (see handleSubmit) instead of via a silent
+              // per-keystroke rejection with no feedback.
+              onChange={setContent}
               placeholder="Optional — leave blank if this record's content will live entirely in an attached file."
             />
             <span className={styles.helperText}>

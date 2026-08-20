@@ -1,7 +1,6 @@
 "use client";
 
 import { upload } from "@vercel/blob/client";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { BusinessKnowledgeAttachment } from "@webdesk/shared-types";
 import { EmptyState } from "@webdesk/ui";
@@ -65,7 +64,6 @@ export function BusinessKnowledgeAttachmentsSection({
   recordId,
   initialAttachments,
 }: BusinessKnowledgeAttachmentsSectionProps): ReactNode {
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] =
     useState<readonly BusinessKnowledgeAttachment[]>(initialAttachments);
@@ -73,8 +71,10 @@ export function BusinessKnowledgeAttachmentsSection({
   const [error, setError] = useState<string | null>(null);
   const { pendingIds, markPending } = usePendingIds();
 
-  // Resync after router.refresh() delivers fresh server data (e.g. another tab/user changed
-  // something) — same pattern ProjectTeamSection/ProjectApproversSection already established.
+  // Resync if the parent's own server-rendered data changes for a reason outside this
+  // component's own control (e.g. a full page navigation elsewhere reloads the parent's props) —
+  // not driven by router.refresh() from this component's own mutations, which are handled by the
+  // local setAttachments() updates below instead.
   useEffect(() => {
     setAttachments(initialAttachments);
   }, [initialAttachments]);
@@ -96,7 +96,12 @@ export function BusinessKnowledgeAttachmentsSection({
       const pathname = `business-knowledge/${recordId}/${crypto.randomUUID()}-${file.name}`;
       const blob = await upload(pathname, file, {
         access: "private",
-        handleUploadUrl: `${getApiBaseUrl()}/business-knowledge/records/${recordId}/attachments/upload-route`,
+        // A same-origin dashboard-web route, not dashboard-api directly — @vercel/blob/client's
+        // upload() has no way to attach the session cookie to a cross-origin request (no
+        // `credentials` option, and browsers forbid scripts from setting `Cookie` manually), so
+        // this route proxies server-to-server instead. See its own doc comment for the full
+        // account.
+        handleUploadUrl: `/business-knowledge-center/${recordId}/attachments/upload-route`,
       });
 
       const response = await fetch(
@@ -113,8 +118,11 @@ export function BusinessKnowledgeAttachmentsSection({
         return;
       }
       const body = (await response.json()) as { data: BusinessKnowledgeAttachment };
+      // No router.refresh() here — this local state update is already sufficient. No other
+      // section of the parent Record Detail page reads attachment data, so nothing on the page
+      // goes stale without a full server re-fetch (the same redundant-refresh shape this project
+      // already found and fixed once for ProjectTeamSection/ProjectApproversSection).
       setAttachments((current) => [...current, body.data]);
-      router.refresh();
     } catch (err) {
       console.error("Failed to upload attachment", err);
       setError("Something went wrong uploading the file. Please try again.");
@@ -138,8 +146,8 @@ export function BusinessKnowledgeAttachmentsSection({
         setError(await parseApiErrorMessage(response));
         return;
       }
+      // No router.refresh() here — see the identical comment in handleFileSelected() above.
       setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
-      router.refresh();
     } catch (err) {
       console.error("Failed to delete attachment", err);
       setError("Something went wrong deleting the attachment. Please try again.");

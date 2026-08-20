@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BusinessKnowledgeAttachmentEntity } from "@webdesk/database";
 import { BusinessKnowledgeAttachmentsService } from "./business-knowledge-attachments.service.js";
+import { generateAttachmentPreviewHtml } from "./preview-generation.util.js";
 
 vi.mock("./preview-generation.util.js", () => ({
   generateAttachmentPreviewHtml: vi.fn().mockResolvedValue("<p>preview</p>"),
@@ -175,6 +176,24 @@ describe("BusinessKnowledgeAttachmentsService", () => {
         service.confirm(RECORD_ID, { pathname: PATHNAME, filename: "report.pdf" }, "user-1"),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(blob.deleteObject).toHaveBeenCalledWith(PATHNAME);
+    });
+
+    it("deletes the object and rejects cleanly when preview generation throws on structurally invalid bytes of an otherwise-allowed type — no orphaned Blob object, no crash", async () => {
+      const body = Buffer.from("not a real docx");
+      blob.getObject.mockResolvedValue({
+        body,
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      vi.mocked(generateAttachmentPreviewHtml).mockRejectedValueOnce(
+        new Error("Can't find end of central directory : is this a zip file?"),
+      );
+
+      await expect(
+        service.confirm(RECORD_ID, { pathname: PATHNAME, filename: "report.docx" }, "user-1"),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(blob.deleteObject).toHaveBeenCalledWith(PATHNAME);
+      expect(attachmentsRepo.create).not.toHaveBeenCalled();
+      expect(auditService.record).not.toHaveBeenCalled();
     });
 
     it("computes a real checksum, generates a preview, persists the attachment, and records an audit event", async () => {

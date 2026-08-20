@@ -97,16 +97,20 @@ export class BusinessKnowledgeRecordsService {
 
   async update(
     id: string,
-    patch: { title?: string; content?: string; notes?: string | null },
+    patch: { title?: string; content?: string | null; notes?: string | null },
     actorUserId: string,
   ): Promise<BusinessKnowledgeRecordEntity> {
     const updated = await this.records.update(id, {
       ...patch,
-      // Only overwrite content if the caller actually sent a value — `undefined` means "leave it
-      // unchanged", not "clear it"; `patch.content` already only reaches here when present,
-      // Object.assign-style, via `...patch`, so this must not accidentally coerce every edit into
-      // an explicit content: null overwrite.
-      ...(patch.content !== undefined ? { content: sanitizeRecordContentHtml(patch.content) } : {}),
+      // Three real, distinct states: `undefined` means "leave content unchanged" (the key is
+      // omitted from the repository patch entirely, so Sequelize never touches the column);
+      // `null` means "clear it" (the rich-text editor was emptied out, patch.content === null);
+      // a real string is sanitized before being written. `patch.content` already only reaches
+      // here when present, Object.assign-style, via `...patch`, so this must not accidentally
+      // coerce every edit into an explicit content: null overwrite.
+      ...(patch.content !== undefined
+        ? { content: patch.content === null ? null : sanitizeRecordContentHtml(patch.content) }
+        : {}),
       updatedBy: actorUserId,
     });
     if (!updated) {

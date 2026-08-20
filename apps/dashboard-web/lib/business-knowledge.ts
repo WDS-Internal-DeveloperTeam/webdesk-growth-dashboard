@@ -92,6 +92,18 @@ export async function getBusinessKnowledgeRecord(
   return ((await response.json()) as ApiSuccessResponse<BusinessKnowledgeRecord>).data;
 }
 
+/**
+ * Same technique `getProjectDetail()` already uses for its own concurrently-fired sub-resource
+ * fetches: attaches a no-op `.catch()` so a promise the caller ultimately discards (the record
+ * turned out not to exist, so its attachments were never actually awaited) doesn't produce a
+ * Node/Next.js "unhandled rejection" warning, while the original `promise` still rejects normally
+ * for a caller that does await it.
+ */
+export function tolerateDiscard<T>(promise: Promise<T>): Promise<T> {
+  promise.catch(() => {});
+  return promise;
+}
+
 /** An empty array is a real, valid answer here (no attachments, or a restricted record redacting
  *  them for this viewer — `GET .../attachments` itself already returns `[]` for that case, no
  *  separate signal is needed) — never thrown as an error, matching how the record's own redacted

@@ -129,8 +129,11 @@ describe("BusinessKnowledgeAttachmentsSection", () => {
     ];
     expect(pathname).toContain(`business-knowledge/${RECORD_ID}/`);
     expect(options.access).toBe("private");
+    // Same-origin dashboard-web route, not dashboard-api directly — @vercel/blob/client's
+    // upload() has no way to attach the session cookie to a cross-origin request, so this must
+    // stay a relative same-origin path for the browser to send the cookie automatically.
     expect(options.handleUploadUrl).toBe(
-      `https://api.example.com/business-knowledge/records/${RECORD_ID}/attachments/upload-route`,
+      `/business-knowledge-center/${RECORD_ID}/attachments/upload-route`,
     );
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -146,7 +149,9 @@ describe("BusinessKnowledgeAttachmentsSection", () => {
       }),
     );
     await waitFor(() => expect(screen.getByText("report.pdf")).toBeInTheDocument());
-    expect(refreshMock).toHaveBeenCalled();
+    // No router.refresh() — the local state update above is already sufficient; no other
+    // section of the parent page reads attachment data.
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("rejects an unsupported file type before ever calling upload()", async () => {
@@ -198,7 +203,7 @@ describe("BusinessKnowledgeAttachmentsSection", () => {
     );
   });
 
-  it("deletes an attachment: removes it from the list and refreshes", async () => {
+  it("deletes an attachment: removes it from the list, with no redundant router.refresh()", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
     global.fetch = fetchMock as typeof fetch;
 
@@ -217,7 +222,7 @@ describe("BusinessKnowledgeAttachmentsSection", () => {
       ),
     );
     await waitFor(() => expect(screen.getByText("No attachments")).toBeInTheDocument());
-    expect(refreshMock).toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("resyncs from initialAttachments when it changes (router.refresh() delivering fresh server data)", () => {

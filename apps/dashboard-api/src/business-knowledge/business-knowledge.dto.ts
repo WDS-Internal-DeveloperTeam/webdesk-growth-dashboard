@@ -51,7 +51,11 @@ export type CreateBusinessKnowledgeRecordDto = z.infer<typeof createBusinessKnow
 // question this V1 doesn't handle; create a new record instead.
 export const updateBusinessKnowledgeRecordSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  content: z.string().max(CONTENT_MAX_LENGTH).optional(),
+  // `.nullish()`, not `.optional()` — omitted means "leave content unchanged", an explicit `null`
+  // means "clear it" (e.g. the rich-text editor was emptied out). Both are real, distinct client
+  // intents now that `content` is a nullable column; collapsing them to `.optional()` alone left
+  // no way to actually clear an existing record's content back to null.
+  content: z.string().max(CONTENT_MAX_LENGTH).nullish(),
   notes: z.string().max(10_000).nullish(),
 });
 export type UpdateBusinessKnowledgeRecordDto = z.infer<typeof updateBusinessKnowledgeRecordSchema>;
