@@ -7,4 +7,5 @@ export {
 export {
   BusinessKnowledgeRecordRepository,
   type BusinessKnowledgeRecordListFilter,
+  type UpdateStatusResult,
 } from "./business-knowledge-record.repository.js";

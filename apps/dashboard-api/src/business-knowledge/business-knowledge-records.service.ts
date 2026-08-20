@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import type {
   BusinessKnowledgeRecordEntity,
   BusinessKnowledgeRecordListFilter,
@@ -23,8 +29,11 @@ const ALLOWED_TRANSITIONS: Readonly<
   Record<BusinessKnowledgeRecordStatus, readonly BusinessKnowledgeRecordStatus[]>
 > = {
   draft: ["mandatory", "advisory", "restricted", "deprecated"],
-  mandatory: ["advisory", "restricted", "deprecated"],
-  advisory: ["mandatory", "restricted", "deprecated"],
+  // Symmetric with `restricted`'s own reachability of `draft` below — an approved record can be
+  // sent back to drafting just as directly as a restricted one can, not only via the detour of
+  // first reclassifying it `restricted`.
+  mandatory: ["advisory", "restricted", "draft", "deprecated"],
+  advisory: ["mandatory", "restricted", "draft", "deprecated"],
   restricted: ["mandatory", "advisory", "draft", "deprecated"],
   deprecated: [],
 };
@@ -46,7 +55,18 @@ export class BusinessKnowledgeRecordsService {
     },
     actorUserId: string,
   ): Promise<BusinessKnowledgeRecordEntity> {
-    return this.records.create({ ...input, createdBy: actorUserId });
+    const created = await this.records.create({ ...input, createdBy: actorUserId });
+    await this.auditService.record({
+      eventType: "data_change",
+      actorUserId,
+      actorType: "human",
+      entityType: "business_knowledge_record",
+      entityId: created.id,
+      action: "create",
+      afterState: { recordType: created.recordType, title: created.title, status: created.status },
+      retentionCategory: "audit-7y",
+    });
+    return created;
   }
 
   async findById(id: string): Promise<BusinessKnowledgeRecordEntity> {
@@ -72,6 +92,16 @@ export class BusinessKnowledgeRecordsService {
     if (!updated) {
       throw new NotFoundException(`Business knowledge record not found: ${id}`);
     }
+    await this.auditService.record({
+      eventType: "data_change",
+      actorUserId,
+      actorType: "human",
+      entityType: "business_knowledge_record",
+      entityId: id,
+      action: "update",
+      afterState: { ...patch },
+      retentionCategory: "audit-7y",
+    });
     return updated;
   }
 
@@ -90,24 +120,44 @@ export class BusinessKnowledgeRecordsService {
       );
     }
 
-    const updated = await this.records.updateStatus(id, nextStatus, actorUserId);
-    if (!updated) {
+    const result = await this.records.updateStatus(id, record.status, nextStatus, actorUserId);
+    if (result.outcome === "not_found") {
       throw new NotFoundException(`Business knowledge record not found: ${id}`);
     }
+    if (result.outcome === "conflict") {
+      // Someone else changed this record's status between our read and our write — the write
+      // never happened, so no audit event is recorded either. The caller re-reads and retries.
+      throw new ConflictException(
+        `Business knowledge record ${id} status changed concurrently ` +
+          `(expected ${record.status}, now ${result.entity.status}) — reload and retry`,
+      );
+    }
 
-    await this.auditService.record({
-      eventType:
-        nextStatus === "mandatory" || nextStatus === "advisory" ? "approval" : "data_change",
-      actorUserId,
-      actorType: "human",
-      entityType: "business_knowledge_record",
-      entityId: id,
-      action: `status:${record.status}->${nextStatus}`,
-      beforeState: { status: record.status },
-      afterState: { status: nextStatus },
-      retentionCategory: "audit-7y",
-    });
+    const isApproval = nextStatus === "mandatory" || nextStatus === "advisory";
+    try {
+      await this.auditService.record({
+        eventType: isApproval ? "approval" : "data_change",
+        actorUserId,
+        actorType: "human",
+        entityType: "business_knowledge_record",
+        entityId: id,
+        action: `status:${record.status}->${nextStatus}`,
+        beforeState: { status: record.status },
+        afterState: { status: nextStatus },
+        // The status write above already committed by this point (no shared-transaction support
+        // exists between AuditService and this repository — same non-atomic ordering already
+        // accepted for ProjectService.changeStatus()'s identical pattern). A logged failure here
+        // at least surfaces the gap instead of silently dropping it.
+        retentionCategory: isApproval ? "approval-audit-7y" : "audit-7y",
+      });
+    } catch (error) {
+      console.error(
+        `Business knowledge record ${id} status transition ${record.status}->${nextStatus} ` +
+          "committed, but recording its audit event failed:",
+        error,
+      );
+    }
 
-    return updated;
+    return result.entity;
   }
 }

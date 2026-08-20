@@ -36,7 +36,9 @@ deferral and item 27's merge).
 "business knowledge records" — the 10 primary-record types named in the canonical spec, modeled as
 rows in one table rather than 10 bespoke tables (§4 D2). List/get/create/edit/status-transition
 endpoints, RBAC-wired against the already-seeded `business_knowledge` permission group, unit +
-integration + e2e tests, `packages/shared-types` additions.
+integration + e2e tests. No `packages/shared-types` additions in this pass — matching the Projects
+module's own backend-first precedent, those are deferred to the `dashboard-web` UI-building slice
+that will actually consume them.
 
 **Explicitly out of scope:**
 
@@ -158,7 +160,7 @@ module's own harness (real disposable Postgres, real seeded RBAC roles, `super_a
 ## 9. Documentation deliverables
 
 This task package; `docs/implementation/module-business-knowledge-center.md` (as-built record, to
-follow once implementation is complete); `packages/shared-types/src/index.ts` additions.
+follow once implementation is complete). No `packages/shared-types` changes — see §3.
 
 ## 10. Open items requiring human decision before or during implementation
 

@@ -1,6 +1,7 @@
 # Business Knowledge Center — Backend (as-built)
 
-**Status:** Built, fully validated, not yet reviewed, gated, or merged. Branch
+**Status:** Built, fully validated, independently code-reviewed (9 of 10 findings fixed, 1 accepted
+as tracked debt — see §8), not yet security-reviewed, gated, or merged. Branch
 `module-business-knowledge-center`, off `main` at `621fed8`.
 
 ## 1. Why this exists, and what it isn't
@@ -127,6 +128,81 @@ moving to `mandatory`/`advisory` (the genuinely approval-shaped transitions), `e
   `eslint-disable-next-line` comment this codebase already uses for the identical, previously-hit
   case (`AuditService` injected into `RoadmapItemsService`).
 
-Not yet reviewed, gated, or merged — code review, security review, second-role human review, a gate
-decision, and merge authorization are each their own separate, not-yet-requested next step,
-unchanged from this project's standing discipline.
+## 8. Independent code review
+
+This project's own `code-review` skill ran at high effort (8 finder angles, 1-vote verification)
+against the full PR #43 diff. 12 candidates survived dedup; 1 (the `entity-mapping.ts`
+"duplication" candidate) was REFUTED — verified against `projects/entity-mapping.ts`,
+`audit/audit-event.repository.ts`, and 3 other modules that every module in this package
+independently hand-rolls this exact helper, not a real deviation. 10 findings were reported
+(9 CONFIRMED, 1 PLAUSIBLE); 2 lower-priority PLAUSIBLE reuse candidates (the `ALLOWED_TRANSITIONS`
+shape resembling `ProjectService`'s own status-machine pattern, and the `record_type`/`status` enum
+values being independently declared across `entities.ts`/`business-knowledge.dto.ts`) were dropped
+under the 10-finding cap, both matching an already-accepted Projects-module precedent.
+
+**All 9 CONFIRMED findings fixed** per the explicit "fix the confirmed findings" instruction:
+
+1. **`restricted` status had no access enforcement** — `list()`/`findOne()`/`update()`/
+   `changeStatus()` now resolve `AuthorizationService.canViewConfidential(userId, "business_knowledge")`
+   and redact `content`/`notes` (never `title`/`status`/`recordType`) on any `restricted` record for
+   a caller without that grant — mirroring `operational-contacts.controller.ts`'s own
+   `CONFIDENTIAL_CONTACT_FIELDS`/`redactContact` pattern exactly. `view_confidential` is zero-seeded
+   today (Phase 1D-expanded), so this currently redacts for every role, including `super_admin` —
+   the same "no role holds it yet" state Operational Contacts' own PII fields already have.
+2. **`create()`/`update()` were never audited** — both now call `AuditService.record()`
+   (`eventType: "data_change"`, `action: "create"`/`"update"`), matching `ProjectService.create()`/
+   `update()`'s own call shape. Only `changeStatus()` was ever audited before this fix.
+3. **TOCTOU race in `changeStatus()`** — `BusinessKnowledgeRecordRepository.updateStatus()` is now
+   an atomic compare-and-swap (`WHERE id = ? AND status = ?`), mirroring
+   `IdempotencyKeyRepository.reserve()`'s own conditional-`UPDATE` pattern, returning a discriminated
+   `UpdateStatusResult` (`"updated" | "not_found" | "conflict"`). The service now throws
+   `ConflictException` (409) on the race-loser path instead of silently reporting false success.
+4. **A malformed record id crashed with a raw 500 instead of a clean 404/400** — all three `:id`
+   routes now apply `ParseUUIDPipe`, converting a malformed id into a `400` before it ever reaches
+   the repository. This is the first use of `ParseUUIDPipe` anywhere in `apps/dashboard-api` — every
+   other `:id` route in this codebase still has the identical latent gap; fixing it here doesn't fix
+   it project-wide, deliberately scoped to this module's own PR.
+5. **`list()` had no pagination cap** — added `DEFAULT_LIST_LIMIT` (50) / `MAX_LIST_LIMIT` (200)
+   clamping, mirroring `ProjectRepository.list()`'s exact pattern; `limit`/`offset` are now accepted
+   on `GET /business-knowledge/records` and threaded through the DTO/service/repository.
+6. **`retentionCategory` was always `"audit-7y"` even for an approval-shaped transition** — now
+   `"approval-audit-7y"` when `nextStatus` is `mandatory`/`advisory` (a real, already-seeded value in
+   `AUDIT_RETENTION_CATEGORIES`, already used by `RecoveryService`/`RetentionHoldService`/
+   `RoleAssignmentService`/`OperationalContactService`), `"audit-7y"` otherwise.
+7. **The audit write was not transactional with the status write** — confirmed via research that
+   `AuditService.record()` doesn't currently accept a `transaction` parameter, so true atomicity
+   would mean extending `AuditService`'s own signature — a larger, cross-cutting change out of
+   proportion for this fix pass, and this exact non-atomic ordering is already the accepted,
+   shipped pattern in `ProjectService.changeStatus()`. The proportionate fix applied instead: the
+   audit call is now wrapped in try/catch, logging a clear `console.error` if it fails after the
+   status write already committed, so the gap is visible instead of silently swallowed.
+8. **`ALLOWED_TRANSITIONS` was asymmetric** — `mandatory`/`advisory` could only reach `draft` via the
+   `restricted` detour, while `restricted` could reach `draft` directly. Both now include `draft`
+   directly, matching `restricted`'s own symmetry.
+9. **The task package falsely claimed `packages/shared-types` additions were delivered** — §3/§9
+   corrected to state explicitly that no shared-types changes exist in this backend-only pass,
+   matching the Projects module's own precedent of deferring them to the UI-building slice.
+
+**The 1 PLAUSIBLE finding was left unfixed, as accepted/tracked debt**: no invariant limits how many
+`mandatory`/`advisory` records can exist per `record_type` simultaneously. Its own verifier
+concluded the "correct" invariant is genuinely record-type-dependent — some types (`competitor`,
+`persona_icp`) plausibly need many simultaneously-approved records, others (`company_profile`,
+`vto`) plausibly want exactly one — and the canonical spec states no rule either way. Flagged here
+explicitly for the human review process to weigh in on, rather than guessed at silently.
+
+Re-validation after all fixes, against a fresh local disposable PostgreSQL 17 database: 14/14
+`dashboard-api` unit tests (3 new: audit-on-create, audit-on-update, conflict/409, audit-failure
+resilience — replacing the old 3-arg `updateStatus` assertions), 389/389 `dashboard-api` unit tests
+overall; 11/11 `packages/database` integration tests (4 new: `not_found`/`conflict` split, the
+oversized-limit clamp, and a real limit/offset pagination proof); 11/11 `dashboard-api` e2e tests
+(2 new: the malformed-id 400, and the restricted-record redaction proof across `findOne`/`update`/
+`changeStatus`/`list`); migration up/down round-trip clean (48 migrations); module-registry
+validation unaffected (43 modules, 21 permission groups); typecheck/lint/prettier clean across both
+packages; `pnpm audit --audit-level=high` — 0 vulnerabilities.
+
+`ReportFindings` was called again with all 10 findings' `outcome` set (`fixed` ×9, `skipped` ×1 for
+the accepted-debt PLAUSIBLE finding).
+
+Not yet security-reviewed, gated, or merged — a security review, the required second-role human
+review, a gate decision, and merge authorization are each their own separate, not-yet-requested
+next step, unchanged from this project's standing discipline.

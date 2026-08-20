@@ -1,8 +1,9 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   BusinessKnowledgeRecordEntity,
   BusinessKnowledgeRecordRepository,
+  UpdateStatusResult,
 } from "@webdesk/database";
 import { BusinessKnowledgeRecordsService } from "./business-knowledge-records.service.js";
 
@@ -54,7 +55,7 @@ describe("BusinessKnowledgeRecordsService", () => {
   });
 
   describe("create", () => {
-    it("delegates to the repository with the actor as createdBy", async () => {
+    it("delegates to the repository with the actor as createdBy, then records an audit event", async () => {
       repository.create.mockResolvedValue(record());
       const result = await service.create(
         { recordType: "vto", title: "VTO", content: "Content" },
@@ -67,6 +68,16 @@ describe("BusinessKnowledgeRecordsService", () => {
         createdBy: "user-1",
       });
       expect(result).toEqual(record());
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "data_change",
+          actorUserId: "user-1",
+          entityType: "business_knowledge_record",
+          entityId: "record-1",
+          action: "create",
+          retentionCategory: "audit-7y",
+        }),
+      );
     });
   });
 
@@ -92,7 +103,7 @@ describe("BusinessKnowledgeRecordsService", () => {
   });
 
   describe("update", () => {
-    it("passes the patch plus updatedBy to the repository", async () => {
+    it("passes the patch plus updatedBy to the repository, then records an audit event", async () => {
       repository.update.mockResolvedValue(record({ title: "New title" }));
       const result = await service.update("record-1", { title: "New title" }, "user-2");
       expect(repository.update).toHaveBeenCalledWith("record-1", {
@@ -100,13 +111,23 @@ describe("BusinessKnowledgeRecordsService", () => {
         updatedBy: "user-2",
       });
       expect(result.title).toBe("New title");
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "data_change",
+          actorUserId: "user-2",
+          entityId: "record-1",
+          action: "update",
+          retentionCategory: "audit-7y",
+        }),
+      );
     });
 
-    it("throws NotFoundException when the repository returns null", async () => {
+    it("throws NotFoundException when the repository returns null, without recording an audit event", async () => {
       repository.update.mockResolvedValue(null);
       await expect(service.update("missing", { title: "x" }, "user-2")).rejects.toBeInstanceOf(
         NotFoundException,
       );
+      expect(auditService.record).not.toHaveBeenCalled();
     });
   });
 
@@ -127,13 +148,41 @@ describe("BusinessKnowledgeRecordsService", () => {
       expect(repository.updateStatus).not.toHaveBeenCalled();
     });
 
-    it("performs an allowed transition and records an 'approval' audit event for mandatory/advisory", async () => {
+    it("allows mandatory -> draft directly (symmetric with restricted's own reachability of draft)", async () => {
+      repository.findById.mockResolvedValue(record({ status: "mandatory" }));
+      const updateResult: UpdateStatusResult = {
+        outcome: "updated",
+        entity: record({ status: "draft" }),
+      };
+      repository.updateStatus.mockResolvedValue(updateResult);
+
+      const result = await service.changeStatus("record-1", "draft", "user-2");
+
+      expect(repository.updateStatus).toHaveBeenCalledWith(
+        "record-1",
+        "mandatory",
+        "draft",
+        "user-2",
+      );
+      expect(result.status).toBe("draft");
+    });
+
+    it("performs an allowed transition (passing the expected current status for the CAS check) and records an 'approval' audit event with the approval retention category for mandatory/advisory", async () => {
       repository.findById.mockResolvedValue(record({ status: "draft" }));
-      repository.updateStatus.mockResolvedValue(record({ status: "mandatory" }));
+      const updateResult: UpdateStatusResult = {
+        outcome: "updated",
+        entity: record({ status: "mandatory" }),
+      };
+      repository.updateStatus.mockResolvedValue(updateResult);
 
       const result = await service.changeStatus("record-1", "mandatory", "user-2");
 
-      expect(repository.updateStatus).toHaveBeenCalledWith("record-1", "mandatory", "user-2");
+      expect(repository.updateStatus).toHaveBeenCalledWith(
+        "record-1",
+        "draft",
+        "mandatory",
+        "user-2",
+      );
       expect(result.status).toBe("mandatory");
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -141,13 +190,18 @@ describe("BusinessKnowledgeRecordsService", () => {
           action: "status:draft->mandatory",
           entityType: "business_knowledge_record",
           entityId: "record-1",
+          retentionCategory: "approval-audit-7y",
         }),
       );
     });
 
-    it("records a 'data_change' audit event for a non-approval transition (e.g. to deprecated)", async () => {
+    it("records a 'data_change' audit event with the plain audit retention category for a non-approval transition (e.g. to deprecated)", async () => {
       repository.findById.mockResolvedValue(record({ status: "mandatory" }));
-      repository.updateStatus.mockResolvedValue(record({ status: "deprecated" }));
+      const updateResult: UpdateStatusResult = {
+        outcome: "updated",
+        entity: record({ status: "deprecated" }),
+      };
+      repository.updateStatus.mockResolvedValue(updateResult);
 
       await service.changeStatus("record-1", "deprecated", "user-2");
 
@@ -155,16 +209,49 @@ describe("BusinessKnowledgeRecordsService", () => {
         expect.objectContaining({
           eventType: "data_change",
           action: "status:mandatory->deprecated",
+          retentionCategory: "audit-7y",
         }),
       );
     });
 
     it("throws NotFoundException if the record disappears between findById and updateStatus", async () => {
       repository.findById.mockResolvedValue(record({ status: "draft" }));
-      repository.updateStatus.mockResolvedValue(null);
+      const updateResult: UpdateStatusResult = { outcome: "not_found" };
+      repository.updateStatus.mockResolvedValue(updateResult);
       await expect(service.changeStatus("record-1", "mandatory", "user-2")).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+
+    it("throws ConflictException (and records no audit event) when the status changed concurrently", async () => {
+      repository.findById.mockResolvedValue(record({ status: "draft" }));
+      const updateResult: UpdateStatusResult = {
+        outcome: "conflict",
+        entity: record({ status: "deprecated" }),
+      };
+      repository.updateStatus.mockResolvedValue(updateResult);
+
+      await expect(service.changeStatus("record-1", "mandatory", "user-2")).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(auditService.record).not.toHaveBeenCalled();
+    });
+
+    it("still returns the updated record even when recording its audit event fails", async () => {
+      repository.findById.mockResolvedValue(record({ status: "draft" }));
+      const updateResult: UpdateStatusResult = {
+        outcome: "updated",
+        entity: record({ status: "mandatory" }),
+      };
+      repository.updateStatus.mockResolvedValue(updateResult);
+      auditService.record.mockRejectedValue(new Error("audit store unavailable"));
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await service.changeStatus("record-1", "mandatory", "user-2");
+
+      expect(result.status).toBe("mandatory");
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
     });
   });
 });

@@ -23,6 +23,8 @@ export const recordStatusSchema = z.enum(RECORD_STATUSES);
 export const listBusinessKnowledgeRecordsQuerySchema = z.object({
   recordType: recordTypeSchema.optional(),
   status: recordStatusSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 export type ListBusinessKnowledgeRecordsQueryDto = z.infer<
   typeof listBusinessKnowledgeRecordsQuerySchema

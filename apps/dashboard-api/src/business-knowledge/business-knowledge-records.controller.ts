@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -18,8 +19,11 @@ import { OriginCheckGuard } from "../auth/common/origin-check.guard.js";
 import type { AuthenticatedRequest } from "../auth/session/session.guard.js";
 import { SessionGuard } from "../auth/session/session.guard.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
+import { redactConfidentialFields } from "../authz/confidential-field.util.js";
 import { PermissionGuard } from "../authz/permission.guard.js";
 import { RequirePermission } from "../authz/require-permission.decorator.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
+import { AuthorizationService } from "../authz/authorization.service.js";
 import {
   changeBusinessKnowledgeRecordStatusSchema,
   createBusinessKnowledgeRecordSchema,
@@ -40,11 +44,51 @@ type BusinessKnowledgeRequest = AuthenticatedRequest & RequestWithCorrelationId;
 // projects.controller.ts draws between "project_configuration" and "projects" (task package §0).
 const MODULE_KEY = "business_knowledge";
 
+// A `restricted` record's substantive content is hidden from anyone without a real
+// `view_confidential` grant on this module (zero-seeded today — see the confidential-field
+// mechanism established in Phase 1D-expanded, mirroring operational-contacts.controller.ts's own
+// `CONFIDENTIAL_CONTACT_FIELDS`/`redactContact` pattern). `title`/`recordType`/`status` stay
+// visible so a list view isn't left showing an unexplained gap; the sensitive prose does not.
+const CONFIDENTIAL_RESTRICTED_FIELDS: readonly (keyof BusinessKnowledgeRecordEntity)[] = [
+  "content",
+  "notes",
+];
+
+function redactIfRestricted(
+  record: BusinessKnowledgeRecordEntity,
+  canViewConfidential: boolean,
+): BusinessKnowledgeRecordEntity {
+  if (canViewConfidential || record.status !== "restricted") {
+    return record;
+  }
+  return redactConfidentialFields(
+    record as unknown as Record<string, unknown>,
+    CONFIDENTIAL_RESTRICTED_FIELDS,
+    false,
+  ) as unknown as BusinessKnowledgeRecordEntity;
+}
+
+/** `redactConfidentialFieldsFromList()` applies uniformly to every list entry via one shared
+ *  boolean — unusable directly here since only `restricted` records in a mixed-status list should
+ *  ever be redacted, so each record is checked individually via `redactIfRestricted()`. */
+function redactRestrictedRecords(
+  records: readonly BusinessKnowledgeRecordEntity[],
+  canViewConfidential: boolean,
+): readonly BusinessKnowledgeRecordEntity[] {
+  if (canViewConfidential) {
+    return records;
+  }
+  return records.map((record) => redactIfRestricted(record, canViewConfidential));
+}
+
 @ApiTags("business-knowledge")
 @Controller("business-knowledge/records")
 @UseGuards(SessionGuard)
 export class BusinessKnowledgeRecordsController {
-  constructor(private readonly records: BusinessKnowledgeRecordsService) {}
+  constructor(
+    private readonly records: BusinessKnowledgeRecordsService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   @Get()
   @UseGuards(PermissionGuard)
@@ -55,7 +99,11 @@ export class BusinessKnowledgeRecordsController {
     query: ListBusinessKnowledgeRecordsQueryDto,
     @Req() req: BusinessKnowledgeRequest,
   ): Promise<ApiSuccessResponse<readonly BusinessKnowledgeRecordEntity[]>> {
-    const data = await this.records.list(query);
+    const [records, canViewConfidential] = await Promise.all([
+      this.records.list(query),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactRestrictedRecords(records, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -64,10 +112,14 @@ export class BusinessKnowledgeRecordsController {
   @RequirePermission(MODULE_KEY, "view")
   @ApiOperation({ summary: "Get one business knowledge record" })
   async findOne(
-    @Param("id") id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @Req() req: BusinessKnowledgeRequest,
   ): Promise<ApiSuccessResponse<BusinessKnowledgeRecordEntity>> {
-    const data = await this.records.findById(id);
+    const [record, canViewConfidential] = await Promise.all([
+      this.records.findById(id),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactIfRestricted(record, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -81,6 +133,8 @@ export class BusinessKnowledgeRecordsController {
     body: CreateBusinessKnowledgeRecordDto,
     @Req() req: BusinessKnowledgeRequest,
   ): Promise<ApiSuccessResponse<BusinessKnowledgeRecordEntity>> {
+    // A brand-new record is always `draft` (never `restricted`), so no redaction check is needed
+    // here — nothing this endpoint returns can ever be a confidential record.
     const data = await this.records.create(body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
@@ -91,12 +145,16 @@ export class BusinessKnowledgeRecordsController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Edit a business knowledge record's title/content/notes" })
   async update(
-    @Param("id") id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(updateBusinessKnowledgeRecordSchema))
     body: UpdateBusinessKnowledgeRecordDto,
     @Req() req: BusinessKnowledgeRequest,
   ): Promise<ApiSuccessResponse<BusinessKnowledgeRecordEntity>> {
-    const data = await this.records.update(id, body, req.authUser!.id);
+    const [updated, canViewConfidential] = await Promise.all([
+      this.records.update(id, body, req.authUser!.id),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactIfRestricted(updated, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -106,12 +164,16 @@ export class BusinessKnowledgeRecordsController {
   @RequirePermission(MODULE_KEY, "approve")
   @ApiOperation({ summary: "Transition a business knowledge record's status" })
   async changeStatus(
-    @Param("id") id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(changeBusinessKnowledgeRecordStatusSchema))
     body: ChangeBusinessKnowledgeRecordStatusDto,
     @Req() req: BusinessKnowledgeRequest,
   ): Promise<ApiSuccessResponse<BusinessKnowledgeRecordEntity>> {
-    const data = await this.records.changeStatus(id, body.status, req.authUser!.id);
+    const [updated, canViewConfidential] = await Promise.all([
+      this.records.changeStatus(id, body.status, req.authUser!.id),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactIfRestricted(updated, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 }

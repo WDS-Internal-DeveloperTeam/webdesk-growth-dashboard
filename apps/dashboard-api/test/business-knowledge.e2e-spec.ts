@@ -274,4 +274,58 @@ describe("Business Knowledge Center module endpoints (e2e, real disposable datab
       .send({ recordType: "vto", title: "No origin", content: "x" })
       .expect(403);
   });
+
+  it("returns 400 (not a raw 500) for a malformed record id", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    await request(app.getHttpServer())
+      .get("/business-knowledge/records/not-a-uuid")
+      .set("Cookie", cookie)
+      .expect(400);
+  });
+
+  it("redacts content/notes on a restricted record for a caller with no view_confidential grant (zero-seeded — no role currently holds it, including super_admin)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const createResponse = await request(app.getHttpServer())
+      .post("/business-knowledge/records")
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({
+        recordType: "competitor",
+        title: "Sensitive competitor intel",
+        content: "The actually sensitive part.",
+        notes: "Also sensitive.",
+      })
+      .expect(201);
+    const recordId = createResponse.body.data.id as string;
+
+    const restrictResponse = await request(app.getHttpServer())
+      .post(`/business-knowledge/records/${recordId}/status`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ status: "restricted" })
+      .expect(200);
+    expect(restrictResponse.body.data.content).toBeUndefined();
+    expect(restrictResponse.body.data.notes).toBeUndefined();
+    expect(restrictResponse.body.data.title).toBe("Sensitive competitor intel");
+
+    const getResponse = await request(app.getHttpServer())
+      .get(`/business-knowledge/records/${recordId}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(getResponse.body.data.content).toBeUndefined();
+    expect(getResponse.body.data.notes).toBeUndefined();
+    expect(getResponse.body.data.status).toBe("restricted");
+
+    const listResponse = await request(app.getHttpServer())
+      .get("/business-knowledge/records")
+      .query({ status: "restricted" })
+      .set("Cookie", cookie)
+      .expect(200);
+    const listed = (
+      listResponse.body.data as Array<{ id: string; content?: string; notes?: string }>
+    ).find((r) => r.id === recordId);
+    expect(listed).toBeDefined();
+    expect(listed?.content).toBeUndefined();
+    expect(listed?.notes).toBeUndefined();
+  });
 });
