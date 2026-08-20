@@ -3,7 +3,10 @@
 **Status:** Code review complete (20 candidates verified after dedup — 10 kept in the final report
 per the review's own cap: 8 CONFIRMED, all fixed; 2 PLAUSIBLE, left as accepted, tracked debt).
 Security review complete (0 findings above threshold — 2 candidates surfaced, both independently
-re-verified and refuted). **Awaiting the required second-role human review.**
+re-verified and refuted). Required second-role human review complete (2026-08-20, Jitesh D,
+"Approved as-is"), accepting the 2 open PLAUSIBLE code-review findings and the flagged,
+not-fixed list-page over-fetch as tracked debt. A gate decision and merge authorization remain
+separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -58,15 +61,27 @@ dropped:
    efficiency/code-review debt item, consistent with how the identical pattern was treated on the
    Projects list page.
 
-## Required second-role human review — PENDING
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (8 CONFIRMED fixed, 2 PLAUSIBLE accepted as tracked debt) — reviewed by:
-      **[pending]**, decision: **[pending]**.
-- [ ] Security-review findings (0 above threshold) — reviewed by: **[pending]**, decision:
-      **[pending]**.
+- [x] Code-review findings (8 CONFIRMED fixed, 1 CONFIRMED flagged-not-fixed [backend scope], 2
+      PLAUSIBLE accepted as tracked debt) — reviewed by: **Jitesh D**, 2026-08-20, **Approved
+      as-is**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-20,
+      **Approved as-is**.
 
 ## Sign-off
 
-**Awaiting the required second-role human review** (ADR-0010 separation-of-duties — the implementing
-agent cannot also be its own reviewer). A gate decision and merge authorization remain separate,
-not-yet-requested next steps.
+**Second-role human review: complete.** The 2 open PLAUSIBLE code-review findings and the flagged,
+not-fixed list-page over-fetch (requires a backend change, out of scope for this branch) were all
+accepted as tracked debt rather than requiring a fix before proceeding.
+
+| Field                         | Value                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                                                                                                                                                                                                |
+| Review date                   | 2026-08-20                                                                                                                                                                                                                                                                                                              |
+| Decision                      | Approved as-is                                                                                                                                                                                                                                                                                                          |
+| Scope reviewed                | Full code-review disposition (8 findings fixed, 1 flagged as out-of-scope backend debt, 2 accepted as tracked debt) and full security-review disposition (0 findings), per this slice's own review outputs recorded in `docs/implementation/dashboard-web-business-knowledge-center.md` and the published review packet |
+| Disputes raised               | None recorded                                                                                                                                                                                                                                                                                                           |
+
+A gate decision (G4-dashboard-web-business-knowledge-center) and merge authorization remain
+separate, not-yet-requested next steps.
