@@ -2,8 +2,9 @@
 
 **Status:** Built, fully validated, independently code-reviewed (8 of 9 findings fixed, 1
 accepted as tracked debt — see `docs/implementation/business-knowledge-center-rich-content-attachments.md`
-§7), security-reviewed (0 findings above threshold), and required second-role human reviewed
-(Jitesh D, "Approved as-is"). Not yet gated or merged.
+§7), security-reviewed (0 findings above threshold), required second-role human reviewed
+(Jitesh D, "Approved as-is"), and gated (G4-bkc-rich-content-attachments, WebDesk Solution,
+CONFIRM). Not yet merged.
 
 ## Completion condition
 
@@ -81,6 +82,17 @@ tracked debt rather than requesting a fix before merge.
 
 **Jitesh D — Approved as-is.** No disputes raised. A gate decision and merge authorization
 remain separate, not-yet-requested next steps, per this project's standing "no auto-merge" rule.
+
+## Gate
+
+**The gate (G4-bkc-rich-content-attachments) was separately requested and approved** — WebDesk
+Solution, decision **CONFIRM** (a clean pass, not an override, since the required second-role
+human review was already complete before the gate was requested), approved commit `359e9a9` on
+branch `business-knowledge-center-rich-content-attachments` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-bkc-rich-content-attachments`) and `audit_log`. **This gate approval does not itself
+authorize merging PR #45 or a production deployment** — merge remains its own separate,
+not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Merge
 

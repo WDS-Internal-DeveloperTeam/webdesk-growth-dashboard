@@ -1505,7 +1505,8 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     per this project's standing "no auto-merge" rule.
 30. **Business Knowledge Center — Rich Content & File Attachments — built, fully validated,
     independently code-reviewed, security-reviewed, second-role human reviewed (Jitesh D,
-    "Approved as-is"), not yet gated or merged (2026-08-20).**
+    "Approved as-is"), and gated (G4-bkc-rich-content-attachments, WebDesk Solution, CONFIRM), not
+    yet merged (2026-08-20).**
     `docs/task-packages/business-knowledge-center-rich-content-attachments.md` records the
     original proposal; `docs/implementation/business-knowledge-center-rich-content-attachments.md`
     records the full as-built account. Built directly on the explicit "go ahead and start building
@@ -1603,8 +1604,17 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       the required second-role human review, since the implementing agent cannot also be its own
       reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the
       one open CONFIRMED code-review finding (no cleanup mechanism for a Blob object orphaned by an
-      interrupted upload) as tracked debt rather than requesting a fix before merge. A gate decision
-      and merge authorization remain separate, not-yet-requested next steps.
+      interrupted upload) as tracked debt rather than requesting a fix before merge. **The gate
+      (G4-bkc-rich-content-attachments) was then separately requested and approved** — WebDesk
+      Solution, decision CONFIRM (a clean pass, not an override, since the second-role review was
+      already complete before the gate was requested), approved commit `359e9a9` on branch
+      `business-knowledge-center-rich-content-attachments` — see
+      `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+      `G4-bkc-rich-content-attachments`) and
+      `docs/project-state/business-knowledge-center-rich-content-attachments-approval-checklist.md`'s
+      "Gate" section. **This gate approval does not itself authorize merging PR #45 or a
+      production deployment** — merge remains its own separate, not-yet-requested authorization,
+      per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -4279,6 +4289,16 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   `docs/project-state/business-knowledge-center-rich-content-attachments-approval-checklist.md`'s
   "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
   next steps.
+- `[2026-08-20]` **The gate (G4-bkc-rich-content-attachments) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+  required second-role human review was already complete before the gate was requested), approved
+  commit `359e9a9` on branch `business-knowledge-center-rich-content-attachments` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-bkc-rich-content-attachments`) and
+  `docs/project-state/business-knowledge-center-rich-content-attachments-approval-checklist.md`'s
+  "Gate" section. **This gate approval does not itself authorize merging PR #45 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
