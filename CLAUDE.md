@@ -444,7 +444,10 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     dashboard design prompt to address these at a later time — none of this is started or
     authorized; each remains its own separate, not-yet-requested next step. **Update
     (2026-08-17): work has begun on the shared blocker and gap (1) — see item 14.** **Update
-    (2026-08-18): gaps (2) and (3) built — see item 18.** Gaps (4) and (5) remain not started.
+    (2026-08-18): gaps (2) and (3) built — see item 18.** **Update (2026-08-20): gap (4)
+    (sub-resource editing) built, reviewed, gated, and merged — see item 27.** **Update
+    (2026-08-20): gap (5) (current-project context propagation) scoped and explicitly deferred, not
+    built — see the 2026-08-20 "Recent decisions" entry below for the full reasoning.**
 14. **User lookup capability + Project owner assignment — built, validated, code-reviewed,
     security-reviewed, second-role human reviewed, gated, merged, and live in production
     (2026-08-17).**
@@ -1263,6 +1266,89 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correct
 7baf414462d245c3242998f7ae4ec38ac82e2dd7`, and `dashboard-web`'s `/home` correctly redirects an
     unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` sidebar spacing & active-link
     fix is now genuinely live in production.**
+27. **`dashboard-web` Roadmap/Objectives/Environments/Repositories editing — built, reviewed,
+    gated, and merged; now live in production (2026-08-20).** Closes gap (4) from item 13's
+    remaining-Projects-module-gaps analysis. Not started automatically — built directly on the
+    explicit "Let's scope and start sub-resource editing" instruction. Roadmap items, Objectives,
+    Environments, and Repositories were all read-only lists on the Project Detail page even though
+    every backend endpoint already existed and was already reviewed/gated under
+    `module-projects-foundation`/`module-projects-backend-closeout` — this slice is `dashboard-web`
+    UI only, no backend changes. Two scoping decisions made directly with the user before building:
+    Roadmap items omit `status` from the edit form (the backend's `RoadmapItemsService.update()`
+    silently strips any `status` sent through the generic update route; only `setActivePhase()` may
+    change it, to protect the one-active-phase-per-project invariant) and instead get a "Set as
+    active phase"/"Clear active phase" action wired to the existing
+    `POST /projects/:projectId/active-phase` (previously unreachable from any `dashboard-web` UI);
+    all four resources shipped together in one PR, matching the Team+Approvers precedent (item 18).
+    New: `ProjectObjectivesSection`, `ProjectEnvironmentsSection` (reuses `isSafeHttpUrl()` before
+    rendering a stored `url` as a link), `ProjectRepositoriesSection` (client-side validates the
+    owner/name segment pattern before submit), and `ProjectRoadmapSection` (disables Delete for the
+    currently-active item, since the backend rejects that deletion). The Project Detail page's four
+    bespoke inline-style read-only sections were replaced with the four new client islands. Along
+    the way, `next build` caught the same `next/headers` client-bundle trap `CLAUDE.md`'s own
+    Cautions section already flagged once (item 18's `formatTimestamp` extraction) — a `"use
+client"` component value-importing anything from `lib/projects.ts` drags in its `next/headers`
+    import. Fixed by extracting `projectStatusBadge`/`roadmapItemStatusBadge`/`objectiveStatusBadge`
+    into `lib/status-badges.ts` and `isSafeHttpUrl` into `lib/safe-http-url.ts`, both
+    zero-non-type-import files; `lib/projects.ts` re-exports both so no server-side call site
+    changed. Two known backend gaps flagged, not fixed (out of scope for a frontend-only branch): no
+    unique-constraint handling for duplicate `(project_id, repo_owner, repo_name)` submissions, and
+    no code path can ever reach roadmap-item status `complete`/`skipped`. 186/186 `dashboard-web`
+    unit tests (24 new), typecheck/lint/`next build`/prettier all clean. Live-rendered in the
+    Browser pane to confirm the new page/component wiring boots without console or server errors.
+    Pushed as branch `dashboard-web-subresource-editing`, opened as
+    [PR #42](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/42).
+    **Independent code review then ran** (high effort, 8 finder angles) — 13 candidates verified, 12
+    CONFIRMED (1 REFUTED and dropped — a claimed `sequenceStyle` `minWidth` regression, where the
+    visual change was real but caused by the markup restructuring itself, not the dropped property).
+    10 findings kept in the final report per the review's own cap, all 10 fixed and re-validated:
+    the active-phase set/clear action previously updated only `activePhaseId`, never the affected
+    roadmap items' own `status`, leaving a stale/contradictory `StatusBadge` until refresh — now
+    mirrors the backend's own status transaction locally; clearing a repository's Default branch
+    field while editing silently reset it to "main" instead of preserving or blocking — the field
+    is now required and part of the edit form's validity check; a non-empty but unparseable
+    Sequence value silently serialized to `null` via `JSON.stringify`'s NaN handling — a new
+    `parseSequence()` helper rejects it client-side with a clear message; the active-phase response
+    was cast to the wrong shared type (`ApiSuccessResponse<ProjectDetail>` instead of the backend's
+    actual `ApiSuccessResponse<ProjectEntity>`) — replaced with an honest, narrow local type; open
+    inline edit forms never resynced on a concurrent external update, risking a silent lost-update
+    on save — fixed with a `useEffect` keyed on `(id, updatedAt)` narrow enough not to wipe an
+    in-progress unsaved edit on an unrelated refresh; two real CSS regressions from the original
+    `page.tsx`-to-component extraction (a dropped item-label `min-width` floor, and secondary text
+    shrinking from the `sm` to `xs` token, undocumented) were both restored; `router.refresh()` on
+    every mutation across all four new sections had raised the page's mutation-triggered
+    full-refetch surfaces from 3 to 7 — removed entirely where nothing else reads the data, and
+    scoped to only fire on a roadmap edit when the edited item is the active phase; the
+    `markPending`/pending-`Set` CRUD-handler pattern, reimplemented nearly verbatim across all four
+    new components, was extracted into a new shared `lib/use-pending-ids.ts` hook; and the
+    `next/headers` client-bundle fix was made proactive rather than reactive by extracting the
+    remaining pure exports of `lib/projects.ts` into a new `lib/projects-query.ts`. 24 new/updated
+    regression tests added (189/189 `dashboard-web` unit tests, up from 186); one planned test (the
+    NaN-sequence guard via a real number input) was found unreproducible in jsdom — its own value
+    sanitization already clamps any non-finite value to `""` at the DOM level — recorded explicitly
+    in `docs/implementation/dashboard-web-subresource-editing.md` rather than dropped silently.
+    **A separate `security-review` skill run then found 0 findings above threshold** — a
+    frontend-only diff with no new unsafe render sinks; the `isSafeHttpUrl()` guard and the
+    repository owner/name segment pattern are either unchanged relocations or backed by an
+    independent, unchanged backend schema. **Jitesh D reviewed it and returned "Approved as-is,"**
+    no disputes raised — see
+    `docs/project-state/dashboard-web-subresource-editing-approval-checklist.md`'s "Sign-off"
+    section. **The gate (G4-subresource-editing) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit `2df707e` on branch
+    `dashboard-web-subresource-editing` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-subresource-editing`) and the approval checklist's "Sign-off"
+    section. **"Merge PR #42" was then separately requested and executed** — one CI failure
+    (Formatting validation, on a whitespace artifact in `project.json` from the hand-edited gate
+    approval) was found and fixed before merging; merge commit
+    `e5c3910dd276739abf21ce713697f78b63b1f625`, all 14 CI checks green beforehand. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly redirects an
+    unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Roadmap/Objectives/
+    Environments/Repositories editing is now genuinely live in production.** Of the five gaps item
+    13 originally named, only gap (5) (current-project context propagation) remains — see the
+    2026-08-20 "Recent decisions" entry below for its scoping outcome.
 
 ## Recent decisions
 
@@ -3659,6 +3745,39 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   `dashboard-web`'s `/home` correctly redirects an unauthenticated visitor to `/auth/sign-in`,
   confirming the session gate is intact. **The `dashboard-web` sidebar spacing & active-link fix is
   now genuinely live in production.**
+- `[2026-08-20]` **Built the `dashboard-web` Roadmap/Objectives/Environments/Repositories editing**,
+  closing gap (4) from item 13's remaining-Projects-module-gaps analysis, under the explicit "Let's
+  scope and start sub-resource editing" instruction. Full account in item 27 above. **Independent
+  code review** (high effort) surfaced 13 candidates, 12 CONFIRMED (1 REFUTED), 10 fixed — most
+  severe a stale/contradictory roadmap-item status badge after "Set active phase," a repository
+  Default-branch field that silently reset to "main" when cleared, and a NaN-sequence value
+  silently serialized to `null`. **Security review found 0 findings above threshold.** **Jitesh D
+  reviewed it and returned "Approved as-is."** **The gate (G4-subresource-editing) was then
+  separately requested and approved** — WebDesk Solution, decision CONFIRM, approved commit
+  `2df707e` on branch `dashboard-web-subresource-editing`. **"Merge PR #42" was then separately
+  requested and executed** — one CI failure (Formatting validation, a whitespace artifact in
+  `project.json` from the hand-edited gate approval) was found and fixed first; merge commit
+  `e5c3910dd276739abf21ce713697f78b63b1f625`, all 14 CI checks green beforehand. Both Vercel
+  projects auto-deployed and were verified live directly — `dashboard-api`'s `/health` returned
+  `build.commitSha == e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` resolves
+  to `/auth/sign-in` for an unauthenticated visitor. **The sub-resource editing slice is now
+  genuinely live in production.**
+- `[2026-08-20]` **Scoped gap (5), "current project" context propagation, and it was explicitly
+  deferred, not built.** Asked directly ("Let's scope and start current-project context propagation
+  first give what is this?") — explained what actually exists today (the header Project Switcher
+  writes a `wds_current_project` cookie via `document.cookie`, read only once server-side, in
+  `app/(shell)/layout.tsx`, purely to pre-select the dropdown on load; confirmed via a dedicated
+  investigation that literally nothing else in `apps/dashboard-web` reads it) and that no design
+  spec anywhere describes what "propagation" should actually drive, since it was originally
+  deferred under D7 (`module-projects-foundation.md`) as "real design/engineering work with no
+  sourced spec," not a wiring afterthought. Presented the real scoping tradeoff directly
+  (`AskUserQuestion`): defer entirely vs. build reusable server-side plumbing with no consumer yet
+  vs. pick one real page as a pilot vs. something else. **The user chose to defer** — building
+  generic propagation infrastructure with zero real downstream consumers (no other project-scoped
+  business module exists yet) was judged speculative work with no way to validate the right shape.
+  Nothing was built; only `CLAUDE.md` item 13/27 and this entry record the outcome. Of the five gaps
+  item 13 originally named, this is now the only one remaining, and it is deliberately, not
+  accidentally, unstarted.
 
 ## Open client blockers
 
