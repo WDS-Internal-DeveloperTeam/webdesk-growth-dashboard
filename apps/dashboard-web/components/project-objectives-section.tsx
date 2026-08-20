@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { StatusBadge } from "@webdesk/ui";
 import type { ApiSuccessResponse, ProjectObjective } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { objectiveStatusBadge } from "@/lib/status-badges";
+import { usePendingIds } from "@/lib/use-pending-ids";
 import styles from "./project-subresource-section.module.css";
 
 export interface ProjectObjectivesSectionProps {
@@ -23,37 +23,29 @@ const DESCRIPTION_MAX_LENGTH = 10_000;
  * built, and RBAC-gated on `project_configuration:edit`. Unlike roadmap items, `status` forwards
  * straight through on update with no server-side stripping (see `roadmap-items.service.ts`'s own
  * comment for the contrasting case), so it's a real, working field here.
+ *
+ * No `router.refresh()` after a mutation here — unlike Roadmap's active-phase change, no other
+ * section on the Project Detail page reads objective data, so the optimistic local-state update
+ * already fully reflects reality; refreshing would only re-fetch the whole page for no visible
+ * benefit (code-review finding, this branch).
  */
 export function ProjectObjectivesSection({
   projectId,
   initialObjectives,
 }: ProjectObjectivesSectionProps): ReactNode {
-  const router = useRouter();
   const [objectives, setObjectives] = useState(initialObjectives);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+  const { pendingIds, markPending } = usePendingIds();
   const [addDescription, setAddDescription] = useState("");
   const [adding, setAdding] = useState(false);
 
-  // Resync from fresh server props after router.refresh() — this component isn't remounted, so
-  // useState's initial value alone would never see the updated list (same pattern as
-  // ProjectTeamSection).
+  // Resync from fresh initialObjectives props (e.g. after a sibling section's own
+  // router.refresh()) — this component isn't remounted, so useState's initial value alone would
+  // never see the updated list (same pattern as ProjectTeamSection).
   useEffect(() => {
     setObjectives(initialObjectives);
   }, [initialObjectives]);
-
-  function markPending(id: string, pending: boolean): void {
-    setPendingIds((current) => {
-      const next = new Set(current);
-      if (pending) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
-  }
 
   async function handleAdd(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -77,7 +69,6 @@ export function ProjectObjectivesSection({
       const body = (await response.json()) as ApiSuccessResponse<ProjectObjective>;
       setObjectives((current) => [...current, body.data]);
       setAddDescription("");
-      router.refresh();
     } catch (err) {
       console.error("Failed to add objective", err);
       setError("Something went wrong. Please try again.");
@@ -110,7 +101,6 @@ export function ProjectObjectivesSection({
       const body = (await response.json()) as ApiSuccessResponse<ProjectObjective>;
       setObjectives((current) => current.map((item) => (item.id === id ? body.data : item)));
       setEditingId(null);
-      router.refresh();
     } catch (err) {
       console.error("Failed to update objective", err);
       setError("Something went wrong. Please try again.");
@@ -132,7 +122,6 @@ export function ProjectObjectivesSection({
         return;
       }
       setObjectives((current) => current.filter((item) => item.id !== id));
-      router.refresh();
     } catch (err) {
       console.error("Failed to delete objective", err);
       setError("Something went wrong. Please try again.");
@@ -245,6 +234,16 @@ function ObjectiveEditForm({
 }: ObjectiveEditFormProps): ReactNode {
   const [description, setDescription] = useState(objective.description);
   const [status, setStatus] = useState(objective.status);
+
+  // Resyncs to the latest stored values if this objective is genuinely updated elsewhere while
+  // this row stays open for editing (another tab, another admin, or an unrelated mutation
+  // elsewhere on the page triggering a background refresh) — keyed on `updatedAt`, not the whole
+  // object, so it doesn't fire (and wipe an in-progress unsaved edit) on every incidental
+  // re-fetch that leaves this specific record unchanged (code-review finding, this branch).
+  useEffect(() => {
+    setDescription(objective.description);
+    setStatus(objective.status);
+  }, [objective.id, objective.updatedAt]);
 
   return (
     <div className={styles.editForm}>

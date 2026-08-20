@@ -1,6 +1,6 @@
 import type { ProjectObjective, RoadmapItem } from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
-import type { ProjectStatusFilter } from "./projects";
+import type { ProjectStatusFilter } from "./projects-query";
 
 /**
  * `projectStatusBadge`/`roadmapItemStatusBadge`/`objectiveStatusBadge` live in their own file with
@@ -8,10 +8,11 @@ import type { ProjectStatusFilter } from "./projects";
  * components (`ProjectRoadmapSection`, `ProjectObjectivesSection`) can import the real functions
  * directly without pulling in `lib/projects.ts`'s `next/headers` import — a value import of
  * anything from that module drags in the whole module, and `next/headers` is
- * Server-Component-only, so Next.js fails the client bundle otherwise. The `ProjectStatusFilter`
- * import above is type-only and is erased at build time, so it does not reintroduce that problem.
- * `lib/projects.ts` re-exports all three so every existing server-side call site is unaffected —
- * same precedent as `lib/format-timestamp.ts`.
+ * Server-Component-only, so Next.js fails the client bundle otherwise. `ProjectStatusFilter` is
+ * imported from `./projects-query` (another zero-non-type-import file), not from `lib/projects.ts`
+ * itself, so no part of this file's import graph touches `next/headers`, not even at the type
+ * level. `lib/projects.ts` re-exports all three so every existing server-side call site is
+ * unaffected — same precedent as `lib/format-timestamp.ts`.
  */
 
 const PROJECT_STATUS_BADGE: Readonly<

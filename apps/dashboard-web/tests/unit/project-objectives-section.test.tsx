@@ -29,7 +29,7 @@ describe("ProjectObjectivesSection", () => {
     expect(screen.getByText("No objectives yet.")).toBeInTheDocument();
   });
 
-  it("adds an objective — posting {description} and refreshing", async () => {
+  it("adds an objective — posting {description}, no refresh needed", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -61,7 +61,8 @@ describe("ProjectObjectivesSection", () => {
       ),
     );
     expect(await screen.findByText("Ship v1")).toBeInTheDocument();
-    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+    // No other section on the page reads objective data, so no router.refresh() is expected.
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("edits an objective — posting {description, status} to .../:id/update", async () => {

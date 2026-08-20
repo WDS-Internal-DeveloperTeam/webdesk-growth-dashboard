@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { ApiSuccessResponse, ProjectRepository } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { usePendingIds } from "@/lib/use-pending-ids";
 import styles from "./project-subresource-section.module.css";
 
 export interface ProjectRepositoriesSectionProps {
@@ -49,34 +49,26 @@ function isValidSegment(value: string): boolean {
  * `parseApiErrorMessage()`'s allowlist then reduces to the generic "Something went wrong" message
  * rather than a clear "this repository is already linked" error. Fixing that means editing the
  * already-reviewed, already-merged Projects module backend, out of scope here.
+ *
+ * No `router.refresh()` after a mutation here — unlike Roadmap's active-phase change, no other
+ * section on the Project Detail page reads repository data, so the optimistic local-state update
+ * already fully reflects reality; refreshing would only re-fetch the whole page for no visible
+ * benefit (code-review finding, this branch).
  */
 export function ProjectRepositoriesSection({
   projectId,
   initialRepositories,
 }: ProjectRepositoriesSectionProps): ReactNode {
-  const router = useRouter();
   const [repositories, setRepositories] = useState(initialRepositories);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+  const { pendingIds, markPending } = usePendingIds();
   const [addValues, setAddValues] = useState<RepositoryFormValues>(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     setRepositories(initialRepositories);
   }, [initialRepositories]);
-
-  function markPending(id: string, pending: boolean): void {
-    setPendingIds((current) => {
-      const next = new Set(current);
-      if (pending) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
-  }
 
   const addIsValid =
     isValidSegment(addValues.repoOwner.trim()) && isValidSegment(addValues.repoName.trim());
@@ -107,7 +99,6 @@ export function ProjectRepositoriesSection({
       const body = (await response.json()) as ApiSuccessResponse<ProjectRepository>;
       setRepositories((current) => [...current, body.data]);
       setAddValues(EMPTY_FORM);
-      router.refresh();
     } catch (err) {
       console.error("Failed to add repository", err);
       setError("Something went wrong. Please try again.");
@@ -117,7 +108,12 @@ export function ProjectRepositoriesSection({
   }
 
   async function handleSaveEdit(id: string, values: RepositoryFormValues): Promise<void> {
-    if (!isValidSegment(values.repoOwner.trim()) || !isValidSegment(values.repoName.trim())) {
+    const defaultBranch = values.defaultBranch.trim();
+    if (
+      !isValidSegment(values.repoOwner.trim()) ||
+      !isValidSegment(values.repoName.trim()) ||
+      !defaultBranch
+    ) {
       return;
     }
     setError(null);
@@ -132,7 +128,7 @@ export function ProjectRepositoriesSection({
           body: JSON.stringify({
             repoOwner: values.repoOwner.trim(),
             repoName: values.repoName.trim(),
-            defaultBranch: values.defaultBranch.trim() || DEFAULT_BRANCH_FALLBACK,
+            defaultBranch,
             notes: values.notes.trim() || null,
           }),
         },
@@ -144,7 +140,6 @@ export function ProjectRepositoriesSection({
       const body = (await response.json()) as ApiSuccessResponse<ProjectRepository>;
       setRepositories((current) => current.map((item) => (item.id === id ? body.data : item)));
       setEditingId(null);
-      router.refresh();
     } catch (err) {
       console.error("Failed to update repository", err);
       setError("Something went wrong. Please try again.");
@@ -166,7 +161,6 @@ export function ProjectRepositoriesSection({
         return;
       }
       setRepositories((current) => current.filter((item) => item.id !== id));
-      router.refresh();
     } catch (err) {
       console.error("Failed to delete repository", err);
       setError("Something went wrong. Please try again.");
@@ -329,7 +323,25 @@ function RepositoryEditForm({
     defaultBranch: repository.defaultBranch,
     notes: repository.notes ?? "",
   });
-  const isValid = isValidSegment(values.repoOwner.trim()) && isValidSegment(values.repoName.trim());
+
+  // Resyncs to the latest stored values if this repository is genuinely updated elsewhere while
+  // this row stays open for editing (another tab, another admin, or an unrelated mutation
+  // elsewhere on the page triggering a background refresh) — keyed on `updatedAt`, not the whole
+  // object, so it doesn't fire (and wipe an in-progress unsaved edit) on every incidental
+  // re-fetch that leaves this specific record unchanged (code-review finding, this branch).
+  useEffect(() => {
+    setValues({
+      repoOwner: repository.repoOwner,
+      repoName: repository.repoName,
+      defaultBranch: repository.defaultBranch,
+      notes: repository.notes ?? "",
+    });
+  }, [repository.id, repository.updatedAt]);
+
+  const isValid =
+    isValidSegment(values.repoOwner.trim()) &&
+    isValidSegment(values.repoName.trim()) &&
+    values.defaultBranch.trim().length > 0;
 
   return (
     <div className={styles.editForm}>
@@ -369,6 +381,7 @@ function RepositoryEditForm({
           <input
             id={`edit-repo-branch-${repository.id}`}
             type="text"
+            required
             maxLength={SEGMENT_MAX_LENGTH}
             value={values.defaultBranch}
             onChange={(event) => setValues((v) => ({ ...v, defaultBranch: event.target.value }))}

@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { StatusBadge, typographyTokens } from "@webdesk/ui";
-import type { ApiSuccessResponse, ProjectDetail, RoadmapItem } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, RoadmapItem } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { roadmapItemStatusBadge } from "@/lib/status-badges";
+import { usePendingIds } from "@/lib/use-pending-ids";
 import styles from "./project-subresource-section.module.css";
 
 export interface ProjectRoadmapSectionProps {
@@ -26,6 +27,41 @@ interface RoadmapItemFormValues {
 }
 
 const EMPTY_FORM: RoadmapItemFormValues = { name: "", sequence: "" };
+
+/**
+ * Honest, narrow response shape for `POST /projects/:projectId/active-phase` — the backend
+ * controller's own declared return type is `ApiSuccessResponse<ProjectEntity>`
+ * (`@webdesk/database`), a type this frontend package doesn't import, not `ProjectDetail`
+ * (`@webdesk/shared-types`); the two only coincidentally share an `activePhaseId` field with no
+ * formal relationship. Declaring only the one field this code actually reads avoids an unchecked
+ * cast to a type the response doesn't structurally match (code-review finding, this branch).
+ */
+interface ActivePhaseResponseData {
+  readonly activePhaseId: string | null;
+}
+
+/**
+ * Parses the "Sequence" field's raw string input. A non-empty but unparseable value (e.g. a lone
+ * "-", a real transient state a number `<input>` allows mid-typing in Chrome/Firefox) previously
+ * produced `Number("-") === NaN`, which `JSON.stringify` silently serializes as `sequence: null`
+ * — a value the backend's `z.number().optional()` (not nullable) schema rejects with an error the
+ * user couldn't trace back to this field. Surfacing that as a clear client-side message instead
+ * (code-review finding, this branch).
+ */
+function parseSequence(raw: string): {
+  readonly value: number | undefined;
+  readonly error: string | null;
+} {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { value: undefined, error: null };
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    return { value: undefined, error: "Sequence must be a valid number." };
+  }
+  return { value: parsed, error: null };
+}
 
 /**
  * Roadmap editing (Projects module gap 4, `CLAUDE.md` "Active tasks" item 13) — create/edit/delete
@@ -52,7 +88,7 @@ export function ProjectRoadmapSection({
   const [activePhaseId, setActivePhaseId] = useState(initialActivePhaseId);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+  const { pendingIds, markPending } = usePendingIds();
   const [addValues, setAddValues] = useState<RoadmapItemFormValues>(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
   const [settingActive, setSettingActive] = useState(false);
@@ -65,35 +101,27 @@ export function ProjectRoadmapSection({
     setActivePhaseId(initialActivePhaseId);
   }, [initialActivePhaseId]);
 
-  function markPending(id: string, pending: boolean): void {
-    setPendingIds((current) => {
-      const next = new Set(current);
-      if (pending) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
-  }
-
   async function handleAdd(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const name = addValues.name.trim();
     if (!name) {
       return;
     }
+    const sequenceResult = parseSequence(addValues.sequence);
+    if (sequenceResult.error) {
+      setError(sequenceResult.error);
+      return;
+    }
     setError(null);
     setAdding(true);
     try {
-      const sequence = addValues.sequence.trim();
       const response = await fetch(`${getApiBaseUrl()}/projects/${projectId}/roadmap-items`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          ...(sequence ? { sequence: Number(sequence) } : {}),
+          ...(sequenceResult.value !== undefined ? { sequence: sequenceResult.value } : {}),
         }),
       });
       if (!response.ok) {
@@ -103,7 +131,9 @@ export function ProjectRoadmapSection({
       const body = (await response.json()) as ApiSuccessResponse<RoadmapItem>;
       setRoadmapItems((current) => [...current, body.data]);
       setAddValues(EMPTY_FORM);
-      router.refresh();
+      // No router.refresh() — a brand-new item is never the active phase, so nothing else on the
+      // page (Overview's "Active phase" Fact) needs to know about it yet (code-review finding,
+      // this branch).
     } catch (err) {
       console.error("Failed to add roadmap item", err);
       setError("Something went wrong. Please try again.");
@@ -117,10 +147,14 @@ export function ProjectRoadmapSection({
     if (!name) {
       return;
     }
+    const sequenceResult = parseSequence(values.sequence);
+    if (sequenceResult.error) {
+      setError(sequenceResult.error);
+      return;
+    }
     setError(null);
     markPending(id, true);
     try {
-      const sequence = values.sequence.trim();
       const response = await fetch(
         `${getApiBaseUrl()}/projects/${projectId}/roadmap-items/${id}/update`,
         {
@@ -129,7 +163,7 @@ export function ProjectRoadmapSection({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
-            ...(sequence ? { sequence: Number(sequence) } : {}),
+            ...(sequenceResult.value !== undefined ? { sequence: sequenceResult.value } : {}),
           }),
         },
       );
@@ -140,7 +174,13 @@ export function ProjectRoadmapSection({
       const body = (await response.json()) as ApiSuccessResponse<RoadmapItem>;
       setRoadmapItems((current) => current.map((item) => (item.id === id ? body.data : item)));
       setEditingId(null);
-      router.refresh();
+      // Only refresh if the edited item is the active phase — its name is the only roadmap-item
+      // field Overview's "Active phase" Fact (rendered server-side) actually shows; every other
+      // edit is already fully reflected by the optimistic setRoadmapItems update above
+      // (code-review finding, this branch).
+      if (id === activePhaseId) {
+        router.refresh();
+      }
     } catch (err) {
       console.error("Failed to update roadmap item", err);
       setError("Something went wrong. Please try again.");
@@ -162,7 +202,9 @@ export function ProjectRoadmapSection({
         return;
       }
       setRoadmapItems((current) => current.filter((item) => item.id !== id));
-      router.refresh();
+      // No router.refresh() — the currently-active item can never reach this handler (Delete is
+      // disabled for it), so a deletion never affects Overview's "Active phase" Fact
+      // (code-review finding, this branch).
     } catch (err) {
       console.error("Failed to delete roadmap item", err);
       setError("Something went wrong. Please try again.");
@@ -174,6 +216,7 @@ export function ProjectRoadmapSection({
   async function handleSetActivePhase(roadmapItemId: string | null): Promise<void> {
     setError(null);
     setSettingActive(true);
+    const previousActivePhaseId = activePhaseId;
     try {
       const response = await fetch(`${getApiBaseUrl()}/projects/${projectId}/active-phase`, {
         method: "POST",
@@ -185,8 +228,25 @@ export function ProjectRoadmapSection({
         setError(await parseApiErrorMessage(response));
         return;
       }
-      const body = (await response.json()) as ApiSuccessResponse<ProjectDetail>;
-      setActivePhaseId(body.data.activePhaseId);
+      const body = (await response.json()) as ApiSuccessResponse<ActivePhaseResponseData>;
+      const newActivePhaseId = body.data.activePhaseId;
+      setActivePhaseId(newActivePhaseId);
+      // ProjectService.setActivePhase() flips both items' status server-side in the same
+      // transaction (the newly-active item to "active", the previously-active one back to
+      // "not_started") — mirror that locally too, not just activePhaseId, so the StatusBadge
+      // next to each row doesn't show a stale status until router.refresh() resolves
+      // (code-review finding, this branch).
+      setRoadmapItems((current) =>
+        current.map((item) => {
+          if (item.id === newActivePhaseId) {
+            return item.status === "active" ? item : { ...item, status: "active" };
+          }
+          if (item.id === previousActivePhaseId && item.status === "active") {
+            return { ...item, status: "not_started" };
+          }
+          return item;
+        }),
+      );
       router.refresh();
     } catch (err) {
       console.error("Failed to set active phase", err);
@@ -347,6 +407,15 @@ function RoadmapItemEditForm({
     name: item.name,
     sequence: String(item.sequence),
   });
+
+  // Resyncs to the latest stored values if this roadmap item is genuinely updated elsewhere while
+  // this row stays open for editing (another tab, another admin, or an unrelated mutation
+  // elsewhere on the page triggering a background refresh) — keyed on `updatedAt`, not the whole
+  // object, so it doesn't fire (and wipe an in-progress unsaved edit) on every incidental
+  // re-fetch that leaves this specific record unchanged (code-review finding, this branch).
+  useEffect(() => {
+    setValues({ name: item.name, sequence: String(item.sequence) });
+  }, [item.id, item.updatedAt]);
 
   return (
     <div className={styles.editForm}>

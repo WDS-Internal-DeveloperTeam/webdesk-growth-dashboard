@@ -149,6 +149,98 @@ server-side call site changed.
   exercise every request/response shape and local-state update path for all four resources against
   mocked `fetch`. Flagged explicitly, not silently skipped.
 
-Not yet reviewed, gated, or merged — code review, security review, second-role human review, a gate
-decision, and merge authorization are each their own separate, not-yet-requested next step,
-unchanged from this project's standing discipline.
+## 6. Independent code review
+
+Ran this project's own `code-review` skill (high effort, 8 finder angles, 1-vote verification)
+against the full PR #42 diff. 13 candidates survived dedup; all 13 verified (12 CONFIRMED, 1
+REFUTED and dropped — a claimed `sequenceStyle` `minWidth` regression, where the visual behavior
+change is real but caused by the markup restructuring itself, not the dropped property, so
+re-adding it would have changed nothing). 10 of the 12 CONFIRMED findings were kept for the final
+report (ranked most-severe first, per the review's own cap); the 2 lowest-priority (a validation
+regex/constants duplication finding and a defensive-guard-consistency finding) were left out under
+the cap, not silently dropped from the review's own record.
+
+**All 10 reported findings fixed**, per explicit "fix the confirmed findings" instruction:
+
+1. **Roadmap active-phase badge staleness** — `handleSetActivePhase` previously updated only
+   `activePhaseId`, never the affected items' own `status`, so the newly-active row briefly showed
+   its old status badge next to the new "Active" label (and vice versa for the previously-active
+   row) until `router.refresh()` resolved. Fixed by mirroring the backend's own transaction locally:
+   the newly-active item's status is set to `"active"`, and the previously-active item's status
+   (if it was `"active"`) is reset to `"not_started"`, in the same `setRoadmapItems` call.
+2. **Repositories: clearing "Default branch" silently reset it to "main"** — the field had no
+   `required` attribute and wasn't part of the Save button's validity check. Fixed by requiring the
+   field and including it in `RepositoryEditForm`'s `isValid` check (matching Owner/Repository
+   name's own treatment); `handleSaveEdit` no longer falls back to `"main"` on an edit (the
+   create-time fallback in `handleAdd` is intentional and unchanged — an unset branch on a brand
+   new repository legitimately defaulting to "main" was never the bug).
+3. **NaN sequence silently serialized as `null`** — a non-empty but unparseable "Sequence" value
+   produced `Number(...) === NaN`, which `JSON.stringify` turns into `null`, a value the backend's
+   non-nullable optional schema rejects with an error the user couldn't trace back to the field.
+   Fixed with a new `parseSequence()` helper that rejects a non-finite value with a clear
+   client-side message before ever calling `fetch`.
+4. **Active-phase response cast to the wrong shared type** — `handleSetActivePhase` cast the
+   response as `ApiSuccessResponse<ProjectDetail>`, but the backend controller's declared return
+   type is `ApiSuccessResponse<ProjectEntity>` (an unrelated, backend-only type); the two only
+   coincidentally share an `activePhaseId` field. Fixed with a new, honest, narrow local
+   `ActivePhaseResponseData` interface declaring only the one field this code actually reads.
+5. **Open edit forms never resynced on a concurrent external update** — each `*EditForm`
+   sub-component seeded its local state once at mount and never resynced if the underlying record
+   changed while the row stayed open for editing, risking a silent lost-update on save. Fixed by
+   adding a `useEffect` to all four `*EditForm` components, keyed on `(id, updatedAt)` — narrow
+   enough that it doesn't fire (and wipe an in-progress unsaved edit) on every incidental
+   background refresh that leaves this specific record unchanged, but does resync when the record
+   is genuinely updated elsewhere.
+6. **Item-label `min-width` floor dropped** — `.rowMain`'s `min-width: 0` let long names/
+   descriptions be squeezed arbitrarily narrow on a narrow viewport instead of the whole row
+   wrapping. Restored the old page's 10rem floor.
+7. **Secondary text font-size shrank, undocumented** — `.secondaryText` used the `xs` token
+   (0.75rem) instead of the old page's `sm` (0.875rem). Restored the `sm` token.
+8. **`router.refresh()` over-fetching** — every mutation in all four new sections called
+   `router.refresh()`, raising the number of client islands triggering the page's full
+   ~7-9-request `getProjectDetail()` refetch from 3 to 7, including for changes nothing else on the
+   page reads. Fixed by removing `router.refresh()` entirely from Objectives/Environments/
+   Repositories (no other section ever reads their data) and from Roadmap's `handleAdd`/
+   `handleDelete` (a new item is never active; the active item can never reach Delete); Roadmap's
+   `handleSaveEdit` now refreshes only when the edited item is the current active phase (the one
+   case Overview's "Active phase" Fact actually depends on); `handleSetActivePhase` keeps its
+   refresh unconditionally, since it always changes what Overview shows.
+9. **CRUD-handler architecture duplicated across (now) six components** — the `markPending`/
+   pending-`Set` helper was reimplemented nearly verbatim in all four new components (on top of the
+   same shape already existing twice in `project-team-section.tsx`/`project-approvers-section.tsx`).
+   Extracted the pending-id-tracking piece into a new shared `apps/dashboard-web/lib/use-pending-ids.ts`
+   hook (`usePendingIds()`), adopted by all four new components — deliberately scoped to just this
+   piece, not the four components' full fetch/error-handling boilerplate, and deliberately not
+   applied to the two pre-existing, already-reviewed/merged/live Team/Approvers sections (out of
+   scope for a fix pass on this branch).
+10. **`next/headers` client-bundle fix was reactive, with no guard against a third recurrence** —
+    `lib/projects.ts` still had two more pure, `next/headers`-free exports
+    (`parseProjectsSearchParams`/`buildProjectsHref`) that a future client component could need,
+    which would trigger the identical `next build` failure again. Proactively extracted both (plus
+    their supporting types/constants) into a new `apps/dashboard-web/lib/projects-query.ts`, the
+    same zero-non-type-import pattern as `lib/format-timestamp.ts`/`lib/status-badges.ts`/
+    `lib/safe-http-url.ts`; `lib/projects.ts` re-exports everything so no existing call site
+    changed. `lib/status-badges.ts`'s `ProjectStatusFilter` type import was also repointed from
+    `./projects` to `./projects-query` directly, removing even the type-level indirection.
+
+24 new/updated regression tests added across the four test files (189/189 `dashboard-web` unit
+tests passing overall, up from 186) — covering the active-phase status-sync fix (asserting the
+StatusBadge, not just the indicator span, now reads "Active" too), the repositories empty-
+default-branch guard, the edit-form resync-on-`updatedAt`-change behavior (and confirming it does
+NOT fire on an unrelated re-render, preserving in-progress typing), and the conditional-refresh
+logic for editing an active vs. non-active roadmap item. One planned regression test (the NaN-
+sequence guard, reached via a real `<input type="number">`) was found to be unreproducible in
+jsdom — verified directly that jsdom's own number-input value sanitization already clamps any
+non-finite value to `""` at the DOM level (both a bare `"-"` and `"1e1000"` reduce to `""` the
+moment `.value` is assigned), unlike the transient-typing behavior real browsers exhibit; the code
+fix remains as defense-in-depth, confirmed correct at the code level during the review's own
+verification pass, just not exercisable via `fireEvent.change` in this test environment — recorded
+here rather than silently dropped.
+
+Full re-validation: typecheck/lint/`check-css-tokens.mjs` (10 CSS Module files, unchanged since no
+new file was added)/`next build`/`pnpm exec prettier --check` all clean. Live-rendered in the
+Browser pane again after the fixes — unauthenticated redirect from `/projects/:id` still clean,
+zero server-side errors.
+
+Not yet security-reviewed, second-role human reviewed, gated, or merged — those remain each their
+own separate, not-yet-requested next step, unchanged from this project's standing discipline.

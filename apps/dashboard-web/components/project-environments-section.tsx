@@ -1,11 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { ApiSuccessResponse, ProjectEnvironment } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { isSafeHttpUrl } from "@/lib/safe-http-url";
+import { usePendingIds } from "@/lib/use-pending-ids";
 import styles from "./project-subresource-section.module.css";
 
 export interface ProjectEnvironmentsSectionProps {
@@ -33,34 +33,26 @@ const EMPTY_FORM: EnvironmentFormValues = { name: "", url: "", notes: "" };
  * still applied client-side before ever rendering a stored value as a link (matches the read-only
  * detail page's own existing guard), since this form doesn't change what's already stored for
  * environments created before that schema existed.
+ *
+ * No `router.refresh()` after a mutation here — unlike Roadmap's active-phase change, no other
+ * section on the Project Detail page reads environment data, so the optimistic local-state update
+ * already fully reflects reality; refreshing would only re-fetch the whole page for no visible
+ * benefit (code-review finding, this branch).
  */
 export function ProjectEnvironmentsSection({
   projectId,
   initialEnvironments,
 }: ProjectEnvironmentsSectionProps): ReactNode {
-  const router = useRouter();
   const [environments, setEnvironments] = useState(initialEnvironments);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+  const { pendingIds, markPending } = usePendingIds();
   const [addValues, setAddValues] = useState<EnvironmentFormValues>(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     setEnvironments(initialEnvironments);
   }, [initialEnvironments]);
-
-  function markPending(id: string, pending: boolean): void {
-    setPendingIds((current) => {
-      const next = new Set(current);
-      if (pending) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
-  }
 
   async function handleAdd(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -88,7 +80,6 @@ export function ProjectEnvironmentsSection({
       const body = (await response.json()) as ApiSuccessResponse<ProjectEnvironment>;
       setEnvironments((current) => [...current, body.data]);
       setAddValues(EMPTY_FORM);
-      router.refresh();
     } catch (err) {
       console.error("Failed to add environment", err);
       setError("Something went wrong. Please try again.");
@@ -121,7 +112,6 @@ export function ProjectEnvironmentsSection({
       const body = (await response.json()) as ApiSuccessResponse<ProjectEnvironment>;
       setEnvironments((current) => current.map((item) => (item.id === id ? body.data : item)));
       setEditingId(null);
-      router.refresh();
     } catch (err) {
       console.error("Failed to update environment", err);
       setError("Something went wrong. Please try again.");
@@ -143,7 +133,6 @@ export function ProjectEnvironmentsSection({
         return;
       }
       setEnvironments((current) => current.filter((item) => item.id !== id));
-      router.refresh();
     } catch (err) {
       console.error("Failed to delete environment", err);
       setError("Something went wrong. Please try again.");
@@ -296,6 +285,19 @@ function EnvironmentEditForm({
     url: environment.url ?? "",
     notes: environment.notes ?? "",
   });
+
+  // Resyncs to the latest stored values if this environment is genuinely updated elsewhere while
+  // this row stays open for editing (another tab, another admin, or an unrelated mutation
+  // elsewhere on the page triggering a background refresh) — keyed on `updatedAt`, not the whole
+  // object, so it doesn't fire (and wipe an in-progress unsaved edit) on every incidental
+  // re-fetch that leaves this specific record unchanged (code-review finding, this branch).
+  useEffect(() => {
+    setValues({
+      name: environment.name,
+      url: environment.url ?? "",
+      notes: environment.notes ?? "",
+    });
+  }, [environment.id, environment.updatedAt]);
 
   return (
     <div className={styles.editForm}>

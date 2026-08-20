@@ -29,7 +29,7 @@ describe("ProjectEnvironmentsSection", () => {
     expect(screen.getByText("No environments recorded yet.")).toBeInTheDocument();
   });
 
-  it("adds an environment — posting name/url/notes and refreshing", async () => {
+  it("adds an environment — posting name/url/notes, no refresh needed", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -69,7 +69,8 @@ describe("ProjectEnvironmentsSection", () => {
       ),
     );
     expect(await screen.findByText("Staging")).toBeInTheDocument();
-    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+    // No other section on the page reads environment data, so no router.refresh() is expected.
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("renders a javascript: URL as inert text, not a clickable link", () => {
@@ -139,5 +140,48 @@ describe("ProjectEnvironmentsSection", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Name is required");
     expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("resyncs an open edit form's fields when the row's own updatedAt changes externally, but not on an unrelated re-render", () => {
+    const base = {
+      id: "env-1",
+      name: "Staging",
+      url: "https://old.example.com",
+      notes: null,
+      createdAt: "2026-08-19T00:00:00.000Z",
+      updatedAt: "2026-08-19T00:00:00.000Z",
+    };
+    const { rerender } = render(
+      <ProjectEnvironmentsSection projectId={PROJECT_ID} initialEnvironments={[base]} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    // Both the edit form and the always-visible add-form below it have a "URL" field — the edit
+    // form's is the first one in DOM order. Same underlying component instance persists across
+    // the rerenders below (React doesn't remount it, matching the real router.refresh() case this
+    // guards against), so it's safe to keep this one reference.
+    const [urlInput] = screen.getAllByLabelText("URL");
+    expect(urlInput).toHaveValue("https://old.example.com");
+
+    // The user types an in-progress, unsaved edit.
+    fireEvent.change(urlInput!, { target: { value: "https://typing.example.com" } });
+    expect(urlInput).toHaveValue("https://typing.example.com");
+
+    // An unrelated re-render (same environment, same updatedAt) must NOT wipe the in-progress edit.
+    rerender(
+      <ProjectEnvironmentsSection projectId={PROJECT_ID} initialEnvironments={[{ ...base }]} />,
+    );
+    expect(urlInput).toHaveValue("https://typing.example.com");
+
+    // A genuine external update to this exact row (new updatedAt) DOES resync — the open form
+    // picks up the newer server value instead of silently overwriting it on save.
+    rerender(
+      <ProjectEnvironmentsSection
+        projectId={PROJECT_ID}
+        initialEnvironments={[
+          { ...base, url: "https://new.example.com", updatedAt: "2026-08-19T01:00:00.000Z" },
+        ]}
+      />,
+    );
+    expect(urlInput).toHaveValue("https://new.example.com");
   });
 });

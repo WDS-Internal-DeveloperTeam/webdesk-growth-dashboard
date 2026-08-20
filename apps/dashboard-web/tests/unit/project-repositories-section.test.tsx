@@ -29,7 +29,7 @@ describe("ProjectRepositoriesSection", () => {
     expect(screen.getByText("No repositories linked yet.")).toBeInTheDocument();
   });
 
-  it("adds a repository — posting repoOwner/repoName/defaultBranch/notes and refreshing", async () => {
+  it("adds a repository — posting repoOwner/repoName/defaultBranch/notes, no refresh needed", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -75,7 +75,8 @@ describe("ProjectRepositoriesSection", () => {
     expect(
       await screen.findByText("WDS-Internal-DeveloperTeam/webdesk-growth-dashboard"),
     ).toBeInTheDocument();
-    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+    // No other section on the page reads repository data, so no router.refresh() is expected.
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("disables Add repository when owner/name don't match the allowed segment pattern", () => {
@@ -157,5 +158,38 @@ describe("ProjectRepositoriesSection", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Repository owner is required");
     expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("disables Save and never submits when the Default branch field is cleared while editing", () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(
+      <ProjectRepositoriesSection
+        projectId={PROJECT_ID}
+        initialRepositories={[
+          {
+            id: "repo-1",
+            repoOwner: "acme",
+            repoName: "widgets",
+            defaultBranch: "develop",
+            notes: null,
+            createdAt: "2026-08-19T00:00:00.000Z",
+            updatedAt: "2026-08-19T00:00:00.000Z",
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    // Both the edit form and the always-visible add-form below it have a "Default branch" field —
+    // the edit form's is the first one in DOM order.
+    const [editBranchInput] = screen.getAllByLabelText("Default branch");
+    fireEvent.change(editBranchInput!, { target: { value: "" } });
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    // A disabled button still fires onClick in some testing-library/jsdom setups if the handler
+    // isn't itself guarded — assert the fetch never actually goes out, not just the button state.
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

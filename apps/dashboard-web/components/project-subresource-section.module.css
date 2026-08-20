@@ -30,7 +30,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  min-width: 0;
+  /* Matches the old page.tsx's itemLabelStyle floor (10rem) — without it, .rowActions's
+     flex-shrink: 0 buttons/badge squeeze this block arbitrarily narrow before .row's own
+     flex-wrap kicks in, producing heavily word-wrapped one-word-per-line text on narrow
+     viewports instead of the whole row wrapping cleanly (code-review finding, this branch). */
+  min-width: 10rem;
   flex: 1;
 }
 
@@ -40,7 +44,10 @@
 }
 
 .secondaryText {
-  font-size: var(--webdesk-dashboard-font-size-xs);
+  /* Matches the old page.tsx's mutedInlineStyle (0.875rem / "sm") — the "xs" token this
+     originally used was a real, undocumented one-step size reduction (code-review finding,
+     this branch). */
+  font-size: var(--webdesk-dashboard-font-size-sm);
   color: var(--webdesk-dashboard-color-foreground-muted);
   word-break: break-word;
 }
