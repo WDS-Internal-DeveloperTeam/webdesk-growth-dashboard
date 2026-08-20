@@ -1,14 +1,22 @@
 import type { ApiErrorResponse } from "@webdesk/shared-types";
 
 /**
- * Error codes `dashboard-api`'s Projects service layer deliberately throws with safe, user-facing
- * text (`"publicId already in use: X"`, `"Project not found: X"`) — everything else (e.g.
+ * Error codes `dashboard-api`'s service layers deliberately throw with safe, user-facing text
+ * (`"publicId already in use: X"`, `"Project not found: X"`) — everything else (e.g.
  * `PermissionGuard`'s `InternalServerErrorException` on a dropped `@RequirePermission` decorator,
  * or any other unanticipated `HttpException`) falls back to a generic message instead.
  * `AllExceptionsFilter` only redacts non-`HttpException` errors, so without this allowlist a future
- * backend bug could leak internal wiring detail straight into this form.
+ * backend bug could leak internal wiring detail straight into this form. `ConflictException` was
+ * added for the Business Knowledge status-transition action — the only route in this app whose
+ * service layer can throw one, when `BusinessKnowledgeRecordRepository.updateStatus()`'s atomic
+ * compare-and-swap loses a race; its message (`"...status changed concurrently...reload and
+ * retry"`) is safe, user-facing text, not internal detail.
  */
-const SAFE_MESSAGE_CODES = new Set(["BadRequestException", "NotFoundException"]);
+const SAFE_MESSAGE_CODES = new Set([
+  "BadRequestException",
+  "NotFoundException",
+  "ConflictException",
+]);
 
 const GENERIC_MESSAGE = "Something went wrong. Please try again.";
 

@@ -355,3 +355,47 @@ export interface ProjectTeamEntry {
   readonly userId: string;
   readonly addedAt: string;
 }
+
+/**
+ * The 10 "primary record" types the Business Knowledge Center module carries
+ * (`03_Detailed_Module_Specifications.md §3`), mirroring
+ * `packages/database/src/business-knowledge/entities.ts`'s `BusinessKnowledgeRecordType` —
+ * `module-business-knowledge-center.md` D5.
+ */
+export type BusinessKnowledgeRecordType =
+  | "company_profile"
+  | "persona_icp"
+  | "marketing_profile"
+  | "vto"
+  | "service_taxonomy"
+  | "engagement_model"
+  | "approved_messaging"
+  | "competitor"
+  | "geographic_scope"
+  | "strategic_priority";
+
+/** Mirrors `BusinessKnowledgeRecordStatus` in the same backend entities file — doubles as both the
+ *  lifecycle state and the confidentiality classification (no separate confidentiality field). */
+export type BusinessKnowledgeRecordStatus =
+  "mandatory" | "advisory" | "draft" | "deprecated" | "restricted";
+
+/**
+ * A business knowledge record, following this file's own header rule ("no business-module types
+ * until their owning module is actually authorized and implemented" — now true for Business
+ * Knowledge Center). `content`/`notes` are genuinely OPTIONAL, not just nullable: the backend's
+ * confidential-field redaction (`apps/dashboard-api/src/business-knowledge/business-knowledge-records.controller.ts`)
+ * deletes both keys outright from the JSON response for a `restricted` record when the caller
+ * lacks `view_confidential` — currently every caller, since that action is zero-seeded for every
+ * role. `createdBy`/`updatedBy` are operational metadata, omitted same as `Project`'s own
+ * precedent.
+ */
+export interface BusinessKnowledgeRecord {
+  readonly id: string;
+  readonly recordType: BusinessKnowledgeRecordType;
+  readonly title: string;
+  readonly content?: string;
+  readonly status: BusinessKnowledgeRecordStatus;
+  readonly notes?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
