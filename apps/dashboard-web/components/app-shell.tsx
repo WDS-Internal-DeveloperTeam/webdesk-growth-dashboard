@@ -351,7 +351,7 @@ export function AppShell({
                       <Tooltip label={label}>
                         <Link
                           href={entry.route}
-                          className={isActive ? styles.sidebarLinkActive : styles.sidebarLink}
+                          className={`${styles.sidebarLink} ${isActive ? styles.sidebarLinkActive : ""}`}
                           aria-current={isActive ? "page" : undefined}
                           aria-label={label}
                         >
@@ -368,7 +368,7 @@ export function AppShell({
                     ) : (
                       <Link
                         href={entry.route}
-                        className={isActive ? styles.sidebarLinkActive : styles.sidebarLink}
+                        className={`${styles.sidebarLink} ${isActive ? styles.sidebarLinkActive : ""}`}
                         aria-current={isActive ? "page" : undefined}
                         onClick={() => setMobileNavOpen(false)}
                       >

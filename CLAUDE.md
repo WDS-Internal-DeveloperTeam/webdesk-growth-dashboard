@@ -1210,6 +1210,54 @@ browsers`, an infra-level browser download) for 40+ minutes each time, while eve
 bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correctly redirects an
     unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` sidebar & module-grid fix is
     now genuinely live in production.**
+26. **`dashboard-web` sidebar spacing adapted to a Vercel reference; a second, independent real
+    active-link layout bug found and fixed; code-reviewed, security-reviewed, second-role human
+    reviewed (Jitesh D, "Approved as-is"), and gated (G4-sidebar-vercel-spacing, WebDesk Solution,
+    CONFIRM); not yet merged (2026-08-19).** Not started automatically — after item 25 went live,
+    the user shared a
+    screenshot of Vercel's own dashboard sidebar and asked to adapt our sidebar's row spacing and
+    selection styling toward it (organization/spacing only, keeping our own light palette and
+    indigo accent). Widened the sidebar's outer inset, row padding, corner radius, and row gap
+    using existing tokens. **While live-verifying this (checking computed styles, not just a
+    screenshot), found a second real, independent, previously-undiscovered bug**: the currently-
+    active sidebar link has never actually inherited any of `.sidebarLink`'s layout properties,
+    since `app-shell.tsx` applied `sidebarLink`/`sidebarLinkActive` as mutually-exclusive classes
+    and `sidebarLinkActive` only ever declared color overrides — verified live before the fix:
+    `display: inline`, `padding: 0px`, `border-radius: 0px`, underlined, on every page, in every
+    deployment, invisible to every prior check since those only verified background/text color,
+    never layout. Fixed at the source: `app-shell.tsx`'s className assignments now always apply
+    the base class, with the active modifier layered on conditionally. **Independent code review
+    then ran** (medium effort, 8 finder angles) — 5 findings survived verification (1 CONFIRMED, 4
+    PLAUSIBLE), three of the eight angles independently converging on the same defect from
+    different directions. Most severe: the base fix's own change (always applying `.sidebarLink`)
+    newly exposed a CSS specificity conflict — `.sidebarLink:hover` (0,2,0) unconditionally beat
+    the standalone `.sidebarLinkActive` (0,1,0), so hovering the _currently-active_ nav link washed
+    its accent styling out to the plain gray hover treatment, a regression structurally impossible
+    before this PR's own fix. Fixed by rewriting `.sidebarLinkActive` as the compound selector
+    `.sidebarLink.sidebarLinkActive` — specificity (0,2,0), tying with `:hover` and winning on
+    source order — verified live via a real `computer{action:"hover"}` mouse event (not a
+    simulated state), confirming `element.matches(':hover') === true` while the accent
+    background/text color held. Also fixed 2 cheap PLAUSIBLE findings: a now-redundant compound
+    selector in the icon-only rail rule, and two comments that referenced "the conversation"
+    without stating their rationale durably. 2 PLAUSIBLE findings left as tracked debt (a radius
+    inconsistency between the sidebar and `packages/ui`'s `Dropdown`/`CommandMenu` menu-item
+    styling; the identical fragile ternary-classname shape existing, currently safely, in
+    `project-status-actions.tsx`). 162/162 `dashboard-web` unit tests (unchanged),
+    typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean. **Security review then
+    run separately — 0 findings above threshold** (a pure CSS Module/`className`-composition diff
+    with no user input, data handling, new endpoint, or dependency in scope). A review packet
+    (published as a Claude artifact — code review + security review findings, fixes, and
+    validation evidence, with a decision section) was then prepared for the required second-role
+    human review, since the implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`. **Jitesh D
+    reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE code-review
+    findings as tracked debt. **The gate (G4-sidebar-vercel-spacing) was then separately requested
+    and approved** — WebDesk Solution, decision CONFIRM, approved commit `6adf852` on branch
+    `dashboard-web-sidebar-vercel-spacing` — see
+    `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
+    section. **This gate approval does not itself authorize merging PR #41 or a production
+    deployment** — merge remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -3518,6 +3566,84 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   `dashboard-web`'s `/home` correctly redirects an unauthenticated visitor to `/auth/sign-in`,
   confirming the session gate is intact. **The `dashboard-web` sidebar & module-grid fix is now
   genuinely live in production.**
+- `[2026-08-19]` **User shared a screenshot of Vercel's own dashboard sidebar as a reference** and
+  asked to adapt our sidebar's row spacing and selection styling toward it — specifically "the
+  spacing between menu and selection." Built directly on branch
+  `dashboard-web-sidebar-vercel-spacing`, off `main` at `eb1ec99` (the PR #40 merge commit): widened
+  `.sidebar`'s outer padding `space-sm` → `space-md`, `.sidebarLink`'s padding to uniform `space-sm`
+  (taller ~34px rows), corner radius `radius-sm` → `radius-md`, and `.navList`'s row gap `space-2xs`
+  → `space-xs` — organization/spacing only, keeping our own light palette and indigo accent.
+  **While live-verifying this (checking computed styles, not a screenshot), found a second real,
+  independent, previously-undiscovered bug**: the currently-active sidebar link has never actually
+  inherited any of `.sidebarLink`'s layout properties, since `app-shell.tsx` applied
+  `sidebarLink`/`sidebarLinkActive` as mutually-exclusive classes and `sidebarLinkActive` only ever
+  declared `background`/`color`/`font-weight` — verified live before the fix: `display: inline`,
+  `padding: 0px`, `border-radius: 0px`, `text-decoration-line: underline`, on every page, in every
+  deployment, invisible to every prior verification pass since those only checked
+  `background-color`/`color`, never layout. Fixed at the source: `app-shell.tsx`'s two `className`
+  assignments now always apply `styles.sidebarLink`, with `styles.sidebarLinkActive` layered on
+  conditionally — the correct base-class-plus-modifier composition. Re-verified live:
+  `display: flex`, `align-items: center`, `gap: 8px`, `padding: 8px`, `border-radius: 8px`,
+  `text-decoration-line: none`, `height: 34px`, matching every other link's layout with the accent
+  styling on top; the icon-only collapsed state re-verified separately (unaffected). 162/162
+  `dashboard-web` unit tests (unchanged), typecheck/lint/`check-css-tokens.mjs`/`next build`/
+  prettier all clean. Pushed as branch `dashboard-web-sidebar-vercel-spacing`, opened as
+  [PR #41](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/41).
+- `[2026-08-19]` **Independent code review run on `dashboard-web-sidebar-vercel-spacing` (PR #41),
+  medium effort — 8-angle finder pass.** 5 findings survived verification (1 CONFIRMED, 4
+  PLAUSIBLE) — three of the eight angles independently converged on the same defect from different
+  directions, meaningfully increasing confidence in it. Most severe: the base fix's own change
+  (always applying `.sidebarLink`) newly exposed a CSS specificity conflict —
+  `.sidebarLink:hover` (specificity 0,2,0) unconditionally beat the standalone `.sidebarLinkActive`
+  (0,1,0) for the `background`/`color` properties both declare, so hovering the _currently-active_
+  nav link washed its accent styling out to the plain gray hover treatment — structurally
+  impossible before this PR's own fix (the active link never carried `.sidebarLink` at all, so
+  `:hover` could never match it). Fixed by rewriting `.sidebarLinkActive` as the compound selector
+  `.sidebarLink.sidebarLinkActive` — specificity (0,2,0), tying with `.sidebarLink:hover` instead
+  of losing outright, with the tie broken by source order (declared after `:hover`) in its favor —
+  also more accurate, since this class can never actually appear without `.sidebarLink` in the DOM.
+  Verified live via a real mouse hover (not a simulated state) — `element.matches(':hover')`
+  confirmed `true` while `getComputedStyle` still showed the correct accent background/text color.
+  Also fixed 2 cheap PLAUSIBLE findings: the icon-only rail's now-redundant compound selector
+  (`.sidebarLinkActive` can never appear alone, so the second clause was dead) simplified to a
+  single clause; and two comments that referenced "the Vercel reference the user pointed at" and
+  "this branch never deployed" with no durable rationale reworded to state the numeric reasoning on
+  their own terms. 2 PLAUSIBLE findings left as tracked debt: `.sidebarLink`'s new `radius-md`
+  (8px) doesn't match `packages/ui`'s existing `Dropdown`/`CommandMenu` menu-item pattern
+  (`radius-sm`, 4px) — a pre-existing design-consistency gap this PR's change happened to surface,
+  not something a sidebar-focused PR should expand scope to reconcile; and
+  `project-status-actions.tsx` has the identical fragile "pick one class or the other" ternary
+  shape that caused the original bug, currently safe only because its own CSS Module happens to
+  write the shared layout as a combined selector — flagged for future awareness, not fixed.
+  Re-validated: 162/162 `dashboard-web` unit tests (unchanged), typecheck/lint/
+  `check-css-tokens.mjs`/`next build`/prettier all clean.
+- `[2026-08-19]` **Security review run on `dashboard-web-sidebar-vercel-spacing` (PR #41),
+  separately from the code review.** 0 findings above threshold — pure CSS Module selector/spacing
+  changes and a `className` composition fix, with no user input, data handling, new endpoint, or
+  dependency anywhere in scope; the `className` template literal composes only fixed,
+  build-generated CSS Module class references, nothing attacker-controlled reaches it; no auth/
+  session/cookie logic touched. A review packet (published as a Claude artifact — code review +
+  security review findings, fixes, and validation evidence, with a decision section) was then
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`.
+- `[2026-08-19]` **Required second-role human review complete for
+  `dashboard-web-sidebar-vercel-spacing` (PR #41).** The review packet (code review + security
+  review findings, fixes, and the 2 open tracked-debt items, with a decision section) was
+  reviewed. **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE
+  code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-sidebar-vercel-spacing) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `6adf852` on branch `dashboard-web-sidebar-vercel-spacing` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-sidebar-vercel-spacing`) and
+  `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #41 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

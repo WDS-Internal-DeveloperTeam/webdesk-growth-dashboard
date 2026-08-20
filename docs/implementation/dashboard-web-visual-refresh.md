@@ -430,3 +430,106 @@ list), 162/162 `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs`
 CSS Module files, up from 8)/`next build`/prettier all clean across both packages. Live-verified
 the boundary behavior directly in the Browser pane (1279px → 3 columns, 1280px → 4 columns, 1440px
 → 4 columns) rather than trusting the arithmetic alone.
+
+## 10. Sidebar spacing adapted to the Vercel dashboard nav reference; real active-link layout bug found and fixed (2026-08-19)
+
+After PR #40 shipped, the user shared a screenshot of Vercel's own dashboard sidebar as a reference
+and asked to adapt our sidebar's row spacing and selection styling toward it — specifically calling
+out "the spacing between menu and selection." Read the reference's proportions directly (roomier
+per-row padding producing ~36–40px rows, a rounder selection pill, clear separation between rows,
+generous outer inset from the sidebar's own edge) and adapted our sidebar's spacing to match that
+rhythm, keeping our own light palette and indigo accent (the ask was to match Vercel's _organization
+and spacing_, not its colors).
+
+Changes: `.sidebar` outer padding `space-sm` → `space-md` (8px → 16px); `.sidebarLink` padding
+`space-xs space-sm` → `space-sm` uniform (4px 8px → 8px 8px, taller rows); `.sidebarLink`/
+`.sidebarLinkActive` corner radius `radius-sm` → `radius-md` (4px → 8px, a rounder pill); `.navList`
+row gap `space-2xs` → `space-xs` (2px → 4px, clearer per-row separation).
+
+**While verifying this live (checking computed styles, not just a screenshot), found a real,
+significant, pre-existing bug**: the currently-active sidebar link has never actually inherited any
+of `.sidebarLink`'s layout properties. `app-shell.tsx` applied `styles.sidebarLinkActive` and
+`styles.sidebarLink` as mutually exclusive alternatives (`isActive ? styles.sidebarLinkActive :
+styles.sidebarLink`) — but `.sidebarLinkActive` in the CSS Module only ever declared
+`background`/`color`/`font-weight` (the override properties), never `display`/`align-items`/`gap`/
+`padding`/`border-radius`/`text-decoration`/`font-size` (the base layout, only declared on
+`.sidebarLink`). Live-verified via `getComputedStyle` on the real active link (`aria-current="page"`)
+before the fix: `display: inline` (not `flex`), `padding: 0px`, `border-radius: 0px`,
+`text-decoration-line: underline` — the currently-active nav item, on every page, in every
+deployment, has always rendered as a bare underlined inline link with a background color hugging
+just the text/icon glyphs, not the padded, rounded, flex-aligned pill every screenshot in this
+document's earlier sections appeared to show (those checks verified `background-color`/`color`
+values, which _were_ correct, but never checked `display`/`padding`/`border-radius`, so the bug was
+invisible to every prior verification pass, code review, and the axe-core WCAG scans — none of
+which check layout correctness). Fixed at the source: `app-shell.tsx`'s two `className` assignments
+now always apply `styles.sidebarLink`, with `styles.sidebarLinkActive` layered on conditionally
+(`` `${styles.sidebarLink} ${isActive ? styles.sidebarLinkActive : ""}` ``) — the correct
+base-class-plus-modifier composition, letting the CSS cascade apply `.sidebarLinkActive`'s
+override properties on top of `.sidebarLink`'s full layout rather than replacing it entirely.
+Re-verified live after the fix: `display: flex`, `align-items: center`, `gap: 8px`, `padding: 8px`,
+`border-radius: 8px`, `text-decoration-line: none`, `height: 34px` — matching every other sidebar
+link's layout exactly, just with the accent background/text/weight on top. The icon-only collapsed
+state (`.sidebarIconOnly .sidebarLink, .sidebarIconOnly .sidebarLinkActive`) was unaffected (that
+compound selector already matched via either class) and was re-verified live as well (36×36px tile,
+correct radius/background).
+
+Validated: 162/162 `dashboard-web` unit tests (unchanged — no test asserted the previous incorrect
+layout), typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean; `next-env.d.ts`
+confirmed unaffected by the local dev-server session. Live-rendered in the Browser pane both before
+and after the active-link fix, in both expanded and icon-only-collapsed sidebar states, confirming
+the exact computed-style values above rather than eyeballing a screenshot — the bug this section
+describes was specifically the kind that a screenshot alone would not have reliably caught at a
+quick glance.
+
+## 11. Independent code review (2026-08-19)
+
+Medium effort, 8-angle finder pass against the full PR #41 diff. 5 findings survived verification
+(1 CONFIRMED, 4 PLAUSIBLE). Three of the eight angles independently converged on the same defect
+from different directions, meaningfully increasing confidence in it.
+
+**CONFIRMED, and the most severe**: §10's own fix (always applying `.sidebarLink`, layering
+`.sidebarLinkActive` on top) introduced a real regression it didn't anticipate — hovering the
+_currently-active_ sidebar link now loses its accent styling. `.sidebarLink:hover` (specificity
+0,2,0 — one class plus one pseudo-class) unconditionally beats the standalone `.sidebarLinkActive`
+(0,1,0 — one class) for the `background`/`color` properties both declare, regardless of source
+order. This was structurally impossible before §10's fix (the active link never carried
+`.sidebarLink` at all, so `:hover` could never match it) — a genuine side effect of the base fix,
+not a pre-existing issue, and one §10's own live-verification pass didn't catch since it only
+checked the active link's non-hovered computed styles.
+
+Fixed by rewriting `.sidebarLinkActive` as the compound selector `.sidebarLink.sidebarLinkActive`
+— two classes, specificity (0,2,0), tying with `.sidebarLink:hover` instead of losing to it
+outright, with the tie broken by source order (the rule is declared after `:hover` in the file, so
+it wins). This is also more accurate: `.sidebarLinkActive` can never actually appear without
+`.sidebarLink` in the DOM (per §10's own fix), so writing it as a standalone selector was
+misleading regardless of the specificity bug. Verified live via a real mouse hover (not a
+simulated CSS state) — `element.matches(':hover')` confirmed `true` while `getComputedStyle`
+still showed the correct accent background (`rgb(238, 240, 255)`)/text (`rgb(67, 56, 202)`) color,
+proving the fix holds under an actual hover event, not just a specificity calculation on paper.
+
+Two PLAUSIBLE findings fixed as cheap, clearly-correct cleanup: the icon-only rail's
+`.sidebarIconOnly .sidebarLink, .sidebarIconOnly .sidebarLinkActive` compound selector had a
+redundant second clause (now that `.sidebarLinkActive` can never appear alone, the first clause
+already matches every case) — simplified to a single selector, with a comment explaining why the
+second clause isn't needed. Also reworded two comments that read as ambiguous/unlinked outside the
+conversation that produced them (a "this branch never deployed" claim that would go stale once any
+branch merges, and three separate "the Vercel dashboard nav reference the user pointed at"
+citations with no pointer to what that reference actually was) into comments that state the
+durable numeric rationale on their own terms.
+
+Two PLAUSIBLE findings left as tracked, out-of-scope debt, not fixed: (1) `.sidebarLink`'s new
+`radius-md` (8px) partially overlaps but doesn't match `packages/ui`'s existing `Dropdown`/
+`CommandMenu` menu-item pattern, which use the same `spacingTokens.sm` padding but `radiusTokens.sm`
+(4px) — three near-identical "clickable row" treatments now drift on one token with no shared
+preset backing any of them, a real but pre-existing design-consistency gap this PR's own change
+happened to surface, not something this sidebar-focused PR should expand scope to reconcile. (2)
+`project-status-actions.tsx` has the identical fragile "pick one class or the other" ternary shape
+that caused the original bug this whole document's §10 fixed — currently safe only because its own
+CSS Module happens to write the shared layout as a combined selector — flagged for future awareness
+rather than fixed here, since it isn't currently broken and touching it is out of scope for a
+sidebar-spacing PR.
+
+Re-validated after all fixes: 162/162 `dashboard-web` unit tests (unchanged), typecheck/lint/
+`check-css-tokens.mjs`/`next build`/prettier all clean. Live-verified the hover fix specifically via
+a real `computer{action:"hover"}` mouse event (not a simulated state), confirming
+`element.matches(':hover') === true` while the accent background/text color held.

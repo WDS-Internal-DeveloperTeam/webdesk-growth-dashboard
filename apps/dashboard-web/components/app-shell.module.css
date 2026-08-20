@@ -110,16 +110,17 @@
   color: var(--webdesk-dashboard-color-foreground-muted);
 }
 
-/* Light surface (not the dark headerBackground fill the header uses) — reverted from a dark
-   sidebar built to match the approved "Enterprise Plus" design canvas mockup, per the user's own
-   direct, later feedback (a reference screenshot, not a production report — this branch never
-   deployed): keep the sidebar light, compact instead of roomy. surfaceRaised (pure white) reads
-   as a distinct panel against the slightly warmer `background` the main content area sits on. */
+/* Light surface (not the dark headerBackground fill the header uses) — reverted from an earlier,
+   never-deployed dark-sidebar attempt on this same page back to the light system this app already
+   uses elsewhere. surfaceRaised (pure white) reads as a distinct panel against the slightly warmer
+   `background` the main content area sits on. Outer inset widened from `space-sm` to `space-md`
+   (8px → 16px) so the selection pill sits with real breathing room from the sidebar's own edge,
+   not flush against it — matching a denser dashboard nav's own rail margin. */
 .sidebar {
   grid-area: sidebar;
   border-right: 1px solid var(--webdesk-dashboard-color-border);
   background: var(--webdesk-dashboard-color-surface-raised);
-  padding: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-md);
   overflow-y: auto;
 }
 
@@ -138,21 +139,26 @@
   padding: var(--webdesk-dashboard-space-2xs) var(--webdesk-dashboard-space-sm);
 }
 
+/* Gap between rows widened from `space-2xs` to `space-xs` (2px → 4px) — each row now reads as its
+   own distinct target instead of a dense block, with clearer per-row separation. */
 .navList {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--webdesk-dashboard-space-2xs);
+  gap: var(--webdesk-dashboard-space-xs);
 }
 
+/* Vertical padding widened from `space-xs` to `space-sm` (taller, ~34px rows) and the corner
+   radius bumped from `sm` to `md` (8px) — a rounder pill, giving the selection state real
+   presence instead of a thin sliver. */
 .sidebarLink {
   display: flex;
   align-items: center;
   gap: var(--webdesk-dashboard-space-sm);
-  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
-  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  border-radius: var(--webdesk-dashboard-radius-md);
   color: var(--webdesk-dashboard-color-foreground-muted);
   text-decoration: none;
   font-size: var(--webdesk-dashboard-font-size-sm);
@@ -167,7 +173,14 @@
   color: var(--webdesk-dashboard-color-foreground);
 }
 
-.sidebarLinkActive {
+/* Compound selector (requires `.sidebarLink`, not standalone) for two reasons: (1) `AppShell`
+   always applies `.sidebarLink` and layers `.sidebarLinkActive` on top as a modifier — this class
+   can never actually appear alone, so writing it as a standalone selector was misleading; (2) this
+   gives it specificity (0,2,0), tying with `.sidebarLink:hover` above instead of losing to it
+   (0,1,0 would lose outright) — a real regression this fix closes: hovering the current page's own
+   nav link no longer washes out its accent background/text back to the plain hover treatment,
+   since this rule is declared after `:hover` and wins the specificity tie on source order. */
+.sidebarLink.sidebarLinkActive {
   background: var(--webdesk-dashboard-color-accent-tint);
   color: var(--webdesk-dashboard-color-accent);
   font-weight: var(--webdesk-dashboard-font-weight-semibold);
@@ -180,9 +193,10 @@
 }
 
 /* Desktop collapsed toggle AND the tablet-forced icon-only rail (§1.2/§1.5) share this rendering:
-   links become fixed-size monogram tiles instead of full-width text rows. */
-.sidebarIconOnly .sidebarLink,
-.sidebarIconOnly .sidebarLinkActive {
+   links become fixed-size monogram tiles instead of full-width text rows. Targets `.sidebarLink`
+   alone (not also `.sidebarLinkActive`) — every link, active or not, always carries `.sidebarLink`
+   (see above), so a second clause for the active modifier would be redundant. */
+.sidebarIconOnly .sidebarLink {
   display: flex;
   align-items: center;
   justify-content: center;
