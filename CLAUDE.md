@@ -1415,10 +1415,16 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-business-knowledge-center`) and
     `docs/project-state/module-business-knowledge-center-approval-checklist.md`'s "Sign-off"
-    section. **This gate approval does not itself authorize merging PR #43 or a production
-    deployment** — merge remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a
-    separate, not-yet-requested next step, matching the Projects module's own precedent.
+    section. **"Merge PR #43" was then separately requested and executed** — waited for all 14 CI
+    checks to go green first, merge commit `032fb274920c523c07b252e45cc8bc0f097c8b4e`. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+    Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+032fb274920c523c07b252e45cc8bc0f097c8b4e`, confirming the exact merged commit is what's serving;
+    `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+    unauthenticated visitor, confirming the session gate is intact. **The Business Knowledge
+    Center backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
+    module — a separate, not-yet-requested next step, matching the Projects module's own
+    precedent.
 
 ## Recent decisions
 
@@ -3904,6 +3910,17 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   **This gate approval does not itself authorize merging PR #43 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing "no
   auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-20]` **"Merge PR #43" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `032fb274920c523c07b252e45cc8bc0f097c8b4e`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+032fb274920c523c07b252e45cc8bc0f097c8b4e`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The Business Knowledge Center
+  backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this module —
+  a separate, not-yet-requested next step, matching the Projects module's own precedent.
 
 ## Open client blockers
 

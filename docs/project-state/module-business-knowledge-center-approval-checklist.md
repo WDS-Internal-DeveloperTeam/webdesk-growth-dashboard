@@ -98,3 +98,20 @@ complete before the gate was requested), approved commit `b64a728` on branch
 This gate approval does not itself authorize merging PR #43 or a production deployment — merge
 remains its own separate, not-yet-requested authorization, per this project's standing "no
 auto-merge" rule.
+
+## Merge — COMPLETE
+
+**"Merge PR #43" was separately requested and executed.** Waited for all 14 CI checks to go green
+first. Merged with a real merge commit (not squash/rebase), matching every prior merge in this
+project's history — merge commit `032fb274920c523c07b252e45cc8bc0f097c8b4e`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha == 032fb274920c523c07b252e45cc8bc0f097c8b4e`,
+  confirming the exact merged commit is what's serving.
+- `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact.
+
+**The Business Knowledge Center backend is now genuinely live in production.** No `dashboard-web`
+UI exists yet for this module — a separate, not-yet-requested next step, matching the Projects
+module's own precedent.
