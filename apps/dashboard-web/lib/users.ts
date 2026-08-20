@@ -1,10 +1,7 @@
 import { cookies } from "next/headers";
 import type { ApiSuccessResponse, UserSummary } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
-
-/** Same UUID short-circuit `lib/projects.ts`'s `getProject()` already uses — a malformed id is the
- *  honest read of a garbled value, not a network call worth making. */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUuid } from "./uuid";
 
 /**
  * Resolves a single, already-known user id to a display summary — server-side only, for a page
@@ -13,7 +10,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * id (mirrors `getProject()`'s own null/throw contract), throws on any other non-OK status.
  */
 export async function getUser(userId: string): Promise<UserSummary | null> {
-  if (!UUID_PATTERN.test(userId)) {
+  if (!isUuid(userId)) {
     return null;
   }
   const apiBaseUrl = getApiBaseUrl();

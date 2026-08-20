@@ -10,6 +10,7 @@ import {
   type BusinessKnowledgeQuery,
 } from "./business-knowledge-query";
 import { formatTimestamp } from "./format-timestamp";
+import { isUuid } from "./uuid";
 
 export {
   BUSINESS_KNOWLEDGE_PAGE_SIZE,
@@ -20,12 +21,6 @@ export {
   RECORD_TYPE_LABEL,
 };
 export type { BusinessKnowledgeQuery };
-
-/** Matches the `id` UUID column `business_knowledge_records` uses (migration `00047`) — same
- *  short-circuit precedent as `lib/projects.ts`'s `UUID_PATTERN`: `dashboard-api` now validates
- *  `:id` route params via `ParseUUIDPipe` (a malformed id gets a clean `400`, not a raw `500`), but
- *  rejecting it here too avoids the network round trip entirely for an obviously-garbled URL. */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface BusinessKnowledgeListResult {
   readonly items: readonly BusinessKnowledgeRecord[];
@@ -67,13 +62,15 @@ export async function getBusinessKnowledgeRecords(
 /**
  * Fetches a single record. Returns `null` on a 404 (the caller renders `notFound()`), and throws
  * on any other non-OK status (403/5xx) — same contract as `getProjectDetail()`. `recordId` is
- * untrusted (a reader can type anything into the URL); the `UUID_PATTERN` short-circuit rejects an
- * obviously-malformed value before any network call, treating it the same as "not found."
+ * untrusted (a reader can type anything into the URL); the `isUuid()` short-circuit rejects an
+ * obviously-malformed value before any network call, treating it the same as "not found." (`dashboard-api`
+ * also validates `:id` route params via `ParseUUIDPipe`, returning a clean `400` rather than a raw
+ * `500` — this check saves the network round trip entirely for an obviously-garbled URL.)
  */
 export async function getBusinessKnowledgeRecord(
   recordId: string,
 ): Promise<BusinessKnowledgeRecord | null> {
-  if (!UUID_PATTERN.test(recordId)) {
+  if (!isUuid(recordId)) {
     return null;
   }
   const apiBaseUrl = getApiBaseUrl();

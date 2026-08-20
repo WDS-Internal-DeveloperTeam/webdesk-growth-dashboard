@@ -59,15 +59,19 @@ const NOTES_MAX_LENGTH = 10_000;
 export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormProps): ReactNode {
   const router = useRouter();
   const initial = props.mode === "edit" ? props.initial : null;
-  const contentRedacted = props.mode === "edit" && initial?.content === undefined;
-  const notesRedacted = props.mode === "edit" && initial?.notes === undefined;
+  // A restricted record's content/notes are always redacted together (one canViewConfidential
+  // check gates both — see business-knowledge-records.controller.ts's CONFIDENTIAL_RESTRICTED_FIELDS),
+  // so one flag derived from `content` (never legitimately absent otherwise) covers both fields —
+  // matching the detail page's own single `isRedacted` check, not two independently-tracked flags
+  // that can never actually differ in practice.
+  const redacted = props.mode === "edit" && initial?.content === undefined;
 
   const [recordType, setRecordType] = useState<BusinessKnowledgeRecord["recordType"]>(
     initial?.recordType ?? "company_profile",
   );
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [content, setContent] = useState(contentRedacted ? "" : (initial?.content ?? ""));
-  const [notes, setNotes] = useState(notesRedacted ? "" : (initial?.notes ?? ""));
+  const [content, setContent] = useState(redacted ? "" : (initial?.content ?? ""));
+  const [notes, setNotes] = useState(redacted ? "" : (initial?.notes ?? ""));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,6 +83,7 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
       const trimmedTitle = title.trim();
       const trimmedContent = content.trim();
       const trimmedNotes = notes.trim();
+      const notesValue = trimmedNotes ? trimmedNotes : null;
 
       const payload =
         props.mode === "create"
@@ -86,15 +91,14 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
               recordType,
               title: trimmedTitle,
               content: trimmedContent,
-              notes: trimmedNotes ? trimmedNotes : null,
+              notes: notesValue,
             }
           : {
               title: trimmedTitle,
               // Omit entirely when redacted — never send an empty string in place of content the
               // form never actually loaded, which would fail the backend's own min(1) validation
               // and, if it somehow didn't, would silently destroy real confidential content.
-              ...(contentRedacted ? {} : { content: trimmedContent }),
-              ...(notesRedacted ? {} : { notes: trimmedNotes ? trimmedNotes : null }),
+              ...(redacted ? {} : { content: trimmedContent, notes: notesValue }),
             };
 
       const url =
@@ -116,7 +120,8 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
 
       const body = (await response.json()) as ApiSuccessResponse<BusinessKnowledgeRecord>;
       router.push(`/business-knowledge-center/${body.data.id}`);
-    } catch {
+    } catch (err) {
+      console.error("Failed to save business knowledge record", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
@@ -176,7 +181,7 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
         <label htmlFor="content" className={styles.label}>
           Content
         </label>
-        {contentRedacted ? (
+        {redacted ? (
           <p className={styles.redactedNotice}>
             This record is restricted and its content isn&apos;t visible to you, so it can&apos;t be
             edited from this form. Change the status first if you need to update the content.
@@ -198,7 +203,7 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
         <label htmlFor="notes" className={styles.label}>
           Notes
         </label>
-        {notesRedacted ? (
+        {redacted ? (
           <p className={styles.redactedNotice}>
             This record is restricted and its notes aren&apos;t visible to you.
           </p>

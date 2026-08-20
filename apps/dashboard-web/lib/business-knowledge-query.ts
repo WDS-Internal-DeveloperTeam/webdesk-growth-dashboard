@@ -3,6 +3,7 @@ import type {
   BusinessKnowledgeRecordType,
 } from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
+import { firstValue } from "./search-params";
 
 /**
  * `BUSINESS_KNOWLEDGE_PAGE_SIZE`/`BusinessKnowledgeQuery`/`parseBusinessKnowledgeSearchParams`/
@@ -75,10 +76,6 @@ export interface BusinessKnowledgeQuery {
   readonly recordType: BusinessKnowledgeRecordType | null;
   readonly status: BusinessKnowledgeRecordStatus | null;
   readonly offset: number;
-}
-
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 /**

@@ -183,4 +183,22 @@ describe("BusinessKnowledgeRecordForm", () => {
       "Something went wrong. Please try again.",
     );
   });
+
+  it("logs the real error to the console on a network failure", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const networkError = new Error("network down");
+    global.fetch = vi.fn().mockRejectedValue(networkError) as typeof fetch;
+
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "x" } });
+    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "y" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create record" }));
+
+    await screen.findByRole("alert");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Failed to save business knowledge record",
+      networkError,
+    );
+    consoleErrorSpy.mockRestore();
+  });
 });

@@ -1,6 +1,7 @@
 # `dashboard-web` Business Knowledge Center UI (as-built)
 
-**Status:** Built, fully validated, not yet reviewed, gated, or merged. Branch
+**Status:** Built, fully validated, independently code-reviewed (8 of 10 findings fixed, 2 accepted
+as tracked debt — see §6), not yet security-reviewed, gated, or merged. Branch
 `dashboard-web-business-knowledge-center`, off `main` at `9e1abb6` (the commit recording PR #43's
 merge as live in production).
 
@@ -102,6 +103,62 @@ listing this module under the "libraries" cluster with its `book-open` icon, alr
   detail/form content) wasn't visually confirmed here — the same limitation the Projects list page's
   own as-built record already noted for itself.
 
-Not yet reviewed, gated, or merged — code review, security review, second-role human review, a gate
-decision, and merge authorization are each their own separate, not-yet-requested next step,
-unchanged from this project's standing discipline.
+## 6. Independent code review
+
+This project's own `code-review` skill ran at high effort (8 finder angles, 1-vote verification)
+against the full PR #44 diff. 10 findings were kept in the final report per the review's own cap —
+8 CONFIRMED, 2 PLAUSIBLE. All 8 CONFIRMED findings fixed:
+
+1. **Adding `ConflictException` to `lib/api-errors.ts`'s `SAFE_MESSAGE_CODES` silently changed
+   error-message behavior for the already-shipped Projects approver-assignment flow**, and the doc
+   comment's claim that Business Knowledge is "the only route" that can throw one was factually
+   false (`RoleAssignmentService.assignRole()` already throws it too, reachable from
+   `ProjectApproversSection`). Verified the change itself is benign — the real message
+   (`"User already holds role: X"`) leaks no PII/secrets and is arguably an improvement over the
+   prior generic fallback — so fixed by correcting the doc comment to accurately describe the
+   shared scope, and adding a dedicated regression test to
+   `project-approvers-section.test.tsx` locking in the new behavior on that path.
+2. **`content`/`notes` were tracked as two independent `contentRedacted`/`notesRedacted` booleans**
+   in `BusinessKnowledgeRecordForm` that can never actually differ, since the backend redacts both
+   atomically via one `canViewConfidential` check — collapsed to a single `redacted` flag, matching
+   the detail page's already-correct pattern (verified against the actual backend code, not
+   speculation about a hypothetical future per-field redaction model).
+3. **The list page over-fetches full `content`/`notes` for every row** (up to ~1.5MB per view) —
+   confirmed real, but not fixable within this branch's own `dashboard-web`-only scope; the backend
+   would need a list-projection change. Flagged here as known, out-of-scope debt rather than fixed.
+4. **`UUID_PATTERN` was copy-pasted a third time** (after `lib/projects.ts` and `lib/users.ts`) —
+   extracted into a new shared `lib/uuid.ts` (`isUuid()`), all three call sites now import from it.
+5. **`firstValue()` was duplicated verbatim** from `lib/projects-query.ts` — extracted into a new
+   shared `lib/search-params.ts`, both query-parsing files now import from it.
+6. **`thStyle`/`tdStyle` table-cell styles were duplicated** between this module's list page and the
+   Projects list page — extracted into a new shared `lib/list-table-styles.ts`; the "a shared
+   `Table` component was premature at one consumer" reasoning from the Projects list page's own
+   as-built record no longer holds now that a second, identical consumer exists, though a full
+   component wasn't built here either (out of proportion for a review-fix pass).
+7. **A duplicated `notes` normalization ternary** (`trimmedNotes ? trimmedNotes : null`, written
+   twice in `handleSubmit()`) — hoisted to a single `notesValue` computed once.
+8. **`BusinessKnowledgeRecordForm`'s catch block never called `console.error`**, unlike the sibling
+   `BusinessKnowledgeStatusActions` component in the same PR — added logging, plus a new regression
+   test confirming it fires.
+
+**The 2 PLAUSIBLE findings were left unfixed, as accepted, tracked debt**:
+
+- `businessKnowledgeStatusBadge()` has no fallback for a status value outside the hardcoded union
+  (a live crash risk on a deploy-skew window), but this is an inherited, already-accepted pattern
+  from three sibling functions in `lib/status-badges.ts` — not a new regression this PR introduces.
+- The 10-record-type/5-status enum is hand-duplicated across three files (backend DTO,
+  `lib/business-knowledge-query.ts`, `packages/shared-types`) with nothing enforcing they stay in
+  sync — but this extends an already-existing, already-tolerated pattern from the Projects module
+  (its own status enum has the identical triplication, unaddressed across many prior review
+  cycles), not something new or newly risky about this PR.
+
+Re-validation after all fixes: 223/223 `dashboard-web` unit tests (2 new — the `ConflictException`
+regression test and the new `console.error` regression test), typecheck/lint/`check-css-tokens.mjs`/
+`next build`/prettier all clean, 15/15 Playwright tests passing.
+
+`ReportFindings` was called again with all 10 findings' `outcome` set (`fixed` ×8, `skipped` ×2 for
+the accepted-debt PLAUSIBLE findings).
+
+Not yet security-reviewed, gated, or merged — a security review, the required second-role human
+review, a gate decision, and merge authorization are each their own separate, not-yet-requested
+next step, unchanged from this project's standing discipline.

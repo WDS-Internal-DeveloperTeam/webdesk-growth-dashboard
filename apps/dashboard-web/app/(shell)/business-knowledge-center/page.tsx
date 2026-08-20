@@ -12,6 +12,7 @@ import {
   RECORD_TYPE_LABEL,
 } from "@/lib/business-knowledge";
 import { RECORD_TYPE_VALUES, STATUS_VALUES } from "@/lib/business-knowledge-query";
+import { listTableCellStyle, listTableHeaderCellStyle } from "@/lib/list-table-styles";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -216,22 +217,9 @@ const submitButtonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const thStyle: React.CSSProperties = {
-  textAlign: "left",
-  padding: "0.6rem 0.75rem",
-  borderBottom: "1px solid var(--webdesk-dashboard-color-border)",
-  fontSize: "0.75rem",
-  color: "var(--webdesk-dashboard-color-foreground-subtle)",
-  fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-};
+const thStyle = listTableHeaderCellStyle;
 
-const tdStyle: React.CSSProperties = {
-  padding: "0.6rem 0.75rem",
-  borderBottom: "1px solid var(--webdesk-dashboard-color-border)",
-  verticalAlign: "middle",
-};
+const tdStyle = listTableCellStyle;
 
 function RecordRow({ record }: { readonly record: BusinessKnowledgeRecord }) {
   const badge = businessKnowledgeStatusBadge(record.status);

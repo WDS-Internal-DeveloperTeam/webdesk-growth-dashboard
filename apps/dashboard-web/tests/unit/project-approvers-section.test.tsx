@@ -231,4 +231,50 @@ describe("ProjectApproversSection", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("User is already an approver");
     expect(refreshMock).not.toHaveBeenCalled();
   });
+
+  it("shows the backend's real message for a 409 conflict (already-has-role), not the generic fallback", async () => {
+    // RoleAssignmentService.assignRole() throws ConflictException("User already holds role: X")
+    // on a duplicate assignment — regression coverage for lib/api-errors.ts's SAFE_MESSAGE_CODES
+    // allowlist, which this section relies on to show this real message rather than falling back
+    // to "Something went wrong."
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.includes("/users?")) {
+        return Promise.resolve(searchResponse());
+      }
+      if (init?.method === "POST") {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({
+            success: false,
+            error: {
+              code: "ConflictException",
+              message: "User already holds role: owner_growth_approver",
+            },
+            correlationId: "corr-1",
+          }),
+        } as Response);
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(
+      <ProjectApproversSection
+        projectId={PROJECT_ID}
+        initialApprovers={[]}
+        approverRoleId={ROLE_ID}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText("Search by name or email…"), {
+      target: { value: "Ada" },
+    });
+    const option = await screen.findByRole("button", { name: /Ada Approver/ });
+    fireEvent.mouseDown(option);
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "User already holds role: owner_growth_approver",
+    );
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
 });
