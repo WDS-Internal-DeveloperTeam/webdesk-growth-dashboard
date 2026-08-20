@@ -6,7 +6,12 @@ second-role human review complete (2026-08-19, Jitesh D, "Approved as-is"), acce
 PLAUSIBLE code-review findings as tracked debt. The gate (G4-sidebar-vercel-spacing) was approved —
 WebDesk Solution, decision CONFIRM, 2026-08-19, approved commit `6adf852` on branch
 `dashboard-web-sidebar-vercel-spacing` — see `outputs/webdesk-growth-dashboard/project.json`'s
-`gates[]`. Merge authorization remains a separate, not-yet-requested next step.
+`gates[]`. **"Merge PR #41" was then separately requested and executed** — merge commit
+`7baf414462d245c3242998f7ae4ec38ac82e2dd7`, all 14 CI checks green beforehand. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly — `dashboard-api`'s `/health`
+returned `build.commitSha == 7baf414462d245c3242998f7ae4ec38ac82e2dd7`, and `dashboard-web`'s
+`/home` correctly redirects an unauthenticated visitor to `/auth/sign-in`. **The dashboard-web
+sidebar spacing & active-link fix is now genuinely live in production.**
 
 ## Completion condition
 

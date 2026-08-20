@@ -1212,9 +1212,10 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correct
     now genuinely live in production.**
 26. **`dashboard-web` sidebar spacing adapted to a Vercel reference; a second, independent real
     active-link layout bug found and fixed; code-reviewed, security-reviewed, second-role human
-    reviewed (Jitesh D, "Approved as-is"), and gated (G4-sidebar-vercel-spacing, WebDesk Solution,
-    CONFIRM); not yet merged (2026-08-19).** Not started automatically — after item 25 went live,
-    the user shared a
+    reviewed (Jitesh D, "Approved as-is"), gated (G4-sidebar-vercel-spacing, WebDesk Solution,
+    CONFIRM), and merged (PR #41, merge commit `7baf414462d245c3242998f7ae4ec38ac82e2dd7`) — now
+    genuinely live in production (2026-08-19/20).** Not started automatically — after item 25 went
+    live, the user shared a
     screenshot of Vercel's own dashboard sidebar and asked to adapt our sidebar's row spacing and
     selection styling toward it (organization/spacing only, keeping our own light palette and
     indigo accent). Widened the sidebar's outer inset, row padding, corner radius, and row gap
@@ -1255,9 +1256,13 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correct
     and approved** — WebDesk Solution, decision CONFIRM, approved commit `6adf852` on branch
     `dashboard-web-sidebar-vercel-spacing` — see
     `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
-    section. **This gate approval does not itself authorize merging PR #41 or a production
-    deployment** — merge remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule.
+    section. **"Merge PR #41" was then separately requested and executed** — merge commit
+    `7baf414462d245c3242998f7ae4ec38ac82e2dd7`, all 14 CI checks green beforehand. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+7baf414462d245c3242998f7ae4ec38ac82e2dd7`, and `dashboard-web`'s `/home` correctly redirects an
+    unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` sidebar spacing & active-link
+    fix is now genuinely live in production.**
 
 ## Recent decisions
 
@@ -3644,6 +3649,16 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   section. **This gate approval does not itself authorize merging PR #41 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-20]` **"Merge PR #41" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `7baf414462d245c3242998f7ae4ec38ac82e2dd7`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+7baf414462d245c3242998f7ae4ec38ac82e2dd7`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/home` correctly redirects an unauthenticated visitor to `/auth/sign-in`,
+  confirming the session gate is intact. **The `dashboard-web` sidebar spacing & active-link fix is
+  now genuinely live in production.**
 
 ## Open client blockers
 
