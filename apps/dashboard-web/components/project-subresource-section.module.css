@@ -1,0 +1,226 @@
+/* Shared by project-roadmap-section.tsx, project-objectives-section.tsx,
+ * project-environments-section.tsx, and project-repositories-section.tsx — all four render the
+ * same shape (a list of rows, each with inline Edit/Delete, plus an add-form below), so the
+ * layout/row/form styling lives here once. Field-level input styling composes from
+ * project-form.module.css rather than being redeclared, matching project-roster-section.module.css's
+ * own precedent for `.addButton`/`.error`. */
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--webdesk-dashboard-space-md);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  /* Matches the old page.tsx's itemLabelStyle floor (10rem) — without it, .rowActions's
+     flex-shrink: 0 buttons/badge squeeze this block arbitrarily narrow before .row's own
+     flex-wrap kicks in, producing heavily word-wrapped one-word-per-line text on narrow
+     viewports instead of the whole row wrapping cleanly (code-review finding, this branch). */
+  min-width: 10rem;
+  flex: 1;
+}
+
+.primaryText {
+  color: var(--webdesk-dashboard-color-foreground);
+  word-break: break-word;
+}
+
+.secondaryText {
+  /* Matches the old page.tsx's mutedInlineStyle (0.875rem / "sm") — the "xs" token this
+     originally used was a real, undocumented one-step size reduction (code-review finding,
+     this branch). */
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  word-break: break-word;
+}
+
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.actionButton {
+  flex-shrink: 0;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: 0.3rem var(--webdesk-dashboard-space-sm);
+  cursor: pointer;
+}
+
+.actionButton:hover,
+.actionButton:focus-visible {
+  background: var(--webdesk-dashboard-color-muted-surface);
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.deleteButton {
+  composes: actionButton;
+  color: var(--webdesk-dashboard-color-danger);
+  border-color: var(--webdesk-dashboard-color-danger);
+}
+
+.deleteButton:hover,
+.deleteButton:focus-visible {
+  background: var(--webdesk-dashboard-color-danger-surface);
+}
+
+/* Inline edit form replacing a row's display content — full width within the row. */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  width: 100%;
+}
+
+/* The always-visible add-record form below the list — visually set apart from the list itself. */
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-sm) 0.75rem;
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+}
+
+.addFormTitle {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0;
+}
+
+.fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.fieldRow > * {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.label {
+  composes: label from "./project-form.module.css";
+}
+
+.input {
+  composes: input from "./project-form.module.css";
+}
+
+.textarea {
+  composes: textarea from "./project-form.module.css";
+}
+
+.select {
+  composes: select from "./project-form.module.css";
+}
+
+.helperText {
+  composes: helperText from "./project-form.module.css";
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.submitButton {
+  composes: submitButton from "./project-form.module.css";
+}
+
+.cancelButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cancelButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  margin-top: var(--webdesk-dashboard-space-xs);
+}
+
+.muted {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0 0 var(--webdesk-dashboard-space-sm);
+}
+
+.sectionToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--webdesk-dashboard-space-sm);
+  margin-bottom: var(--webdesk-dashboard-space-sm);
+}
+
+.linkButton {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.linkButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.linkButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
