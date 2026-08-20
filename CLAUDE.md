@@ -1505,8 +1505,9 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     per this project's standing "no auto-merge" rule.
 30. **Business Knowledge Center — Rich Content & File Attachments — built, fully validated,
     independently code-reviewed, security-reviewed, second-role human reviewed (Jitesh D,
-    "Approved as-is"), and gated (G4-bkc-rich-content-attachments, WebDesk Solution, CONFIRM), not
-    yet merged (2026-08-20).**
+    "Approved as-is"), gated (G4-bkc-rich-content-attachments, WebDesk Solution, CONFIRM), and
+    merged (PR #45, merge commit `3c9f4b7`) — with a real production incident triggered by the
+    merge diagnosed and fixed the same day (2026-08-20).**
     `docs/task-packages/business-knowledge-center-rich-content-attachments.md` records the
     original proposal; `docs/implementation/business-knowledge-center-rich-content-attachments.md`
     records the full as-built account. Built directly on the explicit "go ahead and start building
@@ -1614,7 +1615,30 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       `docs/project-state/business-knowledge-center-rich-content-attachments-approval-checklist.md`'s
       "Gate" section. **This gate approval does not itself authorize merging PR #45 or a
       production deployment** — merge remains its own separate, not-yet-requested authorization,
-      per this project's standing "no auto-merge" rule.
+      per this project's standing "no auto-merge" rule. **"Merge PR #45" was then separately
+      requested and executed** — merged by the user directly via GitHub, with a real merge commit
+      (not squash/rebase), matching every prior merge in this project's history — merge commit
+      `3c9f4b7aad27c057d49b50168e0374f2d5ec1416`, all 14 CI checks green beforehand. **A real
+      production incident then occurred, triggered by the merge, diagnosed and resolved the same
+      day**: `dashboard-api` went fully down (`FUNCTION_INVOCATION_FAILED` on every route,
+      including `/health`) roughly 11 minutes after the merge — a pre-existing Vercel-bundler-only
+      ESM-interop gap (`sanitize-html@2.17.7`, still the latest release, requires
+      `htmlparser2@^12.0.0`, which dropped its CommonJS build entirely), first triggered now since
+      this PR is the first deployment of this project's HTML-sanitization feature to production,
+      not a bug this PR's own review-fix work introduced. Diagnosed from real Vercel runtime logs
+      and fixed with a `pnpm-workspace.yaml` override pinning `htmlparser2` to a CJS-compatible
+      version (`>=10.1.0 <11.0.0`), verified safe against `sanitize-html`'s actual API usage
+      before relying on it, and pushed directly to `main` (commit
+      `aadbce142bec18cbf2789e2491d9f93997e72096`) given the active outage, matching this project's
+      established pattern for urgent live-deployment fixes. Verified resolved live: `/health`
+      returned `build.commitSha == aadbce1` with `status: ok` across repeated requests, `GET /me`
+      (unauthenticated) returned a clean `401` rather than a crash, and `dashboard-web`'s `/`
+      correctly redirects to `/auth/sign-in`. Outage window roughly `2026-08-20T20:55Z`–`21:06Z`
+      (~11 minutes). See
+      `docs/implementation/business-knowledge-center-rich-content-attachments.md` §11 for the full
+      incident account. **The Business Knowledge Center rich content & attachments slice,
+      including the same-day production-incident fix, is now genuinely live and stable in
+      production.**
 
 ## Recent decisions
 
@@ -4299,6 +4323,42 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   "Gate" section. **This gate approval does not itself authorize merging PR #45 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-20]` **"Merge PR #45" was separately requested and executed** — merged by the user
+  directly via GitHub, with a real merge commit (not squash/rebase), matching every prior merge in
+  this project's history — merge commit `3c9f4b7aad27c057d49b50168e0374f2d5ec1416`, all 14 CI
+  checks green beforehand. **A real production incident then occurred, triggered by the merge,
+  diagnosed and resolved the same day**: `dashboard-api` went fully down
+  (`FUNCTION_INVOCATION_FAILED` on every route, including `/health`) roughly 11 minutes after the
+  merge. Diagnosed directly from real Vercel runtime logs (via the user's own authenticated Chrome
+  session — the sandboxed Browser pane has no Vercel login). Root cause: `sanitize-html@2.17.7`
+  (still the latest release on npm) requires `htmlparser2@^12.0.0`, but `htmlparser2` dropped its
+  dual CommonJS+ESM build entirely as of `11.0.0` — its own bundled `require('htmlparser2')` then
+  throws under Vercel's Node Function runtime specifically, the same class of Vercel-bundler-only
+  ESM-interop gap this project has hit repeatedly before (`openid-client`, `pg`'s `dialectModule`,
+  a missing CommonJS barrel export), invisible to every local/CI check since none of them exercise
+  Vercel's actual Function bundler + runtime. Not a bug this session's own review-fix work on PR
+  #45 introduced — it was latent in the original backend build and simply never exercised in a
+  real deployment until this merge, since PR #45 is the first time this project has ever deployed
+  its HTML-sanitization feature (or any use of `sanitize-html`) to production. Fixed with a
+  `pnpm-workspace.yaml` override pinning `htmlparser2` to `>=10.1.0 <11.0.0` (the newest version
+  still shipping a working CommonJS build) — verified safe before relying on it, not assumed: read
+  `sanitize-html`'s own source (only uses `htmlparser2`'s `Parser`/`DomHandler` API, stable across
+  this range) and confirmed the one behavioral difference `sanitize-html`'s own code comments flag
+  between `htmlparser2` `10.x` and `>=11` (RCDATA decoding for `<textarea>`/`<title>`) is
+  irrelevant, since neither tag is in this project's sanitizer allowlist. Directly exercised the
+  exact `require()` path that crashed in production before pushing — confirmed working. Given the
+  active outage, pushed directly to `main` (commit
+  `aadbce142bec18cbf2789e2491d9f93997e72096`) rather than a full PR cycle, matching this project's
+  established pattern for urgent live-deployment fixes. Re-validated: 430/430 `dashboard-api` unit
+  tests, 9/9 `packages/validation` unit tests (including the tabnabbing `rel`-forcing tests),
+  typecheck/lint/build all clean, `pnpm audit` 0 vulnerabilities. **Verified resolved live**:
+  `/health` returned `build.commitSha == aadbce1` with `status: ok` across repeated requests,
+  `GET /me` (unauthenticated) returned a clean `401` rather than a crash, and `dashboard-web`'s `/`
+  correctly redirects to `/auth/sign-in`. Outage window roughly `2026-08-20T20:55Z`–`21:06Z` (~11
+  minutes). See `docs/implementation/business-knowledge-center-rich-content-attachments.md` §11
+  for the full account. **The Business Knowledge Center rich content & attachments slice,
+  including the same-day production-incident fix, is now genuinely live and stable in
+  production.**
 
 ## Open client blockers
 
@@ -4361,6 +4421,23 @@ constructor` — the export simply didn't exist in the deployed CJS build) that 
   applies to any other package with a dual ESM/CommonJS build (`@webdesk/configuration`,
   `@webdesk/shared-types`, `@webdesk/validation`) if they grow a similar split entrypoint — check
   before assuming a single barrel file covers both.
+- Before adding any npm dependency that `dashboard-api` will actually import at runtime (directly
+  or transitively through a workspace package), check whether that dependency — or one of ITS OWN
+  dependencies — is ESM-only (`"type": "module"` with no `require` export condition, no real
+  `dist/commonjs` output). `require()`ing an ESM module throws `ERR_REQUIRE_ESM` under Vercel's
+  Node Function runtime specifically, and this is invisible to every local/CI check (plain Node,
+  not Vercel's Function bundler + runtime). This caused a full `dashboard-api` production outage
+  on 2026-08-20 (~11 minutes, PR #45's merge): `sanitize-html@2.17.7` — still the latest release —
+  requires `htmlparser2@^12.0.0`, which dropped its CommonJS build entirely as of `11.0.0`; the
+  bug was latent from this branch's very first commit but only surfaced once actually deployed,
+  since this was the project's first-ever production use of `sanitize-html`. Fixed with a
+  `pnpm-workspace.yaml` override pinning `htmlparser2` to a still-CJS-compatible version
+  (`>=10.1.0 <11.0.0`) — see `docs/implementation/business-knowledge-center-rich-content-attachments.md`
+  §11 for the full incident account, and the override's own comment in `pnpm-workspace.yaml` for
+  why 10.1.0 specifically is safe for this project's actual usage. This is the third distinct
+  variety of ESM-interop gap this project has hit (after `openid-client` and `pg`'s
+  `dialectModule`) — always diagnosable only from real Vercel runtime logs, never from a local or
+  CI run.
 - Do NOT design `dashboard-worker` as a persistent process — resolved decision,
   see profile `knowledge/04-serverless-queues-workflows-and-cron.md`.
 - Do NOT use ACF anywhere in the WordPress repository — absolute rule, WDS-001.

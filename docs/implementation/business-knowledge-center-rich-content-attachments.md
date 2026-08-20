@@ -3,9 +3,12 @@
 **Status:** Built, fully validated, independently code-reviewed (8 of 9 CONFIRMED/PLAUSIBLE
 findings fixed, 1 left as accepted tracked debt — see §7 below), security-reviewed (0 findings
 above threshold — see §8), required second-role human reviewed (Jitesh D, "Approved as-is" — see
-§9), and gated (G4-bkc-rich-content-attachments, WebDesk Solution, CONFIRM — see §10). Not yet
-merged. Branch `business-knowledge-center-rich-content-attachments`, off `main` at `31001fa` (the
-commit recording this task package's own scoping), approved commit `359e9a9`.
+§9), gated (G4-bkc-rich-content-attachments, WebDesk Solution, CONFIRM — see §10), and merged
+([PR #45](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/45), merge
+commit `3c9f4b7`). **A real production incident triggered by the merge was diagnosed and fixed
+same-day — see §11.** Genuinely live and stable in production. Branch
+`business-knowledge-center-rich-content-attachments`, off `main` at `31001fa` (the commit
+recording this task package's own scoping), approved commit `359e9a9`.
 
 ## 1. Why this exists
 
@@ -391,3 +394,63 @@ second-role human review was already complete before the gate was requested), ap
 "Gate" section. **This gate approval does not itself authorize merging PR #45 or a production
 deployment** — merge remains its own separate, not-yet-requested authorization, per this
 project's standing "no auto-merge" rule.
+
+## 11. Merge and a same-day production incident
+
+**"Merge PR #45" was separately requested and executed** — merged by the user directly via
+GitHub, with a real merge commit (not squash/rebase), matching every prior merge in this
+project's history — merge commit `3c9f4b7aad27c057d49b50168e0374f2d5ec1416`, all 14 CI checks
+green beforehand for the reviewed commit.
+
+**Roughly 11 minutes after the merge, `dashboard-api` went fully down in production** — every
+route, including `/health`, returned `FUNCTION_INVOCATION_FAILED`. Diagnosed directly from real
+Vercel runtime logs (via the user's own authenticated Chrome session — the sandboxed Browser pane
+has no Vercel login, same pattern as every prior live-log diagnosis this project has needed). The
+real error:
+
+```
+Error [ERR_REQUIRE_ESM]: require() of ES Module
+/var/task/node_modules/.pnpm/htmlparser2@12.0.0/node_modules/htmlparser2/dist/index.js from
+/var/task/node_modules/.pnpm/sanitize-html@2.17.7/node_modules/sanitize-html/index.js not supported.
+```
+
+**Root cause**: `sanitize-html@2.17.7` — still the latest release on npm — requires
+`htmlparser2@^12.0.0`. `htmlparser2` dropped its dual CommonJS+ESM build entirely as of `11.0.0`
+(confirmed directly against both versions' own `package.json`: `10.1.0` still ships a real
+`dist/commonjs/index.js` via `tshy`; `11.0.0`/`12.0.0` ship `"type": "module"` with no `require`
+export condition at all). `sanitize-html`'s own bundled code does a plain `require('htmlparser2')`
+internally — this throws under Vercel's Node Function runtime specifically, the same class of
+Vercel-bundler-only ESM-interop gap this project has hit repeatedly before (`openid-client`, `pg`'s
+`dialectModule`, a missing CommonJS barrel export) and that no local or CI check catches, since
+none of them exercise Vercel's actual Function bundler + runtime. This was not a bug introduced by
+this session's own review-fix work on PR #45 — it was latent in the original backend build (the
+first commits on this branch) and simply never exercised in a real deployment until this merge,
+since PR #45 is the first time this project has ever deployed its HTML-sanitization feature (or
+any use of `sanitize-html`) to production.
+
+**Fix**: a `pnpm-workspace.yaml` `overrides` entry pinning `htmlparser2` to `>=10.1.0 <11.0.0` —
+the newest version that still ships a working CommonJS build — a deliberate major-version
+downgrade, unlike every other entry in that file's overrides (all patch-level security fixes).
+Verified safe before relying on it, not assumed: read `sanitize-html`'s own source directly (it
+only calls `htmlparser2`'s `Parser`/`DomHandler` API, stable across this version range) and
+confirmed the one behavioral difference `sanitize-html`'s own code comments flag between
+`htmlparser2` `10.x` and `>=11` (RCDATA decoding for `<textarea>`/`<title>`) is irrelevant, since
+neither tag is in this project's sanitizer allowlist. Directly exercised the exact `require()`
+path that crashed in production
+(`node -e "require('./packages/validation/dist-cjs/index.js').sanitizeRichTextHtml(...)"`) —
+confirmed working before pushing. Re-validated: 430/430 `dashboard-api` unit tests, 9/9
+`packages/validation` unit tests (including the tabnabbing `rel`-forcing tests added in §7),
+`dashboard-api`/`dashboard-web` typecheck/lint/build all clean, `pnpm audit` 0 vulnerabilities.
+Given the active outage, pushed directly to `main` (commit
+`aadbce142bec18cbf2789e2491d9f93997e72096`) rather than a full PR cycle, matching this project's
+established pattern for urgent live-deployment fixes.
+
+**Verified resolved live**: `dashboard-api`'s `/health` returned `build.commitSha == aadbce1`
+with `status: ok` across repeated requests; `GET /me` (unauthenticated) returned a clean `401`
+rather than a crash, confirming the whole Nest application — not just the health check — now
+boots and serves correctly; `dashboard-web`'s `/` correctly redirects an unauthenticated visitor
+to `/auth/sign-in`. Outage window: approximately `2026-08-20T20:55Z` (merge) to
+`2026-08-20T21:06Z` (fix verified live) — roughly 11 minutes.
+
+**The Business Knowledge Center rich content & attachments slice, including the same-day
+production-incident fix, is now genuinely live and stable in production.**

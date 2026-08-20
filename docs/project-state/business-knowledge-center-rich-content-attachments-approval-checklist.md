@@ -3,8 +3,10 @@
 **Status:** Built, fully validated, independently code-reviewed (8 of 9 findings fixed, 1
 accepted as tracked debt — see `docs/implementation/business-knowledge-center-rich-content-attachments.md`
 §7), security-reviewed (0 findings above threshold), required second-role human reviewed
-(Jitesh D, "Approved as-is"), and gated (G4-bkc-rich-content-attachments, WebDesk Solution,
-CONFIRM). Not yet merged.
+(Jitesh D, "Approved as-is"), gated (G4-bkc-rich-content-attachments, WebDesk Solution, CONFIRM),
+and merged (PR #45, merge commit `3c9f4b7`). A real production incident triggered by the merge
+(`dashboard-api` fully down for ~11 minutes) was diagnosed and fixed same-day — see the "Merge"
+section below and the implementation doc's §11. **Genuinely live and stable in production.**
 
 ## Completion condition
 
@@ -96,4 +98,28 @@ not-yet-requested authorization, per this project's standing "no auto-merge" rul
 
 ## Merge
 
-Not yet requested.
+**"Merge PR #45" was separately requested and executed** — merged by the user directly via
+GitHub, with a real merge commit (not squash/rebase), matching every prior merge in this
+project's history — merge commit `3c9f4b7aad27c057d49b50168e0374f2d5ec1416`, all 14 CI checks
+green beforehand.
+
+**A real production incident occurred as a direct result of this merge, diagnosed and resolved
+same-day**: `dashboard-api` went fully down (`FUNCTION_INVOCATION_FAILED` on every route,
+including `/health`) roughly 11 minutes after the merge. Diagnosed from real Vercel runtime logs
+— a pre-existing Vercel-bundler-only ESM-interop gap in `sanitize-html`'s own `htmlparser2`
+dependency (`sanitize-html@2.17.7`, still the latest release, requires `htmlparser2@^12.0.0`,
+which dropped its CommonJS build entirely), first triggered now since this PR is the first
+deployment of this project's HTML-sanitization feature to production — not a bug this PR's own
+review-fix work introduced. Fixed with a `pnpm-workspace.yaml` override pinning `htmlparser2` to
+`10.1.0` (the newest CJS-compatible version), verified safe against the actual API `sanitize-html`
+uses before overriding, and pushed directly to `main` (commit `aadbce142bec18cbf2789e2491d9f93997e72096`)
+given the active outage, matching this project's established pattern for urgent live-deployment
+fixes. See `docs/implementation/business-knowledge-center-rich-content-attachments.md` §11 for
+the full incident account.
+
+Both Vercel projects auto-deployed on push to `main` and were verified live directly —
+`dashboard-api`'s `/health` returned `build.commitSha == aadbce1` with `status: ok` across
+repeated requests, `GET /me` (unauthenticated) returned a clean `401` rather than a crash, and
+`dashboard-web`'s `/` correctly redirects an unauthenticated visitor to `/auth/sign-in`. **The
+Business Knowledge Center rich content & attachments slice, including the same-day
+production-incident fix, is now genuinely live and stable in production.**
