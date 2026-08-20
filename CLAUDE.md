@@ -1425,6 +1425,45 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     Center backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
     module — a separate, not-yet-requested next step, matching the Projects module's own
     precedent.
+29. **`dashboard-web` Business Knowledge Center UI — built, fully validated, not yet reviewed,
+    gated, or merged (2026-08-20).** Closes the module's last named gap — built directly on the
+    explicit "build the dashboard-web UI for it" instruction, following the backend's own build-to-
+    production arc (PR #43). No approved wireframe/spec exists for this module's screens; every
+    screen renders exactly what the already-reviewed, already-gated backend returns and supports,
+    matching the Projects module's own list/detail/form pages' "smallest honest reading" precedent.
+    `docs/implementation/dashboard-web-business-knowledge-center.md` records the full account. New:
+    `packages/shared-types` additions (`content`/`notes` typed as genuinely _optional_, not just
+    nullable, honestly reflecting that the backend's confidential-field redaction deletes both keys
+    outright for a `restricted` record when the caller lacks `view_confidential` — currently every
+    caller, since that action is zero-seeded for every role); `lib/business-knowledge-query.ts`
+    (zero-non-type-import file, written client-safe from the start — page size, query parsing/href
+    building, record-type labels, status-badge tokens); `lib/business-knowledge.ts` (server-side
+    list/get fetch functions, with a malformed-UUID short-circuit mirroring `getProjectDetail()`);
+    `BusinessKnowledgeRecordForm` (create/edit; `recordType` is create-only, matching the backend's
+    own `updateBusinessKnowledgeRecordSchema` contract; `status` is intentionally never a field
+    here); `BusinessKnowledgeStatusActions` (mirrors the backend's 5-state `ALLOWED_TRANSITIONS` by
+    hand, only the terminal `deprecated` transition is confirmed, a concurrent-write `409` now shows
+    a real message via a new `ConflictException` entry in `lib/api-errors.ts`'s allowlist — the
+    first route in this app whose service layer can throw one); four routes under
+    `app/(shell)/business-knowledge-center/` (list, detail, new, edit) at the module registry's own
+    seeded `route` field. A `restricted` record's redacted `content`/`notes` render as an inert
+    notice in both the detail page and the edit form, and are omitted entirely from the edit form's
+    submit payload — never coerced to an empty string that could silently overwrite real
+    confidential content, since `content === undefined`/`notes === undefined` unambiguously signal
+    redaction (a real record always has non-empty content). 32 new `dashboard-web` unit tests
+    (221/221 overall); typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean across
+    `packages/shared-types` and `dashboard-web`; 15/15 Playwright tests passing (one local-
+    environment-only false failure — a manually-started dev server on port 3000 being reused by
+    Playwright's own `webServer` config instead of spinning up its own with
+    `PLAYWRIGHT_E2E_TEST_MODE` set — diagnosed and ruled out, not a real regression). Live-rendered
+    in the Browser pane: unauthenticated redirects confirmed clean for the list and create routes,
+    zero server errors; no local `dashboard-api` was available in this environment, so the
+    authenticated success-path rendering wasn't visually confirmed, the same limitation the
+    Projects list page's own as-built record already noted for itself. Pushed as branch
+    `dashboard-web-business-knowledge-center`, opened as
+    [PR #44](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/44). Not
+    yet reviewed, gated, or merged — code review, security review, second-role human review, a gate
+    decision, and merge authorization are each their own separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -3921,6 +3960,32 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   unauthenticated visitor, confirming the session gate is intact. **The Business Knowledge Center
   backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this module —
   a separate, not-yet-requested next step, matching the Projects module's own precedent.
+- `[2026-08-20]` **Built the `dashboard-web` Business Knowledge Center UI**, under the explicit
+  "build the dashboard-web UI for it" instruction, closing the module's last named gap. Branch
+  `dashboard-web-business-knowledge-center`, off `main` at `9e1abb6` (the commit recording PR #43's
+  merge as live in production). New `packages/shared-types`
+  (`BusinessKnowledgeRecordType`/`Status`/`Record`, with `content`/`notes` typed as genuinely
+  optional to honestly reflect the backend's confidential-field redaction), `lib/business-knowledge-
+query.ts`/`lib/business-knowledge.ts`, `BusinessKnowledgeRecordForm`, `BusinessKnowledgeStatusActions`,
+  and four routes (list/detail/new/edit) under `/business-knowledge-center` — the exact `route`
+  field the module registry already seeded. A `restricted` record's redacted content/notes render as
+  an inert notice and are omitted entirely from the edit form's submit payload, never coerced to an
+  empty string that could silently overwrite real confidential content — `content ===
+undefined`/`notes === undefined` unambiguously signal redaction, distinct from a genuine `null`.
+  `ConflictException` was added to `lib/api-errors.ts`'s allowlist so the backend's atomic-status-
+  write `409` shows a real message — the first route in this app whose service layer can throw one.
+  32 new `dashboard-web` unit tests (221/221 overall); typecheck/lint/`check-css-tokens.mjs`/`next
+build`/prettier all clean; 15/15 Playwright tests passing (a local-environment-only false failure —
+  a manually-started dev server on port 3000 being reused by Playwright's own `webServer` config
+  instead of spinning up its own with `PLAYWRIGHT_E2E_TEST_MODE` set — was diagnosed and ruled out,
+  not a real regression). Live-rendered in the Browser pane: the list and create routes both
+  correctly redirect an unauthenticated visitor to `/auth/sign-in`, zero server errors; no local
+  `dashboard-api` was available in this environment, so the authenticated success-path rendering
+  wasn't visually confirmed, the same limitation the Projects list page's own as-built record
+  already noted for itself. See `docs/implementation/dashboard-web-business-knowledge-center.md`
+  for the full account. Pushed as branch `dashboard-web-business-knowledge-center`, opened as
+  [PR #44](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/44) — not
+  yet reviewed, gated, or merged.
 
 ## Open client blockers
 
