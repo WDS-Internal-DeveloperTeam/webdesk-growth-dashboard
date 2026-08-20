@@ -5,8 +5,12 @@ per the review's own cap: 8 CONFIRMED, all fixed; 2 PLAUSIBLE, left as accepted,
 Security review complete (0 findings above threshold — 2 candidates surfaced, both independently
 re-verified and refuted). Required second-role human review complete (2026-08-20, Jitesh D,
 "Approved as-is"), accepting the 2 open PLAUSIBLE code-review findings and the flagged,
-not-fixed list-page over-fetch as tracked debt. A gate decision and merge authorization remain
-separate, not-yet-requested next steps.
+not-fixed list-page over-fetch as tracked debt. **The gate
+(G4-dashboard-web-business-knowledge-center) was then separately requested and approved** —
+WebDesk Solution, decision CONFIRM, 2026-08-20, approved commit `5d11d63` on branch
+`dashboard-web-business-knowledge-center` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Merge authorization remains a
+separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -83,5 +87,22 @@ accepted as tracked debt rather than requiring a fix before proceeding.
 | Scope reviewed                | Full code-review disposition (8 findings fixed, 1 flagged as out-of-scope backend debt, 2 accepted as tracked debt) and full security-review disposition (0 findings), per this slice's own review outputs recorded in `docs/implementation/dashboard-web-business-knowledge-center.md` and the published review packet |
 | Disputes raised               | None recorded                                                                                                                                                                                                                                                                                                           |
 
-A gate decision (G4-dashboard-web-business-knowledge-center) and merge authorization remain
-separate, not-yet-requested next steps.
+**The gate (G4-dashboard-web-business-knowledge-center) was then separately requested and
+approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+second-role review was already complete before the gate was requested), approved commit
+`5d11d63` on branch `dashboard-web-business-knowledge-center` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+(`current_gate` now `G4-dashboard-web-business-knowledge-center`).
+
+| Field                    | Value                                                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-dashboard-web-business-knowledge-center                                                                                      |
+| Approver (gate decision) | WebDesk Solution                                                                                                                |
+| Gate date                | 2026-08-20                                                                                                                      |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)               |
+| Approved commit          | `5d11d63` on branch `dashboard-web-business-knowledge-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` |
+| Scope                    | Business Knowledge Center `dashboard-web` UI only (PR #44). Merge authorization is a separate, not-yet-requested next step.     |
+
+This gate approval does not itself authorize merging PR #44 or a production deployment — merge
+remains its own separate, not-yet-requested authorization, per this project's standing "no
+auto-merge" rule.

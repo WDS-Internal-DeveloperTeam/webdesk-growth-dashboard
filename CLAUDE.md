@@ -1425,8 +1425,9 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     Center backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
     module — a separate, not-yet-requested next step, matching the Projects module's own
     precedent.
-29. **`dashboard-web` Business Knowledge Center UI — built, fully validated, not yet reviewed,
-    gated, or merged (2026-08-20).** Closes the module's last named gap — built directly on the
+29. **`dashboard-web` Business Knowledge Center UI — built, code-reviewed, security-reviewed,
+    second-role human reviewed, and gated (2026-08-20).** Closes the module's last named gap —
+    built directly on the
     explicit "build the dashboard-web UI for it" instruction, following the backend's own build-to-
     production arc (PR #43). No approved wireframe/spec exists for this module's screens; every
     screen renders exactly what the already-reviewed, already-gated backend returns and supports,
@@ -1461,9 +1462,47 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     authenticated success-path rendering wasn't visually confirmed, the same limitation the
     Projects list page's own as-built record already noted for itself. Pushed as branch
     `dashboard-web-business-knowledge-center`, opened as
-    [PR #44](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/44). Not
-    yet reviewed, gated, or merged — code review, security review, second-role human review, a gate
-    decision, and merge authorization are each their own separate, not-yet-requested next step.
+    [PR #44](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/44).
+    **Independent code review** (high effort, 8 finder angles, 1-vote verification) surfaced 20
+    candidates after dedup, 10 kept in the final report per the review's own cap: **8 CONFIRMED,
+    all fixed** — most severe adding `ConflictException` to `lib/api-errors.ts`'s
+    `SAFE_MESSAGE_CODES` silently changed error-message behavior for the already-shipped Projects
+    approver-assignment flow, with a doc comment falsely claiming Business Knowledge was "the only
+    route" that could throw one (fixed by correcting the comment and adding a dedicated regression
+    test locking in the new, verified-benign behavior on that path). Also fixed: redundant
+    `contentRedacted`/`notesRedacted` flags collapsed to one (verified against actual backend
+    behavior, not speculation); `UUID_PATTERN`/`firstValue()` duplication extracted into new shared
+    `lib/uuid.ts`/`lib/search-params.ts`; duplicated table-cell styles extracted into
+    `lib/list-table-styles.ts`; a duplicated notes-normalization ternary hoisted; a missing
+    `console.error` added with test coverage. **1 CONFIRMED finding flagged, not fixed** — the list
+    page over-fetching full `content`/`notes` for every row is real but not fixable within this
+    `dashboard-web`-only branch's scope (needs a backend list-projection change). **2 PLAUSIBLE
+    findings left as accepted, tracked debt** — a status-badge lookup with no fallback, and the
+    record-type/status enum triplicated across three files — both inherited, already-accepted
+    patterns from sibling code elsewhere in this app, not new regressions this PR introduces. **A
+    separate `security-review` skill run then found 0 findings above threshold** — 2 candidates
+    surfaced (a "change status to unlock confidential content" UI-text concern, and the same
+    list-page over-fetch) were each independently re-verified against the actual code and git
+    history and refuted: the redaction-bypass mechanism is entirely pre-existing backend code from
+    the already-merged, already-security-reviewed PR #43 (confirmed via `git diff`/`git log`
+    showing zero backend files touched by this branch), and the over-fetch crosses no
+    authorization boundary. Final numbers: 223/223 `dashboard-web` unit tests, typecheck/lint/
+    `check-css-tokens.mjs`/`next build`/prettier all clean, 15/15 Playwright tests passing. A
+    review packet (published as a Claude artifact — code review + security review findings, fixes,
+    and validation evidence, with a decision section) was prepared for the required second-role
+    human review, since the implementing agent cannot also be its own reviewer (ADR-0010).
+    **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE findings
+    and the flagged out-of-scope debt item as tracked debt. **The gate
+    (G4-dashboard-web-business-knowledge-center) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit `5d11d63` on branch
+    `dashboard-web-business-knowledge-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-business-knowledge-center`) and
+    `docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md`'s
+    "Sign-off" section. **This gate approval does not itself authorize merging PR #44 or a
+    production deployment** — merge remains its own separate, not-yet-requested authorization,
+    per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -3986,6 +4025,60 @@ build`/prettier all clean; 15/15 Playwright tests passing (a local-environment-o
   for the full account. Pushed as branch `dashboard-web-business-knowledge-center`, opened as
   [PR #44](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/44) — not
   yet reviewed, gated, or merged.
+- `[2026-08-20]` **Independent code review run on `dashboard-web-business-knowledge-center` (PR
+  #44), high effort.** 20 candidates verified after dedup, 10 kept in the final report per the
+  review's own cap (8 CONFIRMED, 2 PLAUSIBLE). **All 8 CONFIRMED findings fixed** per the explicit
+  "fix the confirmed findings" instruction — most severe adding `ConflictException` to
+  `lib/api-errors.ts`'s `SAFE_MESSAGE_CODES` silently changing error-message behavior for the
+  already-shipped Projects approver-assignment flow, with a doc comment falsely claiming Business
+  Knowledge was "the only route" that could throw one — fixed by correcting the comment and adding
+  a regression test to `project-approvers-section.test.tsx`. Also fixed: redundant
+  `contentRedacted`/`notesRedacted` flags collapsed to one (verified against actual backend
+  behavior); `UUID_PATTERN`/`firstValue()` duplication extracted into new shared
+  `lib/uuid.ts`/`lib/search-params.ts`; duplicated table-cell styles extracted into
+  `lib/list-table-styles.ts`; a duplicated notes-normalization ternary hoisted; a missing
+  `console.error` added with test coverage. 1 CONFIRMED finding (the list page over-fetching full
+  `content`/`notes` for every row) is real but not fixable within this branch's own
+  `dashboard-web`-only scope — flagged as known, out-of-scope debt rather than fixed. The 2
+  PLAUSIBLE findings (a status-badge lookup with no fallback; the record-type/status enum
+  triplicated across three files) were left as accepted, tracked debt — both inherited,
+  already-accepted patterns from sibling code elsewhere in this app. Full re-validation: 223/223
+  `dashboard-web` unit tests (2 new), typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier
+  all clean, 15/15 Playwright tests passing. Pushed as commit
+  `1fb1823f7381536404a1b57a4246b19e5b13387b`.
+- `[2026-08-20]` **Security review run on `dashboard-web-business-knowledge-center` (PR #44),
+  separately from the code review.** 2 candidates surfaced by the initial finder pass (a "change
+  status to unlock confidential content" UI-text concern, and the list page's full-content
+  over-fetch) — each independently re-verified against the actual code and git history, both
+  refuted: the redaction-bypass mechanism is entirely pre-existing backend code from the
+  already-merged, already-security-reviewed PR #43 (confirmed via `git diff`/`git log` showing
+  zero backend files touched by this branch — the endpoint is reachable via direct API call with
+  or without this UI's existence), and the over-fetch crosses no authorization boundary (the same
+  already-authorized viewer receives only data they could already fetch on demand — already
+  correctly triaged as efficiency debt, consistent with how the identical pattern was treated on
+  the Projects list page). **0 findings above threshold.** A review packet (published as a Claude
+  artifact — code review + security review findings, fixes, and validation evidence, with a
+  decision section) was prepared for the required second-role human review, since the
+  implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md`.
+- `[2026-08-20]` **Required second-role human review complete for
+  `dashboard-web-business-knowledge-center` (PR #44).** The review packet (code review + security
+  review findings, fixes, and the 1 flagged-not-fixed/2 tracked-debt items, with a decision
+  section) was reviewed. **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2
+  open PLAUSIBLE code-review findings and the flagged out-of-scope debt item as tracked debt
+  rather than requesting fixes. See
+  `docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-20]` **The gate (G4-dashboard-web-business-knowledge-center) was then separately
+  requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+  since the second-role review was already complete before the gate was requested), approved
+  commit `5d11d63` on branch `dashboard-web-business-knowledge-center` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-business-knowledge-center`) and
+  `docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #44 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
