@@ -1349,6 +1349,76 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     Environments/Repositories editing is now genuinely live in production.** Of the five gaps item
     13 originally named, only gap (5) (current-project context propagation) remains — see the
     2026-08-20 "Recent decisions" entry below for its scoping outcome.
+28. **Business Knowledge Center backend — built, code-reviewed, security-reviewed, second-role
+    human reviewed, and gated (2026-08-20).** The second real business-module backend built on the
+    Phase 1F application shell / canonical module registry, after Projects — the first of the 21
+    real business-module endpoints named in the phase plan. Built directly on the explicit "start
+    the business knowledge center now" instruction. `docs/task-packages/module-business-knowledge-center.md`
+    and `docs/implementation/module-business-knowledge-center.md` record the full account. The
+    canonical spec names 10 "primary records" and a 5-value status vocabulary (`Mandatory | Advisory
+| Draft | Deprecated | Restricted`) but gives no field-level schema, workflow doc, or
+    wireframes — design decisions D1–D6 fill the gap explicitly, flagged as proposed, not
+    spec-sourced. A genuine architectural fork was surfaced to the user directly rather than
+    silently resolved: an advisory-only roadmap note (`canonical-inputs/Recommended_Module_Roadmap.md`)
+    proposed a Git+Postgres storage split with no basis in the canonical spec — the user chose pure
+    DB-backed CRUD (matching the Projects module's own precedent) after confirming realistic
+    storage sizing. One generic `business_knowledge_records` table with a `record_type`
+    discriminator rather than 10 bespoke tables; organization-wide, not project-scoped (no
+    `project_id` column); content authoring (`create`/`update`) split from status governance
+    (`changeStatus`) into separate service methods and RBAC actions so the real RBAC matrix
+    distinction is enforceable — `marketing_editor` holds `VCES` but not `A`, so can draft/revise a
+    record but can never self-approve it into `mandatory`/`advisory`, verified directly via e2e
+    test. Reuses the already-seeded `business_knowledge` RBAC permission group verbatim — no new
+    RBAC migration. No hard delete (`deprecated` status is the retirement mechanism, matching
+    ADR-0016). **Independent code review** (high effort, 8 finder angles, 1-vote verification)
+    surfaced 12 candidates — 11 CONFIRMED, 1 REFUTED and dropped (the `entity-mapping.ts` helper
+    "duplication" — every module in `packages/database` independently hand-rolls this exact helper,
+    not a real deviation). 10 findings kept in the final report per the review's own cap: **9
+    CONFIRMED, all fixed** — most severe a TOCTOU race in `changeStatus()` (fixed with an atomic
+    compare-and-swap mirroring `IdempotencyKeyRepository.reserve()`'s own conditional-`UPDATE`
+    pattern, returning a discriminated `updated`/`not_found`/`conflict` result, throwing
+    `ConflictException` (409) on the race-loser path) and the `restricted` status classification
+    having no actual access enforcement (fixed by wiring
+    `AuthorizationService.canViewConfidential()` and redacting `content`/`notes` on any `restricted`
+    record for a caller without that grant, mirroring `operational-contacts.controller.ts`'s own
+    pattern). Also fixed: `create()`/`update()` were never audited; a malformed record id crashed
+    with a raw 500 (now `ParseUUIDPipe` on all three `:id` routes); `list()` had no pagination cap
+    (now clamped, mirroring `ProjectRepository.list()`); `retentionCategory` was always `audit-7y`
+    even for an approval-shaped transition (now `approval-audit-7y` for `mandatory`/`advisory`); the
+    status write and its audit event were not transactional (extending `AuditService`'s signature
+    would be a larger cross-cutting change out of proportion here, and this exact non-atomic
+    ordering is already the accepted, shipped pattern in `ProjectService.changeStatus()` — the audit
+    call is now wrapped in try/catch with a clear `console.error` on failure); `ALLOWED_TRANSITIONS`
+    was asymmetric (`mandatory`/`advisory` can now reach `draft` directly, matching `restricted`'s
+    own symmetry); and the task package falsely claimed `packages/shared-types` additions were
+    delivered (corrected — none exist in this backend-only pass). **1 PLAUSIBLE finding left as
+    accepted, tracked debt** — no invariant limits how many `mandatory`/`advisory` records can exist
+    per `record_type` simultaneously; its own verifier concluded the correct invariant is genuinely
+    record-type-dependent and the spec states no rule either way. **A separate `security-review`
+    skill run then found 0 findings above threshold** — 3 candidates surfaced (unredacted content in
+    the audit trail, no confidential-edit gate on the update route, no separation-of-duties check on
+    self-approval) were each independently re-verified against the actual code and design docs and
+    scored 2/10 confidence; all three turned out to be pre-existing, already-accepted architectural
+    patterns replicated from `ProjectService`/`operational-contacts`, not new gaps this branch
+    introduces. Final numbers: 389/389 `dashboard-api` unit tests, 11/11 `packages/database`
+    integration tests, 11/11 `dashboard-api` e2e tests — all against a real disposable PostgreSQL 17
+    database — migration up/down round-trip clean (48 migrations), module-registry validation
+    unaffected (43 modules, 21 permission groups), typecheck/lint/prettier clean, `pnpm audit` — 0
+    vulnerabilities. A review packet (published as a Claude artifact — code review + security review
+    findings, fixes, and validation evidence, with a decision section) was prepared for the required
+    second-role human review, since the implementing agent cannot also be its own reviewer
+    (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 1 open
+    PLAUSIBLE finding as tracked debt. **The gate (G4-business-knowledge-center) was then separately
+    requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+    since the second-role review was already complete before the gate was requested), approved
+    commit `b64a728` on branch `module-business-knowledge-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-business-knowledge-center`) and
+    `docs/project-state/module-business-knowledge-center-approval-checklist.md`'s "Sign-off"
+    section. **This gate approval does not itself authorize merging PR #43 or a production
+    deployment** — merge remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a
+    separate, not-yet-requested next step, matching the Projects module's own precedent.
 
 ## Recent decisions
 
@@ -3778,6 +3848,62 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   Nothing was built; only `CLAUDE.md` item 13/27 and this entry record the outcome. Of the five gaps
   item 13 originally named, this is now the only one remaining, and it is deliberately, not
   accidentally, unstarted.
+- `[2026-08-20]` **Built the Business Knowledge Center backend**, under the explicit "start the
+  business knowledge center now" instruction — the first of the 21 real business-module endpoints
+  named in the phase plan. Genuine architectural ambiguity (an advisory-only roadmap note's
+  Git+Postgres storage split, absent from the canonical spec) surfaced directly rather than
+  silently adopted; the user chose pure DB-backed CRUD after confirming realistic storage sizing
+  ("Yes, proceed"). Branch `module-business-knowledge-center`, off `main` at `621fed8`. See item 28
+  under "Active tasks" above for the full design-decision and build account.
+- `[2026-08-20]` **Independent code review run on `module-business-knowledge-center` (PR #43), high
+  effort.** 12 candidates verified (11 CONFIRMED, 1 REFUTED and dropped), 10 kept in the final
+  report per the review's own cap (9 CONFIRMED, 1 PLAUSIBLE). **All 9 CONFIRMED findings fixed**
+  per the explicit "fix the confirmed findings" instruction — see item 28 for the full list; most
+  severe were a TOCTOU race in `changeStatus()` (fixed with an atomic compare-and-swap) and the
+  `restricted` status classification having no actual access enforcement (fixed by wiring
+  `AuthorizationService.canViewConfidential()` and a redaction helper mirroring
+  `operational-contacts.controller.ts`'s own pattern). The 1 PLAUSIBLE finding (no per-record-type
+  cap on simultaneous `mandatory`/`advisory` records) was left as accepted, tracked debt — its own
+  verifier concluded the correct invariant is genuinely record-type-dependent and the spec states
+  no rule either way. Full re-validation against a fresh local disposable PostgreSQL 17 database:
+  389/389 `dashboard-api` unit tests, 11/11 `packages/database` integration tests, 11/11
+  `dashboard-api` e2e tests, migration up/down round-trip clean, module-registry validation
+  unaffected, typecheck/lint/prettier clean, `pnpm audit` — 0 vulnerabilities. Pushed as commit
+  `4421614da124125a733e2601cfbb85fd014021b5`.
+- `[2026-08-20]` **Security review run on `module-business-knowledge-center` (PR #43), separately
+  from the code review.** 3 candidates surfaced by the initial finder pass (unredacted content in
+  the audit trail via `update()`'s `afterState`, no `canEditConfidential()` gate on the update
+  route, no separation-of-duties check on self-approval) — each independently re-verified by a
+  separate sub-agent against the actual code and design docs, all scored 2/10 confidence and
+  dropped: all three turned out to be pre-existing, already-accepted architectural patterns
+  replicated from `ProjectService`/`operational-contacts` (identical `afterState`-redaction gap in
+  `ProjectService.update()`; identical read-redaction-only-not-write-gating shape in
+  `operational-contacts.controller.ts`, where gating writes on `canEditConfidential()` would make
+  `restricted` records permanently uneditable since that action is zero-seeded for every role; and
+  the RBAC matrix's own design intent per D4 is role/grant separation, not actor-identity
+  separation, matching `ProjectService.changeStatus()`'s identical shape), not new gaps this branch
+  introduces. **0 findings above threshold.** A review packet (published as a Claude artifact —
+  code review + security review findings, fixes, and validation evidence, with a decision section)
+  was prepared for the required second-role human review, since the implementing agent cannot also
+  be its own reviewer (ADR-0010). See
+  `docs/project-state/module-business-knowledge-center-approval-checklist.md`.
+- `[2026-08-20]` **Required second-role human review complete for `module-business-knowledge-center`
+  (PR #43).** The review packet (code review + security review findings, fixes, and the 1 open
+  tracked-debt item, with a decision section) was reviewed. **Jitesh D reviewed it and returned
+  "Approved as-is,"** accepting the 1 open PLAUSIBLE code-review finding as tracked debt rather than
+  requesting a fix. See
+  `docs/project-state/module-business-knowledge-center-approval-checklist.md`'s "Sign-off" section.
+  A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-20]` **The gate (G4-business-knowledge-center) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `b64a728` on branch `module-business-knowledge-center` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-business-knowledge-center`) and
+  `docs/project-state/module-business-knowledge-center-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #43 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing "no
+  auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
