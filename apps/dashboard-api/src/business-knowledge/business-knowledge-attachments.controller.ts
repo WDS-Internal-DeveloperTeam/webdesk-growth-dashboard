@@ -44,7 +44,9 @@ const MODULE_KEY = "business_knowledge";
  *  client never needs (it always reads content through the cookie-authenticated content-proxy
  *  route, never a direct Blob URL) — narrowed out of every response, matching this app's existing
  *  `UserSummary`-style precedent for response shapes. */
-function toPublicAttachment(entity: BusinessKnowledgeAttachmentEntity): BusinessKnowledgeAttachment {
+function toPublicAttachment(
+  entity: BusinessKnowledgeAttachmentEntity,
+): BusinessKnowledgeAttachment {
   const { blobPathname: _blobPathname, ...publicFields } = entity;
   return publicFields;
 }
