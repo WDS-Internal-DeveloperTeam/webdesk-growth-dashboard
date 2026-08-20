@@ -1,0 +1,143 @@
+.section {
+  margin-bottom: var(--webdesk-dashboard-space-xl);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.heading {
+  font-size: var(--webdesk-dashboard-font-size-lg);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  margin: 0;
+}
+
+.helperText {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: var(--webdesk-dashboard-space-2xs) 0 var(--webdesk-dashboard-space-sm);
+}
+
+.uploadButton {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  background: var(--webdesk-dashboard-color-surface);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  cursor: pointer;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  margin: var(--webdesk-dashboard-space-sm) 0;
+}
+
+.list {
+  list-style: none;
+  margin: var(--webdesk-dashboard-space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-md);
+}
+
+.item {
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-md);
+  padding: var(--webdesk-dashboard-space-sm);
+}
+
+.itemHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--webdesk-dashboard-space-sm);
+  margin-bottom: var(--webdesk-dashboard-space-xs);
+}
+
+.filename {
+  display: block;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+}
+
+.meta {
+  display: block;
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
+  flex-shrink: 0;
+}
+
+.downloadLink {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-accent);
+}
+
+.deleteButton {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-danger);
+  cursor: pointer;
+}
+
+.deleteButton:disabled {
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  cursor: not-allowed;
+}
+
+.pdfPreview {
+  width: 100%;
+  height: 32rem;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+}
+
+.previewHtml {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-surface);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.previewHtml :global(table) {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.previewHtml :global(td) {
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  padding: var(--webdesk-dashboard-space-2xs) var(--webdesk-dashboard-space-xs);
+  font-size: var(--webdesk-dashboard-font-size-xs);
+}
+
+.noPreview {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0;
+}

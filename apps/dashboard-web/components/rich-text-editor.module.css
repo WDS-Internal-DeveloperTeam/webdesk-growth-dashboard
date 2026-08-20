@@ -1,0 +1,101 @@
+.wrapper {
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--webdesk-dashboard-space-2xs);
+  padding: var(--webdesk-dashboard-space-xs);
+  background: var(--webdesk-dashboard-color-surface);
+  border-bottom: 1px solid var(--webdesk-dashboard-color-border);
+}
+
+.toolbarButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  background: transparent;
+  color: var(--webdesk-dashboard-color-foreground);
+  cursor: pointer;
+}
+
+.toolbarButton:hover:not(:disabled) {
+  background: var(--webdesk-dashboard-color-surface-raised);
+  border-color: var(--webdesk-dashboard-color-border);
+}
+
+.toolbarButton:disabled {
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.toolbarButtonActive {
+  background: var(--webdesk-dashboard-color-accent-tint);
+  border-color: var(--webdesk-dashboard-color-accent);
+  color: var(--webdesk-dashboard-color-accent);
+}
+
+.editorContent {
+  min-height: 12rem;
+  padding: var(--webdesk-dashboard-space-sm);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+  outline: none;
+}
+
+.editorContent :global(p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  pointer-events: none;
+}
+
+.editorContent :global(h2) {
+  font-size: var(--webdesk-dashboard-font-size-lg);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  margin: var(--webdesk-dashboard-space-md) 0 var(--webdesk-dashboard-space-xs);
+}
+
+.editorContent :global(h3) {
+  font-size: var(--webdesk-dashboard-font-size-md);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  margin: var(--webdesk-dashboard-space-sm) 0 var(--webdesk-dashboard-space-xs);
+}
+
+.editorContent :global(p) {
+  margin: 0 0 var(--webdesk-dashboard-space-xs);
+}
+
+.editorContent :global(ul),
+.editorContent :global(ol) {
+  padding-left: var(--webdesk-dashboard-space-lg);
+  margin: 0 0 var(--webdesk-dashboard-space-xs);
+}
+
+.editorContent :global(blockquote) {
+  border-left: 3px solid var(--webdesk-dashboard-color-border);
+  padding-left: var(--webdesk-dashboard-space-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0 0 var(--webdesk-dashboard-space-xs);
+}
+
+.editorContent :global(a) {
+  color: var(--webdesk-dashboard-color-accent);
+}
+
+.editorContent :global(pre) {
+  background: var(--webdesk-dashboard-color-surface);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  overflow-x: auto;
+}

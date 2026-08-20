@@ -15,18 +15,24 @@ import {
 } from "../../lib/business-knowledge.js";
 
 describe("parseBusinessKnowledgeSearchParams", () => {
-  it("defaults to no filters, offset 0 when nothing is provided", () => {
+  it("defaults to no filters, offset 0, pageSize 20 when nothing is provided", () => {
     expect(parseBusinessKnowledgeSearchParams({})).toEqual({
       recordType: null,
       status: null,
       offset: 0,
+      pageSize: 20,
     });
   });
 
-  it("parses valid recordType/status/offset values", () => {
+  it("parses valid recordType/status/offset/pageSize values", () => {
     expect(
-      parseBusinessKnowledgeSearchParams({ recordType: "vto", status: "draft", offset: "25" }),
-    ).toEqual({ recordType: "vto", status: "draft", offset: 25 });
+      parseBusinessKnowledgeSearchParams({
+        recordType: "vto",
+        status: "draft",
+        offset: "25",
+        pageSize: "50",
+      }),
+    ).toEqual({ recordType: "vto", status: "draft", offset: 25, pageSize: 50 });
   });
 
   it("falls back to defaults for invalid/garbled enum values instead of passing them through", () => {
@@ -35,8 +41,9 @@ describe("parseBusinessKnowledgeSearchParams", () => {
         recordType: "not_a_real_type",
         status: "deleted",
         offset: "not-a-number",
+        pageSize: "37",
       }),
-    ).toEqual({ recordType: null, status: null, offset: 0 });
+    ).toEqual({ recordType: null, status: null, offset: 0, pageSize: 20 });
   });
 
   it("clamps a negative offset to 0", () => {
@@ -51,13 +58,13 @@ describe("parseBusinessKnowledgeSearchParams", () => {
 });
 
 describe("buildBusinessKnowledgeHref", () => {
-  const baseQuery = { recordType: null, status: null, offset: 0 };
+  const baseQuery = { recordType: null, status: null, offset: 0, pageSize: 20 as const };
 
   it("returns the bare path when nothing is set", () => {
     expect(buildBusinessKnowledgeHref(baseQuery, {})).toBe("/business-knowledge-center");
   });
 
-  it("includes recordType/status and omits offset=0", () => {
+  it("includes recordType/status and omits offset=0/the default pageSize", () => {
     expect(buildBusinessKnowledgeHref(baseQuery, { recordType: "vto", status: "draft" })).toBe(
       "/business-knowledge-center?recordType=vto&status=draft",
     );
@@ -73,6 +80,13 @@ describe("buildBusinessKnowledgeHref", () => {
   it("keeps a nonzero offset when explicitly set", () => {
     expect(buildBusinessKnowledgeHref(baseQuery, { offset: 25 })).toBe(
       "/business-knowledge-center?offset=25",
+    );
+  });
+
+  it("includes a non-default pageSize and resets offset to 0", () => {
+    const withOffset = { ...baseQuery, offset: 50 };
+    expect(buildBusinessKnowledgeHref(withOffset, { pageSize: 50 })).toBe(
+      "/business-knowledge-center?pageSize=50",
     );
   });
 });
@@ -129,11 +143,11 @@ describe("getBusinessKnowledgeRecords", () => {
   it("throws on a non-OK response instead of silently returning an empty list", async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
     await expect(
-      getBusinessKnowledgeRecords({ recordType: null, status: null, offset: 0 }),
+      getBusinessKnowledgeRecords({ recordType: null, status: null, offset: 0, pageSize: 20 }),
     ).rejects.toThrow(/Failed to load business knowledge records/);
   });
 
-  it("requests one row past the display page size, to detect a real next page", async () => {
+  it("requests one row past the chosen page size, to detect a real next page", async () => {
     const requestedUrls: string[] = [];
     global.fetch = vi.fn((url: string) => {
       requestedUrls.push(url);
@@ -143,15 +157,43 @@ describe("getBusinessKnowledgeRecords", () => {
       } as Response);
     }) as typeof fetch;
 
-    await getBusinessKnowledgeRecords({ recordType: "vto", status: "draft", offset: 25 });
+    await getBusinessKnowledgeRecords({
+      recordType: "vto",
+      status: "draft",
+      offset: 25,
+      pageSize: 20,
+    });
 
     expect(requestedUrls[0]).toBe(
-      "https://api.example.com/business-knowledge/records?recordType=vto&status=draft&limit=26&offset=25",
+      "https://api.example.com/business-knowledge/records?recordType=vto&status=draft&limit=21&offset=25",
     );
   });
 
+  it("honors a non-default pageSize in both the request limit and the trimmed result", async () => {
+    const requestedUrls: string[] = [];
+    const items = Array.from({ length: 51 }, (_, i) => recordFixture(`r${i}`));
+    global.fetch = vi.fn((url: string) => {
+      requestedUrls.push(url);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, data: items, correlationId: "test" }),
+      } as Response);
+    }) as typeof fetch;
+
+    const result = await getBusinessKnowledgeRecords({
+      recordType: null,
+      status: null,
+      offset: 0,
+      pageSize: 50,
+    });
+
+    expect(requestedUrls[0]).toContain("limit=51");
+    expect(result.items).toHaveLength(50);
+    expect(result.hasNextPage).toBe(true);
+  });
+
   it("reports hasNextPage: true and trims the extra row when the backend returns one more than the page size", async () => {
-    const items = Array.from({ length: 26 }, (_, i) => recordFixture(`r${i}`));
+    const items = Array.from({ length: 21 }, (_, i) => recordFixture(`r${i}`));
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, data: items, correlationId: "test" }),
@@ -161,9 +203,10 @@ describe("getBusinessKnowledgeRecords", () => {
       recordType: null,
       status: null,
       offset: 0,
+      pageSize: 20,
     });
 
-    expect(result.items).toHaveLength(25);
+    expect(result.items).toHaveLength(20);
     expect(result.hasNextPage).toBe(true);
   });
 });

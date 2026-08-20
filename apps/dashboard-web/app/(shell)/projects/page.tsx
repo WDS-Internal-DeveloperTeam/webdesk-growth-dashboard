@@ -7,6 +7,7 @@ import {
   StatusBadge,
   typographyTokens,
 } from "@webdesk/ui";
+import { PageSizeSelect } from "@/components/page-size-select";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { listTableCellStyle, listTableHeaderCellStyle } from "@/lib/list-table-styles";
 import { getServerSession } from "@/lib/server-session";
@@ -15,7 +16,6 @@ import {
   formatTimestamp,
   getProjects,
   parseProjectsSearchParams,
-  PROJECTS_PAGE_SIZE,
   projectStatusBadge,
   type ProjectSortBy,
   type ProjectsQuery,
@@ -84,7 +84,12 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           >
             Search
           </span>
+          {/* `key` forces a remount whenever the underlying value changes (including back to ""
+              on Clear filters) — a Next.js <Link> soft-navigation re-renders this same DOM node
+              in place, and an uncontrolled input's `defaultValue` is only honored on first mount,
+              so without this the field kept showing a cleared filter's stale value. */}
           <input
+            key={query.search ?? "empty-search"}
             type="text"
             name="search"
             defaultValue={query.search ?? ""}
@@ -109,6 +114,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             Status
           </span>
           <select
+            key={query.status ?? "all-statuses"}
             name="status"
             defaultValue={query.status ?? ""}
             style={{
@@ -168,7 +174,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             isPastLastPage ? (
               <Link
                 href={buildProjectsHref(query, {
-                  offset: Math.max(0, query.offset - PROJECTS_PAGE_SIZE),
+                  offset: Math.max(0, query.offset - query.pageSize),
                 })}
                 style={{ fontSize: "0.875rem" }}
               >
@@ -214,23 +220,27 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             <span style={{ color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
               Showing {query.offset + 1}–{query.offset + projects.length}
             </span>
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              {query.offset > 0 ? (
-                <Link
-                  href={buildProjectsHref(query, {
-                    offset: Math.max(0, query.offset - PROJECTS_PAGE_SIZE),
-                  })}
-                >
-                  Previous
-                </Link>
-              ) : null}
-              {hasNextPage ? (
-                <Link
-                  href={buildProjectsHref(query, { offset: query.offset + PROJECTS_PAGE_SIZE })}
-                >
-                  Next
-                </Link>
-              ) : null}
+            <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+              <PageSizeSelect
+                value={query.pageSize}
+                buildHref={(pageSize) => buildProjectsHref(query, { pageSize })}
+              />
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                {query.offset > 0 ? (
+                  <Link
+                    href={buildProjectsHref(query, {
+                      offset: Math.max(0, query.offset - query.pageSize),
+                    })}
+                  >
+                    Previous
+                  </Link>
+                ) : null}
+                {hasNextPage ? (
+                  <Link href={buildProjectsHref(query, { offset: query.offset + query.pageSize })}>
+                    Next
+                  </Link>
+                ) : null}
+              </div>
             </div>
           </div>
         </>

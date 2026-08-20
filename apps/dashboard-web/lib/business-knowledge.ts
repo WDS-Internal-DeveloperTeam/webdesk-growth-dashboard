@@ -1,8 +1,11 @@
 import { cookies } from "next/headers";
-import type { ApiSuccessResponse, BusinessKnowledgeRecord } from "@webdesk/shared-types";
+import type {
+  ApiSuccessResponse,
+  BusinessKnowledgeAttachment,
+  BusinessKnowledgeRecord,
+} from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
 import {
-  BUSINESS_KNOWLEDGE_PAGE_SIZE,
   buildBusinessKnowledgeHref,
   businessKnowledgeStatusBadge,
   parseBusinessKnowledgeSearchParams,
@@ -13,7 +16,6 @@ import { formatTimestamp } from "./format-timestamp";
 import { isUuid } from "./uuid";
 
 export {
-  BUSINESS_KNOWLEDGE_PAGE_SIZE,
   buildBusinessKnowledgeHref,
   businessKnowledgeStatusBadge,
   formatTimestamp,
@@ -24,7 +26,7 @@ export type { BusinessKnowledgeQuery };
 
 export interface BusinessKnowledgeListResult {
   readonly items: readonly BusinessKnowledgeRecord[];
-  /** Same "request one row past the display page size" technique `getProjects()` uses — `GET
+  /** Same "request one row past the chosen page size" technique `getProjects()` uses — `GET
    *  /business-knowledge/records` returns no total count to check against. */
   readonly hasNextPage: boolean;
 }
@@ -42,7 +44,7 @@ export async function getBusinessKnowledgeRecords(
   const params = new URLSearchParams();
   if (query.recordType) params.set("recordType", query.recordType);
   if (query.status) params.set("status", query.status);
-  params.set("limit", String(BUSINESS_KNOWLEDGE_PAGE_SIZE + 1));
+  params.set("limit", String(query.pageSize + 1));
   params.set("offset", String(query.offset));
 
   const response = await fetch(`${apiBaseUrl}/business-knowledge/records?${params.toString()}`, {
@@ -54,8 +56,8 @@ export async function getBusinessKnowledgeRecords(
   }
   const body = (await response.json()) as ApiSuccessResponse<readonly BusinessKnowledgeRecord[]>;
   return {
-    items: body.data.slice(0, BUSINESS_KNOWLEDGE_PAGE_SIZE),
-    hasNextPage: body.data.length > BUSINESS_KNOWLEDGE_PAGE_SIZE,
+    items: body.data.slice(0, query.pageSize),
+    hasNextPage: body.data.length > query.pageSize,
   };
 }
 
@@ -88,4 +90,38 @@ export async function getBusinessKnowledgeRecord(
     throw new Error(`Failed to load business knowledge record (status ${response.status})`);
   }
   return ((await response.json()) as ApiSuccessResponse<BusinessKnowledgeRecord>).data;
+}
+
+/**
+ * Same technique `getProjectDetail()` already uses for its own concurrently-fired sub-resource
+ * fetches: attaches a no-op `.catch()` so a promise the caller ultimately discards (the record
+ * turned out not to exist, so its attachments were never actually awaited) doesn't produce a
+ * Node/Next.js "unhandled rejection" warning, while the original `promise` still rejects normally
+ * for a caller that does await it.
+ */
+export function tolerateDiscard<T>(promise: Promise<T>): Promise<T> {
+  promise.catch(() => {});
+  return promise;
+}
+
+/** An empty array is a real, valid answer here (no attachments, or a restricted record redacting
+ *  them for this viewer — `GET .../attachments` itself already returns `[]` for that case, no
+ *  separate signal is needed) — never thrown as an error, matching how the record's own redacted
+ *  `content`/`notes` degrade to an absent key rather than a failure. */
+export async function getBusinessKnowledgeAttachments(
+  recordId: string,
+): Promise<readonly BusinessKnowledgeAttachment[]> {
+  const apiBaseUrl = getApiBaseUrl();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const response = await fetch(`${apiBaseUrl}/business-knowledge/records/${recordId}/attachments`, {
+    headers: { cookie: cookieHeader },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load attachments (status ${response.status})`);
+  }
+  return ((await response.json()) as ApiSuccessResponse<readonly BusinessKnowledgeAttachment[]>)
+    .data;
 }

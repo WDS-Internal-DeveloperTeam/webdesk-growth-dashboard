@@ -52,14 +52,21 @@ describe("BusinessKnowledgeRecordForm", () => {
     vi.restoreAllMocks();
   });
 
-  it("create mode: submits recordType/title/content/notes to POST /business-knowledge/records", async () => {
+  it("renders a rich-text editor (not a plain textarea) for content, with the toolbar and a placeholder", () => {
+    global.fetch = vi.fn() as typeof fetch;
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+    expect(screen.getByRole("toolbar", { name: "Formatting" })).toBeInTheDocument();
+    const editable = document.querySelector('[contenteditable="true"]');
+    expect(editable?.getAttribute("data-placeholder")).toContain("Optional");
+  });
+
+  it("create mode: submits recordType/title/notes, omitting content entirely when nothing was typed (attachment-only record)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
     global.fetch = fetchMock as typeof fetch;
 
     render(<BusinessKnowledgeRecordForm mode="create" />);
     fireEvent.change(screen.getByLabelText("Record type"), { target: { value: "competitor" } });
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Acme Corp" } });
-    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "Their strengths." } });
     fireEvent.click(screen.getByRole("button", { name: "Create record" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -71,7 +78,6 @@ describe("BusinessKnowledgeRecordForm", () => {
         body: JSON.stringify({
           recordType: "competitor",
           title: "Acme Corp",
-          content: "Their strengths.",
           notes: null,
         }),
       }),
@@ -81,23 +87,23 @@ describe("BusinessKnowledgeRecordForm", () => {
     );
   });
 
-  it("edit mode: shows the record type as read-only text, not a select", () => {
+  it("edit mode: shows the record type as read-only text, not a select, and the editor loads the initial content", async () => {
     global.fetch = vi.fn() as typeof fetch;
     render(
       <BusinessKnowledgeRecordForm
         mode="edit"
         recordId={RECORD_ID}
-        initial={{ recordType: "vto", title: "VTO", content: "Content", notes: null }}
+        initial={{ recordType: "vto", title: "VTO", content: "<p>Loaded content</p>", notes: null }}
       />,
     );
 
     expect(screen.getByText("VTO")).toBeInTheDocument();
     expect(screen.queryByLabelText("Record type")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Title")).toHaveValue("VTO");
-    expect(screen.getByLabelText("Content")).toHaveValue("Content");
+    await waitFor(() => expect(screen.getByText("Loaded content")).toBeInTheDocument());
   });
 
-  it("edit mode: submits title/content/notes (no recordType) to POST .../:id/update", async () => {
+  it("edit mode: submits title/content/notes (no recordType) to POST .../:id/update, carrying the unedited content through unchanged", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
     global.fetch = fetchMock as typeof fetch;
 
@@ -105,7 +111,12 @@ describe("BusinessKnowledgeRecordForm", () => {
       <BusinessKnowledgeRecordForm
         mode="edit"
         recordId={RECORD_ID}
-        initial={{ recordType: "vto", title: "VTO", content: "Content", notes: null }}
+        initial={{
+          recordType: "vto",
+          title: "VTO",
+          content: "<p>Existing content</p>",
+          notes: null,
+        }}
       />,
     );
 
@@ -117,12 +128,12 @@ describe("BusinessKnowledgeRecordForm", () => {
     expect(url).toBe(`https://api.example.com/business-knowledge/records/${RECORD_ID}/update`);
     expect(JSON.parse(init.body as string)).toEqual({
       title: "VTO Renamed",
-      content: "Content",
+      content: "<p>Existing content</p>",
       notes: null,
     });
   });
 
-  it("edit mode with redacted content: renders an inert notice instead of a textarea, and omits content/notes from the submitted payload", async () => {
+  it("edit mode with redacted content: renders an inert notice instead of the editor, and omits content/notes from the submitted payload", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
     global.fetch = fetchMock as typeof fetch;
 
@@ -139,7 +150,7 @@ describe("BusinessKnowledgeRecordForm", () => {
       />,
     );
 
-    expect(screen.queryByLabelText("Content")).not.toBeInTheDocument();
+    expect(screen.queryByRole("toolbar", { name: "Formatting" })).not.toBeInTheDocument();
     expect(screen.getAllByText(/isn't visible to you/).length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed" } });
@@ -162,7 +173,6 @@ describe("BusinessKnowledgeRecordForm", () => {
 
     render(<BusinessKnowledgeRecordForm mode="create" />);
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "x" } });
-    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "y" } });
     fireEvent.click(screen.getByRole("button", { name: "Create record" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -176,7 +186,6 @@ describe("BusinessKnowledgeRecordForm", () => {
 
     render(<BusinessKnowledgeRecordForm mode="create" />);
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "x" } });
-    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "y" } });
     fireEvent.click(screen.getByRole("button", { name: "Create record" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -191,7 +200,6 @@ describe("BusinessKnowledgeRecordForm", () => {
 
     render(<BusinessKnowledgeRecordForm mode="create" />);
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "x" } });
-    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "y" } });
     fireEvent.click(screen.getByRole("button", { name: "Create record" }));
 
     await screen.findByRole("alert");

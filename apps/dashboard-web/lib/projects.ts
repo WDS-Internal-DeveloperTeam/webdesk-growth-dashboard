@@ -15,7 +15,6 @@ import { formatTimestamp } from "./format-timestamp";
 import {
   buildProjectsHref,
   parseProjectsSearchParams,
-  PROJECTS_PAGE_SIZE,
   type ProjectSortBy,
   type ProjectSortOrder,
   type ProjectStatusFilter,
@@ -33,7 +32,6 @@ export {
   objectiveStatusBadge,
   parseProjectsSearchParams,
   projectStatusBadge,
-  PROJECTS_PAGE_SIZE,
   roadmapItemStatusBadge,
 };
 export type { ProjectSortBy, ProjectSortOrder, ProjectStatusFilter, ProjectsQuery };
@@ -41,7 +39,7 @@ export type { ProjectSortBy, ProjectSortOrder, ProjectStatusFilter, ProjectsQuer
 export interface ProjectsPageResult {
   readonly items: readonly Project[];
   /** Whether a real next page exists — determined by actually requesting one row past the
-   *  display page size (below), not by checking `items.length === PROJECTS_PAGE_SIZE`. That
+   *  chosen page size (below), not by checking `items.length === query.pageSize`. That
    *  exact-count heuristic offered a "Next" link on every page whose result count was a multiple
    *  of the page size, which led to a real dead end: the page it linked to was guaranteed empty,
    *  with no filters active to explain it and no pagination controls to get back (the whole
@@ -64,8 +62,8 @@ export async function getProjects(query: ProjectsQuery): Promise<ProjectsPageRes
   if (query.status) params.set("status", query.status);
   params.set("sortBy", query.sortBy);
   params.set("sortOrder", query.sortOrder);
-  // One row past the display page size — see ProjectsPageResult.hasNextPage's own doc comment.
-  params.set("limit", String(PROJECTS_PAGE_SIZE + 1));
+  // One row past the chosen page size — see ProjectsPageResult.hasNextPage's own doc comment.
+  params.set("limit", String(query.pageSize + 1));
   params.set("offset", String(query.offset));
 
   const response = await fetch(`${apiBaseUrl}/projects?${params.toString()}`, {
@@ -77,8 +75,8 @@ export async function getProjects(query: ProjectsQuery): Promise<ProjectsPageRes
   }
   const body = (await response.json()) as ApiSuccessResponse<readonly Project[]>;
   return {
-    items: body.data.slice(0, PROJECTS_PAGE_SIZE),
-    hasNextPage: body.data.length > PROJECTS_PAGE_SIZE,
+    items: body.data.slice(0, query.pageSize),
+    hasNextPage: body.data.length > query.pageSize,
   };
 }
 

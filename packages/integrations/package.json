@@ -2,23 +2,26 @@
   "name": "@webdesk/integrations",
   "version": "0.1.0",
   "private": true,
-  "description": "Integration adapter INTERFACES only — GitHub, WordPress, Google Workspace (auth+SMTP), Vercel Blob, Vercel background jobs. No implementations at Phase 1A. See docs/contracts/*.md for the full contract each interface formalizes.",
+  "description": "Integration adapters — GitHub/WordPress/Google Workspace/Vercel background jobs remain interfaces only (Phase 1A); the Vercel Blob adapter has a real implementation (VercelBlobAdapter) built for Business Knowledge Center attachments. See docs/contracts/*.md for the full contract each interface formalizes. Dual ESM+CJS build (dist/ + dist-cjs/) — required for dashboard-api's Vercel Function bundler, same as @webdesk/configuration/database/shared-types/validation (see CLAUDE.md's Cautions section).",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "require": "./dist-cjs/index.js",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node ../../scripts/write-cjs-package-json.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "@webdesk/configuration": "workspace:*"
   },
   "devDependencies": {
