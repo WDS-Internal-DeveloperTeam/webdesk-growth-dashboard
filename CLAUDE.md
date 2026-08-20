@@ -1212,8 +1212,9 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correct
     now genuinely live in production.**
 26. **`dashboard-web` sidebar spacing adapted to a Vercel reference; a second, independent real
     active-link layout bug found and fixed; code-reviewed, security-reviewed, second-role human
-    reviewed (Jitesh D, "Approved as-is"); not yet gated or merged (2026-08-19).** Not started
-    automatically — after item 25 went live, the user shared a
+    reviewed (Jitesh D, "Approved as-is"), and gated (G4-sidebar-vercel-spacing, WebDesk Solution,
+    CONFIRM); not yet merged (2026-08-19).** Not started automatically — after item 25 went live,
+    the user shared a
     screenshot of Vercel's own dashboard sidebar and asked to adapt our sidebar's row spacing and
     selection styling toward it (organization/spacing only, keeping our own light palette and
     indigo accent). Widened the sidebar's outer inset, row padding, corner radius, and row gap
@@ -1250,8 +1251,13 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correct
     human review, since the implementing agent cannot also be its own reviewer (ADR-0010). See
     `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`. **Jitesh D
     reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE code-review
-    findings as tracked debt. A gate decision and merge authorization remain separate,
-    not-yet-requested next steps.
+    findings as tracked debt. **The gate (G4-sidebar-vercel-spacing) was then separately requested
+    and approved** — WebDesk Solution, decision CONFIRM, approved commit `6adf852` on branch
+    `dashboard-web-sidebar-vercel-spacing` — see
+    `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
+    section. **This gate approval does not itself authorize merging PR #41 or a production
+    deployment** — merge remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -3628,6 +3634,16 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   code-review findings as tracked debt rather than requesting fixes. See
   `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-19]` **The gate (G4-sidebar-vercel-spacing) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `6adf852` on branch `dashboard-web-sidebar-vercel-spacing` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-sidebar-vercel-spacing`) and
+  `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #41 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

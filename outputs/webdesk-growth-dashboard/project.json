@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-sidebar-grid-fix",
+    "current_gate": "G4-sidebar-vercel-spacing",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-19T00:00:00Z",
-    "version": 31
+    "version": 32
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -374,6 +374,21 @@
       "record": "docs/project-state/dashboard-web-sidebar-grid-fix-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #40 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule.",
       "merge_resolution_note": "RESOLVED 2026-08-19: PR #40 merged to main under explicit 'Merge PR #40' authorization, merge commit bd9743966a8b2406eac7656ccb0e8d502463acde, all 14 CI checks green beforehand. Both Vercel projects auto-deployed on push to main and were verified live directly (not just via CI's own Vercel status check) -- dashboard-api's /health returned build.commitSha == bd9743966a8b2406eac7656ccb0e8d502463acde, confirming the exact merged commit is what's actually serving; dashboard-web's /home correctly redirected an unauthenticated visitor to /auth/sign-in, confirming the session gate is intact. This note is appended rather than rewriting the gate's own historical pre-merge text, which accurately reflected the state at gate-approval time."
+    },
+    {
+      "id": "G4-sidebar-vercel-spacing",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-sidebar-vercel-spacing",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-19T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web sidebar spacing adapted to a Vercel dashboard nav reference, plus a second independent real active-link layout bug found and fixed (branch dashboard-web-sidebar-vercel-spacing, PR #41). Two commits reviewed together as one unit. (1) After item 25/PR #40 went live, the user shared a screenshot of Vercel's own dashboard sidebar and asked to adapt our sidebar's row spacing and selection styling toward it (organization/spacing only, keeping our own light palette and indigo accent). Widened the sidebar's outer inset (space-sm to space-md), row padding to uniform space-sm, corner radius (radius-sm to radius-md), and row gap (space-2xs to space-xs). While live-verifying this, found a second real, independent, previously-undiscovered bug: the currently-active sidebar link had never actually inherited any of .sidebarLink's layout properties, since app-shell.tsx applied sidebarLink/sidebarLinkActive as mutually-exclusive classes and sidebarLinkActive only ever declared color overrides -- verified live before the fix: display:inline, padding:0px, border-radius:0px, underlined, on every page, in every deployment, invisible to every prior check since those only verified background/text color, never layout. Fixed at the source: app-shell.tsx's className assignments now always apply the base class, with the active modifier layered on conditionally. (2) Independent code review (medium effort, 8 finder angles) surfaced 5 findings (1 CONFIRMED, 4 PLAUSIBLE) -- three of the eight angles independently converged on the same defect from different directions. Most severe: the base fix's own change (always applying .sidebarLink) newly exposed a CSS specificity conflict -- .sidebarLink:hover (0,2,0) unconditionally beat the standalone .sidebarLinkActive (0,1,0), so hovering the currently-active nav link washed its accent styling out to the plain gray hover treatment, a regression structurally impossible before this PR's own fix. Fixed by rewriting .sidebarLinkActive as the compound selector .sidebarLink.sidebarLinkActive -- specificity (0,2,0), tying with :hover and winning on source order -- verified live via a real mouse hover (computer action hover, not simulated), confirming element.matches(':hover') === true while the accent background/text color held. Also fixed 2 cheap PLAUSIBLE findings: a now-redundant compound selector in the icon-only rail rule, and two comments that referenced the conversation without stating their rationale durably. 2 PLAUSIBLE findings left as tracked debt: a radius inconsistency between the sidebar and packages/ui's Dropdown/CommandMenu menu-item styling (pre-existing design-consistency gap, out of scope for a sidebar-focused PR); and the identical fragile ternary-classname shape existing, currently safely, in project-status-actions.tsx (flagged for future awareness only). Security review (run separately) found 0 findings above threshold -- a pure CSS Module selector/spacing diff and a className composition fix, with no user input, data handling, new endpoint, or dependency anywhere in scope; the className template literal composes only fixed, build-generated CSS Module class references, nothing attacker-controlled reaches it. Final numbers: 162/162 dashboard-web unit tests (unchanged), typecheck/lint/check-css-tokens.mjs/next build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-19, decision 'Approved as-is', accepting the 2 open PLAUSIBLE findings as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md and its 'Sign-off' section.",
+      "approved_commit": "6adf852",
+      "record": "docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #41 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule.",
+      "merge_resolution_note": null
     }
   ],
   "budget": {

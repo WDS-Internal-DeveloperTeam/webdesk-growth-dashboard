@@ -1,10 +1,12 @@
 # dashboard-web Sidebar Spacing & Active-Link Fix — Approval Checklist
 
 **Status:** Code review complete (1/1 CONFIRMED finding fixed, 2/4 PLAUSIBLE findings fixed, 2
-PLAUSIBLE left as tracked debt). Security review complete (0 findings above threshold). **Required
-second-role human review complete (2026-08-19, Jitesh D, "Approved as-is")**, accepting the 2 open
-PLAUSIBLE code-review findings as tracked debt. A gate decision and merge authorization remain
-separate, not-yet-requested next steps.
+PLAUSIBLE left as tracked debt). Security review complete (0 findings above threshold). Required
+second-role human review complete (2026-08-19, Jitesh D, "Approved as-is"), accepting the 2 open
+PLAUSIBLE code-review findings as tracked debt. The gate (G4-sidebar-vercel-spacing) was approved —
+WebDesk Solution, decision CONFIRM, 2026-08-19, approved commit `6adf852` on branch
+`dashboard-web-sidebar-vercel-spacing` — see `outputs/webdesk-growth-dashboard/project.json`'s
+`gates[]`. Merge authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -45,9 +47,10 @@ this slice can be requested.
 
 ## Sign-off
 
-**Second-role human review: complete.** A gate decision and merge authorization remain separate,
-not-yet-requested next steps, per this project's standing discipline of keeping the review and the
-gate decision distinct.
+**Second-role human review: complete. Gate G4-sidebar-vercel-spacing: approved.** Both were their
+own separate, explicit human step, per every prior phase's own pattern of keeping the review and
+the gate decision distinct — the gate was requested, and approved, only after the review above was
+already recorded as complete.
 
 | Field                         | Value                                                                                                                                                                                   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -56,3 +59,17 @@ gate decision distinct.
 | Decision                      | Approved as-is                                                                                                                                                                          |
 | Scope reviewed                | Full code-review disposition (1 CONFIRMED + 2 PLAUSIBLE fixed, 2 PLAUSIBLE accepted as tracked debt) and full security-review disposition (0 findings), via the published review packet |
 | Disputes raised               | None recorded — the 2 open PLAUSIBLE findings accepted as tracked debt, not requested to be fixed                                                                                       |
+
+| Field                    | Value                                                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-sidebar-vercel-spacing                                                                                                                        |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                 |
+| Gate date                | 2026-08-19                                                                                                                                       |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                |
+| Approved commit          | `6adf852` on branch `dashboard-web-sidebar-vercel-spacing` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record |
+| Scope                    | `dashboard-web` sidebar spacing & active-link fix only (PR #41). Merge authorization is a separate, not-yet-requested next step.                 |
+
+| Role                          | Name             | Decision         | Date       |
+| ----------------------------- | ---------------- | ---------------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved as-is | 2026-08-19 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM        | 2026-08-19 |
