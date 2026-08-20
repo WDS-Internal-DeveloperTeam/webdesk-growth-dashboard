@@ -30,7 +30,7 @@ export class BusinessKnowledgeRecordRepository {
   async create(input: {
     recordType: BusinessKnowledgeRecordType;
     title: string;
-    content: string;
+    content: string | null;
     notes?: string | null;
     createdBy?: string | null;
   }): Promise<BusinessKnowledgeRecordEntity> {
@@ -78,7 +78,7 @@ export class BusinessKnowledgeRecordRepository {
     id: string,
     patch: Partial<{
       title: string;
-      content: string;
+      content: string | null;
       notes: string | null;
       updatedBy: string | null;
     }>,

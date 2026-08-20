@@ -1,14 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { BusinessKnowledgeRecordRepository } from "../src/business-knowledge/index.js";
+import {
+  BusinessKnowledgeAttachmentRepository,
+  BusinessKnowledgeRecordRepository,
+} from "../src/business-knowledge/index.js";
 import { closeConnection } from "../src/connection.js";
 import { buildMigrator } from "../src/migrate.js";
 
 /**
- * Exercises the Business Knowledge Center schema (migrations `00047`-`00048`) against a REAL,
- * disposable PostgreSQL database. See `docs/task-packages/module-business-knowledge-center.md`.
+ * Exercises the Business Knowledge Center schema (migrations `00047`-`00049`) against a REAL,
+ * disposable PostgreSQL database. See `docs/task-packages/module-business-knowledge-center.md`
+ * and `docs/task-packages/business-knowledge-center-rich-content-attachments.md`.
  */
 describe("Business Knowledge Center module (real disposable database)", () => {
   const records = new BusinessKnowledgeRecordRepository();
+  const attachments = new BusinessKnowledgeAttachmentRepository();
 
   beforeAll(async () => {
     const migrator = buildMigrator();
@@ -150,5 +155,145 @@ describe("Business Knowledge Center module (real disposable database)", () => {
         content: "y",
       }),
     ).rejects.toThrow();
+  });
+
+  it("creates a record with content: null — an attachment-only record, migration 00049's relaxed NOT NULL constraint", async () => {
+    const record = await records.create({
+      recordType: "vto",
+      title: "Attachment-only record",
+      content: null,
+    });
+    expect(record.content).toBeNull();
+  });
+
+  describe("BusinessKnowledgeAttachmentRepository", () => {
+    async function createRecord(): Promise<string> {
+      const record = await records.create({
+        recordType: "competitor",
+        title: "Attachment host record",
+        content: "Some content.",
+      });
+      return record.id;
+    }
+
+    it("creates an attachment and lists it back for its record", async () => {
+      const recordId = await createRecord();
+      const created = await attachments.create({
+        recordId,
+        filename: "report.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 12_345,
+        checksumSha256: "a".repeat(64),
+        blobPathname: "business-knowledge/report-abc123.pdf",
+        extractedPreviewHtml: null,
+        scanStatus: "scan_not_configured",
+        uploadedBy: null,
+      });
+      expect(created.recordId).toBe(recordId);
+      expect(created.scanStatus).toBe("scan_not_configured");
+
+      const list = await attachments.listForRecord(recordId);
+      expect(list.map((a) => a.id)).toContain(created.id);
+    });
+
+    it("findByIdForRecord returns null when the attachment belongs to a different record (IDOR guard)", async () => {
+      const recordAId = await createRecord();
+      const recordBId = await createRecord();
+      const attachment = await attachments.create({
+        recordId: recordAId,
+        filename: "notes.md",
+        mimeType: "text/markdown",
+        sizeBytes: 100,
+        checksumSha256: "b".repeat(64),
+        blobPathname: "business-knowledge/notes-xyz.md",
+        extractedPreviewHtml: "<p>Notes.</p>",
+        scanStatus: "scan_not_configured",
+        uploadedBy: null,
+      });
+
+      expect(await attachments.findByIdForRecord(attachment.id, recordAId)).not.toBeNull();
+      expect(await attachments.findByIdForRecord(attachment.id, recordBId)).toBeNull();
+    });
+
+    it("deleteForRecord removes the row and reports true, and false for a repeat delete", async () => {
+      const recordId = await createRecord();
+      const attachment = await attachments.create({
+        recordId,
+        filename: "sheet.xlsx",
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        sizeBytes: 500,
+        checksumSha256: "c".repeat(64),
+        blobPathname: "business-knowledge/sheet-def456.xlsx",
+        extractedPreviewHtml: "<table></table>",
+        scanStatus: "scan_not_configured",
+        uploadedBy: null,
+      });
+
+      expect(await attachments.deleteForRecord(attachment.id, recordId)).toBe(true);
+      expect(await attachments.findByIdForRecord(attachment.id, recordId)).toBeNull();
+      expect(await attachments.deleteForRecord(attachment.id, recordId)).toBe(false);
+    });
+
+    it("deleteForRecord returns false (does not delete) when the recordId doesn't match — cross-record delete is impossible", async () => {
+      const recordAId = await createRecord();
+      const recordBId = await createRecord();
+      const attachment = await attachments.create({
+        recordId: recordAId,
+        filename: "doc.docx",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        sizeBytes: 200,
+        checksumSha256: "d".repeat(64),
+        blobPathname: "business-knowledge/doc-ghi789.docx",
+        extractedPreviewHtml: "<p>Doc.</p>",
+        scanStatus: "scan_not_configured",
+        uploadedBy: null,
+      });
+
+      expect(await attachments.deleteForRecord(attachment.id, recordBId)).toBe(false);
+      expect(await attachments.findByIdForRecord(attachment.id, recordAId)).not.toBeNull();
+    });
+
+    it("cascade-deletes attachments when their owning record is hard-deleted at the DB layer", async () => {
+      const recordId = await createRecord();
+      const attachment = await attachments.create({
+        recordId,
+        filename: "cascade.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 1,
+        checksumSha256: "e".repeat(64),
+        blobPathname: "business-knowledge/cascade.pdf",
+        extractedPreviewHtml: null,
+        scanStatus: "scan_not_configured",
+        uploadedBy: null,
+      });
+
+      // No repository method deletes a business_knowledge_record (ADR-0016, no hard delete via the
+      // application layer) — this proves the FK's ON DELETE CASCADE itself, at the DB layer, not
+      // any application code path.
+      const { getConnection } = await import("../src/connection.js");
+      await getConnection().query('DELETE FROM "business_knowledge_records" WHERE id = :id', {
+        replacements: { id: recordId },
+      });
+
+      expect(await attachments.findByIdForRecord(attachment.id, recordId)).toBeNull();
+    });
+
+    it("rejects an invalid scan_status at the database layer (real ENUM constraint)", async () => {
+      const recordId = await createRecord();
+      await expect(
+        attachments.create({
+          recordId,
+          filename: "bad.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1,
+          checksumSha256: "f".repeat(64),
+          blobPathname: "business-knowledge/bad.pdf",
+          extractedPreviewHtml: null,
+          // @ts-expect-error deliberately invalid to prove the DB-level ENUM constraint
+          scanStatus: "not_a_real_status",
+          uploadedBy: null,
+        }),
+      ).rejects.toThrow();
+    });
   });
 });

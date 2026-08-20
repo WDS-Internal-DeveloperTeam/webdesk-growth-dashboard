@@ -29,11 +29,46 @@ export interface BusinessKnowledgeRecordEntity {
   readonly id: string;
   readonly recordType: BusinessKnowledgeRecordType;
   readonly title: string;
-  readonly content: string;
+  /** Optional since migration `00049` (`business-knowledge-center-rich-content-attachments.md`
+   *  §5) — a record may now carry only file attachments, with no typed content at all. */
+  readonly content: string | null;
   readonly status: BusinessKnowledgeRecordStatus;
   readonly notes: string | null;
   readonly createdBy: string | null;
   readonly updatedBy: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/**
+ * The interim, honest status vocabulary from
+ * `knowledge/08-vercel-blob-and-file-handling.md` — malware scanning is deferred project-wide, so
+ * none of these values ever asserts a file is malware-free.
+ */
+export type BusinessKnowledgeAttachmentScanStatus =
+  | "uploaded"
+  | "validation_passed"
+  | "validation_failed"
+  | "scan_not_configured"
+  | "externally_approved"
+  | "rejected"
+  | "deleted";
+
+export interface BusinessKnowledgeAttachmentEntity {
+  readonly id: string;
+  readonly recordId: string;
+  readonly filename: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly checksumSha256: string;
+  /** The Blob object's own key/pathname — never a raw public URL (`knowledge/08`'s "object
+   *  storage owns binaries" split; a signed download URL is minted per-request, not stored). */
+  readonly blobPathname: string;
+  /** Cached DOCX/XLSX/Markdown-to-HTML conversion, computed once at upload-confirmation time —
+   *  `null` for a PDF (rendered as the real file via a signed URL, not extracted; see the task
+   *  package's D4) or before conversion has run. Already sanitized before being stored. */
+  readonly extractedPreviewHtml: string | null;
+  readonly scanStatus: BusinessKnowledgeAttachmentScanStatus;
+  readonly uploadedBy: string | null;
+  readonly createdAt: string;
 }

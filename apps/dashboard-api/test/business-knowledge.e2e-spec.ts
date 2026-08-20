@@ -8,6 +8,7 @@ import {
   UserRepository,
   UserRoleRepository,
 } from "@webdesk/database";
+import type { BlobStorageAdapter } from "@webdesk/integrations";
 import * as client from "openid-client";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -21,7 +22,39 @@ import {
 import { AUTH_ENV, OIDC_CONFIGURATION } from "../src/auth/config/auth.constants.js";
 import type { AuthEnv } from "../src/auth/config/auth-env.js";
 import { SessionService } from "../src/auth/session/session.service.js";
+import { BLOB_STORAGE_ADAPTER } from "../src/business-knowledge/business-knowledge.constants.js";
 import { BusinessKnowledgeModule } from "../src/business-knowledge/business-knowledge.module.js";
+
+/**
+ * An in-memory `BlobStorageAdapter` fake, substituted for the real `VercelBlobAdapter` in this
+ * suite — no real Vercel Blob store/token is provisioned in this environment (or any CI
+ * environment this project runs in), matching the "mock behind the adapter" testing convention
+ * (`knowledge/08-vercel-blob-and-file-handling.md`'s object-storage adapter rule). `handleClientUploadRequest()`
+ * is a minimal stub — exercising Vercel's own client-token protocol end-to-end isn't meaningful
+ * without a real store; the RBAC/prefix-validation logic inside `onBeforeGenerateToken` is
+ * covered directly by `business-knowledge-attachments.service.spec.ts`'s unit tests instead. This
+ * fake's real job is `getObject()`/`deleteObject()` — the actual confirm→list→content→delete
+ * lifecycle this file exercises depends on those two being real (in-memory) storage.
+ */
+class FakeBlobStorageAdapter implements BlobStorageAdapter {
+  private readonly objects = new Map<string, { body: Buffer; contentType: string }>();
+
+  seed(pathname: string, body: Buffer, contentType: string): void {
+    this.objects.set(pathname, { body, contentType });
+  }
+
+  async handleClientUploadRequest(): Promise<Record<string, unknown>> {
+    return { type: "blob.generate-client-token", clientToken: "fake-token" };
+  }
+
+  async getObject(pathname: string): Promise<{ body: Buffer; contentType: string } | null> {
+    return this.objects.get(pathname) ?? null;
+  }
+
+  async deleteObject(pathname: string): Promise<void> {
+    this.objects.delete(pathname);
+  }
+}
 
 /**
  * Request-level coverage for the Business Knowledge Center module HTTP surface
@@ -54,6 +87,7 @@ describe("Business Knowledge Center module endpoints (e2e, real disposable datab
   let superAdminUserId: string;
   let readOnlyUserId: string;
   let marketingEditorUserId: string;
+  let fakeBlobAdapter: FakeBlobStorageAdapter;
 
   async function cookieForNewSession(userId: string): Promise<string> {
     const { rawToken } = await sessionService.issue({
@@ -92,11 +126,14 @@ describe("Business Knowledge Center module endpoints (e2e, real disposable datab
       "test-client-secret",
     );
 
+    fakeBlobAdapter = new FakeBlobStorageAdapter();
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [BusinessKnowledgeModule],
     })
       .overrideProvider(OIDC_CONFIGURATION)
       .useValue(offlineOidcConfig)
+      .overrideProvider(BLOB_STORAGE_ADAPTER)
+      .useValue(fakeBlobAdapter)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -327,5 +364,211 @@ describe("Business Knowledge Center module endpoints (e2e, real disposable datab
     expect(listed).toBeDefined();
     expect(listed?.content).toBeUndefined();
     expect(listed?.notes).toBeUndefined();
+  });
+
+  describe("attachments", () => {
+    async function createRecord(cookie: string): Promise<string> {
+      const response = await request(app.getHttpServer())
+        .post("/business-knowledge/records")
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ recordType: "vto", title: "Attachment host record" })
+        .expect(201);
+      return response.body.data.id as string;
+    }
+
+    it("confirms an upload: real checksum/size computed server-side, a Markdown preview generated, and the row persisted", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const recordId = await createRecord(cookie);
+      const pathname = `business-knowledge/${recordId}/notes-abc123.md`;
+      fakeBlobAdapter.seed(pathname, Buffer.from("# Heading\n\nSome notes."), "text/markdown");
+
+      const response = await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/attachments/confirm`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname, filename: "notes.md" })
+        .expect(201);
+
+      expect(response.body.data.filename).toBe("notes.md");
+      expect(response.body.data.mimeType).toBe("text/markdown");
+      expect(response.body.data.scanStatus).toBe("scan_not_configured");
+      expect(response.body.data.checksumSha256).toMatch(/^[0-9a-f]{64}$/);
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordId}/attachments`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(1);
+      expect(listResponse.body.data[0].id).toBe(response.body.data.id);
+    });
+
+    it("rejects confirm with 400 when the real downloaded content type isn't in the allowlist, and never persists a row", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const recordId = await createRecord(cookie);
+      const pathname = `business-knowledge/${recordId}/malware.exe`;
+      fakeBlobAdapter.seed(pathname, Buffer.from("MZ"), "application/x-msdownload");
+
+      await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/attachments/confirm`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname, filename: "malware.exe" })
+        .expect(400);
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordId}/attachments`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(0);
+    });
+
+    it("rejects confirm with 400 for a pathname that doesn't belong to the record in the URL", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const recordId = await createRecord(cookie);
+      await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/attachments/confirm`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname: `business-knowledge/${randomUUID()}/x.md`, filename: "x.md" })
+        .expect(400);
+    });
+
+    it("denies confirm/delete with 403 for a read_only session (V grant only, not E)", async () => {
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const recordId = await createRecord(adminCookie);
+      const readOnlyCookie = await cookieForNewSession(readOnlyUserId);
+
+      await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/attachments/confirm`)
+        .set("Cookie", readOnlyCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname: `business-knowledge/${recordId}/x.md`, filename: "x.md" })
+        .expect(403);
+    });
+
+    it("streams real attachment content through the proxy route with the correct content type", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const recordId = await createRecord(cookie);
+      const pathname = `business-knowledge/${recordId}/report.pdf`;
+      fakeBlobAdapter.seed(pathname, Buffer.from("%PDF-1.4 fake pdf bytes"), "application/pdf");
+      const confirmResponse = await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/attachments/confirm`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname, filename: "report.pdf" })
+        .expect(201);
+      const attachmentId = confirmResponse.body.data.id as string;
+
+      const contentResponse = await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordId}/attachments/${attachmentId}/content`)
+        .set("Cookie", cookie)
+        .buffer(true)
+        .parse((res, callback) => {
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk: Buffer) => chunks.push(chunk));
+          res.on("end", () => callback(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+      expect(contentResponse.headers["content-type"]).toBe("application/pdf");
+      expect(contentResponse.headers["cache-control"]).toBe("private, no-cache");
+      expect((contentResponse.body as Buffer).toString()).toBe("%PDF-1.4 fake pdf bytes");
+    });
+
+    it("deletes an attachment: the row is gone from the list, and the content route 404s afterward", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const recordId = await createRecord(cookie);
+      const pathname = `business-knowledge/${recordId}/x.md`;
+      fakeBlobAdapter.seed(pathname, Buffer.from("x"), "text/markdown");
+      const confirmResponse = await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/attachments/confirm`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname, filename: "x.md" })
+        .expect(201);
+      const attachmentId = confirmResponse.body.data.id as string;
+
+      await request(app.getHttpServer())
+        .delete(`/business-knowledge/records/${recordId}/attachments/${attachmentId}`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(200);
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordId}/attachments`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(0);
+
+      await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordId}/attachments/${attachmentId}/content`)
+        .set("Cookie", cookie)
+        .expect(404);
+    });
+
+    it("IDOR guard: an attachment can't be fetched or deleted through a different record's route", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const recordAId = await createRecord(cookie);
+      const recordBId = await createRecord(cookie);
+      const pathname = `business-knowledge/${recordAId}/x.md`;
+      fakeBlobAdapter.seed(pathname, Buffer.from("x"), "text/markdown");
+      const confirmResponse = await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordAId}/attachments/confirm`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname, filename: "x.md" })
+        .expect(201);
+      const attachmentId = confirmResponse.body.data.id as string;
+
+      await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordBId}/attachments/${attachmentId}/content`)
+        .set("Cookie", cookie)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .delete(`/business-knowledge/records/${recordBId}/attachments/${attachmentId}`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .expect(404);
+
+      // Never actually deleted via the wrong record's route.
+      const listResponse = await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordAId}/attachments`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(1);
+    });
+
+    it("redacts attachments (returns an empty list) for a restricted record — zero-seeded view_confidential, same as content/notes", async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const recordId = await createRecord(cookie);
+      const pathname = `business-knowledge/${recordId}/x.md`;
+      fakeBlobAdapter.seed(pathname, Buffer.from("x"), "text/markdown");
+      const confirmResponse = await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/attachments/confirm`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pathname, filename: "x.md" })
+        .expect(201);
+      const attachmentId = confirmResponse.body.data.id as string;
+
+      await request(app.getHttpServer())
+        .post(`/business-knowledge/records/${recordId}/status`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ status: "restricted" })
+        .expect(200);
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordId}/attachments`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listResponse.body.data).toHaveLength(0);
+
+      await request(app.getHttpServer())
+        .get(`/business-knowledge/records/${recordId}/attachments/${attachmentId}/content`)
+        .set("Cookie", cookie)
+        .expect(404);
+    });
   });
 });

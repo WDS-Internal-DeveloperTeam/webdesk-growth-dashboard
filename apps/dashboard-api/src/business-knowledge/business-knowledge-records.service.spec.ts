@@ -79,6 +79,28 @@ describe("BusinessKnowledgeRecordsService", () => {
         }),
       );
     });
+
+    it("strips a <script> tag from content before it ever reaches the repository — the write-time sanitization boundary", async () => {
+      repository.create.mockResolvedValue(record());
+      await service.create(
+        {
+          recordType: "vto",
+          title: "VTO",
+          content: "<p>Safe text</p><script>alert(document.cookie)</script>",
+        },
+        "user-1",
+      );
+      const passedContent = repository.create.mock.calls[0]?.[0]?.content as string;
+      expect(passedContent).toContain("<p>Safe text</p>");
+      expect(passedContent).not.toContain("<script>");
+      expect(passedContent).not.toContain("alert(document.cookie)");
+    });
+
+    it("passes content: null to the repository when no content was sent at all (attachment-only record)", async () => {
+      repository.create.mockResolvedValue(record({ content: null }));
+      await service.create({ recordType: "vto", title: "VTO" }, "user-1");
+      expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ content: null }));
+    });
   });
 
   describe("findById", () => {
@@ -128,6 +150,19 @@ describe("BusinessKnowledgeRecordsService", () => {
         NotFoundException,
       );
       expect(auditService.record).not.toHaveBeenCalled();
+    });
+
+    it("sanitizes content when the patch explicitly includes it", async () => {
+      repository.update.mockResolvedValue(record());
+      await service.update(
+        "record-1",
+        { content: '<p>ok</p><img src=x onerror="alert(1)">' },
+        "user-2",
+      );
+      const passedContent = repository.update.mock.calls[0]?.[1]?.content as string;
+      expect(passedContent).toContain("<p>ok</p>");
+      expect(passedContent).not.toContain("onerror");
+      expect(passedContent).not.toContain("<img");
     });
   });
 

@@ -9,3 +9,4 @@ export {
   type BusinessKnowledgeRecordListFilter,
   type UpdateStatusResult,
 } from "./business-knowledge-record.repository.js";
+export { BusinessKnowledgeAttachmentRepository } from "./business-knowledge-attachment.repository.js";

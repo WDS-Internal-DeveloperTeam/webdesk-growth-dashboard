@@ -13,6 +13,7 @@ import type {
   BusinessKnowledgeRecordType,
 } from "@webdesk/database";
 import { BUSINESS_KNOWLEDGE_RECORD_REPOSITORY } from "./business-knowledge.constants.js";
+import { sanitizeRecordContentHtml } from "./sanitize-html.util.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuditService } from "../audit/audit.service.js";
 
@@ -38,6 +39,13 @@ const ALLOWED_TRANSITIONS: Readonly<
   deprecated: [],
 };
 
+/** `content` is optional at create time (task package: a record may be created empty, with the
+ *  author's real intent being to attach a file right afterward) — sanitize only when a real value
+ *  was actually sent, otherwise pass `null` straight through to the now-nullable column. */
+function sanitizeContentOrNull(content: string | undefined): string | null {
+  return content !== undefined ? sanitizeRecordContentHtml(content) : null;
+}
+
 @Injectable()
 export class BusinessKnowledgeRecordsService {
   constructor(
@@ -50,12 +58,16 @@ export class BusinessKnowledgeRecordsService {
     input: {
       recordType: BusinessKnowledgeRecordType;
       title: string;
-      content: string;
+      content?: string;
       notes?: string | null;
     },
     actorUserId: string,
   ): Promise<BusinessKnowledgeRecordEntity> {
-    const created = await this.records.create({ ...input, createdBy: actorUserId });
+    const created = await this.records.create({
+      ...input,
+      content: sanitizeContentOrNull(input.content),
+      createdBy: actorUserId,
+    });
     await this.auditService.record({
       eventType: "data_change",
       actorUserId,
@@ -88,7 +100,15 @@ export class BusinessKnowledgeRecordsService {
     patch: { title?: string; content?: string; notes?: string | null },
     actorUserId: string,
   ): Promise<BusinessKnowledgeRecordEntity> {
-    const updated = await this.records.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.records.update(id, {
+      ...patch,
+      // Only overwrite content if the caller actually sent a value — `undefined` means "leave it
+      // unchanged", not "clear it"; `patch.content` already only reaches here when present,
+      // Object.assign-style, via `...patch`, so this must not accidentally coerce every edit into
+      // an explicit content: null overwrite.
+      ...(patch.content !== undefined ? { content: sanitizeRecordContentHtml(patch.content) } : {}),
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Business knowledge record not found: ${id}`);
     }
