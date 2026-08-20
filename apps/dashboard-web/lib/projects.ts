@@ -23,6 +23,7 @@ import {
 } from "./projects-query";
 import { isSafeHttpUrl } from "./safe-http-url";
 import { objectiveStatusBadge, projectStatusBadge, roadmapItemStatusBadge } from "./status-badges";
+import { isUuid } from "./uuid";
 import { getUsersByIds } from "./users";
 
 export {
@@ -184,13 +185,9 @@ function tolerateDiscard<T>(promise: Promise<T>): Promise<T> {
   return promise;
 }
 
-/** Matches the `id`/`publicId` shape every `projects`-table UUID column uses — Postgres accepts
- *  either case, so this isn't anchored to a specific UUID version. */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /** The `GET /projects/:projectId` fetch shared by `getProject()` and `getProjectDetail()` below —
  *  `null` on a 404, throws on any other non-OK status. Assumes `projectId` already passed the
- *  `UUID_PATTERN` short-circuit each caller performs before reaching here. */
+ *  `isUuid()` short-circuit each caller performs before reaching here. */
 async function fetchProject(
   apiBaseUrl: string,
   projectId: string,
@@ -216,7 +213,7 @@ async function fetchProject(
  * `repositories`/`team` requests that page's own sub-resource sections need and this one doesn't.
  */
 export async function getProject(projectId: string): Promise<ProjectDetail | null> {
-  if (!UUID_PATTERN.test(projectId)) {
+  if (!isUuid(projectId)) {
     return null;
   }
   const apiBaseUrl = getApiBaseUrl();
@@ -248,7 +245,7 @@ export async function getProject(projectId: string): Promise<ProjectDetail | nul
  * sequential round trip on every normal (project-exists) page view.
  */
 export async function getProjectDetail(projectId: string): Promise<ProjectDetailData | null> {
-  if (!UUID_PATTERN.test(projectId)) {
+  if (!isUuid(projectId)) {
     return null;
   }
 

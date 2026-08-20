@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-business-knowledge-center",
+    "current_gate": "G4-dashboard-web-business-knowledge-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 35
+    "version": 37
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -418,6 +418,20 @@
       "record": "docs/project-state/module-business-knowledge-center-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #43 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule.",
       "merge_resolution_note": "RESOLVED 2026-08-20: PR #43 merged to main under explicit 'Merge PR #43' authorization, merge commit 032fb274920c523c07b252e45cc8bc0f097c8b4e, all 14 CI checks green beforehand. Both Vercel projects auto-deployed on push to main and were verified live directly -- dashboard-api's /health returned build.commitSha == 032fb274920c523c07b252e45cc8bc0f097c8b4e, confirming the exact merged commit is what's actually serving; dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor, confirming the session gate is intact. This note is appended rather than rewriting the gate's own historical pre-merge text, which accurately reflected the state at gate-approval time."
+    },
+    {
+      "id": "G4-dashboard-web-business-knowledge-center",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-business-knowledge-center",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-20T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web Business Knowledge Center UI (branch dashboard-web-business-knowledge-center, PR #44) -- the dashboard-web frontend for the Business Knowledge Center module, closing its last named gap (the backend, PR #43, was live in production with no dashboard-web UI). No approved wireframe/spec exists for these screens; every screen renders exactly what the already-reviewed, already-gated backend returns and supports, matching the Projects module's own list/detail/form pages' precedent. Four routes under /business-knowledge-center (list, detail, create, edit), a status-transition action mirroring the backend's 5-state ALLOWED_TRANSITIONS by hand, and new shared types with content/notes typed as genuinely optional (honestly reflecting the backend's confidential-field redaction, which deletes both keys outright for a restricted record when the caller lacks view_confidential). A redacted field renders as an inert notice in the edit form and is omitted entirely from the submit payload, rather than coerced to an empty string that could silently overwrite real confidential content. Independent code review (high effort, 8 finder angles, 1-vote verification) surfaced 20 candidates after dedup, 10 kept in the final report per the review's own cap: 8 CONFIRMED, all fixed -- most severe adding ConflictException to lib/api-errors.ts's SAFE_MESSAGE_CODES silently changed error-message behavior for the already-shipped Projects approver-assignment flow, with a doc comment falsely claiming Business Knowledge was 'the only route' that could throw one (fixed by correcting the comment and adding a dedicated regression test locking in the new, verified-benign behavior on that path). Also fixed: redundant contentRedacted/notesRedacted flags collapsed to one (verified against actual backend behavior, not speculation); UUID_PATTERN and firstValue() duplication extracted into new shared lib/uuid.ts and lib/search-params.ts; duplicated table-cell styles extracted into lib/list-table-styles.ts; a duplicated notes-normalization ternary hoisted; a missing console.error added with test coverage. One CONFIRMED finding (the list page over-fetching full content/notes for every row) is real but not fixable within this dashboard-web-only branch's scope -- flagged as known, out-of-scope debt rather than fixed. 2 PLAUSIBLE findings (a status-badge lookup with no fallback; the record-type/status enum triplicated across three files) left as accepted, tracked debt -- both inherited, already-accepted patterns from sibling code elsewhere in this app, not new regressions this PR introduces. Security review (run separately) found 0 findings above threshold -- 2 candidates surfaced (a 'change status to unlock confidential content' UI-text concern, and the list-page over-fetch) were each independently re-verified against the actual code and git history and refuted: the redaction-bypass mechanism is entirely pre-existing backend code from the already-merged, already-security-reviewed PR #43 (confirmed via git diff/git log showing zero backend files touched by this branch), and the over-fetch crosses no authorization boundary. Final numbers: 223/223 dashboard-web unit tests, typecheck/lint/check-css-tokens.mjs/next build/prettier all clean, 15/15 Playwright tests passing. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-20, decision 'Approved as-is', accepting the 2 open PLAUSIBLE findings and the flagged out-of-scope debt item, no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md and its 'Sign-off' section.",
+      "approved_commit": "5d11d63",
+      "record": "docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #44 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -1380,6 +1394,38 @@
       },
       "project_version_before": 34,
       "project_version_after": 35
+    },
+    {
+      "timestamp": "2026-08-20T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "reviewed the dashboard-web Business Knowledge Center UI (PR #44) review packet and returned 'Approved as-is'",
+      "details": {
+        "scope": "Full code-review disposition (20 candidates verified after dedup, 10 kept in the final report per the review's own cap -- 8 CONFIRMED all fixed, 1 CONFIRMED flagged as out-of-scope backend debt, 2 PLAUSIBLE accepted as tracked debt) and full security-review disposition (2 candidates surfaced, both independently re-verified and refuted, 0 findings above threshold), for branch dashboard-web-business-knowledge-center, reviewed via the code-review/security-review skill outputs recorded in docs/implementation/dashboard-web-business-knowledge-center.md and the published review packet.",
+        "result": "Satisfies ADR-0010's separation-of-duties requirement for this slice -- the implementing agent could not also be its own reviewer. Recorded in docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md's 'Sign-off' section. A gate decision and merge authorization remain separate, not-yet-requested next steps.",
+        "reviewed_commit": "5d11d63578ac9828cabbe5f4fc4f519fa2fdd3a3",
+        "branch": "dashboard-web-business-knowledge-center",
+        "pr": 44
+      },
+      "project_version_before": 35,
+      "project_version_after": 36
+    },
+    {
+      "timestamp": "2026-08-20T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-dashboard-web-business-knowledge-center for dashboard-web-business-knowledge-center (PR #44) -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-dashboard-web-business-knowledge-center",
+        "scope": "dashboard-web-business-knowledge-center",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-20, decision 'Approved as-is', accepting the 2 open PLAUSIBLE findings and the flagged out-of-scope debt item, no disputes raised) was already complete before the gate was requested. See docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "5d11d63",
+        "branch": "dashboard-web-business-knowledge-center",
+        "pr": 44
+      },
+      "project_version_before": 36,
+      "project_version_after": 37
     }
   ]
 }

@@ -8,6 +8,7 @@ import {
   typographyTokens,
 } from "@webdesk/ui";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import { listTableCellStyle, listTableHeaderCellStyle } from "@/lib/list-table-styles";
 import { getServerSession } from "@/lib/server-session";
 import {
   buildProjectsHref,
@@ -238,22 +239,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   );
 }
 
-const thStyle: React.CSSProperties = {
-  textAlign: "left",
-  padding: "0.6rem 0.75rem",
-  borderBottom: "1px solid var(--webdesk-dashboard-color-border)",
-  fontSize: "0.75rem",
-  color: "var(--webdesk-dashboard-color-foreground-subtle)",
-  fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "0.6rem 0.75rem",
-  borderBottom: "1px solid var(--webdesk-dashboard-color-border)",
-  verticalAlign: "middle",
-};
+const thStyle = listTableHeaderCellStyle;
+const tdStyle = listTableCellStyle;
 
 function SortableHeader({
   column,

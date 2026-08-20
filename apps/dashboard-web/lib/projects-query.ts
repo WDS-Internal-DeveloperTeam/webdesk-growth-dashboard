@@ -12,6 +12,8 @@
  * existing server-side call site is unaffected.
  */
 
+import { firstValue } from "./search-params";
+
 export const PROJECTS_PAGE_SIZE = 25;
 
 const STATUS_VALUES = ["active", "paused", "archived"] as const;
@@ -37,10 +39,6 @@ const DEFAULT_QUERY: ProjectsQuery = {
   sortOrder: "DESC",
   offset: 0,
 };
-
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 /**
  * Next.js `searchParams` is untrusted client input (a reader can type anything into the URL) —
