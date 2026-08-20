@@ -10,12 +10,19 @@ import type {
   RoadmapItem,
   UserSummary,
 } from "@webdesk/shared-types";
-import type { StatusToken } from "@webdesk/ui";
 import { getApiBaseUrl } from "./auth";
 import { formatTimestamp } from "./format-timestamp";
+import { isSafeHttpUrl } from "./safe-http-url";
+import { objectiveStatusBadge, projectStatusBadge, roadmapItemStatusBadge } from "./status-badges";
 import { getUsersByIds } from "./users";
 
-export { formatTimestamp };
+export {
+  formatTimestamp,
+  isSafeHttpUrl,
+  objectiveStatusBadge,
+  projectStatusBadge,
+  roadmapItemStatusBadge,
+};
 
 export const PROJECTS_PAGE_SIZE = 25;
 
@@ -110,22 +117,6 @@ export function buildProjectsHref(
   return queryString ? `/projects?${queryString}` : "/projects";
 }
 
-const STATUS_BADGE: Readonly<Record<ProjectStatusFilter, { token: StatusToken; label: string }>> = {
-  active: { token: "healthy", label: "Active" },
-  paused: { token: "degraded", label: "Paused" },
-  archived: { token: "unknown", label: "Archived" },
-};
-
-/** Maps a project's lifecycle status (D2, `docs/task-packages/module-projects-foundation.md`) onto
- *  the shared design system's semantic status tokens — active/paused/archived are this module's own
- *  vocabulary, not one of `statusTokens`' keys, so this is the one place that translation happens. */
-export function projectStatusBadge(status: ProjectStatusFilter): {
-  readonly token: StatusToken;
-  readonly label: string;
-} {
-  return STATUS_BADGE[status];
-}
-
 export interface ProjectsPageResult {
   readonly items: readonly Project[];
   /** Whether a real next page exists — determined by actually requesting one row past the
@@ -168,55 +159,6 @@ export async function getProjects(query: ProjectsQuery): Promise<ProjectsPageRes
     items: body.data.slice(0, PROJECTS_PAGE_SIZE),
     hasNextPage: body.data.length > PROJECTS_PAGE_SIZE,
   };
-}
-
-/**
- * Guards a stored URL before it's ever rendered as a clickable `<a href>`. The backend's own
- * validation (`z.string().url()` on `ProjectEnvironment.url`) only confirms the value parses as
- * *some* URL — a `javascript:` URI parses successfully and passes it, so it can reach this page
- * unsanitized. Rendering an unchecked value as an `href` would execute it as script on click, in
- * the viewer's own authenticated session. `http:`/`https:` are the only schemes this app ever
- * intends to link to, so anything else is rendered as inert text instead (see the detail page).
- */
-export function isSafeHttpUrl(value: string): boolean {
-  try {
-    const protocol = new URL(value).protocol;
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-const ROADMAP_ITEM_STATUS_BADGE: Readonly<
-  Record<RoadmapItem["status"], { token: StatusToken; label: string }>
-> = {
-  not_started: { token: "unknown", label: "Not started" },
-  active: { token: "healthy", label: "Active" },
-  complete: { token: "healthy", label: "Complete" },
-  skipped: { token: "notConfigured", label: "Skipped" },
-};
-
-/** `active`/`complete` share the `healthy` token — both are non-problem states and the label text
- *  (not color alone) disambiguates them, same reasoning `projectStatusBadge` already establishes. */
-export function roadmapItemStatusBadge(status: RoadmapItem["status"]): {
-  readonly token: StatusToken;
-  readonly label: string;
-} {
-  return ROADMAP_ITEM_STATUS_BADGE[status];
-}
-
-const OBJECTIVE_STATUS_BADGE: Readonly<
-  Record<ProjectObjective["status"], { token: StatusToken; label: string }>
-> = {
-  open: { token: "unknown", label: "Open" },
-  complete: { token: "healthy", label: "Complete" },
-};
-
-export function objectiveStatusBadge(status: ProjectObjective["status"]): {
-  readonly token: StatusToken;
-  readonly label: string;
-} {
-  return OBJECTIVE_STATUS_BADGE[status];
 }
 
 /** A team-roster entry with its `userId` resolved to a display identity where possible — `user` is

@@ -2,18 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
 import { ProjectApproversSection } from "@/components/project-approvers-section";
+import { ProjectEnvironmentsSection } from "@/components/project-environments-section";
+import { ProjectObjectivesSection } from "@/components/project-objectives-section";
+import { ProjectRepositoriesSection } from "@/components/project-repositories-section";
+import { ProjectRoadmapSection } from "@/components/project-roadmap-section";
 import { ProjectStatusActions } from "@/components/project-status-actions";
 import { ProjectTeamSection } from "@/components/project-team-section";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
-import {
-  formatTimestamp,
-  getProjectDetail,
-  isSafeHttpUrl,
-  objectiveStatusBadge,
-  projectStatusBadge,
-  roadmapItemStatusBadge,
-} from "@/lib/projects";
+import { formatTimestamp, getProjectDetail, projectStatusBadge } from "@/lib/projects";
 import { getApproverRoleId } from "@/lib/roles";
 import { getServerSession } from "@/lib/server-session";
 
@@ -119,89 +116,26 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
       <section style={sectionStyle}>
         <h2 style={h2Style}>Roadmap</h2>
-        {roadmapItems.length === 0 ? (
-          <p style={mutedStyle}>No roadmap items yet.</p>
-        ) : (
-          <ol style={listStyle}>
-            {roadmapItems.map((item) => {
-              const itemBadge = roadmapItemStatusBadge(item.status);
-              return (
-                <li key={item.id} style={listItemStyle}>
-                  <span style={sequenceStyle}>{item.sequence}</span>
-                  <span style={itemLabelStyle}>{item.name}</span>
-                  <StatusBadge status={itemBadge.token} label={itemBadge.label} />
-                </li>
-              );
-            })}
-          </ol>
-        )}
+        <ProjectRoadmapSection
+          projectId={project.id}
+          initialRoadmapItems={roadmapItems}
+          initialActivePhaseId={project.activePhaseId}
+        />
       </section>
 
       <section style={sectionStyle}>
         <h2 style={h2Style}>Objectives</h2>
-        {objectives.length === 0 ? (
-          <p style={mutedStyle}>No objectives yet.</p>
-        ) : (
-          <ul style={listStyle}>
-            {objectives.map((objective) => {
-              const objectiveBadge = objectiveStatusBadge(objective.status);
-              return (
-                <li key={objective.id} style={listItemStyle}>
-                  <span style={itemLabelStyle}>{objective.description}</span>
-                  <StatusBadge status={objectiveBadge.token} label={objectiveBadge.label} />
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <ProjectObjectivesSection projectId={project.id} initialObjectives={objectives} />
       </section>
 
       <section style={sectionStyle}>
         <h2 style={h2Style}>Environments</h2>
-        {environments.length === 0 ? (
-          <p style={mutedStyle}>No environments recorded yet.</p>
-        ) : (
-          <ul style={listStyle}>
-            {environments.map((environment) => (
-              <li key={environment.id} style={listItemStyle}>
-                <span style={itemLabelStyle}>{environment.name}</span>
-                {environment.url ? (
-                  isSafeHttpUrl(environment.url) ? (
-                    <a href={environment.url} target="_blank" rel="noopener noreferrer">
-                      {environment.url}
-                    </a>
-                  ) : (
-                    <span style={mutedInlineStyle}>{environment.url}</span>
-                  )
-                ) : (
-                  <span style={mutedInlineStyle}>No URL set</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ProjectEnvironmentsSection projectId={project.id} initialEnvironments={environments} />
       </section>
 
       <section style={sectionStyle}>
         <h2 style={h2Style}>Repositories</h2>
-        {repositories.length === 0 ? (
-          <p style={mutedStyle}>No repositories recorded yet.</p>
-        ) : (
-          <ul style={listStyle}>
-            {repositories.map((repository) => (
-              <li key={repository.id} style={listItemStyle}>
-                <a
-                  href={`https://github.com/${repository.repoOwner}/${repository.repoName}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {repository.repoOwner}/{repository.repoName}
-                </a>
-                <span style={mutedInlineStyle}>{repository.defaultBranch}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ProjectRepositoriesSection projectId={project.id} initialRepositories={repositories} />
       </section>
     </ContentContainer>
   );
@@ -238,40 +172,4 @@ const mutedStyle: React.CSSProperties = {
   fontSize: "0.875rem",
   color: "var(--webdesk-dashboard-color-foreground-muted)",
   margin: 0,
-};
-
-const mutedInlineStyle: React.CSSProperties = {
-  fontSize: "0.875rem",
-  color: "var(--webdesk-dashboard-color-foreground-muted)",
-};
-
-const listStyle: React.CSSProperties = {
-  listStyle: "none",
-  margin: 0,
-  padding: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.5rem",
-};
-
-const listItemStyle: React.CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  alignItems: "center",
-  gap: "0.75rem",
-  padding: "0.6rem 0.75rem",
-  border: "1px solid var(--webdesk-dashboard-color-border)",
-  borderRadius: "0.375rem",
-  fontSize: "0.875rem",
-};
-
-const sequenceStyle: React.CSSProperties = {
-  fontFamily: typographyTokens.fontFamilyMono,
-  color: "var(--webdesk-dashboard-color-foreground-subtle)",
-  minWidth: "1.25rem",
-};
-
-const itemLabelStyle: React.CSSProperties = {
-  flex: 1,
-  minWidth: "10rem",
 };
