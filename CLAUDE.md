@@ -1211,9 +1211,9 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correct
     unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` sidebar & module-grid fix is
     now genuinely live in production.**
 26. **`dashboard-web` sidebar spacing adapted to a Vercel reference; a second, independent real
-    active-link layout bug found and fixed; code-reviewed, security-reviewed; review packet
-    published for second-role human review, not yet second-role reviewed, gated, or merged
-    (2026-08-19).** Not started automatically — after item 25 went live, the user shared a
+    active-link layout bug found and fixed; code-reviewed, security-reviewed, second-role human
+    reviewed (Jitesh D, "Approved as-is"); not yet gated or merged (2026-08-19).** Not started
+    automatically — after item 25 went live, the user shared a
     screenshot of Vercel's own dashboard sidebar and asked to adapt our sidebar's row spacing and
     selection styling toward it (organization/spacing only, keeping our own light palette and
     indigo accent). Widened the sidebar's outer inset, row padding, corner radius, and row gap
@@ -1248,8 +1248,9 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, and `dashboard-web`'s `/home` correct
     (published as a Claude artifact — code review + security review findings, fixes, and
     validation evidence, with a decision section) was then prepared for the required second-role
     human review, since the implementing agent cannot also be its own reviewer (ADR-0010). See
-    `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`. **Awaiting the
-    second-role reviewer's decision** — a gate decision and merge authorization remain separate,
+    `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`. **Jitesh D
+    reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE code-review
+    findings as tracked debt. A gate decision and merge authorization remain separate,
     not-yet-requested next steps.
 
 ## Recent decisions
@@ -3619,9 +3620,14 @@ bd9743966a8b2406eac7656ccb0e8d502463acde`, confirming the exact merged commit is
   security review findings, fixes, and validation evidence, with a decision section) was then
   prepared for the required second-role human review, since the implementing agent cannot also be
   its own reviewer (ADR-0010). See
-  `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`. **Awaiting the
-  second-role reviewer's decision** — a gate decision and merge authorization remain separate,
-  not-yet-requested next steps.
+  `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`.
+- `[2026-08-19]` **Required second-role human review complete for
+  `dashboard-web-sidebar-vercel-spacing` (PR #41).** The review packet (code review + security
+  review findings, fixes, and the 2 open tracked-debt items, with a decision section) was
+  reviewed. **Jitesh D reviewed it and returned "Approved as-is,"** accepting the 2 open PLAUSIBLE
+  code-review findings as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-web-sidebar-vercel-spacing-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
