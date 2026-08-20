@@ -3,8 +3,11 @@
 **Status:** Code review complete (13 candidates verified — 12 CONFIRMED, 1 REFUTED and dropped; 10
 findings kept in the final report per the review's own cap, all 10 fixed and re-validated).
 Security review complete (0 findings above threshold). Required second-role human review complete
-(2026-08-20, Jitesh D, "Approved as-is"). Gate decision and merge authorization remain separate,
-not-yet-requested next steps.
+(2026-08-20, Jitesh D, "Approved as-is"). **The gate (G4-subresource-editing) was then separately
+requested and approved** — WebDesk Solution, decision CONFIRM, 2026-08-20, approved commit
+`2df707e` on branch `dashboard-web-subresource-editing` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Merge authorization remains a
+separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -52,8 +55,10 @@ this slice can be requested.
 
 ## Sign-off
 
-**Second-role human review: complete.** A gate decision and merge authorization remain each their
-own separate, not-yet-requested next step, unchanged from this project's standing discipline.
+**Second-role human review: complete. Gate G4-subresource-editing: approved.** Both were their own
+separate, explicit human step, per every prior phase's own pattern of keeping the review and the
+gate decision distinct — the gate was requested, and approved, only after the review above was
+already recorded as complete.
 
 | Field                         | Value                                                                                                                                                                                                                           |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -63,6 +68,16 @@ own separate, not-yet-requested next step, unchanged from this project's standin
 | Scope reviewed                | Full code-review disposition (10 findings fixed and re-validated) and full security-review disposition (0 findings), per this slice's own review outputs recorded in `docs/implementation/dashboard-web-subresource-editing.md` |
 | Disputes raised               | None recorded                                                                                                                                                                                                                   |
 
-| Role                          | Name     | Decision         | Date       |
-| ----------------------------- | -------- | ---------------- | ---------- |
-| Reviewer (second-role review) | Jitesh D | ☑ Approved as-is | 2026-08-20 |
+| Field                    | Value                                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-subresource-editing                                                                                                                              |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                    |
+| Gate date                | 2026-08-20                                                                                                                                          |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                   |
+| Approved commit          | `2df707e` on branch `dashboard-web-subresource-editing` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record       |
+| Scope                    | `dashboard-web` Roadmap/Objectives/Environments/Repositories editing only (PR #42). Merge authorization is a separate, not-yet-requested next step. |
+
+| Role                          | Name             | Decision         | Date       |
+| ----------------------------- | ---------------- | ---------------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved as-is | 2026-08-20 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM        | 2026-08-20 |
