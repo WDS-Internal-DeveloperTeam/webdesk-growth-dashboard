@@ -3,10 +3,11 @@ import type {
   BusinessKnowledgeRecordType,
 } from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
+import { DEFAULT_PAGE_SIZE, parsePageSize, type PageSize } from "./pagination";
 import { firstValue } from "./search-params";
 
 /**
- * `BUSINESS_KNOWLEDGE_PAGE_SIZE`/`BusinessKnowledgeQuery`/`parseBusinessKnowledgeSearchParams`/
+ * `BusinessKnowledgeQuery`/`parseBusinessKnowledgeSearchParams`/
  * `buildBusinessKnowledgeHref`/the record-type and status label+badge maps live in their own file
  * with zero non-type imports, rather than in `lib/business-knowledge.ts` where the server-side
  * fetch functions live — so a `"use client"` component can import them directly without pulling in
@@ -15,8 +16,6 @@ import { firstValue } from "./search-params";
  * has already flagged that gap twice (`formatTimestamp` and the roadmap/objectives status-badge
  * extractions), so this file is written the client-safe way from the start rather than reactively.
  */
-
-export const BUSINESS_KNOWLEDGE_PAGE_SIZE = 25;
 
 // Mirrors packages/database/src/business-knowledge/entities.ts's BusinessKnowledgeRecordType.
 const RECORD_TYPE_VALUES: readonly BusinessKnowledgeRecordType[] = [
@@ -76,6 +75,7 @@ export interface BusinessKnowledgeQuery {
   readonly recordType: BusinessKnowledgeRecordType | null;
   readonly status: BusinessKnowledgeRecordStatus | null;
   readonly offset: number;
+  readonly pageSize: PageSize;
 }
 
 /**
@@ -103,6 +103,7 @@ export function parseBusinessKnowledgeSearchParams(
       ? (status as BusinessKnowledgeRecordStatus)
       : null,
     offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
+    pageSize: parsePageSize(firstValue(raw.pageSize)),
   };
 }
 
@@ -123,6 +124,7 @@ export function buildBusinessKnowledgeHref(
   const params = new URLSearchParams();
   if (next.recordType) params.set("recordType", next.recordType);
   if (next.status) params.set("status", next.status);
+  if (next.pageSize !== DEFAULT_PAGE_SIZE) params.set("pageSize", String(next.pageSize));
   if (next.offset > 0) params.set("offset", String(next.offset));
   const queryString = params.toString();
   return queryString ? `/business-knowledge-center?${queryString}` : "/business-knowledge-center";

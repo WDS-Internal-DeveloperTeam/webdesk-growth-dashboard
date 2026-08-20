@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import type { ApiSuccessResponse, BusinessKnowledgeRecord } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
 import {
-  BUSINESS_KNOWLEDGE_PAGE_SIZE,
   buildBusinessKnowledgeHref,
   businessKnowledgeStatusBadge,
   parseBusinessKnowledgeSearchParams,
@@ -13,7 +12,6 @@ import { formatTimestamp } from "./format-timestamp";
 import { isUuid } from "./uuid";
 
 export {
-  BUSINESS_KNOWLEDGE_PAGE_SIZE,
   buildBusinessKnowledgeHref,
   businessKnowledgeStatusBadge,
   formatTimestamp,
@@ -24,7 +22,7 @@ export type { BusinessKnowledgeQuery };
 
 export interface BusinessKnowledgeListResult {
   readonly items: readonly BusinessKnowledgeRecord[];
-  /** Same "request one row past the display page size" technique `getProjects()` uses — `GET
+  /** Same "request one row past the chosen page size" technique `getProjects()` uses — `GET
    *  /business-knowledge/records` returns no total count to check against. */
   readonly hasNextPage: boolean;
 }
@@ -42,7 +40,7 @@ export async function getBusinessKnowledgeRecords(
   const params = new URLSearchParams();
   if (query.recordType) params.set("recordType", query.recordType);
   if (query.status) params.set("status", query.status);
-  params.set("limit", String(BUSINESS_KNOWLEDGE_PAGE_SIZE + 1));
+  params.set("limit", String(query.pageSize + 1));
   params.set("offset", String(query.offset));
 
   const response = await fetch(`${apiBaseUrl}/business-knowledge/records?${params.toString()}`, {
@@ -54,8 +52,8 @@ export async function getBusinessKnowledgeRecords(
   }
   const body = (await response.json()) as ApiSuccessResponse<readonly BusinessKnowledgeRecord[]>;
   return {
-    items: body.data.slice(0, BUSINESS_KNOWLEDGE_PAGE_SIZE),
-    hasNextPage: body.data.length > BUSINESS_KNOWLEDGE_PAGE_SIZE,
+    items: body.data.slice(0, query.pageSize),
+    hasNextPage: body.data.length > query.pageSize,
   };
 }
 

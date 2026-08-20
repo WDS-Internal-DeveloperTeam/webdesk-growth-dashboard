@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { BusinessKnowledgeRecord } from "@webdesk/shared-types";
 import { ContentContainer, EmptyState, PageHeader, StatusBadge } from "@webdesk/ui";
+import { PageSizeSelect } from "@/components/page-size-select";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import {
-  BUSINESS_KNOWLEDGE_PAGE_SIZE,
   buildBusinessKnowledgeHref,
   businessKnowledgeStatusBadge,
   formatTimestamp,
@@ -67,7 +67,18 @@ export default async function BusinessKnowledgeListPage({
           >
             Record type
           </span>
-          <select name="recordType" defaultValue={query.recordType ?? ""} style={selectStyle}>
+          {/* `key` forces React to remount this select whenever the underlying filter value
+              changes, including back to "" on Clear filters. Without it, a Next.js `<Link>`
+              soft-navigation re-renders this same DOM node in place, and an uncontrolled
+              `<select>`'s `defaultValue` is only honored on the node's *first* mount — the
+              browser keeps showing whatever the reader last picked even after the URL (and every
+              other prop) has reset. */}
+          <select
+            key={query.recordType ?? "all-record-types"}
+            name="recordType"
+            defaultValue={query.recordType ?? ""}
+            style={selectStyle}
+          >
             <option value="">All record types</option>
             {RECORD_TYPE_VALUES.map((value) => (
               <option key={value} value={value}>
@@ -85,7 +96,12 @@ export default async function BusinessKnowledgeListPage({
           >
             Status
           </span>
-          <select name="status" defaultValue={query.status ?? ""} style={selectStyle}>
+          <select
+            key={query.status ?? "all-statuses"}
+            name="status"
+            defaultValue={query.status ?? ""}
+            style={selectStyle}
+          >
             <option value="">All statuses</option>
             {STATUS_VALUES.map((value) => (
               <option key={value} value={value}>
@@ -127,7 +143,7 @@ export default async function BusinessKnowledgeListPage({
             isPastLastPage ? (
               <Link
                 href={buildBusinessKnowledgeHref(query, {
-                  offset: Math.max(0, query.offset - BUSINESS_KNOWLEDGE_PAGE_SIZE),
+                  offset: Math.max(0, query.offset - query.pageSize),
                 })}
                 style={{ fontSize: "0.875rem" }}
               >
@@ -172,25 +188,31 @@ export default async function BusinessKnowledgeListPage({
             <span style={{ color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
               Showing {query.offset + 1}–{query.offset + records.length}
             </span>
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              {query.offset > 0 ? (
-                <Link
-                  href={buildBusinessKnowledgeHref(query, {
-                    offset: Math.max(0, query.offset - BUSINESS_KNOWLEDGE_PAGE_SIZE),
-                  })}
-                >
-                  Previous
-                </Link>
-              ) : null}
-              {hasNextPage ? (
-                <Link
-                  href={buildBusinessKnowledgeHref(query, {
-                    offset: query.offset + BUSINESS_KNOWLEDGE_PAGE_SIZE,
-                  })}
-                >
-                  Next
-                </Link>
-              ) : null}
+            <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+              <PageSizeSelect
+                value={query.pageSize}
+                buildHref={(pageSize) => buildBusinessKnowledgeHref(query, { pageSize })}
+              />
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                {query.offset > 0 ? (
+                  <Link
+                    href={buildBusinessKnowledgeHref(query, {
+                      offset: Math.max(0, query.offset - query.pageSize),
+                    })}
+                  >
+                    Previous
+                  </Link>
+                ) : null}
+                {hasNextPage ? (
+                  <Link
+                    href={buildBusinessKnowledgeHref(query, {
+                      offset: query.offset + query.pageSize,
+                    })}
+                  >
+                    Next
+                  </Link>
+                ) : null}
+              </div>
             </div>
           </div>
         </>

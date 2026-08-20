@@ -20,17 +20,18 @@ import {
 } from "../../lib/projects.js";
 
 describe("parseProjectsSearchParams", () => {
-  it("defaults to updatedAt DESC with no filters when nothing is provided", () => {
+  it("defaults to updatedAt DESC with no filters, pageSize 20, when nothing is provided", () => {
     expect(parseProjectsSearchParams({})).toEqual({
       search: null,
       status: null,
       sortBy: "updatedAt",
       sortOrder: "DESC",
       offset: 0,
+      pageSize: 20,
     });
   });
 
-  it("parses valid search, status, sort, and offset values", () => {
+  it("parses valid search, status, sort, offset, and pageSize values", () => {
     expect(
       parseProjectsSearchParams({
         search: "acme",
@@ -38,6 +39,7 @@ describe("parseProjectsSearchParams", () => {
         sortBy: "name",
         sortOrder: "ASC",
         offset: "25",
+        pageSize: "50",
       }),
     ).toEqual({
       search: "acme",
@@ -45,6 +47,7 @@ describe("parseProjectsSearchParams", () => {
       sortBy: "name",
       sortOrder: "ASC",
       offset: 25,
+      pageSize: 50,
     });
   });
 
@@ -55,6 +58,7 @@ describe("parseProjectsSearchParams", () => {
         sortBy: "ownerUserId",
         sortOrder: "sideways",
         offset: "not-a-number",
+        pageSize: "1000",
       }),
     ).toEqual({
       search: null,
@@ -62,6 +66,7 @@ describe("parseProjectsSearchParams", () => {
       sortBy: "updatedAt",
       sortOrder: "DESC",
       offset: 0,
+      pageSize: 20,
     });
   });
 
@@ -90,6 +95,7 @@ describe("buildProjectsHref", () => {
     sortBy: "updatedAt" as const,
     sortOrder: "DESC" as const,
     offset: 0,
+    pageSize: 20 as const,
   };
 
   it("returns the bare /projects path when the query is entirely default", () => {
@@ -116,6 +122,11 @@ describe("buildProjectsHref", () => {
     expect(buildProjectsHref(filtered, { sortBy: "name" })).toBe(
       "/projects?search=acme&status=active&sortBy=name",
     );
+  });
+
+  it("includes a non-default pageSize and resets offset to 0", () => {
+    const paged = { ...baseQuery, offset: 50 };
+    expect(buildProjectsHref(paged, { pageSize: 100 })).toBe("/projects?pageSize=100");
   });
 });
 
@@ -150,11 +161,12 @@ describe("getProjects", () => {
         sortBy: "updatedAt",
         sortOrder: "DESC",
         offset: 0,
+        pageSize: 20,
       }),
     ).rejects.toThrow(/Failed to load projects/);
   });
 
-  it("requests one row past the display page size, to detect a real next page", async () => {
+  it("requests one row past the chosen page size, to detect a real next page", async () => {
     const requestedUrls: string[] = [];
     global.fetch = vi.fn((url: string) => {
       requestedUrls.push(url);
@@ -170,11 +182,37 @@ describe("getProjects", () => {
       sortBy: "name",
       sortOrder: "ASC",
       offset: 25,
+      pageSize: 20,
     });
 
     expect(requestedUrls[0]).toBe(
-      "https://api.example.com/projects?search=acme&status=active&sortBy=name&sortOrder=ASC&limit=26&offset=25",
+      "https://api.example.com/projects?search=acme&status=active&sortBy=name&sortOrder=ASC&limit=21&offset=25",
     );
+  });
+
+  it("honors a non-default pageSize in both the request limit and the trimmed result", async () => {
+    const requestedUrls: string[] = [];
+    const items = Array.from({ length: 11 }, (_, i) => projectFixture(`p${i}`));
+    global.fetch = vi.fn((url: string) => {
+      requestedUrls.push(url);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, data: items, correlationId: "test" }),
+      } as Response);
+    }) as typeof fetch;
+
+    const result = await getProjects({
+      search: null,
+      status: null,
+      sortBy: "updatedAt",
+      sortOrder: "DESC",
+      offset: 0,
+      pageSize: 10,
+    });
+
+    expect(requestedUrls[0]).toContain("limit=11");
+    expect(result.items).toHaveLength(10);
+    expect(result.hasNextPage).toBe(true);
   });
 
   function projectFixture(id: string): Project {
@@ -191,7 +229,7 @@ describe("getProjects", () => {
   }
 
   it("reports hasNextPage: false and returns every row when the backend returns a full page or fewer", async () => {
-    const items = Array.from({ length: 25 }, (_, i) => projectFixture(`p${i}`));
+    const items = Array.from({ length: 20 }, (_, i) => projectFixture(`p${i}`));
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, data: items, correlationId: "test" }),
@@ -203,14 +241,15 @@ describe("getProjects", () => {
       sortBy: "updatedAt",
       sortOrder: "DESC",
       offset: 0,
+      pageSize: 20,
     });
 
-    expect(result.items).toHaveLength(25);
+    expect(result.items).toHaveLength(20);
     expect(result.hasNextPage).toBe(false);
   });
 
   it("reports hasNextPage: true and trims the extra row when the backend returns one more than the page size", async () => {
-    const items = Array.from({ length: 26 }, (_, i) => projectFixture(`p${i}`));
+    const items = Array.from({ length: 21 }, (_, i) => projectFixture(`p${i}`));
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, data: items, correlationId: "test" }),
@@ -222,9 +261,10 @@ describe("getProjects", () => {
       sortBy: "updatedAt",
       sortOrder: "DESC",
       offset: 0,
+      pageSize: 20,
     });
 
-    expect(result.items).toHaveLength(25);
+    expect(result.items).toHaveLength(20);
     expect(result.hasNextPage).toBe(true);
   });
 });

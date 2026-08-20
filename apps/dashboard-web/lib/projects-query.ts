@@ -1,5 +1,5 @@
 /**
- * `PROJECTS_PAGE_SIZE`/`ProjectStatusFilter`/`ProjectSortBy`/`ProjectSortOrder`/`ProjectsQuery`/
+ * `ProjectStatusFilter`/`ProjectSortBy`/`ProjectSortOrder`/`ProjectsQuery`/
  * `parseProjectsSearchParams`/`buildProjectsHref` live in their own file with zero non-type
  * imports, rather than in `lib/projects.ts` where they originated, so a `"use client"` component
  * can import them directly without pulling in `lib/projects.ts`'s `next/headers` import — a value
@@ -12,9 +12,8 @@
  * existing server-side call site is unaffected.
  */
 
+import { DEFAULT_PAGE_SIZE, parsePageSize, type PageSize } from "./pagination";
 import { firstValue } from "./search-params";
-
-export const PROJECTS_PAGE_SIZE = 25;
 
 const STATUS_VALUES = ["active", "paused", "archived"] as const;
 const SORT_BY_VALUES = ["name", "status", "createdAt", "updatedAt"] as const;
@@ -30,6 +29,7 @@ export interface ProjectsQuery {
   readonly sortBy: ProjectSortBy;
   readonly sortOrder: ProjectSortOrder;
   readonly offset: number;
+  readonly pageSize: PageSize;
 }
 
 const DEFAULT_QUERY: ProjectsQuery = {
@@ -38,6 +38,7 @@ const DEFAULT_QUERY: ProjectsQuery = {
   sortBy: "updatedAt",
   sortOrder: "DESC",
   offset: 0,
+  pageSize: DEFAULT_PAGE_SIZE,
 };
 
 /**
@@ -75,6 +76,7 @@ export function parseProjectsSearchParams(
       ? (sortOrder as ProjectSortOrder)
       : DEFAULT_QUERY.sortOrder,
     offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
+    pageSize: parsePageSize(firstValue(raw.pageSize)),
   };
 }
 
@@ -98,6 +100,7 @@ export function buildProjectsHref(
   if (next.status) params.set("status", next.status);
   if (next.sortBy !== DEFAULT_QUERY.sortBy) params.set("sortBy", next.sortBy);
   if (next.sortOrder !== DEFAULT_QUERY.sortOrder) params.set("sortOrder", next.sortOrder);
+  if (next.pageSize !== DEFAULT_QUERY.pageSize) params.set("pageSize", String(next.pageSize));
   if (next.offset > 0) params.set("offset", String(next.offset));
   const queryString = params.toString();
   return queryString ? `/projects?${queryString}` : "/projects";
