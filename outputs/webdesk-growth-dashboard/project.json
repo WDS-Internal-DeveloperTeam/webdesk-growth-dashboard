@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 37
+    "version": 38
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -431,7 +431,8 @@
       "notes": "dashboard-web Business Knowledge Center UI (branch dashboard-web-business-knowledge-center, PR #44) -- the dashboard-web frontend for the Business Knowledge Center module, closing its last named gap (the backend, PR #43, was live in production with no dashboard-web UI). No approved wireframe/spec exists for these screens; every screen renders exactly what the already-reviewed, already-gated backend returns and supports, matching the Projects module's own list/detail/form pages' precedent. Four routes under /business-knowledge-center (list, detail, create, edit), a status-transition action mirroring the backend's 5-state ALLOWED_TRANSITIONS by hand, and new shared types with content/notes typed as genuinely optional (honestly reflecting the backend's confidential-field redaction, which deletes both keys outright for a restricted record when the caller lacks view_confidential). A redacted field renders as an inert notice in the edit form and is omitted entirely from the submit payload, rather than coerced to an empty string that could silently overwrite real confidential content. Independent code review (high effort, 8 finder angles, 1-vote verification) surfaced 20 candidates after dedup, 10 kept in the final report per the review's own cap: 8 CONFIRMED, all fixed -- most severe adding ConflictException to lib/api-errors.ts's SAFE_MESSAGE_CODES silently changed error-message behavior for the already-shipped Projects approver-assignment flow, with a doc comment falsely claiming Business Knowledge was 'the only route' that could throw one (fixed by correcting the comment and adding a dedicated regression test locking in the new, verified-benign behavior on that path). Also fixed: redundant contentRedacted/notesRedacted flags collapsed to one (verified against actual backend behavior, not speculation); UUID_PATTERN and firstValue() duplication extracted into new shared lib/uuid.ts and lib/search-params.ts; duplicated table-cell styles extracted into lib/list-table-styles.ts; a duplicated notes-normalization ternary hoisted; a missing console.error added with test coverage. One CONFIRMED finding (the list page over-fetching full content/notes for every row) is real but not fixable within this dashboard-web-only branch's scope -- flagged as known, out-of-scope debt rather than fixed. 2 PLAUSIBLE findings (a status-badge lookup with no fallback; the record-type/status enum triplicated across three files) left as accepted, tracked debt -- both inherited, already-accepted patterns from sibling code elsewhere in this app, not new regressions this PR introduces. Security review (run separately) found 0 findings above threshold -- 2 candidates surfaced (a 'change status to unlock confidential content' UI-text concern, and the list-page over-fetch) were each independently re-verified against the actual code and git history and refuted: the redaction-bypass mechanism is entirely pre-existing backend code from the already-merged, already-security-reviewed PR #43 (confirmed via git diff/git log showing zero backend files touched by this branch), and the over-fetch crosses no authorization boundary. Final numbers: 223/223 dashboard-web unit tests, typecheck/lint/check-css-tokens.mjs/next build/prettier all clean, 15/15 Playwright tests passing. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-20, decision 'Approved as-is', accepting the 2 open PLAUSIBLE findings and the flagged out-of-scope debt item, no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md and its 'Sign-off' section.",
       "approved_commit": "5d11d63",
       "record": "docs/project-state/dashboard-web-business-knowledge-center-approval-checklist.md",
-      "scope_excludes": "This gate approval does not itself authorize merging PR #44 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+      "scope_excludes": "This gate approval does not itself authorize merging PR #44 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule.",
+      "merge_resolution_note": "RESOLVED 2026-08-20: PR #44 merged to main under explicit 'Merge PR #44' authorization, merge commit c2bc5194d5d0ff9f3aa3971b080b4486dfafb384, all 14 CI checks green beforehand. Both Vercel projects auto-deployed on push to main and were verified live directly -- dashboard-api's /health returned build.commitSha == c2bc5194d5d0ff9f3aa3971b080b4486dfafb384, confirming the exact merged commit is what's actually serving; dashboard-web's new /business-knowledge-center route correctly redirects an unauthenticated visitor to /auth/sign-in (a transient stale-edge-cache 404 on the very first check was ruled out via a cache-busting query param and repeat checks, not a real defect). This note is appended rather than rewriting the gate's own historical pre-merge text, which accurately reflected the state at gate-approval time."
     }
   ],
   "budget": {
@@ -1426,6 +1427,22 @@
       },
       "project_version_before": 36,
       "project_version_after": 37
+    },
+    {
+      "timestamp": "2026-08-20T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "requested and executed merge of PR #44 (dashboard-web-business-knowledge-center) into main",
+      "details": {
+        "pr": 44,
+        "branch": "dashboard-web-business-knowledge-center",
+        "merge_commit": "c2bc5194d5d0ff9f3aa3971b080b4486dfafb384",
+        "ci_status": "All 14 CI checks green before merge",
+        "verification": "dashboard-api's /health returned build.commitSha == c2bc5194d5d0ff9f3aa3971b080b4486dfafb384; dashboard-web's new /business-knowledge-center route correctly redirects an unauthenticated visitor to /auth/sign-in, same as the existing /projects route. Both Vercel projects verified live directly, not just via CI's own Vercel status check.",
+        "result": "The Business Knowledge Center dashboard-web UI is now genuinely live in production."
+      },
+      "project_version_before": 37,
+      "project_version_after": 38
     }
   ]
 }

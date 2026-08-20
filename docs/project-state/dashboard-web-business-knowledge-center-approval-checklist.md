@@ -106,3 +106,22 @@ second-role review was already complete before the gate was requested), approved
 This gate approval does not itself authorize merging PR #44 or a production deployment — merge
 remains its own separate, not-yet-requested authorization, per this project's standing "no
 auto-merge" rule.
+
+## Merge — COMPLETE
+
+**"Merge PR #44" was separately requested and executed.** Waited for all 14 CI checks to go green
+first. Merged with a real merge commit (not squash/rebase), matching every prior merge in this
+project's history — merge commit `c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha == c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`,
+  confirming the exact merged commit is what's serving.
+- `dashboard-web`'s new `/business-knowledge-center` route correctly redirects an unauthenticated
+  visitor to `/auth/sign-in`, same as the existing `/projects` route. The very first check hit a
+  transient stale-edge-cache 404 (the CDN had cached a 404 for that exact URL from before this
+  deployment went live) — a cache-busting query param and repeat checks confirmed the route is
+  stably correct, not a real defect.
+
+**The Business Knowledge Center `dashboard-web` UI — list, detail, create, and edit screens, plus
+status-transition actions — is now genuinely live in production.**
