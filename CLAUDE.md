@@ -1504,7 +1504,8 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     production deployment** — merge remains its own separate, not-yet-requested authorization,
     per this project's standing "no auto-merge" rule.
 30. **Business Knowledge Center — Rich Content & File Attachments — built, fully validated,
-    independently code-reviewed, not yet security-reviewed, gated, or merged (2026-08-20).**
+    independently code-reviewed, security-reviewed, second-role human reviewed (Jitesh D,
+    "Approved as-is"), not yet gated or merged (2026-08-20).**
     `docs/task-packages/business-knowledge-center-rich-content-attachments.md` records the
     original proposal; `docs/implementation/business-knowledge-center-rich-content-attachments.md`
     records the full as-built account. Built directly on the explicit "go ahead and start building
@@ -1589,9 +1590,21 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       removed `router.refresh()` calls), typecheck/lint/`next build`/`nest build`/
       `check-css-tokens.mjs`/prettier all clean, `pnpm audit` 0 vulnerabilities. See
       `docs/implementation/business-knowledge-center-rich-content-attachments.md` §7 for the full
-      account. Security review, second-role human review, a gate decision, and merge authorization
-      are each their own separate, not-yet-requested next step, unchanged from this project's
-      standing discipline.
+      account. **A separate `security-review` skill run then found 0 findings above threshold** —
+      confirmed correct IDOR scoping, correct `restricted`-record redaction, the new same-origin
+      upload proxy is not an open proxy/SSRF vector, the sanitizer allowlist and `transformTags`
+      rel enforcement hold, `markdown-it` runs with `html: false`, XLSX cell text is HTML-escaped,
+      Blob pathnames are prefix-checked with the real storage key stripped from every response, and
+      the content-proxy route's filename is `encodeURIComponent`-escaped — see
+      `docs/implementation/business-knowledge-center-rich-content-attachments.md` §8 for the full
+      account, including one sub-threshold doc-comment observation left unfixed (not independently
+      exploitable). A review packet (published as a Claude artifact — code review findings/fixes,
+      the security review, and validation evidence, with a decision section) was then prepared for
+      the required second-role human review, since the implementing agent cannot also be its own
+      reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the
+      one open CONFIRMED code-review finding (no cleanup mechanism for a Blob object orphaned by an
+      interrupted upload) as tracked debt rather than requesting a fix before merge. A gate decision
+      and merge authorization remain separate, not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -4244,6 +4257,28 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   `next build`/`nest build`/`check-css-tokens.mjs`/prettier all clean across every touched
   package, `pnpm audit` 0 vulnerabilities. **Not yet security-reviewed, second-role human
   reviewed, gated, or merged** — each a separate, not-yet-requested next step.
+- `[2026-08-20]` **Security review run on `business-knowledge-center-rich-content-attachments`
+  (PR #45, reviewed commit `359e9a9`), separately from the code review.** Given this branch is
+  this project's first HTML-storage/rendering surface, the sanitization boundary was treated as
+  its own explicit focus area. **0 findings above the confidence threshold.** Confirmed correct
+  IDOR scoping on every attachment read/write, correct `restricted`-record redaction, the new
+  same-origin upload proxy route is not an open proxy/SSRF vector, the sanitizer allowlist and
+  `transformTags` rel enforcement hold, `markdown-it` runs with `html: false`, XLSX cell text is
+  HTML-escaped before table assembly, Blob pathnames are prefix-checked with the real storage key
+  stripped from every response, and the content-proxy route's filename is
+  `encodeURIComponent`-escaped. One sub-threshold observation recorded, not raised as a finding: a
+  doc comment claims a render-time sanitization pass that isn't actually called — not
+  independently exploitable, since the one write path to that field is already sanitized before
+  persisting. See `docs/implementation/business-knowledge-center-rich-content-attachments.md` §8
+  for the full account. A review packet (published as a Claude artifact — code review
+  findings/fixes, the security review, and validation evidence, with a decision section) was then
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting
+  the one open CONFIRMED code-review finding (no cleanup mechanism for a Blob object orphaned by
+  an interrupted upload) as tracked debt rather than requesting a fix before merge. See
+  `docs/project-state/business-knowledge-center-rich-content-attachments-approval-checklist.md`'s
+  "Sign-off" section. A gate decision and merge authorization remain separate, not-yet-requested
+  next steps.
 
 ## Open client blockers
 

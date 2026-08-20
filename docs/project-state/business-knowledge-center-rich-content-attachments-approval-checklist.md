@@ -2,7 +2,8 @@
 
 **Status:** Built, fully validated, independently code-reviewed (8 of 9 findings fixed, 1
 accepted as tracked debt — see `docs/implementation/business-knowledge-center-rich-content-attachments.md`
-§7). Not yet security-reviewed, second-role human reviewed, gated, or merged.
+§7), security-reviewed (0 findings above threshold), and required second-role human reviewed
+(Jitesh D, "Approved as-is"). Not yet gated or merged.
 
 ## Completion condition
 
@@ -50,17 +51,36 @@ for a review-fix pass. See `docs/implementation/business-knowledge-center-rich-c
 
 ## Independent security review
 
-Not yet run. Given this branch is this project's first HTML-storage/rendering surface, the
-review should treat the sanitization boundary (`sanitize-html.util.ts` / `lib/sanitize-html.ts`)
-as its own explicit focus area, not one finding among many general ones.
+Run against reviewed commit `359e9a9`, with the sanitization boundary
+(`sanitize-html.util.ts` / `lib/sanitize-html.ts`, now the shared `packages/validation`
+`sanitizeRichTextHtml()`) treated as its own explicit focus area, per this project's first
+HTML-storage/rendering surface. **0 findings above the confidence threshold (≥ 8/10).**
+Confirmed: correct IDOR scoping on every attachment read/write; correct `restricted`-record
+redaction (list/content both gated on `view_confidential`); the new same-origin upload proxy
+route is not an open proxy or SSRF vector; the sanitizer allowlist and `transformTags` rel
+enforcement hold; `markdown-it` runs with `html: false` and XLSX cell text is HTML-escaped before
+table assembly; Blob pathnames are prefix-checked identically at token-mint and confirm time with
+the real storage key stripped from every response; the content-proxy route's `Content-Type` is
+always one of 4 fixed values and its filename is `encodeURIComponent`-escaped. One sub-threshold
+observation recorded, not raised as a finding: a doc comment in
+`business-knowledge-attachments-section.tsx` claims a render-time sanitization pass that
+`getBusinessKnowledgeAttachments()` doesn't actually call — not independently exploitable, since
+`extractedPreviewHtml` has exactly one write path and it's already sanitized before persisting;
+worth a doc-comment correction, not a security fix.
 
 ## Required second-role human review
 
-Not yet requested.
+A review packet (published as a Claude artifact — code review findings/fixes, the security
+review, validation evidence, and a decision section) was prepared for the required second-role
+human review, since the implementing agent cannot also be its own reviewer (ADR-0010).
+**Jitesh D reviewed it and returned "Approved as-is,"** accepting the one open CONFIRMED
+code-review finding (no cleanup mechanism for a Blob object orphaned by an interrupted upload) as
+tracked debt rather than requesting a fix before merge.
 
 ## Sign-off
 
-Not yet requested.
+**Jitesh D — Approved as-is.** No disputes raised. A gate decision and merge authorization
+remain separate, not-yet-requested next steps, per this project's standing "no auto-merge" rule.
 
 ## Merge
 

@@ -1,9 +1,10 @@
 # Business Knowledge Center — Rich Content & File Attachments (as-built)
 
 **Status:** Built, fully validated, independently code-reviewed (8 of 9 CONFIRMED/PLAUSIBLE
-findings fixed, 1 left as accepted tracked debt — see §7 below). Not yet security-reviewed,
-gated, or merged. Branch `business-knowledge-center-rich-content-attachments`, off `main` at
-`31001fa` (the commit recording this task package's own scoping).
+findings fixed, 1 left as accepted tracked debt — see §7 below), security-reviewed (0 findings
+above threshold — see §8), and required second-role human reviewed (Jitesh D, "Approved as-is").
+Not yet gated or merged. Branch `business-knowledge-center-rich-content-attachments`, off `main`
+at `31001fa` (the commit recording this task package's own scoping), reviewed commit `359e9a9`.
 
 ## 1. Why this exists
 
@@ -322,3 +323,57 @@ sanitizer including the new `rel`-forcing behavior), 258/258 `dashboard-web` uni
 assertions for the new same-origin upload URL and the removed `router.refresh()` calls),
 typecheck/lint/`next build`/`nest build`/`check-css-tokens.mjs`/prettier all clean across every
 touched package, `pnpm audit` 0 vulnerabilities.
+
+## 8. Independent security review
+
+Run separately from the code review, against reviewed commit `359e9a9`. Given this branch is
+this project's first HTML-storage/rendering surface, the sanitization boundary
+(`sanitize-html.util.ts` / `lib/sanitize-html.ts`, now the shared `packages/validation`
+`sanitizeRichTextHtml()`) was treated as its own explicit focus area, not one finding among many
+general ones.
+
+**0 findings above the confidence threshold (≥ 8/10).** Confirmed correct on every pattern that
+usually goes wrong in this shape of feature:
+
+- **IDOR scoping** — every attachment lookup/delete matches on `(id, recordId)` at the repository
+  layer (`findByIdForRecord`/`deleteForRecord`); no cross-record access via a guessed UUID.
+- **`restricted`-record redaction** — `canSeeAttachments()` correctly gates `list()` and
+  `content()` on `AuthorizationService.canViewConfidential()`, mirroring the records controller's
+  own pattern; a redacted caller gets an empty list / a 404, never a leak.
+- **The new same-origin upload proxy** — fixed destination host (server config, not user input),
+  forwards only the browser's own incoming cookie, sets a correct `Origin` header for
+  `OriginCheckGuard`. Not an open proxy or SSRF vector — `recordId` only parameterizes a path
+  segment on a fixed, already-guarded internal API.
+- **Sanitizer allowlist** — tight tag list, `allowedSchemes: ["http", "https"]`,
+  `allowProtocolRelative: false`, no `style`/`class`/`id`, and the `transformTags` rule correctly
+  forces safe `rel` onto any `target`-carrying `<a>` regardless of source.
+- **Preview generation** — `markdown-it` runs with `html: false` (blocks raw-HTML-in-Markdown
+  injection); XLSX cell text is manually HTML-escaped before table assembly; all generated preview
+  HTML passes through the same sanitizer before caching.
+- **Blob pathnames** — prefix-checked identically at token-mint and confirm time,
+  `addRandomSuffix: true` prevents predictable keys, and `blobPathname` is stripped from every API
+  response.
+- **Content-proxy route** — `Content-Type` is always one of 4 fixed, server-validated MIME
+  strings; the `Content-Disposition` filename is `encodeURIComponent`-escaped, closing header
+  injection via a malicious filename.
+- No SQL/command injection, no `eval`/`Function`/`child_process`, no hardcoded secrets anywhere in
+  the diff.
+
+**One sub-threshold observation, not raised as a finding**: a doc comment in
+`business-knowledge-attachments-section.tsx` claims the initial server-rendered attachment list
+passes through a `dashboard-web` render-time sanitization pass "called from
+`getBusinessKnowledgeAttachments()`" — but that function never actually calls
+`sanitizeRenderedHtml()`. Not independently exploitable: `extractedPreviewHtml` has exactly one
+write path (`confirm()` → `generateAttachmentPreviewHtml()` → `sanitizeAttachmentPreviewHtml()`),
+which always sanitizes before persisting, so there's no way to get unsanitized HTML into that
+field today. Worth a doc-comment correction, not a security fix.
+
+## 9. Required second-role human review
+
+A review packet (published as a Claude artifact — code review findings/fixes from §7, the
+security review from §8, and validation evidence, with a decision section) was prepared for the
+required second-role human review, since the implementing agent cannot also be its own reviewer
+(ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting the one open
+CONFIRMED code-review finding (no cleanup mechanism for a Blob object orphaned by an interrupted
+upload — §7) as tracked debt rather than requesting a fix before merge. A gate decision and merge
+authorization remain separate, not-yet-requested next steps.
