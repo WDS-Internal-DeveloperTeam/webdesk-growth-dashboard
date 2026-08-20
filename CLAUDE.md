@@ -1546,7 +1546,9 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       decisions (upload happens from the detail page, not the create form — an attachment needs a
       real `record_id`; the Blob completion webhook is a no-op by design; one same-session
       preview-sanitization gap left open). Pushed as branch
-      `business-knowledge-center-rich-content-attachments`. Not yet reviewed, gated, or merged —
+      `business-knowledge-center-rich-content-attachments`, opened as
+      [PR #45](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/45).
+      Not yet reviewed, gated, or merged —
       code review, security review, second-role human review, a gate decision, and merge
       authorization are each their own separate, not-yet-requested next step, unchanged from this
       project's standing discipline.

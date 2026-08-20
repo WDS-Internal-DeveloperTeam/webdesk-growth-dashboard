@@ -14,7 +14,7 @@ human reviewed, gated, or merged.
 | 5   | Sanitization boundary explicitly addressed | ✅ Write-time (`dashboard-api`) and render-time (`dashboard-web`) sanitization both implemented and tested — flagged as needing a dedicated, high-effort security review pass, not folded into the general review                    |
 | 6   | Known, deliberate scope decisions flagged  | ✅ Recorded in `docs/implementation/business-knowledge-center-rich-content-attachments.md` §6 — upload location, PDF-as-embed, the no-op webhook, the one same-session sanitization gap                                              |
 | 7   | Documentation updated                      | ✅ `docs/implementation/business-knowledge-center-rich-content-attachments.md`                                                                                                                                                       |
-| 8   | Exact branch/commit verified and recorded  | Branch `business-knowledge-center-rich-content-attachments`, off `main` at `31001fa`                                                                                                                                                 |
+| 8   | Exact branch/commit verified and recorded  | Branch `business-knowledge-center-rich-content-attachments`, off `main` at `31001fa`, [PR #45](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/45)                                                       |
 
 ## Forbidden-actions check
 
