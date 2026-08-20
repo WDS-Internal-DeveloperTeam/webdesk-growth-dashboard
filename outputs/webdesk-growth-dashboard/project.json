@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-subresource-editing",
+    "current_gate": "G4-business-knowledge-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-19T00:00:00Z",
-    "version": 32
+    "updated_at": "2026-08-20T00:00:00Z",
+    "version": 34
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -403,6 +403,20 @@
       "approved_commit": "2df707e",
       "record": "docs/project-state/dashboard-web-subresource-editing-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #42 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-business-knowledge-center",
+      "type": "qa-security-gate",
+      "scope": "module-business-knowledge-center",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-20T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Business Knowledge Center backend (branch module-business-knowledge-center, PR #43) -- the second real business-module backend built on the Phase 1F application shell / canonical module registry, after Projects, closing the first of the 21 real business-module endpoints named in the phase plan. Backend only; dashboard-web UI is a separate, not-yet-requested next step. The canonical spec names 10 primary-record types and a 5-value status vocabulary but gives no field-level schema, workflow doc, or wireframes -- design decisions D1-D6 fill the gap explicitly, flagged as proposed, not spec-sourced. An advisory-only roadmap note proposed a Git+Postgres storage split with no basis in the canonical spec -- surfaced to the user directly rather than silently adopted; pure DB-backed CRUD was chosen after confirming realistic storage sizing. One generic business_knowledge_records table with a record_type discriminator, organization-wide (no project_id), content authoring (create/edit) split from status governance (approve) into separate endpoints/RBAC actions so the real RBAC matrix distinction (marketing_editor holds VCES but not A) is actually enforceable -- verified directly via e2e test. Independent code review (high effort, 8 finder angles, 1-vote verification) surfaced 12 candidates -- 11 CONFIRMED, 1 REFUTED and dropped (the entity-mapping.ts helper 'duplication' -- every module in packages/database independently hand-rolls this exact helper, not a real deviation). 10 findings kept in the final report per the review's own cap: 9 CONFIRMED, all fixed and re-validated -- most severe a TOCTOU race in changeStatus() (fixed with an atomic compare-and-swap mirroring IdempotencyKeyRepository.reserve(), returning a discriminated updated/not_found/conflict result, throwing ConflictException (409) on the race-loser path) and the restricted status classification having no actual access enforcement (fixed by wiring AuthorizationService.canViewConfidential() and redacting content/notes on any restricted record for a caller without that grant, mirroring operational-contacts.controller.ts's own pattern). Also fixed: create()/update() were never audited; a malformed record id crashed with a raw 500 (now ParseUUIDPipe on all three :id routes); list() had no pagination cap (now clamped, mirroring ProjectRepository.list()); retentionCategory was always audit-7y even for an approval-shaped transition (now approval-audit-7y for mandatory/advisory); the status write and its audit event were not transactional (extending AuditService's signature would be a larger cross-cutting change out of proportion here, and this exact non-atomic ordering is already the accepted, shipped pattern in ProjectService.changeStatus() -- the audit call is now wrapped in try/catch with a clear console.error on failure); ALLOWED_TRANSITIONS was asymmetric (mandatory/advisory can now reach draft directly, matching restricted's own symmetry); and the task package falsely claimed packages/shared-types additions were delivered (corrected). 1 PLAUSIBLE finding (no invariant limits how many mandatory/advisory records exist per record_type) left as accepted, tracked debt -- its own verifier concluded the correct invariant is genuinely record-type-dependent and the spec states no rule either way. Security review (run separately) found 0 findings above threshold -- 3 candidates surfaced (unredacted content in the audit trail, no confidential-edit gate on the update route, no separation-of-duties check on self-approval) were each independently re-verified against the actual code and design docs and scored 2/10 confidence; all three turned out to be pre-existing, already-accepted architectural patterns replicated from ProjectService/operational-contacts, not new gaps this branch introduces. Final numbers: 389/389 dashboard-api unit tests, 11/11 packages/database integration tests, 11/11 dashboard-api e2e tests, migration up/down round-trip clean (48 migrations), module-registry validation unaffected (43 modules, 21 permission groups), typecheck/lint/prettier clean, pnpm audit -- 0 vulnerabilities. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-20, decision 'Approved as-is', accepting the 1 open PLAUSIBLE finding as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/module-business-knowledge-center-approval-checklist.md and its 'Sign-off' section.",
+      "approved_commit": "b64a728",
+      "record": "docs/project-state/module-business-knowledge-center-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #43 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -1317,6 +1331,38 @@
       },
       "project_version_before": 34,
       "project_version_after": 35
+    },
+    {
+      "timestamp": "2026-08-20T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "reviewed the Business Knowledge Center backend (PR #43) review packet and returned 'Approved as-is'",
+      "details": {
+        "scope": "Full code-review disposition (12 candidates verified, 11 CONFIRMED/1 REFUTED and dropped; 10 findings kept in the final report -- 9 CONFIRMED all fixed, 1 PLAUSIBLE accepted as tracked debt) and full security-review disposition (3 candidates surfaced, all independently re-verified and scored 2/10 confidence, 0 findings above threshold), for branch module-business-knowledge-center, reviewed via the code-review/security-review skill outputs recorded in docs/implementation/module-business-knowledge-center.md and the published review packet.",
+        "result": "Satisfies ADR-0010's separation-of-duties requirement for this slice -- the implementing agent could not also be its own reviewer. Recorded in docs/project-state/module-business-knowledge-center-approval-checklist.md's 'Sign-off' section. A gate decision and merge authorization remain separate, not-yet-requested next steps.",
+        "reviewed_commit": "b64a728eeba1fc7f395b30a0ef7e702c158019df",
+        "branch": "module-business-knowledge-center",
+        "pr": 43
+      },
+      "project_version_before": 32,
+      "project_version_after": 33
+    },
+    {
+      "timestamp": "2026-08-20T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-business-knowledge-center for module-business-knowledge-center (PR #43) -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-business-knowledge-center",
+        "scope": "module-business-knowledge-center",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-20, decision 'Approved as-is', accepting the 1 open PLAUSIBLE finding as tracked debt, no disputes raised) was already complete before the gate was requested. See docs/project-state/module-business-knowledge-center-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "b64a728",
+        "branch": "module-business-knowledge-center",
+        "pr": 43
+      },
+      "project_version_before": 33,
+      "project_version_after": 34
     }
   ]
 }

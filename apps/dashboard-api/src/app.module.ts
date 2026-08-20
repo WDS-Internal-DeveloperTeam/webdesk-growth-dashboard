@@ -8,6 +8,7 @@ import {
 import { LoggerModule } from "nestjs-pino";
 import { AuthModule } from "./auth/auth.module.js";
 import { AuthzModule } from "./authz/authz.module.js";
+import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { HealthModule } from "./health/health.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
@@ -52,6 +53,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     HealthModule,
     AuthModule,
     AuthzModule,
+    BusinessKnowledgeModule,
     JobsModule,
     NotificationsModule,
     OperationalContactsModule,

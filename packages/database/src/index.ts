@@ -15,3 +15,4 @@ export * from "./operational-contacts/index.js";
 export * from "./retention/index.js";
 export * from "./system-operations/index.js";
 export * from "./projects/index.js";
+export * from "./business-knowledge/index.js";
