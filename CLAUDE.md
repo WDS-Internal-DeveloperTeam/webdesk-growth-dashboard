@@ -1503,6 +1503,27 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     "Sign-off" section. **This gate approval does not itself authorize merging PR #44 or a
     production deployment** — merge remains its own separate, not-yet-requested authorization,
     per this project's standing "no auto-merge" rule.
+30. **Business Knowledge Center — Rich Content & File Attachments task package scoped, not yet
+    authorized to build (2026-08-20).** `docs/task-packages/business-knowledge-center-rich-content-attachments.md`
+    records the full proposal. Prepared directly on the explicit "go ahead with the task package"
+    instruction, following a feasibility question about letting users type rich content or upload
+    DOCX/XLSX/PDF/Markdown files, previewable on both the create form and the detail page. Confirmed
+    via repo search that no rich-text editor, file parser, HTML sanitizer, or Vercel Blob usage
+    exists anywhere in this codebase — fully greenfield. Grounded in real, already-approved policy:
+    `knowledge/08-vercel-blob-and-file-handling.md` already allows DOCX/XLSX/PDF/Markdown (25 MB
+    ceiling), and `integrations/vercel/02-blob-and-postgres.md` mandates a shared
+    `ObjectStorageAdapter` — this would be the project's first real implementation of it, built as
+    reusable infrastructure the separate, future, not-yet-authorized Asset Library module will also
+    need. Nine design decisions recorded (D1–D9), the most consequential being D3: storing and
+    rendering arbitrary HTML is a genuinely new attack surface this project has never carried before
+    (every other page relies on React's automatic escaping specifically because `dangerouslySetInnerHTML`
+    has been flagged as the thing to avoid in this project's own prior security reviews) — mitigated
+    with mandatory sanitization on both the write and read paths and a dedicated, separately-called-out
+    security review before merge, not folded into the general pass. Six open items flagged for a
+    decision before implementation begins (§10), including whether content and attachments coexist
+    on one record, the Tiptap editor choice, PDF-as-embed vs. PDF-as-extracted-text, and that a real
+    Vercel Blob store/token don't appear to be provisioned yet. **Not started** — no branch, no code,
+    no dependency added. Building it requires a separate, explicit "begin this work" instruction.
 
 ## Recent decisions
 
@@ -4091,6 +4112,28 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   404 on the very first check was ruled out via a cache-busting query param and repeat checks, not
   a real defect. **The Business Knowledge Center `dashboard-web` UI — list, detail, create, and
   edit screens, plus status-transition actions — is now genuinely live in production.**
+- `[2026-08-20]` **Production incident: `GET /business-knowledge/records` returning a real `500` in
+  production, reported directly by the user via screenshot ("getting this error when tapping on the
+  business knowledge center").** Diagnosed via live Vercel runtime logs (the user's own
+  authenticated Chrome session): `/health`/`/me`/`/me/navigation`/`/projects` all returned `200` in
+  the identical request bursts, isolating the failure to the one route family the Business Knowledge
+  Center backend (PR #43) added. The real underlying exception wasn't recoverable from Vercel's log
+  capture (only pino-http's generic "request errored" wrapper was found, not NestJS's own
+  `Logger.error()` line), but going back through this session's own actions confirmed the real cause
+  directly: **unlike every other schema change in this project's history, migrations `00047`
+  (creates `business_knowledge_records`) and `00048` (marks the module `in_development`) were never
+  run against the production database after PR #43 merged.** The user was asked to run
+  `pnpm --filter @webdesk/database run migrate` (and `migrate:status` to confirm) themselves, same
+  credential-handling discipline as every prior production migration — **outcome not yet confirmed
+  as of this entry; still open.**
+- `[2026-08-20]` **Business Knowledge Center — Rich Content & File Attachments task package
+  scoped, not yet authorized to build.** See "Active tasks" item 30 above and
+  `docs/task-packages/business-knowledge-center-rich-content-attachments.md` for the full account —
+  a rich-text editor for typed content, file attachments (DOCX/XLSX/PDF/Markdown, already-approved
+  formats), and formatted preview rendering on both the create form and the detail page. The
+  project's first proposed use of Vercel Blob and the `ObjectStorageAdapter` pattern; flags storing/
+  rendering arbitrary HTML as a genuinely new security surface needing its own dedicated review.
+  Six open items recorded for a decision before implementation begins.
 
 ## Open client blockers
 

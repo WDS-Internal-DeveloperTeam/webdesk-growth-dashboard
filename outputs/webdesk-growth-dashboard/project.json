@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 38
+    "version": 39
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -1443,6 +1443,20 @@
       },
       "project_version_before": 37,
       "project_version_after": 38
+    },
+    {
+      "timestamp": "2026-08-20T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "prepared task package: Business Knowledge Center - Rich Content & File Attachments",
+      "details": {
+        "doc": "docs/task-packages/business-knowledge-center-rich-content-attachments.md",
+        "trigger": "explicit \"go ahead with the task package\" instruction, following a feasibility question about rich content and DOCX/XLSX/PDF/Markdown file attachments with formatted preview on both the create form and the detail page",
+        "scope": "rich-text HTML editor (Tiptap) for typed content; file attachments via a new, first-of-its-kind ObjectStorageAdapter/Vercel Blob wiring; server-side preview generation per format (DOCX/XLSX/Markdown to sanitized HTML, PDF as native embed); a shared preview component reused by the create form and the detail page; mandatory HTML sanitization on write and read paths, flagged as needing its own dedicated security review before merge",
+        "status": "scoped only -- not authorized to build. No branch created, no code written, no dependency added.",
+        "project_version_before": 38,
+        "project_version_after": 39
+      }
     }
   ]
 }
