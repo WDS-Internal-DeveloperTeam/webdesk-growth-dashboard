@@ -6,16 +6,17 @@ import type { ApiSuccessResponse, BusinessKnowledgeRecord } from "@webdesk/share
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { RECORD_TYPE_LABEL, RECORD_TYPE_VALUES } from "@/lib/business-knowledge-query";
+import { RichTextEditor } from "./rich-text-editor";
 import styles from "./business-knowledge-record-form.module.css";
 
 export interface BusinessKnowledgeRecordFormInitialValues {
   readonly recordType: BusinessKnowledgeRecord["recordType"];
   readonly title: string;
   /** `undefined` means the record's `content` is currently redacted for this viewer (a `restricted`
-   *  record and no `view_confidential` grant) — see the form's own doc comment for why that's
-   *  distinguishable from "no content" (content is never optional at the data-model level; a real
-   *  record always has non-empty content). */
-  readonly content: string | undefined;
+   *  record and no `view_confidential` grant). `null` means a real, visible record with no typed
+   *  content at all (its content may live entirely in its attachments) — distinct from redaction,
+   *  not a placeholder for it. */
+  readonly content: string | null | undefined;
   /** `undefined` means redacted, same as `content` above. `null` means "genuinely no notes, and
    *  visible" — a real, distinct value from redaction, not a placeholder for it. */
   readonly notes: string | null | undefined;
@@ -33,7 +34,10 @@ export type BusinessKnowledgeRecordFormProps =
 // createBusinessKnowledgeRecordSchema/updateBusinessKnowledgeRecordSchema — kept in sync by hand,
 // same approach components/project-form.tsx already uses for the Projects module.
 const TITLE_MAX_LENGTH = 255;
-const CONTENT_MAX_LENGTH = 50_000;
+// Raised from 50_000 alongside the backend's own CONTENT_MAX_LENGTH bump
+// (business-knowledge-center-rich-content-attachments.md) — content is now HTML from the rich-text
+// editor, carrying real markup overhead over the equivalent plain text.
+const CONTENT_MAX_LENGTH = 100_000;
 const NOTES_MAX_LENGTH = 10_000;
 
 /**
@@ -81,7 +85,9 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
     setSubmitting(true);
     try {
       const trimmedTitle = title.trim();
-      const trimmedContent = content.trim();
+      // The Tiptap editor's own "nothing typed" output is "<p></p>", not "" — both count as no
+      // real content.
+      const isContentEmpty = content.trim() === "" || content.trim() === "<p></p>";
       const trimmedNotes = notes.trim();
       const notesValue = trimmedNotes ? trimmedNotes : null;
 
@@ -90,15 +96,17 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
           ? {
               recordType,
               title: trimmedTitle,
-              content: trimmedContent,
+              // Omitted entirely (never an empty string) when nothing was typed — an attachment-
+              // only record, per the backend's now-nullable content column; sending "" would store
+              // a real empty string instead of the honest "no content" null.
+              ...(isContentEmpty ? {} : { content }),
               notes: notesValue,
             }
           : {
               title: trimmedTitle,
               // Omit entirely when redacted — never send an empty string in place of content the
-              // form never actually loaded, which would fail the backend's own min(1) validation
-              // and, if it somehow didn't, would silently destroy real confidential content.
-              ...(redacted ? {} : { content: trimmedContent, notes: notesValue }),
+              // form never actually loaded, which would silently destroy real confidential content.
+              ...(redacted ? {} : { content, notes: notesValue }),
             };
 
       const url =
@@ -187,15 +195,18 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
             edited from this form. Change the status first if you need to update the content.
           </p>
         ) : (
-          <textarea
-            id="content"
-            rows={10}
-            required
-            maxLength={CONTENT_MAX_LENGTH}
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            className={styles.textarea}
-          />
+          <>
+            <RichTextEditor
+              id="content"
+              value={content}
+              onChange={(html) => setContent(html.length <= CONTENT_MAX_LENGTH ? html : content)}
+              placeholder="Optional — leave blank if this record's content will live entirely in an attached file."
+            />
+            <span className={styles.helperText}>
+              Optional. You can attach a file (DOCX, XLSX, PDF, or Markdown) from the record's
+              detail page after saving, instead of or in addition to typed content.
+            </span>
+          </>
         )}
       </div>
 

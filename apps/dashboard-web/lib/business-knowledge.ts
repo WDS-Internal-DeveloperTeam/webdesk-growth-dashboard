@@ -1,5 +1,9 @@
 import { cookies } from "next/headers";
-import type { ApiSuccessResponse, BusinessKnowledgeRecord } from "@webdesk/shared-types";
+import type {
+  ApiSuccessResponse,
+  BusinessKnowledgeAttachment,
+  BusinessKnowledgeRecord,
+} from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
 import {
   buildBusinessKnowledgeHref,
@@ -86,4 +90,26 @@ export async function getBusinessKnowledgeRecord(
     throw new Error(`Failed to load business knowledge record (status ${response.status})`);
   }
   return ((await response.json()) as ApiSuccessResponse<BusinessKnowledgeRecord>).data;
+}
+
+/** An empty array is a real, valid answer here (no attachments, or a restricted record redacting
+ *  them for this viewer — `GET .../attachments` itself already returns `[]` for that case, no
+ *  separate signal is needed) — never thrown as an error, matching how the record's own redacted
+ *  `content`/`notes` degrade to an absent key rather than a failure. */
+export async function getBusinessKnowledgeAttachments(
+  recordId: string,
+): Promise<readonly BusinessKnowledgeAttachment[]> {
+  const apiBaseUrl = getApiBaseUrl();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const response = await fetch(`${apiBaseUrl}/business-knowledge/records/${recordId}/attachments`, {
+    headers: { cookie: cookieHeader },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load attachments (status ${response.status})`);
+  }
+  return ((await response.json()) as ApiSuccessResponse<readonly BusinessKnowledgeAttachment[]>)
+    .data;
 }

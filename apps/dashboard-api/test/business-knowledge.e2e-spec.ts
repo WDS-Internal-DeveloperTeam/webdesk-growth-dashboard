@@ -394,6 +394,7 @@ describe("Business Knowledge Center module endpoints (e2e, real disposable datab
       expect(response.body.data.mimeType).toBe("text/markdown");
       expect(response.body.data.scanStatus).toBe("scan_not_configured");
       expect(response.body.data.checksumSha256).toMatch(/^[0-9a-f]{64}$/);
+      expect(response.body.data.blobPathname).toBeUndefined();
 
       const listResponse = await request(app.getHttpServer())
         .get(`/business-knowledge/records/${recordId}/attachments`)

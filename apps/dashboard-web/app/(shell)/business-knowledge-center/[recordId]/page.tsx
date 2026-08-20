@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
+import { BusinessKnowledgeAttachmentsSection } from "@/components/business-knowledge-attachments-section";
 import { BusinessKnowledgeStatusActions } from "@/components/business-knowledge-status-actions";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import {
   businessKnowledgeStatusBadge,
   formatTimestamp,
+  getBusinessKnowledgeAttachments,
   getBusinessKnowledgeRecord,
   RECORD_TYPE_LABEL,
 } from "@/lib/business-knowledge";
+import { sanitizeRenderedHtml } from "@/lib/sanitize-html";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -39,8 +42,14 @@ export default async function BusinessKnowledgeDetailPage({
 
   const badge = businessKnowledgeStatusBadge(record.status);
   // `content`/`notes` being absent from the JSON response (not merely `null`) is the confidential-
-  // field redaction signal, not "no content exists" — a real record always has non-empty content.
+  // field redaction signal, not "no content exists" — a record can now genuinely have `content:
+  // null` (migration 00049, an attachment-only record) and still be fully visible.
   const isRedacted = record.content === undefined;
+
+  // Attachments are already redacted server-side for a restricted record (an empty array, not an
+  // error — see getBusinessKnowledgeAttachments()'s own doc comment), so no separate isRedacted
+  // branch is needed here the way content/notes need one.
+  const attachments = await getBusinessKnowledgeAttachments(recordId);
 
   return (
     <ContentContainer>
@@ -80,8 +89,16 @@ export default async function BusinessKnowledgeDetailPage({
           <p style={redactedStyle}>
             This record is restricted — its content isn&apos;t visible to your account.
           </p>
+        ) : record.content ? (
+          <div
+            style={richContentStyle}
+            // Sanitized twice: dashboard-api's own write-time pass (sanitize-html.util.ts) before
+            // this was ever stored, and again here at render time as defense-in-depth
+            // (lib/sanitize-html.ts) — see D3 in the task package for why both passes exist.
+            dangerouslySetInnerHTML={{ __html: sanitizeRenderedHtml(record.content) }}
+          />
         ) : (
-          <p style={contentStyle}>{record.content}</p>
+          <p style={mutedStyle}>No content — see this record&apos;s attachments below.</p>
         )}
       </section>
 
@@ -97,6 +114,8 @@ export default async function BusinessKnowledgeDetailPage({
           <p style={mutedStyle}>No notes.</p>
         )}
       </section>
+
+      <BusinessKnowledgeAttachmentsSection recordId={record.id} initialAttachments={attachments} />
     </ContentContainer>
   );
 }
@@ -123,6 +142,13 @@ const contentStyle: React.CSSProperties = {
   color: "var(--webdesk-dashboard-color-foreground)",
   whiteSpace: "pre-wrap",
   margin: 0,
+};
+
+// No `whiteSpace: pre-wrap` here, unlike `contentStyle` above — this wraps real HTML (already
+// structured with its own <p>/<br> tags from the editor), not plain text needing that treatment.
+const richContentStyle: React.CSSProperties = {
+  fontSize: "0.9375rem",
+  color: "var(--webdesk-dashboard-color-foreground)",
 };
 
 const mutedStyle: React.CSSProperties = {

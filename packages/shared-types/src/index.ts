@@ -393,9 +393,50 @@ export interface BusinessKnowledgeRecord {
   readonly id: string;
   readonly recordType: BusinessKnowledgeRecordType;
   readonly title: string;
-  readonly content?: string;
+  /** `undefined` — the key is genuinely absent — means redacted (a `restricted` record, no
+   *  `view_confidential` grant). `null` means a real, visible record that was created or edited
+   *  with no typed content at all (`business-knowledge-center-rich-content-attachments.md` §5 —
+   *  migration `00049` made this column nullable, since a record's real content may live entirely
+   *  in its attachments). A non-empty string is rich HTML from the editor, already sanitized
+   *  server-side. */
+  readonly content?: string | null;
   readonly status: BusinessKnowledgeRecordStatus;
   readonly notes?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** The interim, honest file-scan-status vocabulary from
+ *  `knowledge/08-vercel-blob-and-file-handling.md` — malware scanning is deferred project-wide, so
+ *  none of these values ever asserts a file is malware-free. */
+export type BusinessKnowledgeAttachmentScanStatus =
+  | "uploaded"
+  | "validation_passed"
+  | "validation_failed"
+  | "scan_not_configured"
+  | "externally_approved"
+  | "rejected"
+  | "deleted";
+
+/**
+ * A file attached to a business knowledge record
+ * (`business-knowledge-center-rich-content-attachments.md`). `extractedPreviewHtml` is a cached,
+ * already-sanitized DOCX/XLSX/Markdown→HTML conversion — `null` for a PDF (rendered as the real
+ * file via the content-proxy route, not extracted, task package D4) or any other format with no
+ * generated preview. There is no `url` field — a private attachment is never a direct link;
+ * `dashboard-web` always reads it through
+ * `GET /business-knowledge/records/:id/attachments/:attachmentId/content`, the same
+ * cookie-authenticated route every other resource in this app uses.
+ */
+export interface BusinessKnowledgeAttachment {
+  readonly id: string;
+  readonly recordId: string;
+  readonly filename: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly checksumSha256: string;
+  readonly extractedPreviewHtml: string | null;
+  readonly scanStatus: BusinessKnowledgeAttachmentScanStatus;
+  readonly uploadedBy: string | null;
+  readonly createdAt: string;
 }

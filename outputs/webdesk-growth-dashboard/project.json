@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 39
+    "version": 40
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -1456,6 +1456,21 @@
         "status": "scoped only -- not authorized to build. No branch created, no code written, no dependency added.",
         "project_version_before": 38,
         "project_version_after": 39
+      }
+    },
+    {
+      "timestamp": "2026-08-20T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "built Business Knowledge Center rich content & attachments (task package now implemented), plus pagination/page-size and a clear-filters bug fix",
+      "details": {
+        "branch": "business-knowledge-center-rich-content-attachments",
+        "doc": "docs/implementation/business-knowledge-center-rich-content-attachments.md",
+        "scope": "migration 00049 (nullable content, business_knowledge_attachments table); the first real BlobStorageAdapter implementation (packages/integrations, dual ESM+CJS build); new dashboard-api attachment endpoints (upload-route, confirm, list, content-proxy, delete) with real RBAC/format/size checks and format-specific preview generation (mammoth/ExcelJS/markdown-it); mandatory write-time and render-time HTML sanitization; a new Tiptap RichTextEditor and BusinessKnowledgeAttachmentsSection in dashboard-web; a page-size selector (10/20/30/50/100) on both paginated list pages; a real clear-filters bug fix (uncontrolled select/input defaultValue not resetting on Next.js soft-navigation)",
+        "validation": "149/149 packages/database integration + 28/28 unit, 8/8 packages/integrations unit, 427/427 dashboard-api unit + 132/132 e2e, 258/258 dashboard-web unit + 15/15 Playwright, all passing; typecheck/lint/check-css-tokens.mjs/next build/nest build/prettier all clean; pnpm audit 0 vulnerabilities",
+        "status": "built and fully validated, not yet code-reviewed, security-reviewed, second-role human reviewed, gated, or merged",
+        "project_version_before": 39,
+        "project_version_after": 40
       }
     }
   ]

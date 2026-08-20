@@ -15,7 +15,7 @@ import {
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import type { BusinessKnowledgeAttachmentEntity } from "@webdesk/database";
-import type { ApiSuccessResponse } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, BusinessKnowledgeAttachment } from "@webdesk/shared-types";
 import type { RequestWithCorrelationId } from "../common/correlation-id.middleware.js";
 import { OriginCheckGuard } from "../auth/common/origin-check.guard.js";
 import type { AuthenticatedRequest } from "../auth/session/session.guard.js";
@@ -39,6 +39,15 @@ type BusinessKnowledgeRequest = AuthenticatedRequest & RequestWithCorrelationId;
 // Same permission-group key the sibling records controller uses — attachment actions reuse the
 // record's own `view`/`edit` actions exactly, no separate "attachment" action (task package §6).
 const MODULE_KEY = "business_knowledge";
+
+/** `blobPathname` is the Blob object's own storage key — an internal implementation detail the
+ *  client never needs (it always reads content through the cookie-authenticated content-proxy
+ *  route, never a direct Blob URL) — narrowed out of every response, matching this app's existing
+ *  `UserSummary`-style precedent for response shapes. */
+function toPublicAttachment(entity: BusinessKnowledgeAttachmentEntity): BusinessKnowledgeAttachment {
+  const { blobPathname: _blobPathname, ...publicFields } = entity;
+  return publicFields;
+}
 
 @ApiTags("business-knowledge")
 @Controller("business-knowledge/records/:id/attachments")
@@ -87,9 +96,13 @@ export class BusinessKnowledgeAttachmentsController {
     @Body(new ZodValidationPipe(confirmBusinessKnowledgeAttachmentSchema))
     body: ConfirmBusinessKnowledgeAttachmentDto,
     @Req() req: BusinessKnowledgeRequest,
-  ): Promise<ApiSuccessResponse<BusinessKnowledgeAttachmentEntity>> {
-    const data = await this.attachments.confirm(id, body, req.authUser!.id);
-    return { success: true, data, correlationId: req.correlationId ?? "unknown" };
+  ): Promise<ApiSuccessResponse<BusinessKnowledgeAttachment>> {
+    const entity = await this.attachments.confirm(id, body, req.authUser!.id);
+    return {
+      success: true,
+      data: toPublicAttachment(entity),
+      correlationId: req.correlationId ?? "unknown",
+    };
   }
 
   @Get()
@@ -99,10 +112,14 @@ export class BusinessKnowledgeAttachmentsController {
   async list(
     @Param("id", new ParseUUIDPipe()) id: string,
     @Req() req: BusinessKnowledgeRequest,
-  ): Promise<ApiSuccessResponse<readonly BusinessKnowledgeAttachmentEntity[]>> {
+  ): Promise<ApiSuccessResponse<readonly BusinessKnowledgeAttachment[]>> {
     const canSee = await this.canSeeAttachments(id, req.authUser!.id);
-    const data = canSee ? await this.attachments.list(id) : [];
-    return { success: true, data, correlationId: req.correlationId ?? "unknown" };
+    const entities = canSee ? await this.attachments.list(id) : [];
+    return {
+      success: true,
+      data: entities.map(toPublicAttachment),
+      correlationId: req.correlationId ?? "unknown",
+    };
   }
 
   @Get(":attachmentId/content")

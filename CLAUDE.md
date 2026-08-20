@@ -1503,27 +1503,53 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     "Sign-off" section. **This gate approval does not itself authorize merging PR #44 or a
     production deployment** — merge remains its own separate, not-yet-requested authorization,
     per this project's standing "no auto-merge" rule.
-30. **Business Knowledge Center — Rich Content & File Attachments task package scoped, not yet
-    authorized to build (2026-08-20).** `docs/task-packages/business-knowledge-center-rich-content-attachments.md`
-    records the full proposal. Prepared directly on the explicit "go ahead with the task package"
-    instruction, following a feasibility question about letting users type rich content or upload
-    DOCX/XLSX/PDF/Markdown files, previewable on both the create form and the detail page. Confirmed
-    via repo search that no rich-text editor, file parser, HTML sanitizer, or Vercel Blob usage
-    exists anywhere in this codebase — fully greenfield. Grounded in real, already-approved policy:
-    `knowledge/08-vercel-blob-and-file-handling.md` already allows DOCX/XLSX/PDF/Markdown (25 MB
-    ceiling), and `integrations/vercel/02-blob-and-postgres.md` mandates a shared
-    `ObjectStorageAdapter` — this would be the project's first real implementation of it, built as
-    reusable infrastructure the separate, future, not-yet-authorized Asset Library module will also
-    need. Nine design decisions recorded (D1–D9), the most consequential being D3: storing and
-    rendering arbitrary HTML is a genuinely new attack surface this project has never carried before
-    (every other page relies on React's automatic escaping specifically because `dangerouslySetInnerHTML`
-    has been flagged as the thing to avoid in this project's own prior security reviews) — mitigated
-    with mandatory sanitization on both the write and read paths and a dedicated, separately-called-out
-    security review before merge, not folded into the general pass. Six open items flagged for a
-    decision before implementation begins (§10), including whether content and attachments coexist
-    on one record, the Tiptap editor choice, PDF-as-embed vs. PDF-as-extracted-text, and that a real
-    Vercel Blob store/token don't appear to be provisioned yet. **Not started** — no branch, no code,
-    no dependency added. Building it requires a separate, explicit "begin this work" instruction.
+30. **Business Knowledge Center — Rich Content & File Attachments — built, fully validated, not
+    yet reviewed, gated, or merged (2026-08-20).**
+    `docs/task-packages/business-knowledge-center-rich-content-attachments.md` records the
+    original proposal; `docs/implementation/business-knowledge-center-rich-content-attachments.md`
+    records the full as-built account. Built directly on the explicit "go ahead and start building
+    it" instruction, bundling in two explicitly-requested, unrelated fixes touching the same list
+    pages: a page-size selector (10/20/30/50/100) on both `/projects` and
+    `/business-knowledge-center`, and a real bug fix (a Next.js `<Link>` soft-navigation reusing
+    the same DOM node meant an uncontrolled `<select>`/`<input>`'s `defaultValue` never actually
+    reset on "Clear filters" — fixed with a `key` tied to each field's own value). Migration
+    `00049`: `content` relaxed to nullable (an attachment-only record is now real), a new
+    `business_knowledge_attachments` table. The first real implementation of the Phase 1A
+    `BlobStorageAdapter` interface (`packages/integrations`, now with the same dual ESM+CJS build
+    as `@webdesk/database`/etc., per this file's own Cautions-section lesson) — its shape was
+    revised from the original placeholder guess after verifying Vercel's actual documented Blob
+    mechanics directly (no "uploadUrl"/"signed read URL" concepts exist for a private store;
+    real client uploads use `@vercel/blob/client`'s two-phase `handleUpload()`/`upload()`
+    protocol, real reads proxy through the app's own auth). New `dashboard-api` attachment
+    endpoints (upload-route, confirm, list, a content-proxy stream, delete) — real RBAC/format/
+    size checks, a real SHA-256 checksum, format-specific preview generation (mammoth for DOCX; a
+    hand-built table from a real `ExcelJS`-parsed XLSX, chosen over the `xlsx` package after
+    `pnpm audit` flagged two real HIGH vulnerabilities in it; `markdown-it` over `marked`, which
+    is ESM-only and would have repeated the openid-client-class production-outage pattern this
+    file already documents once; PDF gets no extraction, embedded as the real file instead — D4).
+    Mandatory HTML sanitization at write time (`dashboard-api`) and again at render time
+    (`dashboard-web`, defense-in-depth) against a strict allowlist — flagged as this project's
+    first HTML-storage/rendering surface, needing its own dedicated security-review focus, not
+    folded into the general pass. New `RichTextEditor` (Tiptap) replacing the plain textarea in
+    the create/edit form; new `BusinessKnowledgeAttachmentsSection` on the detail page (upload,
+    inline preview — a real `<embed>` for PDF, cached sanitized HTML for DOCX/XLSX/Markdown — and
+    delete). 149/149 `packages/database` integration + 28/28 unit, 8/8 `packages/integrations`
+    unit, 427/427 `dashboard-api` unit + 132/132 e2e (19 new, real disposable database, an
+    in-memory `BlobStorageAdapter` fake substituted for the real one — no Vercel Blob store is
+    provisioned anywhere in this environment or in production yet), 258/258 `dashboard-web` unit
+    - 15/15 Playwright, all passing; typecheck/lint/`check-css-tokens.mjs`/`next build`/
+      `nest build`/prettier all clean; `pnpm audit` 0 vulnerabilities. Live-rendered: both new/
+      detail routes confirmed to redirect an unauthenticated visitor cleanly, zero server errors —
+      no local `dashboard-api` exists in this environment, so the authenticated success path
+      (editor/attachments actually mounted) was verified only through real jsdom component tests,
+      not visually. See the implementation doc's §6 for deliberate, explicitly-flagged scope
+      decisions (upload happens from the detail page, not the create form — an attachment needs a
+      real `record_id`; the Blob completion webhook is a no-op by design; one same-session
+      preview-sanitization gap left open). Pushed as branch
+      `business-knowledge-center-rich-content-attachments`. Not yet reviewed, gated, or merged —
+      code review, security review, second-role human review, a gate decision, and merge
+      authorization are each their own separate, not-yet-requested next step, unchanged from this
+      project's standing discipline.
 
 ## Recent decisions
 
@@ -4134,6 +4160,20 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   project's first proposed use of Vercel Blob and the `ObjectStorageAdapter` pattern; flags storing/
   rendering arbitrary HTML as a genuinely new security surface needing its own dedicated review.
   Six open items recorded for a decision before implementation begins.
+- `[2026-08-20]` **Business Knowledge Center — Rich Content & File Attachments — built and fully
+  validated.** See "Active tasks" item 30 above and
+  `docs/implementation/business-knowledge-center-rich-content-attachments.md` for the full
+  as-built account. Built directly on the explicit "go ahead and start building it" instruction,
+  bundling in an explicitly-requested page-size selector (10/20/30/50/100) for both paginated
+  list pages and a real clear-filters bug fix. Migration `00049`, the first real
+  `BlobStorageAdapter` implementation (revised from its Phase 1A placeholder shape after
+  verifying Vercel's actual documented Blob mechanics directly), new `dashboard-api` attachment
+  endpoints, format-specific preview generation, and mandatory write-time + render-time HTML
+  sanitization. 149/149 `packages/database` integration + 28/28 unit, 8/8 `packages/integrations`
+  unit, 427/427 `dashboard-api` unit + 132/132 e2e, 258/258 `dashboard-web` unit + 15/15
+  Playwright, all passing; full validation clean; `pnpm audit` 0 vulnerabilities. Pushed as
+  branch `business-knowledge-center-rich-content-attachments`. **Not yet reviewed, gated, or
+  merged** — each a separate, not-yet-requested next step.
 
 ## Open client blockers
 
