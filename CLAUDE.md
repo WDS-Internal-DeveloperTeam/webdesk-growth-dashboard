@@ -4613,6 +4613,23 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
 - The real emergency-administrator account list — the provisioning _mechanism_ is built
   (`apps/dashboard-api/src/auth/scripts/provision-emergency-admin.ts`), but no real accounts exist
   yet. Owner: PM/security owner.
+- **No real Vercel Blob store is provisioned for `webdesk-growth-dashboard-7v1u`** —
+  `BLOB_READ_WRITE_TOKEN` doesn't exist among that project's env vars, and its Storage tab shows
+  only the Neon database connected. This was already flagged as a known gap when the Business
+  Knowledge Center attachments feature was first built (PR #45, "no Vercel Blob store is
+  provisioned anywhere in this environment or in production yet"), but never closed. It surfaced
+  as a real, confirmed production `500` on `POST .../attachments/upload-route` on 2026-08-21 (the
+  first real attempt at a file upload in production, via the new create-form feature) —
+  `handleUpload()` requires that static token per its own docs ("OIDC tokens are not sufficient
+  for `handleUpload`") and throws without it, masked by the same generic pino-http logging gap
+  this project has hit before. Not a code bug — `VercelBlobAdapter`/the create-form feature both
+  work correctly; this is purely a missing infrastructure step. **User has deferred provisioning
+  to later** ("right now move ahead will setup it later and check") — no file upload (from either
+  the create form or the existing detail-page control) will succeed in production until a real
+  Blob store is connected and `dashboard-api` is redeployed. Fix, once ready: Storage → Create
+  Database → Blob (or Connect Store) on the `webdesk-growth-dashboard-7v1u` project, which should
+  add `BLOB_READ_WRITE_TOKEN` automatically; `dashboard-web` needs no change (its upload-route
+  proxy never imports `@vercel/blob` directly).
 - ~~`dashboard-web`'s real deployed origin (`WEB_APP_ORIGIN` on the `dashboard-api` side,
   CORS/CSRF allowlist)~~ — resolved 2026-08-12, user set it as a `dashboard-api` Vercel env var.
   Whether the current Vercel-assigned domain is the final one (vs. a custom domain later) is still
