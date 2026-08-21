@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 42
+    "version": 43
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -1619,6 +1619,20 @@
       },
       "project_version_before": 41,
       "project_version_after": 42
+    },
+    {
+      "timestamp": "2026-08-21T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "pushed branch dashboard-web-attachments-on-create to origin and opened PR #46",
+      "details": {
+        "branch": "dashboard-web-attachments-on-create",
+        "pr": 46,
+        "pr_url": "https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46",
+        "note": "Requested directly (\"push the branch and open a PR\"), after the gate (G4-attachments-on-create) had already been approved. Unlike every prior slice this session, review (code review, security review, second-role human review, and the gate) all happened before the branch was ever pushed or opened as a PR -- this is the first time the branch is visible on GitHub."
+      },
+      "project_version_before": 42,
+      "project_version_after": 43
     }
   ]
 }

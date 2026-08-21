@@ -1653,9 +1653,10 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       outcome not yet recorded here.
 31. **`dashboard-web` file upload on the Business Knowledge Record create form — built, fully
     validated, independently code-reviewed (all 8 CONFIRMED findings fixed), security-reviewed (0
-    findings above threshold), required second-role human reviewed (Jitesh D, "Approved"), and
-    gated (G4-attachments-on-create, WebDesk Solution, CONFIRM); not yet pushed, opened as a PR,
-    or merged (2026-08-21).**
+    findings above threshold), required second-role human reviewed (Jitesh D, "Approved"), gated
+    (G4-attachments-on-create, WebDesk Solution, CONFIRM), and pushed/opened as
+    [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46); not
+    yet merged (2026-08-21).**
     `docs/implementation/dashboard-web-attachments-on-create.md` records the full account. Not
     started automatically — built directly on the explicit "we need upload option in New business
     knowledge record add not in view" instruction. Upload was previously detail-page-only (task
@@ -1733,7 +1734,13 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     `G4-attachments-on-create`) and the approval checklist's "Sign-off" section. **This gate
     approval does not itself authorize pushing the branch, opening a PR, or merging** — each
     remains its own separate, not-yet-requested authorization, per this project's standing
-    "no auto-merge" rule.
+    "no auto-merge" rule. **"Push the branch and open a PR" was then separately requested and
+    executed** — pushed to `origin`, opened as
+    [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46).
+    Unusually, unlike every prior slice this session, the branch had never been visible on GitHub
+    until after code review, security review, second-role human review, and the gate had all
+    already happened locally — this is the first time it's on `origin`. Merge authorization
+    remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -4549,6 +4556,13 @@ migrate` command to run themselves (same credential-handling discipline as every
   approval does not itself authorize pushing the branch, opening a PR, or merging** — each remains
   its own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
   rule.
+- `[2026-08-21]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-attachments-on-create` — pushed to `origin`, opened as
+  [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46).
+  Unusually, unlike every prior slice this session, the branch had never been visible on GitHub
+  until now — code review, security review, second-role human review, and the gate had all
+  already happened on the local branch first, so this push/PR came _after_ the gate rather than
+  before it. Merge authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

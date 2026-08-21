@@ -4,8 +4,11 @@
 fixed, 0 open). Security review complete (0 findings above threshold). Required second-role human
 review complete (2026-08-21, Jitesh D, "Approved", no disputes raised). **Gate G4-attachments-on-create
 approved** (2026-08-21, WebDesk Solution, decision CONFIRM, approved commit `7bbaa67`) — see
-`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Pushing the branch, opening a PR, and
-merge authorization remain separate, not-yet-requested next steps.
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Branch pushed and opened as
+[PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46) —
+unusually, after the gate was approved rather than before, since review and gate approval all
+happened on the local branch first. Merge authorization remains a separate, not-yet-requested next
+step.
 
 ## Completion condition
 
