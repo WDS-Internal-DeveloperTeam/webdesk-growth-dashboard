@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-attachments-on-create",
+    "current_gate": "G4-service-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 44
+    "version": 46
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -461,6 +461,20 @@
       "notes": "dashboard-web file upload on the Business Knowledge Record create form (branch dashboard-web-attachments-on-create, not yet pushed/opened as a PR). Closes the last named gap on the Business Knowledge Center module by letting a user pick attachments directly on the New record form, not only after the record already exists -- an attachment's record_id is a real database foreign key, so picked files are staged client-side and uploaded via the existing uploadAttachment() flow only once the record is actually created. No new backend surface; a new lib/business-knowledge-attachments.ts extracts the shared MIME/size allowlist and upload()-then-confirm() sequence out of the pre-existing detail-page control so the new picker reuses it instead of duplicating it. Independent code review (high effort, 9 finder angles, 1-vote verification) surfaced 8 kept findings -- all 8 came back CONFIRMED (0 PLAUSIBLE, 0 REFUTED) and all 8 were fixed. Most severe: handleSubmit had no internal guard against being re-invoked once the record was already created -- the <form> stayed mounted with the Title field the only remaining input that doesn't block HTML's implicit-submission-on-Enter behavior, so pressing Enter there after a partial upload failure could silently create a duplicate record; fixed with a real early-return guard inside handleSubmit itself, not just the button-swap the initial build relied on. Also fixed: the 'View record' link was clickable before staged uploads actually finished, letting a click mid-upload hard-navigate and silently abort in-flight uploads with no error surfaced; the batch-upload path never checked for AttachmentUploadApiError, discarding curated backend rejection reasons in favor of a generic message; pendingFiles was never trimmed after a partial success; attachmentError was never cleared on submit; a doc comment contradicted the actual navigation behavior; and a hand-copied CSS rule was missing a :disabled state. 5 new regression tests added. Security review (run separately) found 0 findings above threshold -- confirmed this diff is client-side UI/orchestration only, no new backend endpoint, no changes to the upload-route proxy/RBAC/HTML-sanitization boundary; the Blob-pathname-from-raw-filename construction was verified via git show to be byte-for-byte identical to the pre-existing, already-reviewed code this refactor only relocated. Final numbers: 269/269 dashboard-web unit tests (10 new across both fix rounds), typecheck/lint/check-css-tokens.mjs/next build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-21, decision 'Approved', no disputes raised, 0 open findings of any kind) was already complete before this gate was requested -- see docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md's 'Sign-off' section.",
       "approved_commit": "7bbaa67",
       "record": "docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-service-library",
+      "type": "qa-security-gate",
+      "scope": "module-service-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-21T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Service Library module backend (branch module-service-library, not yet pushed/opened as a PR) -- the third real business-module backend on the Phase 1F application shell / canonical module registry, after Projects and Business Knowledge Center, module #3 in the project-owner-supplied Recommended Module Roadmap. A genuine roadmap/dependency conflict was surfaced and resolved directly with the user (AskUserQuestion): the module registry's own seeded dependencies field for service_library names three modules that don't exist yet (persona_library/case_study_library/page_inventory); the user chose to build now and store the cross-module relationship fields (icpIds/relatedPageIds/relatedCaseStudyIds) as plain unvalidated string arrays. A real normalized 7-table schema (migration 00050, sourced from 04_Data_Model_and_Ownership.md:107-118), organization-wide, with a three-tier RBAC-gated status-transition system (submit/review/approve, dynamically checked). Independent code review (high effort, 8 finder angles, 1-vote verification) surfaced 8 CONFIRMED findings, all fixed -- most severe a real workflow-blocking RBAC bug where every transition to draft silently required the approve action instead of submit, blocking a marketing_editor from ever reverting their own rejected/revision-requested work to fix and resubmit, contradicting the canonical spec's own stated intent; also fixed five distinct missing FK-existence checks (ownerUserId/parentServiceId/deliverableIds/platformIds/engagementModelIds all surfaced raw 500s instead of clean 400s on a bad id), create()/update() omitting the relationship ids they just wrote from their own response, an unescaped SQL LIKE wildcard in search, a redundant re-fetch/re-validation in update(), six near-identical join-table repository methods contradicting their own doc comment, and a third hand-duplicated auth-check pattern (closed by adding AuthorizationService.assertAllowed()). One unrelated candidate (a findOne() return-type/Swagger-schema claim) was independently refuted and dropped. Security review (run separately) found 1 CONFIRMED finding at confidence 8/10: the confidentiality field (public/internal/restricted) had zero read-side enforcement anywhere, letting any caller with baseline service_persona_proof:view (all 7 seeded roles) read a restricted record's internalDescription -- fixed by wiring the same, already-shared confidential-field.util.ts mechanism Business Knowledge Center already uses (AuthorizationService.canViewConfidential()), across list/findOne/create/update/changeStatus. Final numbers: 461/461 dashboard-api unit tests, 21/21 packages/database integration tests, 21/21 dashboard-api e2e tests, all against a real disposable PostgreSQL 17 database; migration up/down round-trip clean (51 migrations); pnpm validate:module-registry unaffected (43 modules, 21 permission groups); typecheck/lint/nest build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-21, decision 'Approved', no disputes raised) was already complete before this gate was requested -- see docs/project-state/module-service-library-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "03856b8",
+      "record": "docs/project-state/module-service-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
@@ -1649,6 +1663,36 @@
       },
       "project_version_before": 43,
       "project_version_after": 44
+    },
+    {
+      "timestamp": "2026-08-21T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "reviewed the Service Library Module Backend review packet and returned 'Approved'",
+      "details": {
+        "scope": "Full code-review disposition (8 finder angles, 8 kept findings, all 8 CONFIRMED, all 8 fixed -- 0 open, 1 unrelated candidate independently refuted and dropped) and full security-review disposition (1 CONFIRMED finding at confidence 8/10, fixed -- 0 open), for branch module-service-library, reviewed via the code-review/security-review skill outputs recorded in docs/implementation/module-service-library.md and the published review packet.",
+        "result": "Satisfies ADR-0010's separation-of-duties requirement for this slice -- the implementing agent could not also be its own reviewer. Recorded in docs/project-state/module-service-library-approval-checklist.md's 'Sign-off' section. A gate decision, push/PR, and merge authorization remain separate, not-yet-requested next steps.",
+        "reviewed_commit": "03856b8",
+        "branch": "module-service-library"
+      },
+      "project_version_before": 44,
+      "project_version_after": 45
+    },
+    {
+      "timestamp": "2026-08-21T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-service-library for module-service-library -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-service-library",
+        "scope": "module-service-library",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-21, decision 'Approved', no disputes raised) was already complete before the gate was requested. See docs/project-state/module-service-library-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "03856b8",
+        "branch": "module-service-library"
+      },
+      "project_version_before": 45,
+      "project_version_after": 46
     }
   ]
 }
