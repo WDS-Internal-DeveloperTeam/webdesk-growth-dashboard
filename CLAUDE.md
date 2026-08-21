@@ -2040,9 +2040,18 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     (`javascript:`/`data:`) at parse/render/command time, closing the one client-side edit-path
     scenario considered. **"Push the branch and open a PR" was then separately requested and
     executed** — pushed to `origin`, opened as
-    [PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49). A
-    review packet for the required second-role human review, a gate decision, and merge
-    authorization each remain separate, not-yet-requested next steps.
+    [PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49), all
+    14 CI checks green. **"Merge PR #49" was then requested directly** — held per this project's
+    standing discipline (required second-role human review, then a gate decision, each separate,
+    before merge — neither had happened yet). Asked the user directly whether to prepare the
+    review packet first or proceed as an explicit override (the Phase 1C G4-1C pattern); the user
+    chose to prepare the packet first. A review packet (published as a Claude artifact, "Rich-Text
+    Editor Review Packet" — code review + security review findings, fixes, and validation
+    evidence, with a decision section) was prepared for the required second-role human review,
+    since the implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/rich-text-editor-long-fields-approval-checklist.md` — **awaiting that
+    review.** A gate decision and merge authorization each remain separate, not-yet-requested next
+    steps.
 
 ## Recent decisions
 
