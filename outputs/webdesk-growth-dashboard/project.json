@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-service-library",
+    "current_gate": "G4-dashboard-web-service-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 48
+    "version": 50
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -475,6 +475,20 @@
       "notes": "Service Library module backend (branch module-service-library, not yet pushed/opened as a PR) -- the third real business-module backend on the Phase 1F application shell / canonical module registry, after Projects and Business Knowledge Center, module #3 in the project-owner-supplied Recommended Module Roadmap. A genuine roadmap/dependency conflict was surfaced and resolved directly with the user (AskUserQuestion): the module registry's own seeded dependencies field for service_library names three modules that don't exist yet (persona_library/case_study_library/page_inventory); the user chose to build now and store the cross-module relationship fields (icpIds/relatedPageIds/relatedCaseStudyIds) as plain unvalidated string arrays. A real normalized 7-table schema (migration 00050, sourced from 04_Data_Model_and_Ownership.md:107-118), organization-wide, with a three-tier RBAC-gated status-transition system (submit/review/approve, dynamically checked). Independent code review (high effort, 8 finder angles, 1-vote verification) surfaced 8 CONFIRMED findings, all fixed -- most severe a real workflow-blocking RBAC bug where every transition to draft silently required the approve action instead of submit, blocking a marketing_editor from ever reverting their own rejected/revision-requested work to fix and resubmit, contradicting the canonical spec's own stated intent; also fixed five distinct missing FK-existence checks (ownerUserId/parentServiceId/deliverableIds/platformIds/engagementModelIds all surfaced raw 500s instead of clean 400s on a bad id), create()/update() omitting the relationship ids they just wrote from their own response, an unescaped SQL LIKE wildcard in search, a redundant re-fetch/re-validation in update(), six near-identical join-table repository methods contradicting their own doc comment, and a third hand-duplicated auth-check pattern (closed by adding AuthorizationService.assertAllowed()). One unrelated candidate (a findOne() return-type/Swagger-schema claim) was independently refuted and dropped. Security review (run separately) found 1 CONFIRMED finding at confidence 8/10: the confidentiality field (public/internal/restricted) had zero read-side enforcement anywhere, letting any caller with baseline service_persona_proof:view (all 7 seeded roles) read a restricted record's internalDescription -- fixed by wiring the same, already-shared confidential-field.util.ts mechanism Business Knowledge Center already uses (AuthorizationService.canViewConfidential()), across list/findOne/create/update/changeStatus. Final numbers: 461/461 dashboard-api unit tests, 21/21 packages/database integration tests, 21/21 dashboard-api e2e tests, all against a real disposable PostgreSQL 17 database; migration up/down round-trip clean (51 migrations); pnpm validate:module-registry unaffected (43 modules, 21 permission groups); typecheck/lint/nest build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-21, decision 'Approved', no disputes raised) was already complete before this gate was requested -- see docs/project-state/module-service-library-approval-checklist.md's 'Sign-off' section.",
       "approved_commit": "03856b8",
       "record": "docs/project-state/module-service-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-service-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-service-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-21T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web Service Library UI (branch dashboard-web-service-library, not yet pushed/opened as a PR) -- list, detail, create/edit, and status-action screens for the already-live, already-reviewed Service Library backend (PR #47), closing the module's last named gap. Unlike Projects/Business Knowledge Center, a real design brief exists (docs/design/dashboard-ui/15-representative-screen-specifications.md section 4) -- built to its field grouping/archetype, with one deliberate, explicitly-flagged deviation: the design brief's own named ApprovalBlock component was not used, since the backend's changeServiceApprovalStatusSchema/services table neither accepts nor tracks the submitter/reviewer/reason data it requires. Independent code review (high effort, 8 finder angles) surfaced 10 kept findings after dedup -- 8 CONFIRMED, all fixed, most severe a permanently unsubmittable create form (categoryId required, zero seeded service categories, no UI/API to create any) fixed with an inline warning; also fixed a filter form silently resetting pageSize, two CSS Modules that were the third byte-for-byte duplicate of existing Projects/BKC styling (extracted shared form-fields.module.css/status-actions.module.css base files), an approval-status badge map collapsing a live state and a terminal one onto the identical color, and TagListField being a genuinely reusable primitive built privately instead of promoted to packages/ui (promoted it, with 3 new packages/ui unit tests). 2 CONFIRMED findings left as accepted, tracked debt, each requiring a backend contract change out of scope for a dashboard-web-only branch (ServiceStatusActions hand-mirroring the backend transition table; the list page over-fetching long-text fields, matching the identical accepted-debt pattern on the Business Knowledge Center list page). 2 PLAUSIBLE findings left open (an orphaned relationship-id removal gap with no current UI path to trigger it; ServiceLibraryForm having no key in edit mode, a pre-existing pattern already shared with ProjectForm). Security review found 0 findings above threshold. Final numbers: 308/308 dashboard-web unit tests (39 new), 82/82 packages/ui unit tests (3 new), typecheck/lint/check-css-tokens.mjs/next build/prettier all clean across both packages. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-21, decision 'Approved', no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-service-library-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "ab6b2e8",
+      "record": "docs/project-state/dashboard-web-service-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
@@ -1725,6 +1739,36 @@
       },
       "project_version_before": 47,
       "project_version_after": 48
+    },
+    {
+      "timestamp": "2026-08-21T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "recorded required second-role human review for dashboard-web-service-library",
+      "details": {
+        "reviewer": "Jitesh D",
+        "decision": "Approved",
+        "scope": "Full code-review disposition (10 findings -- 8 CONFIRMED all fixed, 2 CONFIRMED accepted as tracked debt, 2 PLAUSIBLE left open) and full security-review disposition (0 findings above threshold), per the published review packet.",
+        "record": "docs/project-state/dashboard-web-service-library-approval-checklist.md"
+      },
+      "project_version_before": 48,
+      "project_version_after": 49
+    },
+    {
+      "timestamp": "2026-08-21T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "requested and recorded gate approval G4-dashboard-web-service-library",
+      "details": {
+        "gate": "G4-dashboard-web-service-library",
+        "approver": "WebDesk Solution",
+        "decision": "CONFIRM",
+        "approved_commit": "ab6b2e8",
+        "branch": "dashboard-web-service-library",
+        "context": "Clean pass, not an override -- the second-role review (Jitesh D, Approved) was already complete before the gate was requested. This gate approval does not itself authorize pushing the branch, opening a PR, or merging."
+      },
+      "project_version_before": 49,
+      "project_version_after": 50
     }
   ]
 }

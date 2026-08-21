@@ -1902,9 +1902,24 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     not silently dropped. Re-validated: 82/82 `packages/ui` unit tests (3 new), 308/308
     `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all
     clean. See `docs/implementation/dashboard-web-service-library.md` §9 for the full account.
-    Committed to branch `dashboard-web-service-library` — not yet pushed to `origin`,
-    security-reviewed, gated, or merged; each remains its own separate, not-yet-requested next
-    step, matching this project's standing discipline for every prior module's own UI slice.
+    **A separate `security-review` skill run then found 0 findings above threshold** — checked and
+    ruled out unsafe HTML rendering, the project's own documented open-redirect/unsafe-URL-scheme
+    precedent (Projects' `environment.url` stored-XSS), confidential-field (`internalDescription`)
+    leakage on both read and write paths, `fetch()` target/credential trust, the error-message
+    allowlist, `TagListField`/`RelationshipPicker` as an injection surface, and the CSS Module
+    `composes:` refactor. A review packet (published as a Claude artifact — code review + security
+    review findings, fixes, and validation evidence, with a decision section) was then prepared for
+    the required second-role human review, since the implementing agent cannot also be its own
+    reviewer (ADR-0010). **Jitesh D reviewed it and returned "Approved,"** accepting the 2 open
+    CONFIRMED tracked-debt items and the 2 open PLAUSIBLE findings as-is. See
+    `docs/project-state/dashboard-web-service-library-approval-checklist.md`'s "Sign-off" section.
+    **The gate (G4-dashboard-web-service-library) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit `ab6b2e8` on branch
+    `dashboard-web-service-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-dashboard-web-service-library`). **This gate approval does
+    not itself authorize pushing the branch, opening a PR, or merging** — each remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -4897,6 +4912,41 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   across both packages. See `docs/implementation/dashboard-web-service-library.md` §9 for the full
   account. Security review, second-role human review, a gate decision, push/PR, and merge
   authorization remain each their own separate, not-yet-requested next step.
+- `[2026-08-21]` **Security review run on `dashboard-web-service-library`, separately from the
+  code review, against the fixed branch.** 0 findings above threshold. Confirmed: no
+  `dangerouslySetInnerHTML` anywhere in the diff — every new render site is plain JSX text,
+  React-escaped; checked specifically against this project's own documented precedent (Projects'
+  `environment.url` stored-XSS, fixed with `isSafeHttpUrl()`) — none of Service Library's
+  identifier-list fields (`icpIds`/`relatedPageIds`/`relatedCaseStudyIds`) are ever rendered as a
+  clickable link; the `internalDescription` redaction signal (`undefined` vs `null`) is honored on
+  both read and write paths, never resubmitted or logged; every `fetch()` targets a trusted,
+  build-time base URL plus hardcoded path literals or a resolved entity's own `.id`, with
+  `getService()` validating the route param via `isUuid()` first; `lib/api-errors.ts` is
+  unmodified by this branch, and the Service Library backend exceptions it can surface only echo
+  back caller-supplied values; `TagListField`/`RelationshipPicker` values are only ever rendered
+  as text or sent as a plain JSON string array; the CSS Module `composes:` refactor is purely
+  static, build-time class composition with no dynamic values. A review packet (published as a
+  Claude artifact — code review + security review findings, fixes, and validation evidence, with
+  a decision section) was then prepared for the required second-role human review, since the
+  implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-service-library-approval-checklist.md`.
+- `[2026-08-21]` **Required second-role human review complete for
+  `dashboard-web-service-library`.** The review packet (code review + security review findings,
+  fixes, and the 2 accepted-debt/2 open-PLAUSIBLE items, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved,"** accepting all 4 open items (2 CONFIRMED
+  accepted as tracked debt, 2 PLAUSIBLE left open) as-is. See
+  `docs/project-state/dashboard-web-service-library-approval-checklist.md`'s "Sign-off" section. A
+  gate decision, push/PR, and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-21]` **The gate (G4-dashboard-web-service-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `ab6b2e8` on branch `dashboard-web-service-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-service-library`) and
+  `docs/project-state/dashboard-web-service-library-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
+  each remains its own separate, not-yet-requested authorization, per this project's standing "no
+  auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
