@@ -1652,8 +1652,9 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       (the user running the real `migrate` command themselves) given but its confirmed-applied
       outcome not yet recorded here.
 31. **`dashboard-web` file upload on the Business Knowledge Record create form — built, fully
-    validated, independently code-reviewed (all 8 CONFIRMED findings fixed), not yet security
-    reviewed, gated, or merged (2026-08-21).**
+    validated, independently code-reviewed (all 8 CONFIRMED findings fixed), security-reviewed (0
+    findings above threshold), a review packet published and the required second-role human
+    review requested; not yet gated or merged (2026-08-21).**
     `docs/implementation/dashboard-web-attachments-on-create.md` records the full account. Not
     started automatically — built directly on the explicit "we need upload option in New business
     knowledge record add not in view" instruction. Upload was previously detail-page-only (task
@@ -1704,9 +1705,23 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     added covering mixed valid/invalid file selection, multi-file removal by index, a genuinely
     mixed success/failure upload batch, the resubmission guard, and `attachmentError` clearing.
     Re-validated: 269/269 `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs`/
-    `next build`/prettier all clean. Not yet security reviewed, second-role human reviewed, gated,
-    or merged — each their own separate, not-yet-requested next step, unchanged from this
-    project's standing discipline.
+    `next build`/prettier all clean.
+    **A separate `security-review` skill run then found 0 findings above threshold** — this diff
+    is client-side UI/orchestration only, no new backend endpoint, no changes to the upload-route
+    proxy/RBAC/HTML-sanitization boundary. Four candidates were individually verified and ruled
+    out: the Blob-pathname-from-raw-filename construction (confirmed via `git show` to be
+    byte-for-byte identical to the pre-existing, already-reviewed code this refactor only
+    relocated); client-side-only MIME/size validation (unchanged, real enforcement is unmodified
+    backend code); the duplicate-record-creation guard (a business-logic concern, not
+    authorization, and already fixed within the same diff); and error/filename string
+    interpolation into the failure message (confirmed rendered only via JSX text children, never
+    `dangerouslySetInnerHTML`). A review packet (published as a Claude artifact, "Attachments On
+    Create Review" — code review + security review findings, fixes, and validation evidence, with
+    a decision section) was then prepared for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`. **Awaiting the
+    second-role reviewer's decision** — a gate decision and merge authorization remain separate,
+    not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -4489,6 +4504,24 @@ migrate` command to run themselves (same credential-handling discipline as every
   `check-css-tokens.mjs`/`next build`/prettier all clean. See
   `docs/implementation/dashboard-web-attachments-on-create.md` §8 for the full account. Security
   review, second-role human review, a gate decision, and merge authorization remain separate,
+  not-yet-requested next steps.
+- `[2026-08-21]` **Security review run on `dashboard-web-attachments-on-create`, separately from
+  the code review — 0 findings above threshold.** Requested directly ("run the security review
+  skill on this branch"). Confirmed this diff is client-side UI/orchestration only — no new
+  backend endpoint, no changes to the upload-route proxy, RBAC, or HTML-sanitization boundary.
+  Four candidates were individually verified and ruled out: the Blob-pathname-from-raw-filename
+  construction (`git show`-confirmed byte-for-byte identical to the pre-existing code this
+  refactor only relocated, already covered by PR #45's own security review); client-side-only
+  MIME/size validation (unchanged, real enforcement is unmodified backend code); the
+  duplicate-record-creation guard (a business-logic/idempotency concern, not authorization, and
+  already fixed within the same diff); and error/filename string interpolation into the failure
+  message (confirmed rendered only via JSX text children, never `dangerouslySetInnerHTML`, not
+  exploitable as XSS). A review packet (published as a Claude artifact, "Attachments On Create
+  Review" — code review + security review findings, fixes, and validation evidence, with a
+  decision section) was then prepared for the required second-role human review, since the
+  implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`. Awaiting the
+  second-role reviewer's decision — a gate decision and merge authorization remain separate,
   not-yet-requested next steps.
 
 ## Open client blockers
