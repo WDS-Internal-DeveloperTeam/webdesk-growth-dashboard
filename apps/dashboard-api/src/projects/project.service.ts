@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { withTransaction } from "@webdesk/database";
-import { sanitizeRichTextHtml } from "@webdesk/validation";
+import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import type {
   ProjectConfidentiality,
   ProjectEntity,
@@ -27,14 +27,6 @@ export interface UpdateProjectInput {
   description?: string | null;
   ownerUserId?: string | null;
   confidentiality?: ProjectConfidentiality;
-}
-
-/** Sanitizes `description` (HTML from the dashboard-web rich-text editor) before it's ever
- *  written — `null`/`undefined` pass through unchanged. Mirrors
- *  `apps/dashboard-api/src/business-knowledge/sanitize-html.util.ts`'s own
- *  `sanitizeContentOrNull()` pattern against the same shared `@webdesk/validation` allowlist. */
-function sanitizeLongTextField(value: string | null | undefined): string | null | undefined {
-  return typeof value === "string" ? sanitizeRichTextHtml(value) : value;
 }
 
 export interface ListProjectsInput {
@@ -84,7 +76,7 @@ export class ProjectService {
     const project = await this.projects.create({
       publicId: input.publicId,
       name: input.name,
-      description: sanitizeLongTextField(input.description) ?? null,
+      description: sanitizeNullableRichText(input.description) ?? null,
       ownerUserId: input.ownerUserId ?? null,
       confidentiality: input.confidentiality,
       createdBy: actorUserId,
@@ -130,7 +122,11 @@ export class ProjectService {
     }
     const updated = await this.projects.update(id, {
       ...patch,
-      description: sanitizeLongTextField(patch.description),
+      // Skips the real HTML parse when the patch resends the project's own unchanged description
+      // (the common case for a form that resends full record state) — the previous unconditional
+      // re-sanitize wasted a real parse/allowlist-filter on every save (code-review finding,
+      // efficiency).
+      description: sanitizeNullableRichTextIfChanged(patch.description, project.description),
       updatedBy: actorUserId,
     });
     if (!updated) {

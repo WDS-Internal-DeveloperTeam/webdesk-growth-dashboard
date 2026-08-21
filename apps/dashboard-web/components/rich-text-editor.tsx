@@ -16,6 +16,7 @@ import {
   Undo,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { toSafeRichTextValue } from "@/lib/rich-text";
 import styles from "./rich-text-editor.module.css";
 
 export interface RichTextEditorProps {
@@ -62,7 +63,10 @@ export function RichTextEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [StarterKit],
-    content: value,
+    // `toSafeRichTextValue()` guards against a field that held real, unsanitized plain text
+    // before it switched to this editor (code-review finding, rich-text-editor-long-fields
+    // branch) — a no-op for any value this app's own sanitizer has ever produced.
+    content: toSafeRichTextValue(value),
     editorProps: { attributes },
     onUpdate: ({ editor: updatedEditor }) => {
       onChange(updatedEditor.getHTML());
@@ -74,7 +78,7 @@ export function RichTextEditor({
   // stops this from re-firing onChange and looping back into itself.
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value, { emitUpdate: false });
+      editor.commands.setContent(toSafeRichTextValue(value), { emitUpdate: false });
     }
   }, [value, editor]);
 

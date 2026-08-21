@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
+import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { ServiceStatusActions } from "@/components/service-status-actions";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
-import { sanitizeRenderedHtml } from "@/lib/sanitize-html";
 import { getServerSession } from "@/lib/server-session";
 import {
   formatTimestamp,
@@ -219,14 +219,7 @@ function TextBlock({ label, value }: { readonly label: string; readonly value: s
     <div style={subsectionStyle}>
       <h3 style={h3Style}>{label}</h3>
       {value ? (
-        <div
-          style={richContentStyle}
-          // Sanitized twice: dashboard-api's own write-time pass (services.service.ts's
-          // sanitizeLongTextField()) before this was ever stored, and again here at render time
-          // as defense-in-depth (lib/sanitize-html.ts) — same double-sanitization pattern
-          // Business Knowledge Center's own content field already establishes.
-          dangerouslySetInnerHTML={{ __html: sanitizeRenderedHtml(value) }}
-        />
+        <SanitizedRichText html={value} style={richContentStyle} />
       ) : (
         <p style={mutedStyle}>Not set.</p>
       )}

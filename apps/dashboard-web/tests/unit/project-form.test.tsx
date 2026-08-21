@@ -161,6 +161,68 @@ describe("ProjectForm", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}`));
   });
 
+  it("edit mode: loads a stored description and submits it unchanged", async () => {
+    // Restores the coverage lost when the plain <textarea> (fireEvent.change-able) was replaced
+    // by RichTextEditor, a Tiptap contentEditable div that can't be driven the same way in jsdom —
+    // matches this file's own "renders a rich-text editor" test note and
+    // business-knowledge-record-form.test.tsx's established convention: prove a value reaches the
+    // submitted request body via the `initial` prop, not simulated typing (code-review finding,
+    // test-coverage).
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: "<p>Existing description</p>",
+          confidentiality: "internal",
+          owner: null,
+          ownerUserId: null,
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Existing description")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body.description).toBe("<p>Existing description</p>");
+  });
+
+  it("edit mode: normalizes a stored empty-document value ('<p></p>') to an empty string on submit", async () => {
+    // A cleared RichTextEditor field serializes to "<p></p>", not "" — left unnormalized, this
+    // renders as truthy on the detail page, permanently showing an empty content box instead of
+    // "No description." (code-review finding, correctness).
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: "<p></p>",
+          confidentiality: "internal",
+          owner: null,
+          ownerUserId: null,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body.description).toBe("");
+  });
+
   it("edit mode: leaving a stored empty-string description untouched preserves it (never nulled)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
     global.fetch = fetchMock as typeof fetch;

@@ -6,6 +6,7 @@ import type { ApiSuccessResponse, Project, UserSummary } from "@webdesk/shared-t
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CONFIDENTIALITY_LABEL, CONFIDENTIALITY_VALUES } from "@/lib/project-confidentiality";
+import { findOverLongRichTextField, isEmptyRichTextHtml } from "@/lib/rich-text";
 import { RichTextEditor } from "./rich-text-editor";
 import { UserPicker } from "./user-picker";
 import styles from "./project-form.module.css";
@@ -100,21 +101,23 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
     setSubmitting(true);
     try {
       const trimmedName = name.trim();
-      // Sent as-is (may be "" or the rich-text editor's own empty-document output, "<p></p>"),
-      // never coerced to `null` — the schema accepts either just as validly as null, and coercing
-      // would silently overwrite a project's existing stored value with null on any edit that
-      // left this field untouched (both render identically either way, so there's no display
-      // reason to prefer one over the other).
+      // Never coerced to `null` — the schema accepts either "" or null just as validly, and
+      // coercing to null would silently overwrite a project's existing stored value on any edit
+      // that left this field untouched. Tiptap's own "nothing typed" output ("<p></p>") is
+      // normalized to "" here (matching ServiceLibraryForm's own textField() convention) — left
+      // as-is, it renders as truthy on the detail page, permanently showing an empty content box
+      // instead of "No description." (code-review finding, this branch).
       const trimmedDescription = description.trim();
+      const normalizedDescription = isEmptyRichTextHtml(trimmedDescription)
+        ? ""
+        : trimmedDescription;
 
-      // The rich-text editor is a contentEditable div, not a real form control — it has no native
-      // `maxLength` attribute to enforce this the way the old <textarea> did, so the limit is
-      // checked once, clearly, here at submit time instead (same approach
-      // business-knowledge-record-form.tsx uses for its own CONTENT_MAX_LENGTH).
-      if (description.length > DESCRIPTION_MAX_LENGTH) {
-        setError(
-          `Description is too long (max ${DESCRIPTION_MAX_LENGTH.toLocaleString()} characters).`,
-        );
+      const lengthError = findOverLongRichTextField(
+        [["Description", description]],
+        DESCRIPTION_MAX_LENGTH,
+      );
+      if (lengthError) {
+        setError(lengthError);
         return;
       }
       // If the owner picker was never touched, preserve the project's existing ownerUserId exactly
@@ -128,13 +131,13 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
           ? {
               publicId: publicId.trim(),
               name: trimmedName,
-              description: trimmedDescription,
+              description: normalizedDescription,
               confidentiality,
               ownerUserId,
             }
           : {
               name: trimmedName,
-              description: trimmedDescription,
+              description: normalizedDescription,
               confidentiality,
               ownerUserId,
             };

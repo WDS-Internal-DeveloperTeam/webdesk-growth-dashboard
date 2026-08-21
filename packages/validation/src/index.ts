@@ -5,7 +5,11 @@
  */
 import { z } from "zod";
 
-export { sanitizeRichTextHtml } from "./sanitize-html.js";
+export {
+  sanitizeRichTextHtml,
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+} from "./sanitize-html.js";
 
 export const paginationParamsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

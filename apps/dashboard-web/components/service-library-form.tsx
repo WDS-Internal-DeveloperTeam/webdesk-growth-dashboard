@@ -14,6 +14,7 @@ import type {
 import { RelationshipPicker, TagListField, type RelationshipOption } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { findOverLongRichTextField, isEmptyRichTextHtml } from "@/lib/rich-text";
 import { CONFIDENTIALITY_VALUES, PUBLICATION_STATUS_VALUES } from "@/lib/service-library-query";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./service-library-form.module.css";
@@ -168,23 +169,30 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
       // their own required fields.
       const trimmedCanonicalName = canonicalName.trim();
 
+      // Plain-text fields: omitted entirely (create) or sent as an explicit null (edit) when
+      // empty — same nullish contract as richTextField below, just without the rich-text-specific
+      // empty check (that check must not apply to a plain <input> — code-review finding: it
+      // previously also ran on publicName, so a value that happened to equal the literal
+      // "<p></p>" would have been silently treated as empty).
+      function plainTextField(value: string): string | null | undefined {
+        const trimmed = value.trim();
+        if (trimmed !== "") return trimmed;
+        return props.mode === "create" ? undefined : null;
+      }
+
       // Long-text fields: omitted entirely (create) or sent as an explicit null (edit) when
       // empty — omission on create avoids an unnecessary null write for a field never touched;
       // an explicit null on edit is what actually clears an existing value back to "none",
       // matching updateServiceSchema's own nullish contract (an omitted key leaves it unchanged).
-      // The 7 rich-text fields' own "nothing typed" output is "<p></p>", not "" — both count as
-      // empty, same as business-knowledge-record-form.tsx's own isContentEmpty check.
-      function textField(value: string): string | null | undefined {
+      // isEmptyRichTextHtml() also treats the 7 rich-text fields' own "nothing typed" output
+      // ("<p></p>") as empty, same as business-knowledge-record-form.tsx's own isContentEmpty
+      // check.
+      function richTextField(value: string): string | null | undefined {
         const trimmed = value.trim();
-        const isEmpty = trimmed === "" || trimmed === "<p></p>";
-        if (!isEmpty) return trimmed;
+        if (!isEmptyRichTextHtml(trimmed)) return trimmed;
         return props.mode === "create" ? undefined : null;
       }
 
-      // The rich-text editor is a contentEditable div, not a real form control — it has no native
-      // `maxLength` attribute to enforce this the way the old <textarea>s did, so the limit is
-      // checked once, clearly, here at submit time instead (same approach
-      // business-knowledge-record-form.tsx uses for its own CONTENT_MAX_LENGTH).
       const richTextFields: ReadonlyArray<readonly [string, string]> = [
         ["Short public description", shortPublicDescription],
         ["Audience", audience],
@@ -194,25 +202,22 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
         ["Exclusions", exclusions],
         ...(redacted ? [] : ([["Internal description", internalDescription]] as const)),
       ];
-      for (const [label, value] of richTextFields) {
-        if (value.length > LONG_TEXT_MAX_LENGTH) {
-          setError(
-            `${label} is too long (max ${LONG_TEXT_MAX_LENGTH.toLocaleString()} characters).`,
-          );
-          return;
-        }
+      const lengthError = findOverLongRichTextField(richTextFields, LONG_TEXT_MAX_LENGTH);
+      if (lengthError) {
+        setError(lengthError);
+        return;
       }
 
       const sharedFields = {
         canonicalName: trimmedCanonicalName,
-        publicName: textField(publicName),
+        publicName: plainTextField(publicName),
         categoryId,
-        shortPublicDescription: textField(shortPublicDescription),
-        audience: textField(audience),
-        problems: textField(problems),
-        capabilities: textField(capabilities),
-        outcomes: textField(outcomes),
-        exclusions: textField(exclusions),
+        shortPublicDescription: richTextField(shortPublicDescription),
+        audience: richTextField(audience),
+        problems: richTextField(problems),
+        capabilities: richTextField(capabilities),
+        outcomes: richTextField(outcomes),
+        exclusions: richTextField(exclusions),
         confidentiality,
         icpIds,
         relatedPageIds,
@@ -223,7 +228,7 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
         // Redacted: omit entirely (never send an empty string in place of content this form
         // never actually loaded — that would silently destroy real confidential content). Not
         // redacted: an explicit value (possibly null) is what keeps/clears it correctly.
-        ...(redacted ? {} : { internalDescription: textField(internalDescription) }),
+        ...(redacted ? {} : { internalDescription: richTextField(internalDescription) }),
       };
 
       const payload =

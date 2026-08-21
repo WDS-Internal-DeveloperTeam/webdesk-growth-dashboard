@@ -87,3 +87,36 @@ const RICH_TEXT_HTML_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 export function sanitizeRichTextHtml(html: string): string {
   return sanitizeHtml(html, RICH_TEXT_HTML_SANITIZE_OPTIONS);
 }
+
+/**
+ * Sanitizes a rich-text field's incoming value before it's ever written, preserving its
+ * three-way nullish contract (`undefined` = not provided/leave unchanged, `null` = explicitly
+ * cleared, a string = real HTML to sanitize) — `null`/`undefined` pass through unchanged.
+ * Previously declared independently, byte-for-byte identical, in multiple `dashboard-api`
+ * services (`business-knowledge-records.service.ts`'s own `sanitizeContentOrNull`, then
+ * `project.service.ts`/`services.service.ts` each re-declaring the same wrapper — code-review
+ * finding, `rich-text-editor-long-fields` branch) — the same duplication shape `safeHttpUrlSchema`
+ * and `sanitizeRichTextHtml` were each promoted here to close.
+ */
+export function sanitizeNullableRichText(
+  value: string | null | undefined,
+): string | null | undefined {
+  return typeof value === "string" ? sanitizeRichTextHtml(value) : value;
+}
+
+/**
+ * Same contract as `sanitizeNullableRichText()`, but skips the real HTML parse entirely when the
+ * incoming value is identical to what's already stored — the common case for any form that
+ * resends full record state on every save. `ProjectService.update()`/`ServicesService.update()`
+ * previously re-sanitized every rich-text field on every save regardless of whether it changed
+ * (code-review finding, efficiency).
+ */
+export function sanitizeNullableRichTextIfChanged(
+  value: string | null | undefined,
+  current: string | null,
+): string | null | undefined {
+  if (typeof value === "string" && value === current) {
+    return value;
+  }
+  return sanitizeNullableRichText(value);
+}

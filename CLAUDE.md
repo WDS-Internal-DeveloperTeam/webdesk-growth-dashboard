@@ -1941,7 +1941,8 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     the Service Library module.
 34. **Rich-text editor rollout — Service Library (all 7 Positioning fields) + Projects
     (`description` only) — built, fully validated, live-verified end-to-end against a real local
-    stack, not yet reviewed, gated, or merged (2026-08-21).**
+    stack, code-reviewed (all 9 confirmed findings fixed), not yet security-reviewed, gated, or
+    merged (2026-08-21).**
     `docs/implementation/rich-text-editor-long-fields.md` records the full account. Not started
     automatically — requested directly ("use the rich html editor in place of the text area...
     at every place"). Surveyed every plain `<textarea>` in `apps/dashboard-web/components/` first
@@ -1984,9 +1985,47 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     persist → re-fetch → render round trip for both modules, with the bold-formatted text
     surviving sanitization and rendering as genuinely bold HTML on each detail page; confirmed
     zero new console/server errors throughout. See
-    `docs/implementation/rich-text-editor-long-fields.md` §5 for the full account. Committed to
-    branch `rich-text-editor-long-fields` — not yet pushed to `origin`, reviewed, gated, or merged;
-    each remains its own separate, not-yet-requested next step.
+    `docs/implementation/rich-text-editor-long-fields.md` §5 for the full account. **Independent
+    code review then ran** (high effort, 8 finder angles, 1-vote verification) — 9 candidates
+    surfaced after dedup, all 9 CONFIRMED (0 PLAUSIBLE, 0 REFUTED), **all 9 fixed**. Most severe: a
+    real correctness bug where `ProjectForm` never normalized Tiptap's own empty-document output
+    (`"<p></p>"`) to an empty string the way Service Library's own `textField()` already did for
+    the identical string, so a cleared description was stored and rendered as truthy content,
+    permanently showing an empty content box on the detail page instead of "No description." Also
+    fixed: a real, previously-undiscovered legacy-data risk — Projects' `description` has held
+    real, unsanitized plain-text data since PR #28 (2026-08-17), roughly 4 days of production
+    availability before this branch started treating that same stored value as HTML on both the
+    edit form (parsed by Tiptap) and the detail page (sanitized), with no migration step for
+    existing rows — closed generically, not per-field, via a new `toSafeRichTextValue()` helper
+    wired directly into `RichTextEditor` itself (both its initial content and its external-reset
+    effect), so every current and future consumer is protected by construction; the lost
+    onChange-to-submit test coverage in `project-form.test.tsx` (restored, matching Business
+    Knowledge Center's own `initial`-prop testing convention, since jsdom can't simulate typing
+    into a Tiptap contentEditable div); `sanitizeLongTextField()` triplicated across two new
+    services plus a pre-existing Business Knowledge Center copy (two new shared
+    `@webdesk/validation` exports — `sanitizeNullableRichText()`/
+    `sanitizeNullableRichTextIfChanged()` — close the two new copies; the pre-existing BKC one is
+    left as known, out-of-scope debt); both `update()` methods unconditionally re-sanitizing every
+    rich-text field on every save regardless of whether it changed (fixed via
+    `sanitizeNullableRichTextIfChanged()`, mirroring the in-file precedent already established for
+    `ownerUserId`/`categoryId`); the `"<p></p>"` literal and the submit-time max-length check each
+    independently re-implemented per form with no shared helper (both promoted into a new
+    `apps/dashboard-web/lib/rich-text.ts`); the `dangerouslySetInnerHTML` +
+    `sanitizeRenderedHtml()` pairing hand-rolled at all three detail-page call sites with nothing
+    enforcing it — notable given this project's own prior confirmed HIGH stored-XSS finding from
+    exactly this kind of unenforced rendering convention — promoted into a new server-only
+    `SanitizedRichText` component, now the only place any of the three pages may use
+    `dangerouslySetInnerHTML` for rich-text content (including Business Knowledge Center's own
+    pre-existing call site, a safe, purely mechanical convergence); and the rich-text-aware empty
+    check leaking onto `publicName`, a plain `<input>` (split into `plainTextField()`/
+    `richTextField()`). New coverage: `apps/dashboard-web/tests/unit/rich-text.test.tsx` (10 tests
+    for the new shared helpers) plus 2 new `project-form.test.tsx` tests. Re-validated: 465/465
+    `dashboard-api` unit tests, 323/323 `dashboard-web` unit tests (12 new), `pnpm audit` 0
+    vulnerabilities, typecheck/lint/`check-css-tokens.mjs`/`next build`/`nest build`/prettier all
+    clean across `apps/dashboard-api`, `apps/dashboard-web`, and `packages/validation`. See
+    `docs/implementation/rich-text-editor-long-fields.md` §6 for the full account. Committed to
+    branch `rich-text-editor-long-fields` — not yet pushed to `origin`, security-reviewed, gated,
+    or merged; each remains its own separate, not-yet-requested next step.
 
 ## Recent decisions
 
