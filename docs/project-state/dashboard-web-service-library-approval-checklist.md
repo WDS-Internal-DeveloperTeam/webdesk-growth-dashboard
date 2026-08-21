@@ -2,8 +2,13 @@
 
 **Status:** Code review complete (10 findings kept after dedup — 8 CONFIRMED, all fixed; 2
 PLAUSIBLE, left open). Security review complete (0 findings above threshold). Required second-role
-human review complete (2026-08-21, Jitesh D, "Approved," no disputes raised). Gate decision
-requested next.
+human review complete (2026-08-21, Jitesh D, "Approved," no disputes raised). **The gate
+(G4-dashboard-web-service-library) was then separately requested and approved** — WebDesk
+Solution, decision CONFIRM, 2026-08-21, approved commit `ab6b2e8` on branch
+`dashboard-web-service-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`.
+Pushed to `origin` and opened as
+[PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48). Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
