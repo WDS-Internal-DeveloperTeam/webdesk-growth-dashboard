@@ -372,6 +372,57 @@ describe("Service Library module endpoints (e2e, real disposable database)", () 
     expect(afterClear.body.data.platformIds).toEqual([platform.id]); // untouched — not included in that patch
   });
 
+  it("redacts internalDescription on a restricted service for a caller with no view_confidential grant (zero-seeded — no role currently holds it, including super_admin)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+
+    const createResponse = await request(app.getHttpServer())
+      .post("/service-library/services")
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({
+        publicId: uniquePublicId("SVC"),
+        canonicalName: "Sensitive Service",
+        categoryId,
+        confidentiality: "restricted",
+        internalDescription: "The actually sensitive internal notes.",
+        audience: "Non-sensitive marketing copy stays visible.",
+      })
+      .expect(201);
+    // create() can produce an already-restricted record directly (unlike Business Knowledge
+    // Center's create(), which is always draft) — the create response itself must already redact.
+    expect(createResponse.body.data.internalDescription).toBeUndefined();
+    expect(createResponse.body.data.audience).toBe("Non-sensitive marketing copy stays visible.");
+    expect(createResponse.body.data.canonicalName).toBe("Sensitive Service");
+    const serviceId = createResponse.body.data.id as string;
+
+    const getResponse = await request(app.getHttpServer())
+      .get(`/service-library/services/${serviceId}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(getResponse.body.data.internalDescription).toBeUndefined();
+    expect(getResponse.body.data.confidentiality).toBe("restricted");
+
+    const listResponse = await request(app.getHttpServer())
+      .get("/service-library/services")
+      .query({ categoryId })
+      .set("Cookie", cookie)
+      .expect(200);
+    const listed = (
+      listResponse.body.data as Array<{ id: string; internalDescription?: string }>
+    ).find((s) => s.id === serviceId);
+    expect(listed).toBeDefined();
+    expect(listed?.internalDescription).toBeUndefined();
+
+    const updateResponse = await request(app.getHttpServer())
+      .post(`/service-library/services/${serviceId}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ audience: "Revised marketing copy." })
+      .expect(200);
+    expect(updateResponse.body.data.internalDescription).toBeUndefined();
+    expect(updateResponse.body.data.audience).toBe("Revised marketing copy.");
+  });
+
   it("marketing_editor (VCESR) can submit and review, but is denied approve (draft->submitted->under_review->approved)", async () => {
     const cookie = await cookieForNewSession(marketingEditorUserId);
     const created = await createDraftService(cookie, { canonicalName: "Marketing Editor Fixture" });

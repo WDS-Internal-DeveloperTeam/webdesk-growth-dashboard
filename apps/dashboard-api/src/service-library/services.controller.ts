@@ -19,8 +19,11 @@ import { OriginCheckGuard } from "../auth/common/origin-check.guard.js";
 import type { AuthenticatedRequest } from "../auth/session/session.guard.js";
 import { SessionGuard } from "../auth/session/session.guard.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
+import { redactConfidentialFields } from "../authz/confidential-field.util.js";
 import { PermissionGuard } from "../authz/permission.guard.js";
 import { RequirePermission } from "../authz/require-permission.decorator.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
+import { AuthorizationService } from "../authz/authorization.service.js";
 import {
   changeServiceApprovalStatusSchema,
   createServiceSchema,
@@ -38,11 +41,53 @@ type ServiceLibraryRequest = AuthenticatedRequest & RequestWithCorrelationId;
 
 const MODULE_KEY = "service_persona_proof";
 
+// A `restricted` service's internal-only prose is hidden from anyone without a real
+// `view_confidential` grant on this module (zero-seeded today, mirroring
+// business-knowledge-records.controller.ts's own `CONFIDENTIAL_RESTRICTED_FIELDS`/
+// `redactIfRestricted` pattern, sourced from `03_Detailed_Module_Specifications.md:132`'s three
+// named views — public/internal/restricted — for this exact module). Unlike Business Knowledge
+// Center, `confidentiality` here is a field independent of `approvalStatus`, and both `create()`
+// and `update()` accept it directly, so a caller can produce a `restricted` record on day one —
+// every write path needs the same redaction the read paths do, not just status-change responses.
+// `internalDescription` is the one field whose own name signals it isn't meant to leave the
+// organization; `shortPublicDescription`/`audience`/`problems`/`capabilities`/`outcomes`/
+// `exclusions` read as general marketing copy the spec never flags as restricted, so they stay
+// visible — the same conservative, name-driven field selection BKC's own `content`/`notes` choice
+// used (security-review finding, `module-service-library`).
+const CONFIDENTIAL_RESTRICTED_FIELDS: readonly (keyof ServiceEntity)[] = ["internalDescription"];
+
+function redactIfRestricted<T extends ServiceEntity>(record: T, canViewConfidential: boolean): T {
+  if (canViewConfidential || record.confidentiality !== "restricted") {
+    return record;
+  }
+  return redactConfidentialFields(
+    record as unknown as Record<string, unknown>,
+    CONFIDENTIAL_RESTRICTED_FIELDS,
+    false,
+  ) as unknown as T;
+}
+
+/** `redactConfidentialFieldsFromList()` applies uniformly to every list entry via one shared
+ *  boolean — unusable directly here since only `restricted` records in a mixed-confidentiality
+ *  list should ever be redacted, so each record is checked individually. */
+function redactRestrictedRecords<T extends ServiceEntity>(
+  records: readonly T[],
+  canViewConfidential: boolean,
+): readonly T[] {
+  if (canViewConfidential) {
+    return records;
+  }
+  return records.map((record) => redactIfRestricted(record, canViewConfidential));
+}
+
 @ApiTags("service-library")
 @Controller("service-library/services")
 @UseGuards(SessionGuard)
 export class ServicesController {
-  constructor(private readonly services: ServicesService) {}
+  constructor(
+    private readonly services: ServicesService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   @Get()
   @UseGuards(PermissionGuard)
@@ -52,7 +97,11 @@ export class ServicesController {
     @Query(new ZodValidationPipe(listServicesQuerySchema)) query: ListServicesQueryDto,
     @Req() req: ServiceLibraryRequest,
   ): Promise<ApiSuccessResponse<readonly ServiceEntity[]>> {
-    const data = await this.services.list(query);
+    const [records, canViewConfidential] = await Promise.all([
+      this.services.list(query),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactRestrictedRecords(records, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -64,7 +113,11 @@ export class ServicesController {
     @Param("id", new ParseUUIDPipe()) id: string,
     @Req() req: ServiceLibraryRequest,
   ): Promise<ApiSuccessResponse<ServiceWithRelationshipIds>> {
-    const data = await this.services.findById(id);
+    const [record, canViewConfidential] = await Promise.all([
+      this.services.findById(id),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactIfRestricted(record, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -77,7 +130,14 @@ export class ServicesController {
     @Body(new ZodValidationPipe(createServiceSchema)) body: CreateServiceDto,
     @Req() req: ServiceLibraryRequest,
   ): Promise<ApiSuccessResponse<ServiceWithRelationshipIds>> {
-    const data = await this.services.create(body, req.authUser!.id);
+    // Unlike Business Knowledge Center's create() (always draft, never restricted), this schema
+    // accepts `confidentiality` directly — a caller can create an already-`restricted` record, so
+    // the response needs the same redaction check as every read path.
+    const [record, canViewConfidential] = await Promise.all([
+      this.services.create(body, req.authUser!.id),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactIfRestricted(record, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -91,7 +151,11 @@ export class ServicesController {
     @Body(new ZodValidationPipe(updateServiceSchema)) body: UpdateServiceDto,
     @Req() req: ServiceLibraryRequest,
   ): Promise<ApiSuccessResponse<ServiceWithRelationshipIds>> {
-    const data = await this.services.update(id, body, req.authUser!.id);
+    const [updated, canViewConfidential] = await Promise.all([
+      this.services.update(id, body, req.authUser!.id),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactIfRestricted(updated, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -111,11 +175,11 @@ export class ServicesController {
     body: ChangeServiceApprovalStatusDto,
     @Req() req: ServiceLibraryRequest,
   ): Promise<ApiSuccessResponse<ServiceEntity>> {
-    const data = await this.services.changeApprovalStatus(
-      id,
-      body.approvalStatus,
-      req.authUser!.id,
-    );
+    const [updated, canViewConfidential] = await Promise.all([
+      this.services.changeApprovalStatus(id, body.approvalStatus, req.authUser!.id),
+      this.authorizationService.canViewConfidential(req.authUser!.id, MODULE_KEY),
+    ]);
+    const data = redactIfRestricted(updated, canViewConfidential);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 }
