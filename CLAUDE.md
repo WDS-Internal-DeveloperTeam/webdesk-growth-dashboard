@@ -1751,6 +1751,44 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
     `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
     `dashboard-web` file upload on the Business Knowledge Record create form is now genuinely
     live in production.**
+32. **Service Library module backend — built, fully validated, not yet reviewed, gated, or merged
+    (2026-08-21).** `docs/task-packages/module-service-library.md` and
+    `docs/implementation/module-service-library.md` record the full account. The third real
+    business-module backend built on the Phase 1F application shell / canonical module registry,
+    after Projects and Business Knowledge Center — module #3 in the project-owner-supplied
+    `canonical-inputs/Recommended_Module_Roadmap.md`. Not started automatically — built directly on
+    the explicit "Start Service Library module" choice, presented as the recommended next step. A
+    genuine roadmap/dependency conflict was surfaced and resolved directly with the user rather than
+    silently picked: the module registry's own seeded `dependencies` field for `service_library`
+    names three modules that don't exist yet (`persona_library`/`case_study_library`/
+    `page_inventory`); the user chose **build now, storing the three cross-module relationship
+    fields (`icpIds`/`relatedPageIds`/`relatedCaseStudyIds`) as plain unvalidated string arrays**,
+    no foreign key, to be properly linked once those modules exist. A real normalized 7-table schema
+    (migration `00050`, opposite of BKC's single-generic-table design, sourced from
+    `04_Data_Model_and_Ownership.md:107-118`), organization-wide (no `project_id`), two
+    independently-governed status fields (`approvalStatus` governed via a dedicated transition
+    route, `publicationStatus` a plain ungoverned field — no `P` grant exists), and adopts
+    `public_id` (unlike BKC). The status-transition route is gated only on `view` at the route
+    level, with the real per-transition action (submit/review/approve) checked dynamically inside
+    `ServicesService.changeApprovalStatus()` — the real seeded RBAC matrix splits these three
+    actions across three different role tiers (`marketing_editor` holds submit but not approve;
+    `super_admin`/`owner_growth_approver` hold approve but not submit; `qa_security_reviewer` holds
+    only review), mirroring `ProjectApproversService.assign()`'s own layered pattern. **A real bug
+    was caught by the new e2e suite before merge**: `ServiceLibraryDimensionsController` was first
+    written with `@RequirePermission` at the class level, which `PermissionGuard` never actually
+    reads (it only checks `context.getHandler()`, a deliberate fail-closed design) — every
+    dimension-list route would have 500'd in production; fixed by moving the decorator to each
+    method, matching every other controller in this codebase. 17 new `dashboard-api` unit tests, 21
+    new `packages/database` integration tests (real disposable database), 15 new `dashboard-api` e2e
+    tests (real disposable database + real seeded RBAC roles, including the full three-tier
+    submit/review/approve matrix and a relationship round-trip test) — 447/447 `dashboard-api` unit
+    tests overall. Migration `00050`/`00051` up/down round-trip clean (51 migrations);
+    `pnpm validate:module-registry` unaffected (43 modules, 21 permission groups);
+    typecheck/lint/`nest build`/prettier all clean. Committed on branch `module-service-library`,
+    on top of the already-committed task-package commit. **Not yet pushed, not yet reviewed, gated,
+    or merged** — no `dashboard-web` UI exists yet, matching the Projects/BKC precedent; independent
+    code review, security review, second-role human review, a gate decision, push/PR, and merge each
+    remain their own separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -4583,6 +4621,37 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
   `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
   `dashboard-web` file upload on the Business Knowledge Record create form is now genuinely live
   in production.**
+- `[2026-08-21]` **Built the Service Library module backend**, under the explicit "Start Service
+  Library module" instruction, presented as the recommended next step from
+  `canonical-inputs/Recommended_Module_Roadmap.md` (module #3, right after Projects and Business
+  Knowledge Center). Branch `module-service-library`, off `main` at `b7fdc95`. Before writing any
+  code, a genuine roadmap/dependency conflict was surfaced and resolved directly with the user
+  (`AskUserQuestion`, three options presented): the module registry's own seeded `dependencies`
+  field for `service_library` names `persona_library`/`case_study_library`/`page_inventory`, none
+  of which exist yet, while the advisory roadmap wants Service Library built now. **The user chose
+  "Build now, store as unvalidated IDs"** — the three cross-module relationship fields
+  (`icpIds`/`relatedPageIds`/`relatedCaseStudyIds`) are stored as plain unvalidated string-array
+  columns, no foreign key, to be properly linked once those modules exist later. Full design
+  account (D1-D9) in `docs/task-packages/module-service-library.md`; full as-built account in
+  `docs/implementation/module-service-library.md` — see "Active tasks" item 32 above for the
+  summary. Migration `00050` creates a real normalized 7-table schema (opposite of BKC's
+  single-generic-table design, sourced from `04_Data_Model_and_Ownership.md:107-118`), including
+  the codebase's first real `pg_trgm` GIN trigram index. The status-transition route is gated only
+  on `view` at the route level, with the real per-transition action (submit/review/approve)
+  checked dynamically inside `ServicesService.changeApprovalStatus()`, mirroring
+  `ProjectApproversService.assign()`'s own layered pattern — the real seeded RBAC matrix splits
+  these three actions across three different role tiers. **A real bug was caught by the new e2e
+  suite before merge**: `ServiceLibraryDimensionsController` was first written with
+  `@RequirePermission` at the class level, which `PermissionGuard` never reads (fail-closed by
+  design — it only checks `context.getHandler()`), so every dimension-list route would have 500'd
+  in production; fixed by moving the decorator to each method. 17 new `dashboard-api` unit tests,
+  21 new `packages/database` integration tests (real disposable database), 15 new `dashboard-api`
+  e2e tests (real disposable database + real seeded RBAC roles) — 447/447 `dashboard-api` unit
+  tests overall; migration up/down round-trip clean (51 migrations);
+  `pnpm validate:module-registry` unaffected; typecheck/lint/`nest build`/prettier all clean.
+  Committed to the branch. **Not yet pushed, reviewed, gated, or merged** — each remains its own
+  separate, not-yet-requested next step, matching this project's standing discipline for every
+  prior module.
 
 ## Open client blockers
 
