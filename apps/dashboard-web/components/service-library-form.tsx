@@ -15,13 +15,17 @@ import { RelationshipPicker, TagListField, type RelationshipOption } from "@webd
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CONFIDENTIALITY_VALUES, PUBLICATION_STATUS_VALUES } from "@/lib/service-library-query";
+import { RichTextEditor } from "./rich-text-editor";
 import styles from "./service-library-form.module.css";
 
 // Mirrors apps/dashboard-api/src/service-library/service-library.dto.ts — kept in sync by hand,
 // same approach components/project-form.tsx/business-knowledge-record-form.tsx already use.
 const PUBLIC_ID_MAX_LENGTH = 64;
 const NAME_MAX_LENGTH = 255;
-const LONG_TEXT_MAX_LENGTH = 20_000;
+// Raised from 20_000 alongside the backend's own LONG_TEXT_MAX_LENGTH bump — these 7 fields are
+// now HTML from the rich-text editor, carrying real markup overhead over the equivalent plain
+// text, same reasoning as business-knowledge-record-form.tsx's own CONTENT_MAX_LENGTH raise.
+const LONG_TEXT_MAX_LENGTH = 40_000;
 const TAG_MAX_LENGTH = 128;
 const TAG_MAX_COUNT = 200;
 
@@ -62,7 +66,14 @@ function toRelationshipOptions<T extends { readonly id: string; readonly name: s
  *  current viewer lacks `view_confidential` for — rendered as an inert notice and omitted entirely
  *  from the submit payload, the same convention `BusinessKnowledgeRecordForm` already establishes
  *  for its own redacted `content`/`notes` fields, so an unseen confidential value is never
- *  silently overwritten by whatever an empty textarea would otherwise submit.
+ *  silently overwritten by whatever an empty editor would otherwise submit.
+ *
+ *  All 7 Positioning fields (`shortPublicDescription`/`audience`/`problems`/`capabilities`/
+ *  `outcomes`/`exclusions`/`internalDescription`) use `RichTextEditor` (Tiptap), not a plain
+ *  `<textarea>` — the resulting HTML is sanitized server-side before it's ever stored
+ *  (`services.service.ts`'s `sanitizeLongTextField()`) and again at render time on the detail
+ *  page, the same double-sanitization pattern `BusinessKnowledgeRecordForm`'s own `content` field
+ *  already established.
  *
  *  Submits via a direct browser `fetch()` with `credentials: "include"` — required for
  *  `dashboard-api`'s `OriginCheckGuard` to see a real browser `Origin` header, the same pattern
@@ -161,10 +172,35 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
       // empty — omission on create avoids an unnecessary null write for a field never touched;
       // an explicit null on edit is what actually clears an existing value back to "none",
       // matching updateServiceSchema's own nullish contract (an omitted key leaves it unchanged).
+      // The 7 rich-text fields' own "nothing typed" output is "<p></p>", not "" — both count as
+      // empty, same as business-knowledge-record-form.tsx's own isContentEmpty check.
       function textField(value: string): string | null | undefined {
         const trimmed = value.trim();
-        if (trimmed) return trimmed;
+        const isEmpty = trimmed === "" || trimmed === "<p></p>";
+        if (!isEmpty) return trimmed;
         return props.mode === "create" ? undefined : null;
+      }
+
+      // The rich-text editor is a contentEditable div, not a real form control — it has no native
+      // `maxLength` attribute to enforce this the way the old <textarea>s did, so the limit is
+      // checked once, clearly, here at submit time instead (same approach
+      // business-knowledge-record-form.tsx uses for its own CONTENT_MAX_LENGTH).
+      const richTextFields: ReadonlyArray<readonly [string, string]> = [
+        ["Short public description", shortPublicDescription],
+        ["Audience", audience],
+        ["Problems solved", problems],
+        ["Capabilities", capabilities],
+        ["Outcomes", outcomes],
+        ["Exclusions", exclusions],
+        ...(redacted ? [] : ([["Internal description", internalDescription]] as const)),
+      ];
+      for (const [label, value] of richTextFields) {
+        if (value.length > LONG_TEXT_MAX_LENGTH) {
+          setError(
+            `${label} is too long (max ${LONG_TEXT_MAX_LENGTH.toLocaleString()} characters).`,
+          );
+          return;
+        }
       }
 
       const sharedFields = {
@@ -318,13 +354,10 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
           <label htmlFor="shortPublicDescription" className={styles.label}>
             Short public description
           </label>
-          <textarea
+          <RichTextEditor
             id="shortPublicDescription"
-            rows={2}
-            maxLength={LONG_TEXT_MAX_LENGTH}
             value={shortPublicDescription}
-            onChange={(event) => setShortPublicDescription(event.target.value)}
-            className={styles.textarea}
+            onChange={setShortPublicDescription}
           />
         </div>
 
@@ -332,70 +365,35 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
           <label htmlFor="audience" className={styles.label}>
             Audience
           </label>
-          <textarea
-            id="audience"
-            rows={2}
-            maxLength={LONG_TEXT_MAX_LENGTH}
-            value={audience}
-            onChange={(event) => setAudience(event.target.value)}
-            className={styles.textarea}
-          />
+          <RichTextEditor id="audience" value={audience} onChange={setAudience} />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="problems" className={styles.label}>
             Problems solved
           </label>
-          <textarea
-            id="problems"
-            rows={2}
-            maxLength={LONG_TEXT_MAX_LENGTH}
-            value={problems}
-            onChange={(event) => setProblems(event.target.value)}
-            className={styles.textarea}
-          />
+          <RichTextEditor id="problems" value={problems} onChange={setProblems} />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="capabilities" className={styles.label}>
             Capabilities
           </label>
-          <textarea
-            id="capabilities"
-            rows={2}
-            maxLength={LONG_TEXT_MAX_LENGTH}
-            value={capabilities}
-            onChange={(event) => setCapabilities(event.target.value)}
-            className={styles.textarea}
-          />
+          <RichTextEditor id="capabilities" value={capabilities} onChange={setCapabilities} />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="outcomes" className={styles.label}>
             Outcomes
           </label>
-          <textarea
-            id="outcomes"
-            rows={2}
-            maxLength={LONG_TEXT_MAX_LENGTH}
-            value={outcomes}
-            onChange={(event) => setOutcomes(event.target.value)}
-            className={styles.textarea}
-          />
+          <RichTextEditor id="outcomes" value={outcomes} onChange={setOutcomes} />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="exclusions" className={styles.label}>
             Exclusions
           </label>
-          <textarea
-            id="exclusions"
-            rows={2}
-            maxLength={LONG_TEXT_MAX_LENGTH}
-            value={exclusions}
-            onChange={(event) => setExclusions(event.target.value)}
-            className={styles.textarea}
-          />
+          <RichTextEditor id="exclusions" value={exclusions} onChange={setExclusions} />
         </div>
 
         <div className={styles.field}>
@@ -409,13 +407,10 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
             </p>
           ) : (
             <>
-              <textarea
+              <RichTextEditor
                 id="internalDescription"
-                rows={3}
-                maxLength={LONG_TEXT_MAX_LENGTH}
                 value={internalDescription}
-                onChange={(event) => setInternalDescription(event.target.value)}
-                className={styles.textarea}
+                onChange={setInternalDescription}
               />
               <span className={styles.helperText}>
                 Not shown outside the organization — hidden from anyone without a view-confidential

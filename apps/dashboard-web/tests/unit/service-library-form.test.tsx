@@ -257,4 +257,33 @@ describe("ServiceLibraryForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("publicId already in use: SVC-NEW");
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it("renders a rich-text editor (not a plain textarea) for all 7 Positioning fields", () => {
+    render(
+      <ServiceLibraryForm
+        mode="create"
+        categories={categories}
+        deliverables={deliverables}
+        platforms={platforms}
+        engagementModels={engagementModels}
+      />,
+    );
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
+    expect(document.querySelectorAll('[contenteditable="true"]')).toHaveLength(7);
+  });
+
+  it("edit mode: a rich-text field's initial HTML content loads into its editor", async () => {
+    render(
+      <ServiceLibraryForm
+        mode="edit"
+        serviceId={SERVICE_ID}
+        initial={serviceDetailFixture({ problems: "<p>Solves onboarding friction</p>" })}
+        categories={categories}
+        deliverables={deliverables}
+        platforms={platforms}
+        engagementModels={engagementModels}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText("Solves onboarding friction")).toBeInTheDocument());
+  });
 });

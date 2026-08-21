@@ -126,6 +126,24 @@ describe("ProjectService", () => {
       );
     });
 
+    it("sanitizes description before it's written, stripping a disallowed tag", async () => {
+      projects.findByPublicId.mockResolvedValue(null);
+      projects.create.mockResolvedValue(project());
+
+      await service.create(
+        {
+          publicId: "acme-website",
+          name: "Acme",
+          description: "<script>alert(1)</script><p>Safe text</p>",
+        },
+        "actor-1",
+      );
+
+      expect(projects.create).toHaveBeenCalledWith(
+        expect.objectContaining({ description: "<p>Safe text</p>" }),
+      );
+    });
+
     it("rejects a create with an ownerUserId that doesn't resolve to an active user", async () => {
       projects.findByPublicId.mockResolvedValue(null);
       usersService.findById.mockRejectedValue(new NotFoundException());
@@ -154,6 +172,22 @@ describe("ProjectService", () => {
       );
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: "data_change", action: "update" }),
+      );
+    });
+
+    it("sanitizes description before it's written, stripping a disallowed tag", async () => {
+      projects.findById.mockResolvedValue(project());
+      projects.update.mockResolvedValue(project());
+
+      await service.update(
+        "project-1",
+        { description: "<img src=x onerror=alert(1)><p>Ships fast</p>" },
+        "actor-1",
+      );
+
+      expect(projects.update).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ description: "<p>Ships fast</p>" }),
       );
     });
 

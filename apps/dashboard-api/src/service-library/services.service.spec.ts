@@ -172,6 +172,30 @@ describe("ServicesService", () => {
       );
     });
 
+    it("sanitizes the 7 rich-text fields before they're written, stripping a disallowed tag", async () => {
+      categories.findById.mockResolvedValue(category());
+      services.findByPublicId.mockResolvedValue(null);
+      services.create.mockResolvedValue(service());
+
+      await svc.create(
+        {
+          publicId: "SVC-HEADLESS-COMMERCE",
+          canonicalName: "Headless Commerce",
+          categoryId: "category-1",
+          shortPublicDescription: "<script>alert(1)</script><p>Safe text</p>",
+          audience: null,
+          problems: undefined,
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = services.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.shortPublicDescription).toBe("<p>Safe text</p>");
+      // null/undefined pass through unchanged rather than being coerced into an empty string.
+      expect(writtenInput.audience).toBeNull();
+      expect(writtenInput.problems).toBeUndefined();
+    });
+
     it("rejects when the category does not exist", async () => {
       categories.findById.mockResolvedValue(null);
 
@@ -370,6 +394,20 @@ describe("ServicesService", () => {
       );
 
       expect(categories.findById).not.toHaveBeenCalled();
+    });
+
+    it("sanitizes the 7 rich-text fields before they're written, stripping a disallowed tag", async () => {
+      services.findById.mockResolvedValue(service());
+      services.update.mockResolvedValue(service());
+
+      await svc.update(
+        "service-1",
+        { capabilities: "<img src=x onerror=alert(1)><p>Ships fast</p>" },
+        "actor-1",
+      );
+
+      const [, writtenPatch] = services.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.capabilities).toBe("<p>Ships fast</p>");
     });
 
     it("rejects when a new parentServiceId does not exist", async () => {

@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { withTransaction } from "@webdesk/database";
+import { sanitizeRichTextHtml } from "@webdesk/validation";
 import type {
   ProjectConfidentiality,
   ProjectEntity,
@@ -26,6 +27,14 @@ export interface UpdateProjectInput {
   description?: string | null;
   ownerUserId?: string | null;
   confidentiality?: ProjectConfidentiality;
+}
+
+/** Sanitizes `description` (HTML from the dashboard-web rich-text editor) before it's ever
+ *  written — `null`/`undefined` pass through unchanged. Mirrors
+ *  `apps/dashboard-api/src/business-knowledge/sanitize-html.util.ts`'s own
+ *  `sanitizeContentOrNull()` pattern against the same shared `@webdesk/validation` allowlist. */
+function sanitizeLongTextField(value: string | null | undefined): string | null | undefined {
+  return typeof value === "string" ? sanitizeRichTextHtml(value) : value;
 }
 
 export interface ListProjectsInput {
@@ -75,7 +84,7 @@ export class ProjectService {
     const project = await this.projects.create({
       publicId: input.publicId,
       name: input.name,
-      description: input.description ?? null,
+      description: sanitizeLongTextField(input.description) ?? null,
       ownerUserId: input.ownerUserId ?? null,
       confidentiality: input.confidentiality,
       createdBy: actorUserId,
@@ -119,7 +128,11 @@ export class ProjectService {
     if (patch.ownerUserId && patch.ownerUserId !== project.ownerUserId) {
       await this.assertOwnerExists(patch.ownerUserId);
     }
-    const updated = await this.projects.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.projects.update(id, {
+      ...patch,
+      description: sanitizeLongTextField(patch.description),
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Project not found: ${id}`);
     }

@@ -3,10 +3,16 @@ import { safeHttpUrlSchema } from "@webdesk/validation";
 
 const confidentialityEnum = z.enum(["public", "internal", "confidential", "restricted"]);
 
+// Raised from 10_000 — description is now HTML from the dashboard-web rich-text editor
+// (sanitized in project.service.ts before being stored), carrying real markup overhead over the
+// equivalent plain text, same reasoning as the Business Knowledge Center module's own
+// CONTENT_MAX_LENGTH raise.
+const DESCRIPTION_MAX_LENGTH = 20_000;
+
 export const createProjectSchema = z.object({
   publicId: z.string().min(1).max(64),
   name: z.string().min(1).max(255),
-  description: z.string().max(10_000).nullish(),
+  description: z.string().max(DESCRIPTION_MAX_LENGTH).nullish(),
   ownerUserId: z.string().uuid().nullish(),
   confidentiality: confidentialityEnum.optional(),
 });
@@ -14,7 +20,7 @@ export type CreateProjectDto = z.infer<typeof createProjectSchema>;
 
 export const updateProjectSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  description: z.string().max(10_000).nullish(),
+  description: z.string().max(DESCRIPTION_MAX_LENGTH).nullish(),
   ownerUserId: z.string().uuid().nullish(),
   confidentiality: confidentialityEnum.optional(),
 });

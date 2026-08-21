@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
 import { ServiceStatusActions } from "@/components/service-status-actions";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import { sanitizeRenderedHtml } from "@/lib/sanitize-html";
 import { getServerSession } from "@/lib/server-session";
 import {
   formatTimestamp,
@@ -189,11 +190,12 @@ const dlStyle: React.CSSProperties = {
   margin: 0,
 };
 
-const contentStyle: React.CSSProperties = {
+// No `whiteSpace: pre-wrap` here — this wraps real HTML (already structured with its own <p>/<br>
+// tags from the rich-text editor), not plain text needing that treatment, matching Business
+// Knowledge Center's own `richContentStyle` precedent.
+const richContentStyle: React.CSSProperties = {
   fontSize: "0.9375rem",
   color: "var(--webdesk-dashboard-color-foreground)",
-  whiteSpace: "pre-wrap",
-  margin: 0,
 };
 
 const mutedStyle: React.CSSProperties = {
@@ -216,7 +218,18 @@ function TextBlock({ label, value }: { readonly label: string; readonly value: s
   return (
     <div style={subsectionStyle}>
       <h3 style={h3Style}>{label}</h3>
-      {value ? <p style={contentStyle}>{value}</p> : <p style={mutedStyle}>Not set.</p>}
+      {value ? (
+        <div
+          style={richContentStyle}
+          // Sanitized twice: dashboard-api's own write-time pass (services.service.ts's
+          // sanitizeLongTextField()) before this was ever stored, and again here at render time
+          // as defense-in-depth (lib/sanitize-html.ts) — same double-sanitization pattern
+          // Business Knowledge Center's own content field already establishes.
+          dangerouslySetInnerHTML={{ __html: sanitizeRenderedHtml(value) }}
+        />
+      ) : (
+        <p style={mutedStyle}>Not set.</p>
+      )}
     </div>
   );
 }

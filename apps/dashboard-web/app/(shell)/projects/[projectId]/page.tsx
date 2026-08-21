@@ -12,6 +12,7 @@ import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
 import { formatTimestamp, getProjectDetail, projectStatusBadge } from "@/lib/projects";
 import { getApproverRoleId } from "@/lib/roles";
+import { sanitizeRenderedHtml } from "@/lib/sanitize-html";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +89,14 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           <Fact label="Updated">{formatTimestamp(project.updatedAt)}</Fact>
         </dl>
         {project.description ? (
-          <p style={descriptionStyle}>{project.description}</p>
+          <div
+            style={descriptionStyle}
+            // Sanitized twice: dashboard-api's own write-time pass (project.service.ts's
+            // sanitizeLongTextField()) before this was ever stored, and again here at render
+            // time as defense-in-depth (lib/sanitize-html.ts) — same double-sanitization pattern
+            // Business Knowledge Center's own content field already establishes.
+            dangerouslySetInnerHTML={{ __html: sanitizeRenderedHtml(project.description) }}
+          />
         ) : (
           <p style={mutedStyle}>No description.</p>
         )}

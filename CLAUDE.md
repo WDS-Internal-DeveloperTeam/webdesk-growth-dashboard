@@ -1939,6 +1939,54 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     is now genuinely live in production**, closing out this slice's full build-to-production arc.
     Backend and now the full UI (list, detail, create/edit form, status actions) are both live for
     the Service Library module.
+34. **Rich-text editor rollout — Service Library (all 7 Positioning fields) + Projects
+    (`description` only) — built, fully validated, live-verified end-to-end against a real local
+    stack, not yet reviewed, gated, or merged (2026-08-21).**
+    `docs/implementation/rich-text-editor-long-fields.md` records the full account. Not started
+    automatically — requested directly ("use the rich html editor in place of the text area...
+    at every place"). Surveyed every plain `<textarea>` in `apps/dashboard-web/components/` first
+    (15 sites, 6 files) and flagged that this also means real backend changes, since neither
+    Service Library's nor Projects' DTOs/services sanitize HTML today (only Business Knowledge
+    Center's `content` field has that precedent) — two scope questions
+    (`AskUserQuestion`) resolved this directly: **which fields switch** (Service Library's all 7 —
+    no clear primary/secondary split exists among them; Projects' `description` only — its own
+    Objectives/Repositories/Environments sub-resource fields stay plain text) and **whether backend
+    sanitization is included in this pass** (yes — mirror Business Knowledge Center's write-time +
+    render-time sanitization pattern exactly, not a frontend-only swap that would persist
+    unsanitized HTML with only a length cap). `RichTextEditor` (the existing Tiptap component,
+    unmodified) replaces the plain `<textarea>`s; `LONG_TEXT_MAX_LENGTH`/`DESCRIPTION_MAX_LENGTH`
+    raised (2× — matching Business Knowledge Center's own markup-overhead-driven raise ratio) on
+    both frontend and backend; both `services.service.ts` and `project.service.ts` gained a
+    `sanitizeLongTextField()` helper (mirroring `sanitize-html.util.ts`'s existing
+    `sanitizeContentOrNull()` pattern) wired into `create()`/`update()`; both detail pages switched
+    their render sites to `dangerouslySetInnerHTML` + `sanitizeRenderedHtml()`, the same
+    defense-in-depth pattern Business Knowledge Center's own detail page already establishes. Two
+    real test-writing lessons recorded for this codebase: `RichTextEditor` is a Tiptap
+    contentEditable div, not a real form control, so `fireEvent.change`/`toHaveValue` don't apply —
+    two existing `project-form.test.tsx` tests that assumed otherwise were fixed to match
+    `business-knowledge-record-form.test.tsx`'s own established convention (verify rich-text
+    content only via the `initial` prop, never simulated typing). 4 new `dashboard-api` unit tests
+    (2 per service) prove a disallowed tag is stripped before reaching the repository layer; 3 new
+    `dashboard-web` unit tests add structural "N contenteditable, 0 textarea" + "initial content
+    loads" checks. Deliberately not tested: the new submit-time max-length rejection path —
+    reliably typing 40,000+ characters via jsdom isn't practical, and Business Knowledge Center's
+    own equivalent `CONTENT_MAX_LENGTH` check isn't tested either; this branch follows that same
+    accepted gap. 465/465 `dashboard-api` unit tests (4 new), 153/153 `dashboard-api`
+    e2e/integration tests (unchanged), 311/311 `dashboard-web` unit tests (3 new), typecheck/lint/
+    `check-css-tokens.mjs`/`next build`/prettier all clean across both apps. **Live-verified
+    end-to-end**, not just typechecked/built blind — unlike most prior slices, stood up a genuinely
+    live local stack (both `dashboard-web` and `dashboard-api` running locally against the
+    project's existing disposable-database convention, `webdesk_phase1b_dev`, all 51 migrations
+    applied, a real provisioned Super Admin user, a real minted session cookie via a throwaway
+    script deleted immediately after use, never committed): confirmed all 7 Service Library
+    editors and the 1 Projects editor render with a working toolbar; confirmed typing and Bold
+    formatting genuinely work (real `<strong>` output); confirmed a full real create → sanitize →
+    persist → re-fetch → render round trip for both modules, with the bold-formatted text
+    surviving sanitization and rendering as genuinely bold HTML on each detail page; confirmed
+    zero new console/server errors throughout. See
+    `docs/implementation/rich-text-editor-long-fields.md` §5 for the full account. Committed to
+    branch `rich-text-editor-long-fields` — not yet pushed to `origin`, reviewed, gated, or merged;
+    each remains its own separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -4982,6 +5030,23 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   was ruled out via repeated checks, not a real defect. **The `dashboard-web` Service Library UI
   is now genuinely live in production.** Backend and now the full UI (list, detail, create/edit
   form, status actions) are both live for the Service Library module.
+- `[2026-08-21]` **Built the rich-text editor rollout — Service Library (all 7 Positioning
+  fields) + Projects (`description` only)**, under the explicit "use the rich html editor in
+  place of the text area... at every place" instruction. Surveyed every plain `<textarea>` first
+  (15 sites, 6 files) and surfaced that this also means real backend changes — neither Service
+  Library's nor Projects' DTOs/services sanitize HTML today. Two genuine scope questions were put
+  to the user directly rather than guessed: which fields switch (Service Library's all 7 — no
+  clear primary/secondary split exists; Projects' `description` only, sub-resource fields stay
+  plain) and whether backend sanitization is included (yes — mirror Business Knowledge Center's
+  write-time + render-time pattern exactly). Full account, including two new test-writing
+  conventions this codebase now has (RichTextEditor can't be driven via `fireEvent.change`) and a
+  genuinely live end-to-end verification (a real local `dashboard-web` + `dashboard-api` stack, a
+  real provisioned Super Admin user, a real minted session, confirming the full create → sanitize
+  → persist → render round trip for both modules with bold formatting surviving intact) in
+  `docs/implementation/rich-text-editor-long-fields.md`. 465/465 `dashboard-api` unit tests (4
+  new), 153/153 `dashboard-api` e2e tests (unchanged), 311/311 `dashboard-web` unit tests (3 new),
+  full validation clean. Committed to branch `rich-text-editor-long-fields` — not yet pushed,
+  reviewed, gated, or merged.
 
 ## Open client blockers
 

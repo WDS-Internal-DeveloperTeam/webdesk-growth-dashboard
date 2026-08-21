@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { withTransaction } from "@webdesk/database";
+import { sanitizeRichTextHtml } from "@webdesk/validation";
 import type {
   DeliverableRepository,
   EngagementModelRepository,
@@ -85,6 +86,18 @@ const TRANSITIONS: Readonly<
   superseded: {},
   archived: {},
 };
+
+/** Sanitizes one of the 7 rich-text long-text fields (`shortPublicDescription`/`audience`/
+ *  `problems`/`capabilities`/`outcomes`/`exclusions`/`internalDescription`) before it's ever
+ *  written — `null`/`undefined` pass through unchanged, preserving the field's own three-way
+ *  nullish semantics (`undefined` = "not provided"/"leave unchanged", `null` = "explicitly
+ *  cleared", a string = real HTML from the dashboard-web rich-text editor to sanitize). Mirrors
+ *  `apps/dashboard-api/src/business-knowledge/sanitize-html.util.ts`'s own
+ *  `sanitizeContentOrNull()` pattern, generalized to this module's 7 fields against the same
+ *  shared `@webdesk/validation` allowlist. */
+function sanitizeLongTextField(value: string | null | undefined): string | null | undefined {
+  return typeof value === "string" ? sanitizeRichTextHtml(value) : value;
+}
 
 @Injectable()
 export class ServicesService {
@@ -193,6 +206,13 @@ export class ServicesService {
     const created = await withTransaction(async (transaction) => {
       const service = await this.services.create({
         ...input,
+        shortPublicDescription: sanitizeLongTextField(input.shortPublicDescription),
+        audience: sanitizeLongTextField(input.audience),
+        problems: sanitizeLongTextField(input.problems),
+        capabilities: sanitizeLongTextField(input.capabilities),
+        outcomes: sanitizeLongTextField(input.outcomes),
+        exclusions: sanitizeLongTextField(input.exclusions),
+        internalDescription: sanitizeLongTextField(input.internalDescription),
         createdBy: actorUserId,
       });
       // skipDestroy: `service.id` was just inserted in this same transaction, so the join tables
@@ -317,7 +337,17 @@ export class ServicesService {
       const { deliverableIds, platformIds, engagementModelIds, ...servicePatch } = patch;
       const result = await this.services.update(
         id,
-        { ...servicePatch, updatedBy: actorUserId },
+        {
+          ...servicePatch,
+          shortPublicDescription: sanitizeLongTextField(servicePatch.shortPublicDescription),
+          audience: sanitizeLongTextField(servicePatch.audience),
+          problems: sanitizeLongTextField(servicePatch.problems),
+          capabilities: sanitizeLongTextField(servicePatch.capabilities),
+          outcomes: sanitizeLongTextField(servicePatch.outcomes),
+          exclusions: sanitizeLongTextField(servicePatch.exclusions),
+          internalDescription: sanitizeLongTextField(servicePatch.internalDescription),
+          updatedBy: actorUserId,
+        },
         transaction,
       );
       if (deliverableIds) {
