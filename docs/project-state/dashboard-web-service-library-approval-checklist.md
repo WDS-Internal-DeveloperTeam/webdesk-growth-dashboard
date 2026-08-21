@@ -7,8 +7,28 @@ human review complete (2026-08-21, Jitesh D, "Approved," no disputes raised). **
 Solution, decision CONFIRM, 2026-08-21, approved commit `ab6b2e8` on branch
 `dashboard-web-service-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`.
 Pushed to `origin` and opened as
-[PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48), all 14
+CI checks green. **"Merge PR #48" was then separately requested and executed** — merge commit
+`3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`, verified live in production directly. **The
+`dashboard-web` Service Library UI is now genuinely live in production.**
+
+## Merge — COMPLETE
+
+**"Merge PR #48" was separately requested and executed.** Waited for all 14 CI checks to go green
+first (already confirmed green from the push/PR step). Merged with a real merge commit (not
+squash/rebase), matching every prior merge in this project's history — merge commit
+`3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`. Both Vercel projects auto-deployed on push to `main`
+and were verified live directly, not just via CI's own Vercel status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`, confirming the exact merged commit is what's serving.
+- `dashboard-web`'s new `/service-library` route correctly redirects (`307`) an unauthenticated
+  visitor to `/auth/sign-in` (`200`) — a transient stale-edge-cache `404` on the very first check
+  was ruled out via repeated checks, not a real defect.
+
+**The `dashboard-web` Service Library UI is now genuinely live in production.** Backend and now
+the full UI (list, detail, create/edit form, status actions) are both live for the Service Library
+module.
 
 ## Completion condition
 

@@ -1841,9 +1841,10 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     `dashboard-web` UI has since been built — see item 33 below.**
 33. **`dashboard-web` Service Library UI — built, fully validated, code-reviewed (8 of 10 findings
     fixed), security-reviewed (0 findings above threshold), second-role human reviewed (Jitesh D,
-    "Approved"), gated (G4-dashboard-web-service-library, WebDesk Solution, CONFIRM), and pushed
-    with [PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48)
-    opened — not yet merged (2026-08-21).**
+    "Approved"), gated (G4-dashboard-web-service-library, WebDesk Solution, CONFIRM), merged
+    ([PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48),
+    merge commit `3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`) — now genuinely live in production
+    (2026-08-21).**
     `docs/implementation/dashboard-web-service-library.md` records the full account. Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for Service
     Library" instruction, following the backend's own build-to-production arc (PR #47). Unlike
@@ -1925,8 +1926,19 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
     **"Push the branch and open a PR" was then separately requested and executed** — pushed to
     `origin`, opened as
-    [PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48).
-    Merge authorization remains a separate, not-yet-requested next step.
+    [PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48), all
+    14 CI checks green. **"Merge PR #48" was then separately requested and executed** — merged
+    with a real merge commit (not squash/rebase), matching every prior merge in this project's
+    history — merge commit `3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`. Both Vercel projects
+    auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+    status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`, confirming the exact merged commit is what's serving;
+    `dashboard-web`'s new `/service-library` route correctly redirects (307) an unauthenticated
+    visitor to `/auth/sign-in` (200) — a transient stale-edge-cache `404` on the very first check
+    was ruled out via repeated checks, not a real defect. **The `dashboard-web` Service Library UI
+    is now genuinely live in production**, closing out this slice's full build-to-production arc.
+    Backend and now the full UI (list, detail, create/edit form, status actions) are both live for
+    the Service Library module.
 
 ## Recent decisions
 
@@ -4958,6 +4970,18 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `dashboard-web-service-library` — pushed to `origin`, opened as
   [PR #48](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/48). Merge
   authorization remains a separate, not-yet-requested next step.
+- `[2026-08-21]` **CI status checked on PR #48 — all 14 checks green**, including both Vercel
+  preview deployments. **"Merge PR #48" was then separately requested and executed** — merged
+  with a real merge commit (not squash/rebase), matching every prior merge in this project's
+  history — merge commit `3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`. Both Vercel projects
+  auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+  status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+3743de4d4b4b33c6e31d7eeba8583cbb0a07e8f0`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s new `/service-library` route correctly redirects (307) an unauthenticated
+  visitor to `/auth/sign-in` (200) — a transient stale-edge-cache `404` on the very first check
+  was ruled out via repeated checks, not a real defect. **The `dashboard-web` Service Library UI
+  is now genuinely live in production.** Backend and now the full UI (list, detail, create/edit
+  form, status actions) are both live for the Service Library module.
 
 ## Open client blockers
 
