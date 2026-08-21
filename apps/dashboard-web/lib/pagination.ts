@@ -22,3 +22,20 @@ export function parsePageSize(raw: string | undefined): PageSize {
     ? (parsed as PageSize)
     : DEFAULT_PAGE_SIZE;
 }
+
+/** Precomputes every `PAGE_SIZE_OPTIONS` entry's destination href up front, as a plain,
+ *  JSON-serializable object — what `<PageSizeSelect>` (a Client Component) actually needs from
+ *  its Server Component caller. A Server Component can't pass a closure as a prop across the RSC
+ *  boundary (React rejects it at render time — "Functions cannot be passed directly to Client
+ *  Components" — a real production bug this fixed, see
+ *  `docs/implementation/business-knowledge-center-rich-content-attachments.md`'s §12), so the
+ *  caller must compute each option's real href itself, using its own `buildXHref(query, {
+ *  pageSize })`, rather than handing this component a function to call. */
+export function buildHrefBySize(
+  buildHref: (pageSize: PageSize) => string,
+): Readonly<Record<PageSize, string>> {
+  return Object.fromEntries(PAGE_SIZE_OPTIONS.map((size) => [size, buildHref(size)])) as Record<
+    PageSize,
+    string
+  >;
+}

@@ -13,6 +13,7 @@ import {
 } from "@/lib/business-knowledge";
 import { RECORD_TYPE_VALUES, STATUS_VALUES } from "@/lib/business-knowledge-query";
 import { listTableCellStyle, listTableHeaderCellStyle } from "@/lib/list-table-styles";
+import { buildHrefBySize } from "@/lib/pagination";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -191,7 +192,9 @@ export default async function BusinessKnowledgeListPage({
             <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
               <PageSizeSelect
                 value={query.pageSize}
-                buildHref={(pageSize) => buildBusinessKnowledgeHref(query, { pageSize })}
+                hrefBySize={buildHrefBySize((pageSize) =>
+                  buildBusinessKnowledgeHref(query, { pageSize }),
+                )}
               />
               <div style={{ display: "flex", gap: "0.75rem" }}>
                 {query.offset > 0 ? (

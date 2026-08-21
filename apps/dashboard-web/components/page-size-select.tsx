@@ -6,9 +6,14 @@ import { PAGE_SIZE_OPTIONS, type PageSize } from "@/lib/pagination";
 
 export interface PageSizeSelectProps {
   readonly value: PageSize;
-  /** Builds the destination href for a chosen page size — the caller's own `buildXHref(query, {
-   *  pageSize })`, which already resets `offset` to 0 for any non-offset override. */
-  readonly buildHref: (pageSize: PageSize) => string;
+  /** The destination href for each selectable page size, precomputed by the caller (its own
+   *  `buildXHref(query, { pageSize })` per option, which already resets `offset` to 0 for any
+   *  non-offset override) — a plain, JSON-serializable object, not a function. A Server Component
+   *  page can't pass a closure as a prop to this Client Component (React Server Components
+   *  rejects that at render time: "Functions cannot be passed directly to Client Components"),
+   *  so the caller computes every option's href up front instead of handing this component a way
+   *  to compute one itself. */
+  readonly hrefBySize: Readonly<Record<PageSize, string>>;
 }
 
 /**
@@ -19,7 +24,7 @@ export interface PageSizeSelectProps {
  * change is expected to apply at once, the same way it does in every other table UI a reader has
  * used before.
  */
-export function PageSizeSelect({ value, buildHref }: PageSizeSelectProps): ReactNode {
+export function PageSizeSelect({ value, hrefBySize }: PageSizeSelectProps): ReactNode {
   const router = useRouter();
 
   return (
@@ -29,7 +34,7 @@ export function PageSizeSelect({ value, buildHref }: PageSizeSelectProps): React
         aria-label="Records per page"
         value={value}
         onChange={(event) => {
-          router.push(buildHref(Number(event.target.value) as PageSize));
+          router.push(hrefBySize[Number(event.target.value) as PageSize]);
         }}
         style={{
           padding: "0.3rem 0.5rem",

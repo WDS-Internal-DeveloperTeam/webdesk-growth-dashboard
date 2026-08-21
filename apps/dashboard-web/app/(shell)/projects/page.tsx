@@ -10,6 +10,7 @@ import {
 import { PageSizeSelect } from "@/components/page-size-select";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { listTableCellStyle, listTableHeaderCellStyle } from "@/lib/list-table-styles";
+import { buildHrefBySize } from "@/lib/pagination";
 import { getServerSession } from "@/lib/server-session";
 import {
   buildProjectsHref,
@@ -223,7 +224,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
               <PageSizeSelect
                 value={query.pageSize}
-                buildHref={(pageSize) => buildProjectsHref(query, { pageSize })}
+                hrefBySize={buildHrefBySize((pageSize) => buildProjectsHref(query, { pageSize }))}
               />
               <div style={{ display: "flex", gap: "0.75rem" }}>
                 {query.offset > 0 ? (
