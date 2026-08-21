@@ -2,7 +2,10 @@
 
 **Status:** Built, fully validated. Code review complete (9 finder angles, 8/8 CONFIRMED findings
 fixed, 0 open). Security review complete (0 findings above threshold). Required second-role human
-review requested — see "Required second-role human review" below.
+review complete (2026-08-21, Jitesh D, "Approved", no disputes raised). **Gate G4-attachments-on-create
+approved** (2026-08-21, WebDesk Solution, decision CONFIRM, approved commit `7bbaa67`) — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Pushing the branch, opening a PR, and
+merge authorization remain separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -38,24 +41,41 @@ this slice can be requested.
   finding came back CONFIRMED and was fixed; every security-review candidate was individually
   verified and ruled out with a documented reason (see the review packet's §3).
 
-## Required second-role human review — REQUESTED
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (8/8 CONFIRMED, all fixed) — review packet published, awaiting decision.
-- [ ] Security-review findings (0 above threshold) — review packet published, awaiting decision.
+- [x] Code-review findings (8/8 CONFIRMED, all fixed) — reviewed by: **Jitesh D**, 2026-08-21,
+      **Approved**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-21,
+      **Approved**.
 
 Review packet: published as a Claude artifact ("Attachments On Create Review") — code review
 findings/fixes, security review disposition, and validation evidence, with a decision section.
 
 ## Sign-off
 
-**Required second-role human review: pending.** Not yet reviewed by a second role, since the
-implementing agent cannot also be its own reviewer (ADR-0010). A gate decision and merge
-authorization remain separate, not-yet-requested next steps until this review completes.
+**Second-role human review: complete. Gate G4-attachments-on-create: approved.** Both were their
+own separate, explicit human step, per every prior phase's own pattern of keeping the review and
+the gate decision distinct — the gate was requested, and approved, only after the review above was
+already recorded as complete.
 
 | Field                         | Value                                                                                                                                      |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reviewer (second-role review) | Pending                                                                                                                                    |
-| Review date                   | Pending                                                                                                                                    |
-| Decision                      | Pending                                                                                                                                    |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                   |
+| Review date                   | 2026-08-21                                                                                                                                 |
+| Decision                      | Approved                                                                                                                                   |
 | Scope reviewed                | Full code-review disposition (8/8 CONFIRMED, all fixed) and full security-review disposition (0 findings), via the published review packet |
-| Disputes raised               | Pending                                                                                                                                    |
+| Disputes raised               | None recorded — 0 open findings of any kind on this branch                                                                                 |
+
+| Field                    | Value                                                                                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-attachments-on-create                                                                                                                                                                            |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                                                    |
+| Gate date                | 2026-08-21                                                                                                                                                                                          |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                                                   |
+| Approved commit          | `7bbaa67` on branch `dashboard-web-attachments-on-create` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record                                                     |
+| Scope                    | `dashboard-web` file upload on the Business Knowledge Record create form only. Pushing the branch, opening a PR, and merge authorization are each their own separate, not-yet-requested next steps. |
+
+| Role                          | Name             | Decision   | Date       |
+| ----------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved | 2026-08-21 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-21 |

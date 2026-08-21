@@ -1653,8 +1653,9 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       outcome not yet recorded here.
 31. **`dashboard-web` file upload on the Business Knowledge Record create form — built, fully
     validated, independently code-reviewed (all 8 CONFIRMED findings fixed), security-reviewed (0
-    findings above threshold), a review packet published and the required second-role human
-    review requested; not yet gated or merged (2026-08-21).**
+    findings above threshold), required second-role human reviewed (Jitesh D, "Approved"), and
+    gated (G4-attachments-on-create, WebDesk Solution, CONFIRM); not yet pushed, opened as a PR,
+    or merged (2026-08-21).**
     `docs/implementation/dashboard-web-attachments-on-create.md` records the full account. Not
     started automatically — built directly on the explicit "we need upload option in New business
     knowledge record add not in view" instruction. Upload was previously detail-page-only (task
@@ -1677,7 +1678,10 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     redirect for `/business-knowledge-center/new` confirmed clean, zero console/server errors; no
     local `dashboard-api` available in this environment, so the authenticated file-picker
     rendering wasn't visually confirmed, the same limitation noted on several prior slices.
-    Pushed as branch `dashboard-web-attachments-on-create`.
+    Committed locally on branch `dashboard-web-attachments-on-create` — unlike every prior slice
+    this session, not pushed to `origin` or opened as a PR before review; the code-review,
+    security-review, and second-role-review steps below were still each run in full, matching
+    this project's standing discipline regardless.
     **Independent code review then ran** (this project's own `code-review` skill, high effort, 9
     finder angles, 1-vote verification) — every one of the 9 candidates that survived dedup came
     back CONFIRMED (0 PLAUSIBLE, 0 REFUTED). All 8 kept findings fixed (a 9th collapsed into the
@@ -1719,9 +1723,17 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     Create Review" — code review + security review findings, fixes, and validation evidence, with
     a decision section) was then prepared for the required second-role human review, since the
     implementing agent cannot also be its own reviewer (ADR-0010). See
-    `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`. **Awaiting the
-    second-role reviewer's decision** — a gate decision and merge authorization remain separate,
-    not-yet-requested next steps.
+    `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`. **Jitesh D
+    reviewed it and returned "Approved"** — 0 disputes raised, matching the 0 open findings of any
+    kind on this branch. **The gate (G4-attachments-on-create) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `7bbaa67` on branch `dashboard-web-attachments-on-create` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-attachments-on-create`) and the approval checklist's "Sign-off" section. **This gate
+    approval does not itself authorize pushing the branch, opening a PR, or merging** — each
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -4520,9 +4532,23 @@ migrate` command to run themselves (same credential-handling discipline as every
   Review" — code review + security review findings, fixes, and validation evidence, with a
   decision section) was then prepared for the required second-role human review, since the
   implementing agent cannot also be its own reviewer (ADR-0010). See
-  `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`. Awaiting the
-  second-role reviewer's decision — a gate decision and merge authorization remain separate,
-  not-yet-requested next steps.
+  `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`.
+- `[2026-08-21]` **Required second-role human review complete for
+  `dashboard-web-attachments-on-create`.** The review packet (code review + security review
+  findings, fixes, and validation evidence, with a decision section) was reviewed. **Jitesh D
+  reviewed it and returned "Approved,"** no disputes raised — 0 open findings of any kind on this
+  branch. See
+  `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-21]` **The gate (G4-attachments-on-create) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `7bbaa67` on branch `dashboard-web-attachments-on-create` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-attachments-on-create`) and the approval checklist's "Sign-off" section. **This gate
+  approval does not itself authorize pushing the branch, opening a PR, or merging** — each remains
+  its own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
+  rule.
 
 ## Open client blockers
 
