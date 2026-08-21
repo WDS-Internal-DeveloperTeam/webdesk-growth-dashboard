@@ -1638,7 +1638,109 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       `docs/implementation/business-knowledge-center-rich-content-attachments.md` §11 for the full
       incident account. **The Business Knowledge Center rich content & attachments slice,
       including the same-day production-incident fix, is now genuinely live and stable in
-      production.**
+      production.** **Two more real, independent production errors surfaced the next day and were
+      diagnosed and fixed the same way** — see
+      `docs/implementation/business-knowledge-center-rich-content-attachments.md` §12/§13 for the
+      full accounts: (1) an RSC function-prop crash on both `/projects` and
+      `/business-knowledge-center` (a Server Component passing a closure, not plain data, to the
+      `PageSizeSelect` Client Component — React Server Components rejects that at render time),
+      fixed by changing `PageSizeSelect`'s prop from a `buildHref` function to a precomputed
+      `hrefBySize` record and deployed as commit `600f88e`, verified resolved live; (2) a specific
+      record's detail page 500ing because migration `00049`
+      (`create-business-knowledge-attachments`) had never actually been run against production
+      after PR #45 merged — confirmed via a real, read-only `migrate:status` check, with the fix
+      (the user running the real `migrate` command themselves) given but its confirmed-applied
+      outcome not yet recorded here.
+31. **`dashboard-web` file upload on the Business Knowledge Record create form — built, fully
+    validated, independently code-reviewed (all 8 CONFIRMED findings fixed), security-reviewed (0
+    findings above threshold), required second-role human reviewed (Jitesh D, "Approved"), gated
+    (G4-attachments-on-create, WebDesk Solution, CONFIRM), and pushed/opened as
+    [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46); not
+    yet merged (2026-08-21).**
+    `docs/implementation/dashboard-web-attachments-on-create.md` records the full account. Not
+    started automatically — built directly on the explicit "we need upload option in New business
+    knowledge record add not in view" instruction. Upload was previously detail-page-only (task
+    package D5's own deliberate scope decision, since an attachment's `record_id` is a real
+    foreign key that can't exist before the record itself does). Files picked on the create form
+    are now staged client-side (never uploaded) until the record is actually created, at which
+    point every staged file is uploaded via the exact same `uploadAttachment()` flow the detail
+    page's own control already uses — no new backend surface. A new
+    `lib/business-knowledge-attachments.ts` extracts the shared MIME/size allowlist and the
+    `upload()`-then-`confirm()` sequence out of `BusinessKnowledgeAttachmentsSection` (a pure
+    refactor, re-validated by that component's own unchanged 10-test suite) so the create form's
+    new file picker doesn't duplicate either. A `createdRecordId` state guards against the real
+    risk this design introduces: once the record is created, the submit button is replaced by a
+    direct "View record" link instead of staying resubmittable. The first pass at the
+    shared-helper extraction silently dropped a real behavioral distinction (a curated backend
+    error message vs. a generic fallback for any other failure) that the pre-existing
+    attachments-section test suite caught immediately — fixed with a new `AttachmentUploadApiError`
+    class. 264/264 `dashboard-web` unit tests (5 new), typecheck/lint/`check-css-tokens.mjs`/
+    `next build`/prettier all clean. Live-rendered in the Browser pane: the unauthenticated
+    redirect for `/business-knowledge-center/new` confirmed clean, zero console/server errors; no
+    local `dashboard-api` available in this environment, so the authenticated file-picker
+    rendering wasn't visually confirmed, the same limitation noted on several prior slices.
+    Committed locally on branch `dashboard-web-attachments-on-create` — unlike every prior slice
+    this session, not pushed to `origin` or opened as a PR before review; the code-review,
+    security-review, and second-role-review steps below were still each run in full, matching
+    this project's standing discipline regardless.
+    **Independent code review then ran** (this project's own `code-review` skill, high effort, 9
+    finder angles, 1-vote verification) — every one of the 9 candidates that survived dedup came
+    back CONFIRMED (0 PLAUSIBLE, 0 REFUTED). All 8 kept findings fixed (a 9th collapsed into the
+    same root cause as one of the 8). Most severe: `handleSubmit` had no internal guard against
+    being re-invoked once `createdRecordId` was already set — the `<form>` stayed mounted with the
+    Title field the only remaining input that doesn't block HTML's implicit-submission-on-Enter
+    behavior, so pressing Enter there after a partial upload failure could silently create a
+    duplicate record; fixed with an early `if (createdRecordId) return;` guard inside
+    `handleSubmit` itself, not just a UI-level button swap. Also fixed: the "View record" link (a
+    plain `<a>`, not a Next.js `<Link>`) was rendered — and clickable — before staged uploads
+    actually finished, so clicking through mid-upload could hard-navigate and silently abort
+    in-flight attachment uploads with no error ever surfaced; now gated on `!submitting` too. The
+    batch-upload path never actually checked for `AttachmentUploadApiError` (contradicting this
+    branch's own implementation doc, which had claimed it did), always showing a generic message
+    even when the backend returned a real, curated rejection reason — now shows the real per-file
+    reason when available. `pendingFiles` was never trimmed after a partial success, so the staged
+    list kept showing already-uploaded files as if they still needed action — now trims to just
+    the files still pending. `attachmentError` was never cleared by `handleSubmit`, so a stale
+    rejection message could render alongside a newer, unrelated error — now cleared at the start
+    of every submit. The component's own doc comment claimed navigation "still proceeds" after a
+    partial failure, contradicting the actual early-return code path (and this branch's own test
+    asserting it) — corrected. `.removeStagedButton` hand-copied `.deleteButton`'s styling but
+    omitted its `:disabled` rule, so a disabled Remove button looked fully active — now composes
+    from `.deleteButton` directly, picking up the missing state for free. 5 new regression tests
+    added covering mixed valid/invalid file selection, multi-file removal by index, a genuinely
+    mixed success/failure upload batch, the resubmission guard, and `attachmentError` clearing.
+    Re-validated: 269/269 `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs`/
+    `next build`/prettier all clean.
+    **A separate `security-review` skill run then found 0 findings above threshold** — this diff
+    is client-side UI/orchestration only, no new backend endpoint, no changes to the upload-route
+    proxy/RBAC/HTML-sanitization boundary. Four candidates were individually verified and ruled
+    out: the Blob-pathname-from-raw-filename construction (confirmed via `git show` to be
+    byte-for-byte identical to the pre-existing, already-reviewed code this refactor only
+    relocated); client-side-only MIME/size validation (unchanged, real enforcement is unmodified
+    backend code); the duplicate-record-creation guard (a business-logic concern, not
+    authorization, and already fixed within the same diff); and error/filename string
+    interpolation into the failure message (confirmed rendered only via JSX text children, never
+    `dangerouslySetInnerHTML`). A review packet (published as a Claude artifact, "Attachments On
+    Create Review" — code review + security review findings, fixes, and validation evidence, with
+    a decision section) was then prepared for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`. **Jitesh D
+    reviewed it and returned "Approved"** — 0 disputes raised, matching the 0 open findings of any
+    kind on this branch. **The gate (G4-attachments-on-create) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `7bbaa67` on branch `dashboard-web-attachments-on-create` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-attachments-on-create`) and the approval checklist's "Sign-off" section. **This gate
+    approval does not itself authorize pushing the branch, opening a PR, or merging** — each
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule. **"Push the branch and open a PR" was then separately requested and
+    executed** — pushed to `origin`, opened as
+    [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46).
+    Unusually, unlike every prior slice this session, the branch had never been visible on GitHub
+    until after code review, security review, second-role human review, and the gate had all
+    already happened locally — this is the first time it's on `origin`. Merge authorization
+    remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -4359,6 +4461,108 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   for the full account. **The Business Knowledge Center rich content & attachments slice,
   including the same-day production-incident fix, is now genuinely live and stable in
   production.**
+- `[2026-08-21]` **A second real production error, an RSC function-prop crash on both
+  `/projects` and `/business-knowledge-center`, diagnosed and fixed.** Reported by the user via a
+  live "Something went wrong" error screenshot. Diagnosed from real Vercel runtime logs: `Error:
+Functions cannot be passed directly to Client Components...` — `PageSizeSelect` (added by this
+  PR's own page-size selector, §2 of the implementation doc) took a `buildHref` function prop, and
+  both list pages (Server Components) passed a closure directly, which React Server Components
+  rejects at render time as non-serializable. Fixed by changing the prop to plain,
+  JSON-serializable data — a new `lib/pagination.ts#buildHrefBySize()` helper precomputes every
+  page-size option's real destination href up front, and both pages pass that record instead of a
+  closure. A new regression test (`page-size-select.test.tsx`) asserts the fixture round-trips
+  through `JSON.parse(JSON.stringify(...))` without throwing — a direct proxy for "safe to pass
+  across the RSC boundary." Deployed as commit `600f88e`; full validation clean before and after;
+  verified resolved live via clean `200`s in Vercel's runtime logs for `/business-knowledge-center`
+  requests. See
+  `docs/implementation/business-knowledge-center-rich-content-attachments.md` §12 for the full
+  account.
+- `[2026-08-21]` **A third real production error, on a specific record's detail page, diagnosed
+  as a pending production migration.** Reported by the user via a second, distinct live error
+  screenshot (a different digest, on `/business-knowledge-center/a8624947-1f5d-45b6-9f35-14ae123cdf47`).
+  Correlated Vercel logs showed `/health`/`/me`/`/me/navigation`/`/projects` all returning clean
+  `200`s in the same request bursts, isolating the failure to the attachment-listing route. The
+  user then ran the real, read-only `pnpm --filter @webdesk/database run migrate:status` against
+  production, confirming directly: migration `00049` (`create-business-knowledge-attachments`)
+  had never been run against production after PR #45 merged — unlike every other schema change in
+  this project's history. The user was given the real `pnpm --filter @webdesk/database run
+migrate` command to run themselves (same credential-handling discipline as every prior production
+  migration); its confirmed-applied outcome is not yet recorded in this file. See
+  `docs/implementation/business-knowledge-center-rich-content-attachments.md` §13.
+- `[2026-08-21]` **Built `dashboard-web` file upload on the Business Knowledge Record create
+  form**, under the explicit "we need upload option in New business knowledge record add not in
+  view" instruction — see "Active tasks" item 31 above and
+  `docs/implementation/dashboard-web-attachments-on-create.md` for the full account. Extracted a
+  new `lib/business-knowledge-attachments.ts` shared by both the detail page's existing upload
+  control and the new create-form file picker; a `createdRecordId` guard was intended to prevent a
+  partial attachment-upload failure from ever letting the form re-create a duplicate record — the
+  code review below found this guard was UI-only at first (only the render, not `handleSubmit`
+  itself). 264/264 `dashboard-web` unit tests (5 new), full validation clean. Pushed as branch
+  `dashboard-web-attachments-on-create`. Not yet reviewed, gated, or merged.
+- `[2026-08-21]` **Independent code review run on `dashboard-web-attachments-on-create`, high
+  effort — 9 finder angles, then all 8 kept CONFIRMED findings fixed.** Requested directly ("run
+  the code review skill on this branch"). Every one of the 9 candidates that survived dedup came
+  back CONFIRMED — 0 PLAUSIBLE, 0 REFUTED, an unusually clean-cut result for this project's own
+  review history. Most severe: `handleSubmit` had no internal guard against being re-invoked once
+  `createdRecordId` was already set — the `<form>` stayed mounted with the Title field the only
+  remaining input that doesn't block HTML's implicit-submission-on-Enter behavior, so pressing
+  Enter there after a partial upload failure could silently create a duplicate record; fixed with
+  a real early-return guard inside `handleSubmit` itself, not just the button-swap the initial
+  build relied on. Also fixed: the "View record" link was clickable before staged uploads actually
+  finished, letting a click mid-upload hard-navigate and silently abort in-flight uploads with no
+  error surfaced (now gated on uploads having settled); the batch-upload path never checked for
+  `AttachmentUploadApiError`, discarding curated backend rejection reasons in favor of a generic
+  message (contradicting the implementation doc's own claim that it did); `pendingFiles` was never
+  trimmed after a partial success, so the staged list kept showing already-uploaded files as if
+  they still needed action; `attachmentError` was never cleared on submit, letting a stale
+  rejection message render alongside a newer error; the component's own doc comment claimed
+  navigation "still proceeds" after a partial failure, contradicting the actual code and this
+  branch's own test; and `.removeStagedButton` was missing the `:disabled` CSS its sibling
+  `.deleteButton` has, now fixed by composing from it directly instead of hand-copying it. 5 new
+  regression tests added. Re-validated: 269/269 `dashboard-web` unit tests, typecheck/lint/
+  `check-css-tokens.mjs`/`next build`/prettier all clean. See
+  `docs/implementation/dashboard-web-attachments-on-create.md` §8 for the full account. Security
+  review, second-role human review, a gate decision, and merge authorization remain separate,
+  not-yet-requested next steps.
+- `[2026-08-21]` **Security review run on `dashboard-web-attachments-on-create`, separately from
+  the code review — 0 findings above threshold.** Requested directly ("run the security review
+  skill on this branch"). Confirmed this diff is client-side UI/orchestration only — no new
+  backend endpoint, no changes to the upload-route proxy, RBAC, or HTML-sanitization boundary.
+  Four candidates were individually verified and ruled out: the Blob-pathname-from-raw-filename
+  construction (`git show`-confirmed byte-for-byte identical to the pre-existing code this
+  refactor only relocated, already covered by PR #45's own security review); client-side-only
+  MIME/size validation (unchanged, real enforcement is unmodified backend code); the
+  duplicate-record-creation guard (a business-logic/idempotency concern, not authorization, and
+  already fixed within the same diff); and error/filename string interpolation into the failure
+  message (confirmed rendered only via JSX text children, never `dangerouslySetInnerHTML`, not
+  exploitable as XSS). A review packet (published as a Claude artifact, "Attachments On Create
+  Review" — code review + security review findings, fixes, and validation evidence, with a
+  decision section) was then prepared for the required second-role human review, since the
+  implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`.
+- `[2026-08-21]` **Required second-role human review complete for
+  `dashboard-web-attachments-on-create`.** The review packet (code review + security review
+  findings, fixes, and validation evidence, with a decision section) was reviewed. **Jitesh D
+  reviewed it and returned "Approved,"** no disputes raised — 0 open findings of any kind on this
+  branch. See
+  `docs/project-state/dashboard-web-attachments-on-create-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-21]` **The gate (G4-attachments-on-create) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `7bbaa67` on branch `dashboard-web-attachments-on-create` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-attachments-on-create`) and the approval checklist's "Sign-off" section. **This gate
+  approval does not itself authorize pushing the branch, opening a PR, or merging** — each remains
+  its own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
+  rule.
+- `[2026-08-21]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-attachments-on-create` — pushed to `origin`, opened as
+  [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46).
+  Unusually, unlike every prior slice this session, the branch had never been visible on GitHub
+  until now — code review, security review, second-role human review, and the gate had all
+  already happened on the local branch first, so this push/PR came _after_ the gate rather than
+  before it. Merge authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 
