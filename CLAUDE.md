@@ -1941,8 +1941,8 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     the Service Library module.
 34. **Rich-text editor rollout — Service Library (all 7 Positioning fields) + Projects
     (`description` only) — built, fully validated, live-verified end-to-end against a real local
-    stack, code-reviewed (all 9 confirmed findings fixed), not yet security-reviewed, gated, or
-    merged (2026-08-21).**
+    stack, code-reviewed (all 9 confirmed findings fixed), security-reviewed (0 findings above
+    threshold), pushed and opened as PR #49, not yet gated or merged (2026-08-21).**
     `docs/implementation/rich-text-editor-long-fields.md` records the full account. Not started
     automatically — requested directly ("use the rich html editor in place of the text area...
     at every place"). Surveyed every plain `<textarea>` in `apps/dashboard-web/components/` first
@@ -2023,9 +2023,26 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     `dashboard-api` unit tests, 323/323 `dashboard-web` unit tests (12 new), `pnpm audit` 0
     vulnerabilities, typecheck/lint/`check-css-tokens.mjs`/`next build`/`nest build`/prettier all
     clean across `apps/dashboard-api`, `apps/dashboard-web`, and `packages/validation`. See
-    `docs/implementation/rich-text-editor-long-fields.md` §6 for the full account. Committed to
-    branch `rich-text-editor-long-fields` — not yet pushed to `origin`, security-reviewed, gated,
-    or merged; each remains its own separate, not-yet-requested next step.
+    `docs/implementation/rich-text-editor-long-fields.md` §6 for the full account. **A separate
+    `security-review` skill run then found 0 findings above threshold** — focused specifically on
+    the sanitization boundary this branch touches directly (`dangerouslySetInnerHTML` via the new
+    `SanitizedRichText` component, `toSafeRichTextValue()`'s tag-prefix regex, and the two new
+    `@webdesk/validation` sanitize wrappers), confirming: the sanitizer allowlist itself is
+    byte-identical to `main` (only new wrapper functions were added around it); every rich-text
+    render site across all three detail pages routes exclusively through the new
+    `SanitizedRichText` component with no bypass path; `toSafeRichTextValue()`'s
+    "already-looks-like-rich-text" branch is not a sanitization bypass, since the render-time
+    sanitizer still runs afterward regardless of which branch executes; and
+    `sanitizeNullableRichTextIfChanged()`'s skip-if-unchanged optimization introduces no new
+    exposure, since render-time sanitization still runs on every read regardless of what's stored.
+    Also directly verified (via inspecting the installed `@tiptap/extension-link` package's own
+    source) that Tiptap's own Link extension independently blocks non-allowlisted URL schemes
+    (`javascript:`/`data:`) at parse/render/command time, closing the one client-side edit-path
+    scenario considered. **"Push the branch and open a PR" was then separately requested and
+    executed** — pushed to `origin`, opened as
+    [PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49). A
+    review packet for the required second-role human review, a gate decision, and merge
+    authorization each remain separate, not-yet-requested next steps.
 
 ## Recent decisions
 
