@@ -1822,11 +1822,14 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
     commit `03856b8` on branch `module-service-library` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-service-library`) and
-    `docs/project-state/module-service-library-approval-checklist.md`'s "Sign-off" section. **This
-    gate approval does not itself authorize pushing the branch, opening a PR, or merging** — each
-    remains its own separate, not-yet-requested authorization, per this project's standing "no
-    auto-merge" rule. No `dashboard-web` UI exists yet for this module, matching the Projects/BKC
-    precedent — a separate, not-yet-requested next step.
+    `docs/project-state/module-service-library-approval-checklist.md`'s "Sign-off" section.
+    **"Push the branch and open a PR" was then separately requested and executed** — pushed to
+    `origin`, opened as
+    [PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47).
+    **This does not itself authorize merging** — that remains its own separate, not-yet-requested
+    authorization, per this project's standing "no auto-merge" rule. No `dashboard-web` UI exists
+    yet for this module, matching the Projects/BKC precedent — a separate, not-yet-requested next
+    step.
 
 ## Recent decisions
 
@@ -4752,6 +4755,10 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
   gate approval does not itself authorize pushing the branch, opening a PR, or merging** — each
   remains its own separate, not-yet-requested authorization, per this project's standing "no
   auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-21]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-service-library` — pushed to `origin`, opened as
+  [PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47).
+  Merge authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

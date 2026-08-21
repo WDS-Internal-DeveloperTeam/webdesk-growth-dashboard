@@ -5,8 +5,10 @@ review complete (1 MEDIUM candidate verified at confidence 8/10, fixed). Require
 human review complete (2026-08-21, Jitesh D, "Approved," no disputes raised). **The gate
 (G4-service-library) was then separately requested and approved** — WebDesk Solution, decision
 CONFIRM, 2026-08-21, approved commit `03856b8` on branch `module-service-library` — see
-`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Push/PR and merge authorization each
-remain separate, not-yet-requested next steps.
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **"Push the branch and open a PR"
+was then separately requested and executed** — pushed to `origin`, opened as
+[PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47). Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -23,7 +25,7 @@ for this slice can be requested.
 | 6   | Security review complete                     | ✅ `security-review` skill run separately — 1 candidate surfaced, independently re-verified (confidence 8/10) — 1 finding above threshold, fixed and re-validated with a new e2e regression test                                                                                                        |
 | 7   | Known out-of-scope gaps flagged, not fixed   | ✅ No dimension-table (categories/deliverables/platforms/engagement-models) authoring UI/API — read-only in this pass, per task package §3/§7; `icpIds`/`relatedPageIds`/`relatedCaseStudyIds` remain genuinely unvalidated (D1); no `dashboard-web` UI — backend only, matching Projects/BKC precedent |
 | 8   | Documentation updated                        | ✅ `docs/task-packages/module-service-library.md`, `docs/implementation/module-service-library.md`                                                                                                                                                                                                      |
-| 9   | Exact branch/commit verified and recorded    | ✅ Branch `module-service-library`, off `main` at `b7fdc95`, latest commit `e738eec` — not yet pushed to `origin`, no PR opened yet                                                                                                                                                                     |
+| 9   | Exact branch/commit verified and recorded    | ✅ Branch `module-service-library`, off `main` at `b7fdc95`, latest commit `b8c797f` — pushed to `origin`, [PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47) opened                                                                                              |
 
 ## Forbidden-actions check
 
@@ -134,14 +136,14 @@ before the gate was requested), approved commit `03856b8` on branch `module-serv
 see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
 `G4-service-library`).
 
-| Field                    | Value                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Gate                     | G4-service-library                                                                                                    |
-| Approver (gate decision) | WebDesk Solution                                                                                                      |
-| Gate date                | 2026-08-21                                                                                                            |
-| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)     |
-| Approved commit          | `03856b8` on branch `module-service-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`        |
-| Scope                    | Service Library module backend only. Push/PR and merge authorization are each separate, not-yet-requested next steps. |
+| Field                    | Value                                                                                                                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-service-library                                                                                                                                                                              |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                                                |
+| Gate date                | 2026-08-21                                                                                                                                                                                      |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                                               |
+| Approved commit          | `03856b8` on branch `module-service-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`                                                                                  |
+| Scope                    | Service Library module backend only ([PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47)). Merge authorization is a separate, not-yet-requested next step. |
 
 This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
 remains its own separate, not-yet-requested authorization, per this project's standing "no
