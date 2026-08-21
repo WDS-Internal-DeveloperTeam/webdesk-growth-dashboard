@@ -16,6 +16,7 @@ import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
+import { ServiceLibraryModule } from "./service-library/service-library.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
 import { UsersModule } from "./users/users.module.js";
 import { API_VERSION } from "./version.js";
@@ -59,6 +60,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     OperationalContactsModule,
     ProjectsModule,
     RetentionModule,
+    ServiceLibraryModule,
     SystemOperationsModule,
     UsersModule,
   ],

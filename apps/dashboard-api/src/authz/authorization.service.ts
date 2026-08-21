@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import type {
   AuthEventRepository,
   ModuleRepository,
@@ -165,10 +165,12 @@ export class AuthorizationService {
 
   /**
    * Records a `privileged_access_denied` event — called only from a real
-   * enforcement point (`PermissionGuard`) that actually blocked a request,
-   * not from informational `can()`/`evaluate()` calls. Closes the
-   * "no persisted audit trail for denied permission checks" gap flagged in
-   * docs/security/threat-model-authorization-rbac.md's accepted-gaps list.
+   * enforcement point (`PermissionGuard`, or a dynamic per-request check via
+   * `assertAllowed()`/its own pre-existing hand-rolled callers) that actually
+   * blocked a request, not from informational `can()`/`evaluate()` calls.
+   * Closes the "no persisted audit trail for denied permission checks" gap
+   * flagged in docs/security/threat-model-authorization-rbac.md's
+   * accepted-gaps list.
    */
   async recordAccessDenied(
     userId: string,
@@ -182,5 +184,24 @@ export class AuthorizationService {
       success: false,
       reason: `module:${moduleKey} action:${action} reason:${reasonCode}`,
     });
+  }
+
+  /**
+   * Centralizes the `evaluate()` → `recordAccessDenied()` → throw pattern for
+   * a dynamic, per-request permission check made outside `PermissionGuard`
+   * — e.g. a status-transition route whose real required action varies by
+   * payload (submit/review/approve), not by static route, so a single
+   * `@RequirePermission` decorator can't express it. `PermissionGuard` and
+   * `ProjectApproversService.assign()` each still hand-roll this same
+   * sequence directly (pre-existing, unchanged); new dynamic-check call
+   * sites should prefer this helper instead of hand-rolling a fourth copy
+   * (code-review finding, `module-service-library`).
+   */
+  async assertAllowed(userId: string, moduleKey: string, action: string): Promise<void> {
+    const decision = await this.evaluate(userId, moduleKey, action);
+    if (!decision.allowed) {
+      await this.recordAccessDenied(userId, moduleKey, action, decision.reasonCode!);
+      throw new ForbiddenException(`Missing permission: ${moduleKey}:${action}`);
+    }
   }
 }

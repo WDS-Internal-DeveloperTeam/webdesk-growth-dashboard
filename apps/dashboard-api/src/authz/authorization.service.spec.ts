@@ -205,4 +205,37 @@ describe("AuthorizationService", () => {
       );
     });
   });
+
+  describe("assertAllowed", () => {
+    it("resolves without recording anything when the action is granted", async () => {
+      users.findById.mockResolvedValue(ACTIVE_USER);
+      modules.findByKey.mockResolvedValue({ id: "module-1" });
+      userRoles.findRoleIdsForUser.mockResolvedValue(["role-1"]);
+      rolePermissions.hasGrant.mockResolvedValue(true);
+
+      await expect(
+        service.assertAllowed("user-1", "service_persona_proof", "approve"),
+      ).resolves.toBeUndefined();
+      expect(events.record).not.toHaveBeenCalled();
+    });
+
+    it("records a denial and throws ForbiddenException when the action is not granted", async () => {
+      users.findById.mockResolvedValue(ACTIVE_USER);
+      modules.findByKey.mockResolvedValue({ id: "module-1" });
+      userRoles.findRoleIdsForUser.mockResolvedValue(["role-1"]);
+      rolePermissions.hasGrant.mockResolvedValue(false);
+
+      await expect(
+        service.assertAllowed("user-1", "service_persona_proof", "approve"),
+      ).rejects.toThrow("Missing permission: service_persona_proof:approve");
+      expect(events.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "privileged_access_denied",
+          userId: "user-1",
+          success: false,
+          reason: expect.stringContaining("no_grant"),
+        }),
+      );
+    });
+  });
 });
