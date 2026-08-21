@@ -1,6 +1,7 @@
 # `dashboard-web` Service Library UI (as-built)
 
-**Status:** Built, fully validated, not yet reviewed, gated, or merged. Branch
+**Status:** Built, fully validated, independently code-reviewed (8 of 10 findings fixed, 2 left as
+accepted, tracked debt — see §9), not yet security-reviewed, gated, or merged. Branch
 `dashboard-web-service-library`, off `main` at the commit recording PR #47's merge as live in
 production (the Service Library module backend).
 
@@ -153,3 +154,63 @@ instead.
 `/service-library` — taken directly from the already-seeded `module_registry` row's own `route`
 field, not invented; the sidebar nav (already listing this module under the "libraries" cluster)
 now links to a real page instead of a 404.
+
+## 9. Independent code review
+
+Ran this project's own `code-review` skill (high effort, 8 finder angles, 1-vote verification)
+against the full branch diff. 15 candidates survived dedup, 10 kept in the final report per the
+review's own cap (8 CONFIRMED, 2 PLAUSIBLE). **All 8 CONFIRMED findings fixed:**
+
+- **The create form was permanently unsubmittable** — `categoryId` is a required field, but
+  `service_categories` ships with zero seed rows (migration `00050`) and no UI/API exists yet to
+  create any, so `/service-library/new` was dead on arrival with only the browser's own unhelpful
+  native-validation bubble. Fixed with an inline warning explaining why.
+- **The list page's filter form silently reset `pageSize`** — no hidden field preserved it across
+  a filter submit. Fixed by adding `<input type="hidden" name="pageSize" ...>`, matching Projects'
+  own `sortBy`/`sortOrder` preservation precedent. (Both Projects' and Business Knowledge Center's
+  own filter forms share this identical gap — out of scope to fix here, flagged for awareness.)
+- **Two CSS Modules were the third byte-for-byte duplicate of an existing pattern** —
+  `service-library-form.module.css` duplicated `project-form.module.css`/
+  `business-knowledge-record-form.module.css`'s field/input/button styling, and
+  `service-status-actions.module.css` duplicated `project-status-actions.module.css`/
+  `business-knowledge-status-actions.module.css`'s button styling. Extracted two new shared base
+  files, `components/form-fields.module.css` and `components/status-actions.module.css` (mirroring
+  the existing `error-message.module.css` composition precedent), and refactored all three
+  form/status-actions CSS Module pairs to `composes` from them — a real behavior-preserving
+  reduction of a drift risk this project has already hit once before (the `primaryActionLinkStyle`
+  extraction in PR #28).
+- **The approval-status badge map lost real distinction** — the 8-to-5 token mapping collapsed
+  `draft`/`archived` and `submitted`/`superseded` onto identical colors, so a live everyday state
+  and a permanently terminal one were indistinguishable by color. Re-paired the mapping so no live
+  state shares a token with a dead one — the three genuinely terminal states
+  (`rejected`/`superseded`/`archived`) now share `unavailable` together instead.
+- **`TagListField` was a genuinely reusable primitive built privately** instead of promoted to
+  `packages/ui` alongside `RelationshipPicker`, which sits right next to it in the same form and is
+  already a shared component. Promoted it to `packages/ui/src/components/domain.tsx`, exported it,
+  added 3 new `packages/ui` unit tests, and wired `ServiceLibraryForm` to import it instead of its
+  own local copy — closing the exact gap flagged (this file's §5 above is now stale on the
+  "hand-rolled ... local to this file" framing; the design rationale for using a tag input over
+  `RelationshipPicker` for these three fields still holds, only the implementation's location
+  changed).
+
+**2 CONFIRMED findings left as accepted, tracked debt**, each requiring a change out of scope for
+a `dashboard-web`-only branch: `ServiceStatusActions` hand-mirrors the backend's `TRANSITIONS`
+table as an unlinked third copy (the identical, already-accepted pattern
+`ProjectStatusActions`/`BusinessKnowledgeStatusActions` already established — a real fix means the
+backend's `GET` response computing and returning legal next transitions); and the list page
+over-fetches full long-text `Service` fields per row (the identical pattern already accepted as
+debt on the Business Knowledge Center list page — a real fix means a list-projection DTO on the
+backend). `lib/service-library.ts`'s own doc comment now flags the latter explicitly.
+
+**2 PLAUSIBLE findings left open, not silently dropped**: an orphaned relationship-id (a
+deliverable/platform/engagement-model no longer present in the fetched dimension list) has no
+removal path in the UI yet stays in the submit payload — not currently reachable, since dimension
+rows have no delete UI anywhere in this app yet; and `ServiceLibraryForm` has no `key` in edit
+mode, risking stale field values across a direct edit-to-edit client-side navigation — a
+pre-existing pattern already shared with `ProjectForm`'s own edit page, not a novel regression, and
+no current in-app link reaches that navigation path.
+
+Re-validated after all fixes: 82/82 `packages/ui` unit tests (3 new), 308/308 `dashboard-web` unit
+tests (unchanged — the CSS/badge/promotion fixes didn't require new assertions beyond what already
+existed), typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean across both
+packages.

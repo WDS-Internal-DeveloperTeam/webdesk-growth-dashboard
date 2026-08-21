@@ -1839,21 +1839,23 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     production.** No `dashboard-web` UI exists yet for this module, matching the Projects/BKC
     precedent — a separate, not-yet-requested next step. **Update (2026-08-21): the
     `dashboard-web` UI has since been built — see item 33 below.**
-33. **`dashboard-web` Service Library UI — built, fully validated, not yet reviewed, gated, or
-    merged (2026-08-21).** `docs/implementation/dashboard-web-service-library.md` records the full
-    account. Not started automatically — built directly on the explicit "Start the dashboard-web
-    UI for Service Library" instruction, following the backend's own build-to-production arc
-    (PR #47). Unlike Projects/Business Knowledge Center, a real design brief exists for this
-    module — `docs/design/dashboard-ui/15-representative-screen-specifications.md` §4 names
-    Service Library explicitly (list → detail → editor archetype, Identity/Positioning/
-    Relationships/Status field groups, and calls for the shared `ApprovalBlock` component) — built
-    to that brief's own grouping, with one deliberate, explicitly-flagged deviation. New
-    `packages/shared-types` (`Service`/`ServiceDetail` and the four dimension entity types);
+33. **`dashboard-web` Service Library UI — built, fully validated, code-reviewed (8 of 10 findings
+    fixed), not yet security-reviewed, gated, or merged (2026-08-21).**
+    `docs/implementation/dashboard-web-service-library.md` records the full account. Not started
+    automatically — built directly on the explicit "Start the dashboard-web UI for Service
+    Library" instruction, following the backend's own build-to-production arc (PR #47). Unlike
+    Projects/Business Knowledge Center, a real design brief exists for this module —
+    `docs/design/dashboard-ui/15-representative-screen-specifications.md` §4 names Service Library
+    explicitly (list → detail → editor archetype, Identity/Positioning/Relationships/Status field
+    groups, and calls for the shared `ApprovalBlock` component) — built to that brief's own
+    grouping, with one deliberate, explicitly-flagged deviation. New `packages/shared-types`
+    (`Service`/`ServiceDetail` and the four dimension entity types);
     `lib/service-library-query.ts`/`lib/service-library.ts` (mirroring `business-knowledge-query.ts`/
     `business-knowledge.ts`'s own zero-non-type-import-file split); `ServiceLibraryForm` — the
     first real use of `@webdesk/ui`'s `RelationshipPicker` in this codebase, for the three
     FK-backed relationship fields (`deliverableIds`/`platformIds`/`engagementModelIds`), alongside
-    a hand-rolled `TagListField` for the three unvalidated identifier-list fields
+    a `TagListField` (initially hand-rolled, then promoted to `packages/ui` in the code-review fix
+    round below) for the three unvalidated identifier-list fields
     (`icpIds`/`relatedPageIds`/`relatedCaseStudyIds`, per the backend's own D1 decision — no
     backing entity exists yet to search against); `ServiceStatusActions` (mirrors the backend's
     `TRANSITIONS` table by hand, same pattern as `ProjectStatusActions`/
@@ -1875,9 +1877,34 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     the test was trying to exercise — fixed by asserting `.toBeRequired()` directly and by filling
     in the previously-missing required field in two other tests. 308/308 `dashboard-web` unit
     tests (39 new), typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean.
-    Committed to branch `dashboard-web-service-library` — not yet pushed to `origin`, reviewed,
-    gated, or merged; each remains its own separate, not-yet-requested next step, matching this
-    project's standing discipline for every prior module's own UI slice.
+    **Independent code review then ran** (high effort, 8 finder angles) — 10 findings kept after
+    dedup (8 CONFIRMED, 2 PLAUSIBLE), **all 8 CONFIRMED fixed**: most severe, `categoryId` being a
+    required create-form field with zero seeded service categories and no UI/API to create any,
+    making the create form permanently unsubmittable with only an unhelpful native-validation
+    bubble — fixed with an inline warning. Also fixed: the list page's filter form silently
+    resetting `pageSize` (no hidden field preserved it, matching a gap Projects/BKC's own filter
+    forms independently share but weren't touched here); two CSS Modules being the third
+    byte-for-byte duplicate of existing Projects/BKC styling (extracted new shared
+    `form-fields.module.css`/`status-actions.module.css` bases, mirroring the existing
+    `error-message.module.css` composition precedent, and refactored all three form/status-actions
+    pairs to compose from them); the approval-status badge map collapsing a live state and a
+    permanently terminal one onto the identical color (re-paired so no live state shares a token
+    with a dead one); and `TagListField` being a genuinely reusable primitive built privately
+    instead of promoted to `packages/ui` alongside `RelationshipPicker` (promoted it, with 3 new
+    `packages/ui` unit tests). 2 CONFIRMED findings left as accepted, tracked debt, each requiring
+    a change out of scope for a `dashboard-web`-only branch: `ServiceStatusActions` hand-mirroring
+    the backend's transition table as an unlinked third copy (the identical, already-accepted
+    pattern the two sibling status-actions components already established), and the list page
+    over-fetching full long-text fields per row (the identical pattern already accepted as debt on
+    the Business Knowledge Center list page). The 2 PLAUSIBLE findings (an orphaned
+    relationship-id removal gap with no current UI path to trigger it; `ServiceLibraryForm` having
+    no `key` in edit mode, a pre-existing pattern already shared with `ProjectForm`) were left open,
+    not silently dropped. Re-validated: 82/82 `packages/ui` unit tests (3 new), 308/308
+    `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all
+    clean. See `docs/implementation/dashboard-web-service-library.md` §9 for the full account.
+    Committed to branch `dashboard-web-service-library` — not yet pushed to `origin`,
+    security-reviewed, gated, or merged; each remains its own separate, not-yet-requested next
+    step, matching this project's standing discipline for every prior module's own UI slice.
 
 ## Recent decisions
 
@@ -4832,6 +4859,44 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `RelationshipPicker`-vs-`TagListField` design split and the `parentServiceId`/`ownerUserId`
   known-gap. 308/308 `dashboard-web` unit tests (39 new), full validation clean. Committed to
   branch `dashboard-web-service-library` — not yet pushed to `origin`, reviewed, gated, or merged.
+- `[2026-08-21]` **Independent code review run on `dashboard-web-service-library`, high effort —
+  8 finder angles, then all 8 CONFIRMED findings fixed.** Requested directly ("run the code review
+  skill on this branch," then "fix the confirmed findings"). 15 candidates surfaced after dedup, 10
+  kept in the final report per the review's own cap (8 CONFIRMED, 2 PLAUSIBLE). Most severe: the
+  create form's `categoryId` field is required, but `service_categories` ships with zero seed rows
+  and no UI/API exists yet to create any, so `/service-library/new` was permanently unsubmittable
+  with only the browser's own unhelpful native-validation bubble — fixed with an inline warning
+  explaining why. Also fixed: the list page's filter form silently reset `pageSize` (no hidden
+  field preserved it across a filter submit — Projects'/BKC's own filter forms independently share
+  this identical gap, not touched here, out of scope); two CSS Modules
+  (`service-library-form.module.css`, `service-status-actions.module.css`) being the third
+  byte-for-byte duplicate of the equivalent Projects/BKC styling (extracted two new shared base
+  files, `components/form-fields.module.css` and `components/status-actions.module.css`, mirroring
+  the existing `error-message.module.css` composition precedent, and refactored all three
+  form/status-actions CSS Module pairs — including the two pre-existing sibling pairs — to compose
+  from them); the approval-status badge map collapsing a live, editable state and a permanently
+  terminal one onto the identical color (`draft`/`archived` and `submitted`/`superseded` both
+  re-paired so no live state shares a token with a dead one); and `TagListField` (a genuinely
+  reusable free-text tag/chip input) being built privately inside the form instead of promoted to
+  `packages/ui` alongside `RelationshipPicker`, which sits right next to it in the same form and is
+  already a shared primitive — promoted it to `packages/ui/src/components/domain.tsx`, exported it,
+  added 3 new `packages/ui` unit tests, and wired `ServiceLibraryForm` to import it instead of its
+  own local copy. 2 CONFIRMED findings left as accepted, tracked debt, each requiring a change out
+  of scope for a `dashboard-web`-only branch: `ServiceStatusActions` hand-mirroring the backend's
+  `TRANSITIONS` table as an unlinked third copy (the identical, already-accepted pattern
+  `ProjectStatusActions`/`BusinessKnowledgeStatusActions` already established — a real fix means
+  the backend's `GET` response computing and returning legal next transitions); and the list page
+  over-fetching full long-text `Service` fields per row (the identical pattern already accepted as
+  debt on the Business Knowledge Center list page — `lib/service-library.ts`'s own doc comment now
+  flags this explicitly, matching that precedent). The 2 PLAUSIBLE findings (an orphaned
+  relationship-id removal gap with no current UI path to trigger it — dimension rows have no delete
+  UI anywhere in this app yet; `ServiceLibraryForm` having no `key` in edit mode, a pre-existing
+  pattern already shared with `ProjectForm`'s own edit page, not a novel regression) were left open,
+  not silently dropped. Re-validated: 82/82 `packages/ui` unit tests (3 new), 308/308
+  `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean
+  across both packages. See `docs/implementation/dashboard-web-service-library.md` §9 for the full
+  account. Security review, second-role human review, a gate decision, push/PR, and merge
+  authorization remain each their own separate, not-yet-requested next step.
 
 ## Open client blockers
 
