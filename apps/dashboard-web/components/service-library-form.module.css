@@ -1,8 +1,25 @@
 .form {
   display: flex;
   flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xl);
+  max-width: 44rem;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
   gap: var(--webdesk-dashboard-space-lg);
-  max-width: 32rem;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fieldsetLegend {
+  font-size: var(--webdesk-dashboard-font-size-md);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  color: var(--webdesk-dashboard-color-foreground);
+  padding: 0;
+  margin: 0 0 var(--webdesk-dashboard-space-xs);
 }
 
 .field {
@@ -18,9 +35,18 @@
 }
 
 .readonlyValue {
-  font-family: var(--webdesk-dashboard-font-family-mono);
   font-size: var(--webdesk-dashboard-font-size-sm);
   color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.redactedNotice {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  margin: 0;
 }
 
 .input {

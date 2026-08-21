@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   borderTokens,
   colorTokens,
@@ -660,6 +660,136 @@ export function RelationshipPicker({
             </li>
           ))}
         </ul>
+      ) : null}
+    </div>
+  );
+}
+
+export interface TagListFieldProps {
+  readonly id: string;
+  readonly label: string;
+  readonly hint?: string;
+  readonly values: readonly string[];
+  readonly onChange: (next: readonly string[]) => void;
+  readonly maxLength?: number;
+  readonly maxCount?: number;
+}
+
+/** A minimal, generic free-text chip/tag multi-value input — type a value, press Enter or comma to
+ *  add it, click × on a chip to remove it. For unvalidated identifier/tag lists with no backing
+ *  entity to search against; contrast `RelationshipPicker`, which is for real FK-backed entities. */
+export function TagListField({
+  id,
+  label,
+  hint,
+  values,
+  onChange,
+  maxLength = 128,
+  maxCount = 200,
+}: TagListFieldProps): ReactNode {
+  const [draft, setDraft] = useState("");
+
+  function addTag(): void {
+    const trimmed = draft.trim().slice(0, maxLength);
+    if (!trimmed || values.length >= maxCount || values.includes(trimmed)) {
+      setDraft("");
+      return;
+    }
+    onChange([...values, trimmed]);
+    setDraft("");
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addTag();
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.xs }}>
+      <label
+        htmlFor={id}
+        style={{
+          fontSize: typographyTokens.fontSizeSm,
+          fontWeight: typographyTokens.fontWeightMedium,
+          color: colorTokens.foreground,
+        }}
+      >
+        {label}
+      </label>
+      {values.length > 0 ? (
+        <ul
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: spacingTokens.xs,
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+          }}
+        >
+          {values.map((value) => (
+            <li
+              key={value}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacingTokens.xs,
+                padding: `${spacingTokens.xs} ${spacingTokens.sm}`,
+                borderRadius: radiusTokens.full,
+                background: colorTokens.mutedSurface,
+                fontSize: typographyTokens.fontSizeXs,
+              }}
+            >
+              {value}
+              <button
+                type="button"
+                aria-label={`Remove ${value}`}
+                onClick={() => onChange(values.filter((v) => v !== value))}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: colorTokens.foregroundMuted,
+                  fontSize: typographyTokens.fontSizeSm,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <input
+        id={id}
+        type="text"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={addTag}
+        placeholder="Type a value and press Enter"
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        style={{
+          height: "2.25rem",
+          paddingInline: spacingTokens.md,
+          fontSize: typographyTokens.fontSizeMd,
+          border: `${borderTokens.widthThin} solid ${colorTokens.border}`,
+          borderRadius: radiusTokens.sm,
+        }}
+      />
+      {hint ? (
+        <p
+          id={`${id}-hint`}
+          style={{
+            margin: 0,
+            fontSize: typographyTokens.fontSizeXs,
+            color: colorTokens.foregroundMuted,
+          }}
+        >
+          {hint}
+        </p>
       ) : null}
     </div>
   );

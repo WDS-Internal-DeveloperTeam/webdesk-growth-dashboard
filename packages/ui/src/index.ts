@@ -159,6 +159,7 @@ export {
   FileAttachment,
   RelationshipPicker,
   Stepper,
+  TagListField,
   type ApprovalBlockProps,
   type CodeProps,
   type DiffField,
@@ -170,4 +171,5 @@ export {
   type StepperProps,
   type StepperStage,
   type StepperStageState,
+  type TagListFieldProps,
 } from "./components/domain.js";

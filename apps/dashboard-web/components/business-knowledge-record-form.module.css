@@ -6,20 +6,15 @@
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--webdesk-dashboard-space-xs);
+  composes: field from "./form-fields.module.css";
 }
 
 .label {
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  font-weight: var(--webdesk-dashboard-font-weight-medium);
-  color: var(--webdesk-dashboard-color-foreground);
+  composes: label from "./form-fields.module.css";
 }
 
 .helperText {
-  font-size: var(--webdesk-dashboard-font-size-xs);
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  composes: helperText from "./form-fields.module.css";
 }
 
 .readonlyValue {
@@ -37,69 +32,32 @@
   margin: 0;
 }
 
-.input,
-.textarea,
-.select {
-  font-size: var(--webdesk-dashboard-font-size-md);
-  font-family: inherit;
-  color: var(--webdesk-dashboard-color-foreground);
-  background: var(--webdesk-dashboard-color-surface);
-  border: 1px solid var(--webdesk-dashboard-color-border);
-  border-radius: var(--webdesk-dashboard-radius-sm);
-  padding: var(--webdesk-dashboard-space-sm);
-}
-
-.input,
-.select {
-  height: 2.25rem;
+.input {
+  composes: input from "./form-fields.module.css";
 }
 
 .textarea {
-  resize: vertical;
+  composes: textarea from "./form-fields.module.css";
 }
 
-.input:focus-visible,
-.textarea:focus-visible,
-.select:focus-visible {
-  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
-  outline-offset: 2px;
+.select {
+  composes: select from "./form-fields.module.css";
 }
 
 .error {
-  composes: error from "./error-message.module.css";
-  padding: var(--webdesk-dashboard-space-sm);
+  composes: error from "./form-fields.module.css";
 }
 
 .actions {
-  display: flex;
-  align-items: center;
-  gap: var(--webdesk-dashboard-space-md);
+  composes: actions from "./form-fields.module.css";
 }
 
 .submitButton {
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  font-weight: var(--webdesk-dashboard-font-weight-medium);
-  color: var(--webdesk-dashboard-color-accent-foreground);
-  background: var(--webdesk-dashboard-color-accent);
-  border: none;
-  border-radius: var(--webdesk-dashboard-radius-sm);
-  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
-  cursor: pointer;
-}
-
-.submitButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.submitButton:focus-visible {
-  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
-  outline-offset: 2px;
+  composes: submitButton from "./form-fields.module.css";
 }
 
 .cancelLink {
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  color: var(--webdesk-dashboard-color-foreground-muted);
+  composes: cancelLink from "./form-fields.module.css";
 }
 
 .uploadButton {

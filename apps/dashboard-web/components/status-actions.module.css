@@ -1,0 +1,52 @@
+/* Shared base for the status-transition button row every status-actions component in this app
+ * renders (ProjectStatusActions/BusinessKnowledgeStatusActions/ServiceStatusActions) — consumers
+ * `composes` from this rather than each defining their own near-identical button/error treatment.
+ * Each consumer still owns its own semantic local class name for the warning-styled,
+ * irreversible-transition button (`archiveButton`/`deprecateButton`/`terminalButton`), since that
+ * name documents which specific transition it is per module, even though the visual treatment
+ * (composed from `.terminalButton` here) is identical across all three. */
+.wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.actionButton,
+.terminalButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  cursor: pointer;
+}
+
+.actionButton {
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+}
+
+.terminalButton {
+  color: var(--webdesk-dashboard-color-warning);
+  background: var(--webdesk-dashboard-color-warning-surface);
+  border: 1px solid var(--webdesk-dashboard-color-warning);
+}
+
+.actionButton:disabled,
+.terminalButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButton:focus-visible,
+.terminalButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  width: 100%;
+}

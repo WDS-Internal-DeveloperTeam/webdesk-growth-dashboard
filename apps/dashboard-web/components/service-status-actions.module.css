@@ -6,7 +6,7 @@
   composes: actionButton from "./status-actions.module.css";
 }
 
-.archiveButton {
+.terminalButton {
   composes: terminalButton from "./status-actions.module.css";
 }
 
