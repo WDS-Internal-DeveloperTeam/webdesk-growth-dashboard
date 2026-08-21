@@ -44,7 +44,14 @@ export interface ServiceListResult {
 
 /** Never degrades silently — this page's entire content IS the service list, so a fetch failure
  *  must surface as a real error state (propagates to the nearest `error.tsx`), matching
- *  `getProjects()`/`getBusinessKnowledgeRecords()`'s own precedent. */
+ *  `getProjects()`/`getBusinessKnowledgeRecords()`'s own precedent.
+ *
+ *  Known, accepted debt: this fetches (and `Service` types) the full row shape per list item,
+ *  including several long-text fields the list page never renders — the identical over-fetch
+ *  already flagged and accepted on `getBusinessKnowledgeRecords()`'s own list page. A real fix
+ *  needs a list-projection DTO on the backend (`GET /service-library/services` currently does a
+ *  plain `findAll` with no `attributes` narrowing), out of scope for a `dashboard-web`-only
+ *  branch. */
 export async function getServices(query: ServiceLibraryQuery): Promise<ServiceListResult> {
   const apiBaseUrl = getApiBaseUrl();
   const cookieStore = await cookies();

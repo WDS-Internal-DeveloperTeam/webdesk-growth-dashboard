@@ -8,6 +8,7 @@ import {
   FileAttachment,
   RelationshipPicker,
   Stepper,
+  TagListField,
 } from "./domain.js";
 
 describe("Code", () => {
@@ -142,6 +143,51 @@ describe("RelationshipPicker", () => {
     fireEvent.click(screen.getByRole("button", { name: "SEO Audit" }));
     fireEvent.click(screen.getByRole("button", { name: "Remove SEO Audit" }));
     expect(screen.queryByRole("button", { name: "Remove SEO Audit" })).not.toBeInTheDocument();
+  });
+});
+
+describe("TagListField", () => {
+  function Harness() {
+    const [values, setValues] = useState<readonly string[]>([]);
+    return (
+      <TagListField id="tags" label="Tags" values={values} onChange={setValues} maxCount={2} />
+    );
+  }
+
+  it("adds a value on Enter and removes it via its chip's remove button", () => {
+    render(<Harness />);
+    const input = screen.getByLabelText("Tags");
+    fireEvent.change(input, { target: { value: "alpha" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(screen.getByText("alpha")).toBeInTheDocument();
+    expect(input).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove alpha" }));
+    expect(screen.queryByText("alpha")).not.toBeInTheDocument();
+  });
+
+  it("does not add a duplicate or an empty/whitespace-only value", () => {
+    render(<Harness />);
+    const input = screen.getByLabelText("Tags");
+    fireEvent.change(input, { target: { value: "alpha" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "alpha" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(screen.getAllByText("alpha")).toHaveLength(1);
+  });
+
+  it("stops adding once maxCount is reached", () => {
+    render(<Harness />);
+    const input = screen.getByLabelText("Tags");
+    fireEvent.change(input, { target: { value: "alpha" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "beta" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "gamma" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(screen.queryByText("gamma")).not.toBeInTheDocument();
   });
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type {
   Deliverable,
   EngagementModel,
@@ -11,7 +11,7 @@ import type {
   ServiceDetail,
   ServicePublicationStatus,
 } from "@webdesk/shared-types";
-import { RelationshipPicker, type RelationshipOption } from "@webdesk/ui";
+import { RelationshipPicker, TagListField, type RelationshipOption } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CONFIDENTIALITY_VALUES, PUBLICATION_STATUS_VALUES } from "@/lib/service-library-query";
@@ -45,79 +45,6 @@ function toRelationshipOptions<T extends { readonly id: string; readonly name: s
   entities: readonly T[],
 ): readonly RelationshipOption[] {
   return entities.map((entity) => ({ id: entity.id, displayName: entity.name }));
-}
-
-/** A minimal, hand-rolled tag input for `icpIds`/`relatedPageIds`/`relatedCaseStudyIds` —
- *  deliberately NOT `RelationshipPicker`, since these three fields are unvalidated identifier
- *  lists with no backing entity to search against (task package D1: the modules that would own
- *  real validation — `persona_library`/`page_inventory`/`case_study_library` — don't exist yet). */
-function TagListField({
-  id,
-  label,
-  hint,
-  values,
-  onChange,
-}: {
-  readonly id: string;
-  readonly label: string;
-  readonly hint: string;
-  readonly values: readonly string[];
-  readonly onChange: (next: readonly string[]) => void;
-}): ReactNode {
-  const [draft, setDraft] = useState("");
-
-  function addTag(): void {
-    const trimmed = draft.trim().slice(0, TAG_MAX_LENGTH);
-    if (!trimmed || values.length >= TAG_MAX_COUNT || values.includes(trimmed)) {
-      setDraft("");
-      return;
-    }
-    onChange([...values, trimmed]);
-    setDraft("");
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
-    if (event.key === "Enter" || event.key === ",") {
-      event.preventDefault();
-      addTag();
-    }
-  }
-
-  return (
-    <div className={styles.field}>
-      <label htmlFor={id} className={styles.label}>
-        {label}
-      </label>
-      {values.length > 0 ? (
-        <ul className={styles.tagList}>
-          {values.map((value) => (
-            <li key={value} className={styles.tagChip}>
-              {value}
-              <button
-                type="button"
-                aria-label={`Remove ${value}`}
-                onClick={() => onChange(values.filter((v) => v !== value))}
-                className={styles.tagRemoveButton}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <input
-        id={id}
-        type="text"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={addTag}
-        placeholder="Type a value and press Enter"
-        className={styles.input}
-      />
-      <span className={styles.helperText}>{hint}</span>
-    </div>
-  );
 }
 
 /** Create/edit form for a service (`docs/design/dashboard-ui/15-representative-screen-specifications.md`
@@ -375,6 +302,12 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
               </option>
             ))}
           </select>
+          {props.categories.length === 0 ? (
+            <p className={styles.helperText}>
+              No service categories exist yet, so this form can&apos;t be submitted until an
+              administrator adds one directly.
+            </p>
+          ) : null}
         </div>
       </fieldset>
 
@@ -549,6 +482,8 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
           hint="Unvalidated identifiers — no persona library exists yet to look these up against (task package D1)."
           values={icpIds}
           onChange={setIcpIds}
+          maxLength={TAG_MAX_LENGTH}
+          maxCount={TAG_MAX_COUNT}
         />
         <TagListField
           id="relatedPageIds"
@@ -556,6 +491,8 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
           hint="Unvalidated identifiers — no page inventory exists yet to look these up against (task package D1)."
           values={relatedPageIds}
           onChange={setRelatedPageIds}
+          maxLength={TAG_MAX_LENGTH}
+          maxCount={TAG_MAX_COUNT}
         />
         <TagListField
           id="relatedCaseStudyIds"
@@ -563,6 +500,8 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
           hint="Unvalidated identifiers — no case study library exists yet to look these up against (task package D1)."
           values={relatedCaseStudyIds}
           onChange={setRelatedCaseStudyIds}
+          maxLength={TAG_MAX_LENGTH}
+          maxCount={TAG_MAX_COUNT}
         />
       </fieldset>
 

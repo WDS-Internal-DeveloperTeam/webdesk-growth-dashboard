@@ -70,6 +70,10 @@ export default async function ServiceLibraryListPage({
         method="get"
         style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.5rem" }}
       >
+        {/* Preserves the reader's page-size choice across a filter submit — without it, a native
+            GET form submission builds its target URL purely from this form's own named fields,
+            silently dropping any existing `?pageSize=` and resetting it back to the default. */}
+        <input type="hidden" name="pageSize" value={query.pageSize} />
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
           <span
             style={{

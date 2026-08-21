@@ -1,45 +1,15 @@
 .wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--webdesk-dashboard-space-sm);
-}
-
-.actionButton,
-.terminalButton {
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  font-weight: var(--webdesk-dashboard-font-weight-medium);
-  border-radius: var(--webdesk-dashboard-radius-sm);
-  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
-  cursor: pointer;
+  composes: wrapper from "./status-actions.module.css";
 }
 
 .actionButton {
-  color: var(--webdesk-dashboard-color-foreground);
-  background: var(--webdesk-dashboard-color-surface);
-  border: 1px solid var(--webdesk-dashboard-color-border);
+  composes: actionButton from "./status-actions.module.css";
 }
 
 .terminalButton {
-  color: var(--webdesk-dashboard-color-warning);
-  background: var(--webdesk-dashboard-color-warning-surface);
-  border: 1px solid var(--webdesk-dashboard-color-warning);
-}
-
-.actionButton:disabled,
-.terminalButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.actionButton:focus-visible,
-.terminalButton:focus-visible {
-  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
-  outline-offset: 2px;
+  composes: terminalButton from "./status-actions.module.css";
 }
 
 .error {
-  composes: error from "./error-message.module.css";
-  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
-  width: 100%;
+  composes: error from "./status-actions.module.css";
 }

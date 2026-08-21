@@ -63,6 +63,13 @@ export const CONFIDENTIALITY_LABEL: Readonly<Record<ServiceConfidentiality, stri
   restricted: "Restricted",
 };
 
+// 8 real statuses onto a fixed 5-token badge palette necessarily doubles some up — chosen so the
+// two states most likely to be confused for each other (a live, editable state and a permanently
+// terminal one) never share a token: `draft`/`submitted`/`approved` each get their own unique
+// token; `under_review`/`revision_requested` share `degraded` (both are "still in progress, not
+// yet resolved" — a low-confusion pair); and the three genuinely terminal/no-longer-valid states
+// (`rejected`/`superseded`/`archived`) share `unavailable` together, rather than any of them
+// colliding with an everyday live state.
 const APPROVAL_STATUS_BADGE: Readonly<
   Record<ServiceApprovalStatus, { token: StatusToken; label: string }>
 > = {
@@ -72,8 +79,8 @@ const APPROVAL_STATUS_BADGE: Readonly<
   approved: { token: "healthy", label: "Approved" },
   revision_requested: { token: "degraded", label: "Revision Requested" },
   rejected: { token: "unavailable", label: "Rejected" },
-  superseded: { token: "notConfigured", label: "Superseded" },
-  archived: { token: "unknown", label: "Archived" },
+  superseded: { token: "unavailable", label: "Superseded" },
+  archived: { token: "unavailable", label: "Archived" },
 };
 
 export function serviceApprovalStatusBadge(status: ServiceApprovalStatus): {
