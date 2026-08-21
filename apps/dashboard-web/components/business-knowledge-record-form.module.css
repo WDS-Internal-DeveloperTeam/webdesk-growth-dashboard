@@ -141,11 +141,6 @@
 }
 
 .removeStagedButton {
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: var(--webdesk-dashboard-font-size-sm);
-  color: var(--webdesk-dashboard-color-danger);
-  cursor: pointer;
+  composes: deleteButton from "./business-knowledge-attachments-section.module.css";
   flex-shrink: 0;
 }

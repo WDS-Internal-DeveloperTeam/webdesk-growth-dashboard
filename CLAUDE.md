@@ -1652,7 +1652,8 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       (the user running the real `migrate` command themselves) given but its confirmed-applied
       outcome not yet recorded here.
 31. **`dashboard-web` file upload on the Business Knowledge Record create form — built, fully
-    validated, not yet reviewed, gated, or merged (2026-08-21).**
+    validated, independently code-reviewed (all 8 CONFIRMED findings fixed), not yet security
+    reviewed, gated, or merged (2026-08-21).**
     `docs/implementation/dashboard-web-attachments-on-create.md` records the full account. Not
     started automatically — built directly on the explicit "we need upload option in New business
     knowledge record add not in view" instruction. Upload was previously detail-page-only (task
@@ -1665,22 +1666,47 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     `upload()`-then-`confirm()` sequence out of `BusinessKnowledgeAttachmentsSection` (a pure
     refactor, re-validated by that component's own unchanged 10-test suite) so the create form's
     new file picker doesn't duplicate either. A `createdRecordId` state guards against the real
-    risk this design introduces: once the record is created, the form can never be resubmitted
-    (which would silently create a second, duplicate record) even if one or more staged
-    attachments then fail to upload — the submit button is replaced by a direct "View record"
-    link instead. The first pass at the shared-helper extraction silently dropped a real
-    behavioral distinction (a curated backend error message vs. a generic fallback for any other
-    failure) that the pre-existing attachments-section test suite caught immediately — fixed with
-    a new `AttachmentUploadApiError` class both consumers branch on. 264/264 `dashboard-web` unit
-    tests (5 new), typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean.
-    Live-rendered in the Browser pane: the unauthenticated redirect for `/business-knowledge-center/new`
-    confirmed clean, zero console/server errors; no local `dashboard-api` available in this
-    environment, so the authenticated file-picker rendering wasn't visually confirmed, the same
-    limitation noted on several prior slices. Pushed as branch
-    `dashboard-web-attachments-on-create`. Not yet reviewed, gated, or merged — code review,
-    security review, second-role human review, a gate decision, and merge authorization are each
-    their own separate, not-yet-requested next step, unchanged from this project's standing
-    discipline.
+    risk this design introduces: once the record is created, the submit button is replaced by a
+    direct "View record" link instead of staying resubmittable. The first pass at the
+    shared-helper extraction silently dropped a real behavioral distinction (a curated backend
+    error message vs. a generic fallback for any other failure) that the pre-existing
+    attachments-section test suite caught immediately — fixed with a new `AttachmentUploadApiError`
+    class. 264/264 `dashboard-web` unit tests (5 new), typecheck/lint/`check-css-tokens.mjs`/
+    `next build`/prettier all clean. Live-rendered in the Browser pane: the unauthenticated
+    redirect for `/business-knowledge-center/new` confirmed clean, zero console/server errors; no
+    local `dashboard-api` available in this environment, so the authenticated file-picker
+    rendering wasn't visually confirmed, the same limitation noted on several prior slices.
+    Pushed as branch `dashboard-web-attachments-on-create`.
+    **Independent code review then ran** (this project's own `code-review` skill, high effort, 9
+    finder angles, 1-vote verification) — every one of the 9 candidates that survived dedup came
+    back CONFIRMED (0 PLAUSIBLE, 0 REFUTED). All 8 kept findings fixed (a 9th collapsed into the
+    same root cause as one of the 8). Most severe: `handleSubmit` had no internal guard against
+    being re-invoked once `createdRecordId` was already set — the `<form>` stayed mounted with the
+    Title field the only remaining input that doesn't block HTML's implicit-submission-on-Enter
+    behavior, so pressing Enter there after a partial upload failure could silently create a
+    duplicate record; fixed with an early `if (createdRecordId) return;` guard inside
+    `handleSubmit` itself, not just a UI-level button swap. Also fixed: the "View record" link (a
+    plain `<a>`, not a Next.js `<Link>`) was rendered — and clickable — before staged uploads
+    actually finished, so clicking through mid-upload could hard-navigate and silently abort
+    in-flight attachment uploads with no error ever surfaced; now gated on `!submitting` too. The
+    batch-upload path never actually checked for `AttachmentUploadApiError` (contradicting this
+    branch's own implementation doc, which had claimed it did), always showing a generic message
+    even when the backend returned a real, curated rejection reason — now shows the real per-file
+    reason when available. `pendingFiles` was never trimmed after a partial success, so the staged
+    list kept showing already-uploaded files as if they still needed action — now trims to just
+    the files still pending. `attachmentError` was never cleared by `handleSubmit`, so a stale
+    rejection message could render alongside a newer, unrelated error — now cleared at the start
+    of every submit. The component's own doc comment claimed navigation "still proceeds" after a
+    partial failure, contradicting the actual early-return code path (and this branch's own test
+    asserting it) — corrected. `.removeStagedButton` hand-copied `.deleteButton`'s styling but
+    omitted its `:disabled` rule, so a disabled Remove button looked fully active — now composes
+    from `.deleteButton` directly, picking up the missing state for free. 5 new regression tests
+    added covering mixed valid/invalid file selection, multi-file removal by index, a genuinely
+    mixed success/failure upload batch, the resubmission guard, and `attachmentError` clearing.
+    Re-validated: 269/269 `dashboard-web` unit tests, typecheck/lint/`check-css-tokens.mjs`/
+    `next build`/prettier all clean. Not yet security reviewed, second-role human reviewed, gated,
+    or merged — each their own separate, not-yet-requested next step, unchanged from this
+    project's standing discipline.
 
 ## Recent decisions
 
@@ -4434,10 +4460,36 @@ migrate` command to run themselves (same credential-handling discipline as every
   view" instruction — see "Active tasks" item 31 above and
   `docs/implementation/dashboard-web-attachments-on-create.md` for the full account. Extracted a
   new `lib/business-knowledge-attachments.ts` shared by both the detail page's existing upload
-  control and the new create-form file picker; a `createdRecordId` guard prevents a partial
-  attachment-upload failure from ever letting the form re-create a duplicate record. 264/264
-  `dashboard-web` unit tests (5 new), full validation clean. Pushed as branch
+  control and the new create-form file picker; a `createdRecordId` guard was intended to prevent a
+  partial attachment-upload failure from ever letting the form re-create a duplicate record — the
+  code review below found this guard was UI-only at first (only the render, not `handleSubmit`
+  itself). 264/264 `dashboard-web` unit tests (5 new), full validation clean. Pushed as branch
   `dashboard-web-attachments-on-create`. Not yet reviewed, gated, or merged.
+- `[2026-08-21]` **Independent code review run on `dashboard-web-attachments-on-create`, high
+  effort — 9 finder angles, then all 8 kept CONFIRMED findings fixed.** Requested directly ("run
+  the code review skill on this branch"). Every one of the 9 candidates that survived dedup came
+  back CONFIRMED — 0 PLAUSIBLE, 0 REFUTED, an unusually clean-cut result for this project's own
+  review history. Most severe: `handleSubmit` had no internal guard against being re-invoked once
+  `createdRecordId` was already set — the `<form>` stayed mounted with the Title field the only
+  remaining input that doesn't block HTML's implicit-submission-on-Enter behavior, so pressing
+  Enter there after a partial upload failure could silently create a duplicate record; fixed with
+  a real early-return guard inside `handleSubmit` itself, not just the button-swap the initial
+  build relied on. Also fixed: the "View record" link was clickable before staged uploads actually
+  finished, letting a click mid-upload hard-navigate and silently abort in-flight uploads with no
+  error surfaced (now gated on uploads having settled); the batch-upload path never checked for
+  `AttachmentUploadApiError`, discarding curated backend rejection reasons in favor of a generic
+  message (contradicting the implementation doc's own claim that it did); `pendingFiles` was never
+  trimmed after a partial success, so the staged list kept showing already-uploaded files as if
+  they still needed action; `attachmentError` was never cleared on submit, letting a stale
+  rejection message render alongside a newer error; the component's own doc comment claimed
+  navigation "still proceeds" after a partial failure, contradicting the actual code and this
+  branch's own test; and `.removeStagedButton` was missing the `:disabled` CSS its sibling
+  `.deleteButton` has, now fixed by composing from it directly instead of hand-copying it. 5 new
+  regression tests added. Re-validated: 269/269 `dashboard-web` unit tests, typecheck/lint/
+  `check-css-tokens.mjs`/`next build`/prettier all clean. See
+  `docs/implementation/dashboard-web-attachments-on-create.md` §8 for the full account. Security
+  review, second-role human review, a gate decision, and merge authorization remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 

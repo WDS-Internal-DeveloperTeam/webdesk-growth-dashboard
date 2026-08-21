@@ -1,6 +1,7 @@
 # `dashboard-web` — file upload on the Business Knowledge Record create form
 
-**Status: built, fully validated. Not yet reviewed, gated, or merged.**
+**Status: built, fully validated, independently code-reviewed (8 CONFIRMED findings, all fixed —
+see §8). Not yet security-reviewed, gated, or merged.**
 
 ## 1. Why this exists
 
@@ -45,9 +46,11 @@ this app's own `parseApiErrorMessage`/`getApiBaseUrl` — a plain client-safe mo
   helper's own generic fallback otherwise) — safe to show a caller's user directly. Any other
   failure (the Blob PUT itself, a network-level rejection, a malformed response body) throws a
   plain `Error` instead, so callers can tell the two apart and never show a raw, uncurated message
-  verbatim (this project's standing rule). Both consumers below branch on
+  verbatim (this project's standing rule). `BusinessKnowledgeAttachmentsSection` branches on
   `instanceof AttachmentUploadApiError` to preserve that distinction — a subtlety the first pass
-  at this refactor missed and a test caught (see §5).
+  at this refactor missed and a test caught (see §5). The create form's own batch-upload path
+  originally did _not_ branch on it either, discarding curated backend messages — a real gap an
+  independent code review caught and fixed (see §8, finding 3).
 
 `BusinessKnowledgeAttachmentsSection` was updated to import all of the above instead of its own
 copies — a pure refactor, no behavior change (re-validated by its own existing test suite, all
@@ -84,8 +87,12 @@ and visible, with nothing else preventing a confused user from clicking "Create 
 
 Fixed with a `createdRecordId` state, set as soon as the record creation `POST` succeeds
 (regardless of what happens to any staged attachments after). Once set, the submit button is
-replaced entirely by a "View record" link pointing at the real, already-created record — there is
-no code path left that can re-invoke `handleSubmit`'s record-creation branch.
+replaced entirely by a "View record" link pointing at the real, already-created record. The
+initial build relied on that render swap alone — the `<form>` itself stayed mounted with no check
+inside `handleSubmit`, and the Title field remained the one input HTML's implicit-submission
+algorithm doesn't skip, so pressing Enter there could still re-invoke `handleSubmit` and create a
+duplicate record. An independent code review caught this (see §8, finding 1); `handleSubmit` now
+also refuses to run at all once `createdRecordId` is set, regardless of what triggers it.
 
 ## 5. A refactor pitfall caught by the existing test suite
 
@@ -101,7 +108,7 @@ in §3, restoring the original distinction in both consumers. Left as a concrete
 "pure" extraction of duplicated logic can still silently drop a behavioral nuance that lived only
 in how the original callers handled a shared dependency's result.
 
-## 6. Validation
+## 6. Validation (initial build)
 
 - **264/264** `dashboard-web` unit tests (5 new: staging a file and removing it before submit;
   rejecting an invalid staged file inline; uploading every staged file after record creation and
@@ -129,3 +136,61 @@ in how the original callers handled a shared dependency's result.
 - No retry-in-place for a failed staged upload — the user is told to retry from the detail page's
   own upload control, which already exists and is already reviewed/live, rather than building a
   second, parallel retry mechanism on the create form.
+
+## 8. Independent code review
+
+This project's own `code-review` skill ran at high effort (9 finder angles, 1-vote verification)
+against the full branch diff. All 9 candidates that survived dedup and verification came back
+**CONFIRMED** (no PLAUSIBLE, no REFUTED). All 8 kept findings were fixed (a 9th, a broader
+observation about staged-list CSS mirroring the detail page's sibling rules, resolved to the same
+root cause as finding 6 below once verified, so it isn't tracked as a separate item):
+
+1. **`handleSubmit` had no internal guard against being re-invoked once the record was already
+   created** — the most severe finding. The only thing preventing resubmission was the submit
+   `<button>` being swapped for an `<a>` link once `createdRecordId` was set; the `<form>` itself
+   stayed mounted, and the Title `<input>` was the sole remaining field that doesn't block HTML's
+   implicit form-submission-on-Enter algorithm (`recordType` is a `<select>`, `notes` a
+   `<textarea>`, `content` a contentEditable `div` — none of those block it). Pressing Enter while
+   focused in Title after a partial upload failure would silently create a duplicate record (with
+   the same staged files re-uploaded onto it). **Fixed**: `handleSubmit` now returns immediately if
+   `createdRecordId` is already set, regardless of how it's invoked.
+2. **The "View record" link could abort in-flight uploads with no error surfaced.**
+   `setCreatedRecordId(recordId)` ran before the `Promise.allSettled` attachment-upload block even
+   started, so the plain `<a>` link (a hard navigation, not a Next.js `<Link>`) was clickable while
+   uploads were still running — clicking it could abort them mid-flight, and since the component
+   unmounts on navigation, no error handling ever ran. **Fixed**: the button-to-link swap now also
+   waits on `!submitting`, so the link only appears once uploads have genuinely settled; a disabled
+   "Saving…" button covers the window while `createdRecordId` is set but uploads are still pending.
+3. **The batch-upload failure path never checked for `AttachmentUploadApiError`**, always showing
+   a fixed generic message even when the backend had returned a real, curated rejection reason —
+   contradicting this document's own §3 claim that both consumers branch on it. **Fixed**: the
+   failure message is now built per-file, using each rejection's real `AttachmentUploadApiError`
+   message when present and a generic "upload failed" fallback otherwise, matching the detail
+   page's own control.
+4. **`pendingFiles` was never trimmed after a partial success**, so the staged list kept showing
+   files that had already uploaded successfully as if they still needed action. **Fixed**: on a
+   partial failure, `pendingFiles` is now set to only the files that are still actually pending.
+5. **`attachmentError` was never cleared by `handleSubmit`**, only by selecting new files, so a
+   stale client-side rejection message could render alongside an unrelated, newer submit error.
+   **Fixed**: `handleSubmit` now clears both `error` and `attachmentError` at the start of every
+   attempt.
+6. **The component's own doc comment said navigation "still proceeds" after a partial upload
+   failure** — factually wrong; the code returns before `router.push` is ever reached on that path
+   (already covered by this branch's own test asserting `pushMock` is not called). **Fixed**: the
+   doc comment now accurately describes the guard-against-resubmission behavior too.
+7. **`.removeStagedButton` hand-copied `.deleteButton`'s styling but omitted its `:disabled`
+   rule**, even though the button it styles is genuinely disabled at times — it would render as
+   bright, clickable-looking red text while inert. **Fixed**: `.removeStagedButton` now composes
+   from `.deleteButton` (the same pattern this file already used for `.uploadButton`/`.fileInput`)
+   instead of hand-copying it, picking up the `:disabled` rule for free.
+8. **No test covered a mixed valid+invalid file selection, multi-file removal by index, or a
+   genuinely mixed success/failure upload batch** — each real branch in `handleFilesSelected`,
+   `handleRemoveStagedFile`, and the `Promise.allSettled` result-pairing logic was only exercised
+   with single-file, uniform-outcome cases. **Fixed**: 5 new tests added covering all three
+   scenarios plus the resubmission guard (finding 1) and the `attachmentError`-clearing fix
+   (finding 5) directly.
+
+Re-validated: **269/269** `dashboard-web` unit tests (18/18 in this component's own suite, 5 new),
+typecheck/lint/`check-css-tokens.mjs`/`next build`/`pnpm exec prettier --check` all clean. Not yet
+security-reviewed, second-role human reviewed, gated, or merged — each a separate, not-yet-requested
+next step.

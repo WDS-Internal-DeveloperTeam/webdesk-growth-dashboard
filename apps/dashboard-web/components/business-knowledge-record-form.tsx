@@ -7,6 +7,7 @@ import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import {
   ALLOWED_ATTACHMENT_EXTENSIONS,
+  AttachmentUploadApiError,
   formatAttachmentSize,
   uploadAttachment,
   validateAttachmentFile,
@@ -72,9 +73,13 @@ const NOTES_MAX_LENGTH = 10_000;
  * record itself exists — files picked here are only staged client-side (never uploaded) until
  * `handleSubmit` creates the record and learns its real id, at which point each staged file is
  * uploaded via the same `uploadAttachment()` helper the detail page's own upload control uses. If
- * the record is created but one or more staged uploads then fail, the failure is surfaced but
- * navigation still proceeds — the record itself was saved successfully, and any attachment that
- * didn't make it can be retried from the detail page's own upload control.
+ * the record is created but one or more staged uploads then fail, the form does NOT navigate away
+ * — the record itself was already saved successfully, so the failure is surfaced (naming which
+ * file(s) failed and why, when the backend gave a curated reason) alongside a direct link to the
+ * new record, where the file(s) that didn't make it can be retried from its own upload control.
+ * Once the record is created, `handleSubmit` refuses to run again (even though the `<form>` stays
+ * mounted) — otherwise a second submit, e.g. from pressing Enter in the still-focusable Title
+ * field once the submit button is replaced by a link, would silently create a duplicate record.
  */
 export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormProps): ReactNode {
   const router = useRouter();
@@ -132,7 +137,15 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    // The record has already been created (create mode only) — refuse a second submit rather
+    // than relying solely on the submit button having been replaced by a link, since the <form>
+    // itself stays mounted and native implicit submission (e.g. pressing Enter while the Title
+    // field is focused) can still fire this handler directly.
+    if (createdRecordId) {
+      return;
+    }
     setError(null);
+    setAttachmentError(null);
     setSubmitting(true);
     try {
       const trimmedTitle = title.trim();
@@ -207,10 +220,23 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
             "Some attachments failed to upload after record creation",
             failed.map((entry) => entry.result.reason),
           );
+          // Only the files that are still pending get to stay staged — the ones that already
+          // uploaded successfully are done and shouldn't keep showing in this list as if they
+          // still needed action.
+          setPendingFiles(failed.map((entry) => entry.file));
+          const descriptions = failed.map((entry) => {
+            // AttachmentUploadApiError's message is already the safe, curated string
+            // parseApiErrorMessage() produced from a real backend response — safe to show
+            // verbatim, same as the detail page's own upload control does. Anything else (a
+            // network-level rejection, the Blob PUT itself failing) gets a generic reason.
+            const reason =
+              entry.result.reason instanceof AttachmentUploadApiError
+                ? entry.result.reason.message
+                : "upload failed";
+            return `${entry.file.name} (${reason})`;
+          });
           setError(
-            `The record was created, but ${failed.length} of ${pendingFiles.length} file(s) failed to upload: ${failed
-              .map((entry) => entry.file.name)
-              .join(", ")}. You can retry from the record's detail page.`,
+            `The record was created, but ${failed.length} of ${pendingFiles.length} file(s) failed to upload: ${descriptions.join("; ")}. You can retry from the record's detail page.`,
           );
           return;
         }
@@ -387,12 +413,22 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
       ) : null}
 
       <div className={styles.actions}>
-        {createdRecordId ? (
+        {/* Only switch to the "View record" link once uploads have actually settled — while
+            they're still in flight (createdRecordId is set, but submitting is still true), a
+            plain <a> here would already be clickable, and clicking it triggers a hard navigation
+            that aborts any in-flight attachment upload with no chance for its own error handling
+            to run. Rendering the disabled "Saving…" button through that window instead keeps the
+            link inert until there's nothing left it could interrupt. */}
+        {createdRecordId && !submitting ? (
           <a href={`/business-knowledge-center/${createdRecordId}`} className={styles.submitButton}>
             View record
           </a>
         ) : (
-          <button type="submit" disabled={submitting} className={styles.submitButton}>
+          <button
+            type="submit"
+            disabled={submitting || createdRecordId !== null}
+            className={styles.submitButton}
+          >
             {submitting ? "Saving…" : props.mode === "create" ? "Create record" : "Save changes"}
           </button>
         )}

@@ -14,6 +14,7 @@ vi.mock("@/lib/business-knowledge-attachments", async (importOriginal) => {
   return { ...actual, uploadAttachment: (...args: unknown[]) => uploadAttachmentMock(...args) };
 });
 
+import { AttachmentUploadApiError } from "../../lib/business-knowledge-attachments.js";
 import { BusinessKnowledgeRecordForm } from "../../components/business-knowledge-record-form.js";
 
 const RECORD_ID = "11111111-1111-1111-1111-111111111111";
@@ -278,10 +279,10 @@ describe("BusinessKnowledgeRecordForm", () => {
     );
   });
 
-  it("create mode: when a staged upload fails, the record is still kept (not resubmitted), the failure is shown, and the submit button becomes a 'View record' link instead of navigating automatically", async () => {
+  it("create mode: when a staged upload fails with a non-curated error, the record is still kept (not resubmitted), a generic per-file reason is shown, and the submit button becomes a 'View record' link instead of navigating automatically", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
     global.fetch = fetchMock as typeof fetch;
-    uploadAttachmentMock.mockRejectedValue(new Error("upload failed"));
+    uploadAttachmentMock.mockRejectedValue(new Error("ECONNRESET"));
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     render(<BusinessKnowledgeRecordForm mode="create" />);
@@ -294,7 +295,7 @@ describe("BusinessKnowledgeRecordForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create record" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /The record was created, but 1 of 1 file\(s\) failed to upload: a\.pdf/,
+      "The record was created, but 1 of 1 file(s) failed to upload: a.pdf (upload failed). You can retry from the record's detail page.",
     );
     expect(pushMock).not.toHaveBeenCalled();
     // The record itself was already created — POST must never fire a second time (a second
@@ -305,5 +306,114 @@ describe("BusinessKnowledgeRecordForm", () => {
     expect(viewLink).toHaveAttribute("href", `/business-knowledge-center/${RECORD_ID}`);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     consoleErrorSpy.mockRestore();
+  });
+
+  it("create mode: a mixed upload batch shows the backend's real curated message for the file that failed with AttachmentUploadApiError, drops the successfully-uploaded file from the staged list, and reports the correct X of Y count", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
+    global.fetch = fetchMock as typeof fetch;
+    const file1 = new File(["a"], "a.pdf", { type: "application/pdf" });
+    const file2 = new File(["b"], "b.md", { type: "text/markdown" });
+    uploadAttachmentMock.mockImplementation((_recordId: string, file: File) =>
+      file === file1
+        ? Promise.resolve({ id: "attachment-1" })
+        : Promise.reject(new AttachmentUploadApiError("Unsupported file type: b.md")),
+    );
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Acme Corp" } });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file1, file2] } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create record" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The record was created, but 1 of 2 file(s) failed to upload: b.md (Unsupported file type: b.md). You can retry from the record's detail page.",
+    );
+    // Only the still-failed file remains staged — the one that already uploaded successfully is
+    // gone from the list, not shown as if it still needed action.
+    expect(screen.queryByText("a.pdf")).not.toBeInTheDocument();
+    expect(screen.getByText("b.md")).toBeInTheDocument();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("create mode: staging multiple files and removing one by index removes only that file, keeping the others", () => {
+    global.fetch = vi.fn() as typeof fetch;
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+
+    const file1 = new File(["a"], "a.pdf", { type: "application/pdf" });
+    const file2 = new File(["b"], "b.md", { type: "text/markdown" });
+    const file3 = new File(["c"], "c.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file1, file2, file3] } });
+
+    expect(screen.getByText("a.pdf")).toBeInTheDocument();
+    expect(screen.getByText("b.md")).toBeInTheDocument();
+    expect(screen.getByText("c.docx")).toBeInTheDocument();
+
+    const removeButtons = screen.getAllByRole("button", { name: "Remove" });
+    expect(removeButtons).toHaveLength(3);
+    fireEvent.click(removeButtons[1] as HTMLElement);
+
+    expect(screen.getByText("a.pdf")).toBeInTheDocument();
+    expect(screen.queryByText("b.md")).not.toBeInTheDocument();
+    expect(screen.getByText("c.docx")).toBeInTheDocument();
+  });
+
+  it("create mode: a single file-select event with both a valid and an invalid file stages the valid one and rejects the invalid one", () => {
+    global.fetch = vi.fn() as typeof fetch;
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+
+    const validFile = new File(["a"], "report.pdf", { type: "application/pdf" });
+    const invalidFile = new File(["b"], "malware.exe", { type: "application/x-msdownload" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [validFile, invalidFile] } });
+
+    expect(screen.getByText("report.pdf")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "malware.exe: Only PDF, DOCX, XLSX, and Markdown files are supported.",
+    );
+  });
+
+  it("create mode: once the record is created, resubmitting the form (e.g. native implicit submission) does not create a duplicate record", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    const { container } = render(<BusinessKnowledgeRecordForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Acme Corp" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create record" }));
+
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/business-knowledge-center/${RECORD_ID}`),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Simulate the form being submitted again directly (e.g. what native implicit submission —
+    // pressing Enter while a still-focusable field has focus — would trigger), bypassing whatever
+    // button is or isn't currently rendered. handleSubmit must refuse to run a second time now
+    // that the record already exists.
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("create mode: a stale attachment-rejection message is cleared as soon as a new submit begins", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Acme Corp" } });
+
+    const invalidFile = new File(["b"], "malware.exe", { type: "application/x-msdownload" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [invalidFile] } });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Only PDF, DOCX, XLSX/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Create record" }));
+
+    await waitFor(() => expect(screen.queryByText(/Only PDF, DOCX, XLSX/)).not.toBeInTheDocument());
   });
 });
