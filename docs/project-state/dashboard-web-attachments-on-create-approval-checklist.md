@@ -2,13 +2,17 @@
 
 **Status:** Built, fully validated. Code review complete (9 finder angles, 8/8 CONFIRMED findings
 fixed, 0 open). Security review complete (0 findings above threshold). Required second-role human
-review complete (2026-08-21, Jitesh D, "Approved", no disputes raised). **Gate G4-attachments-on-create
-approved** (2026-08-21, WebDesk Solution, decision CONFIRM, approved commit `7bbaa67`) — see
+review complete (2026-08-21, Jitesh D, "Approved", no disputes raised). Gate G4-attachments-on-create
+approved (2026-08-21, WebDesk Solution, decision CONFIRM, approved commit `7bbaa67`) — see
 `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Branch pushed and opened as
 [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46) —
 unusually, after the gate was approved rather than before, since review and gate approval all
-happened on the local branch first. Merge authorization remains a separate, not-yet-requested next
-step.
+happened on the local branch first. All 14 CI checks confirmed green, then **"Merge PR #46" was
+separately requested and executed** — merge commit `adf9a6b4e908e975b309cd372d1252c1912c8aee`.
+Both Vercel projects auto-deployed on push to `main` and were verified live directly —
+`dashboard-api`'s `/health` returned `build.commitShaShort == adf9a6b`, and `dashboard-web`'s `/`
+correctly redirects an unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` file
+upload on the Business Knowledge Record create form is now genuinely live in production.**
 
 ## Completion condition
 

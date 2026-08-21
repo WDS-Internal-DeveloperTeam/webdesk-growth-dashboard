@@ -1654,9 +1654,10 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
 31. **`dashboard-web` file upload on the Business Knowledge Record create form — built, fully
     validated, independently code-reviewed (all 8 CONFIRMED findings fixed), security-reviewed (0
     findings above threshold), required second-role human reviewed (Jitesh D, "Approved"), gated
-    (G4-attachments-on-create, WebDesk Solution, CONFIRM), and pushed/opened as
-    [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46); not
-    yet merged (2026-08-21).**
+    (G4-attachments-on-create, WebDesk Solution, CONFIRM), merged
+    ([PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46),
+    merge commit `adf9a6b4e908e975b309cd372d1252c1912c8aee`) — now genuinely live in production
+    (2026-08-21).**
     `docs/implementation/dashboard-web-attachments-on-create.md` records the full account. Not
     started automatically — built directly on the explicit "we need upload option in New business
     knowledge record add not in view" instruction. Upload was previously detail-page-only (task
@@ -1739,8 +1740,17 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
     [PR #46](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/46).
     Unusually, unlike every prior slice this session, the branch had never been visible on GitHub
     until after code review, security review, second-role human review, and the gate had all
-    already happened locally — this is the first time it's on `origin`. Merge authorization
-    remains a separate, not-yet-requested next step.
+    already happened locally — this is the first time it's on `origin`. **All 14 CI checks were
+    then confirmed green** (typecheck, lint, unit tests, integration tests, production build, both
+    Vercel preview deployments, etc.), and **"Merge PR #46" was then separately requested and
+    executed** — merged with a real merge commit (not squash/rebase), matching every prior merge
+    in this project's history — merge commit `adf9a6b4e908e975b309cd372d1252c1912c8aee`. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort ==
+adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'s `/` resolves to
+    `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
+    `dashboard-web` file upload on the Business Knowledge Record create form is now genuinely
+    live in production.**
 
 ## Recent decisions
 
@@ -4563,6 +4573,16 @@ migrate` command to run themselves (same credential-handling discipline as every
   until now — code review, security review, second-role human review, and the gate had all
   already happened on the local branch first, so this push/PR came _after_ the gate rather than
   before it. Merge authorization remains a separate, not-yet-requested next step.
+- `[2026-08-21]` **CI status checked on PR #46 — all 14 checks green**, including both Vercel
+  preview deployments. **"Merge PR #46" was then separately requested and executed** — merged
+  with a real merge commit (not squash/rebase), matching every prior merge in this project's
+  history — merge commit `adf9a6b4e908e975b309cd372d1252c1912c8aee`. Both Vercel projects
+  auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+  status check — `dashboard-api`'s `/health` returned `build.commitShaShort ==
+adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'s `/` resolves to
+  `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
+  `dashboard-web` file upload on the Business Knowledge Record create form is now genuinely live
+  in production.**
 
 ## Open client blockers
 

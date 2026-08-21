@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-20T00:00:00Z",
-    "version": 43
+    "version": 44
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -1633,6 +1633,22 @@
       },
       "project_version_before": 42,
       "project_version_after": 43
+    },
+    {
+      "timestamp": "2026-08-21T00:00:00Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "requested and executed merge of PR #46 (dashboard-web-attachments-on-create) into main",
+      "details": {
+        "pr": 46,
+        "branch": "dashboard-web-attachments-on-create",
+        "merge_commit": "adf9a6b4e908e975b309cd372d1252c1912c8aee",
+        "ci_status": "All 14 CI checks green before merge",
+        "verification": "dashboard-api's /health returned build.commitShaShort == adf9a6b; dashboard-web's / resolves to /auth/sign-in for an unauthenticated visitor. Both Vercel projects verified live directly, not just via CI's own Vercel status check.",
+        "result": "The dashboard-web file upload on the Business Knowledge Record create form is now genuinely live in production."
+      },
+      "project_version_before": 43,
+      "project_version_after": 44
     }
   ]
 }
