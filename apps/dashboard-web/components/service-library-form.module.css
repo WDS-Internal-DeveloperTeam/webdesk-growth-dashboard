@@ -1,0 +1,148 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xl);
+  max-width: 44rem;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-lg);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fieldsetLegend {
+  font-size: var(--webdesk-dashboard-font-size-md);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  color: var(--webdesk-dashboard-color-foreground);
+  padding: 0;
+  margin: 0 0 var(--webdesk-dashboard-space-xs);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.label {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.helperText {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.readonlyValue {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.redactedNotice {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  margin: 0;
+}
+
+.input,
+.textarea,
+.select {
+  font-size: var(--webdesk-dashboard-font-size-md);
+  font-family: inherit;
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+}
+
+.input,
+.select {
+  height: 2.25rem;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--webdesk-dashboard-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tagChip {
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-xs);
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  border-radius: var(--webdesk-dashboard-radius-full);
+  background: var(--webdesk-dashboard-color-muted-surface);
+  font-size: var(--webdesk-dashboard-font-size-xs);
+}
+
+.tagRemoveButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  line-height: 1;
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+  padding: var(--webdesk-dashboard-space-sm);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-md);
+}
+
+.submitButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-accent-foreground);
+  background: var(--webdesk-dashboard-color-accent);
+  border: none;
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  cursor: pointer;
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submitButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.cancelLink {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}

@@ -440,3 +440,91 @@ export interface BusinessKnowledgeAttachment {
   readonly uploadedBy: string | null;
   readonly createdAt: string;
 }
+
+export type ServiceConfidentiality = "public" | "internal" | "restricted";
+export type ServicePublicationStatus = "draft" | "published" | "unpublished";
+export type ServiceApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * The Service Library list page's own row shape, matching what `GET /service-library/services`
+ * actually returns — the bare entity, without `deliverableIds`/`platformIds`/`engagementModelIds`
+ * (those are only present on the enriched detail/write-response shape, `ServiceDetail` below,
+ * since resolving them per row would be an N+1 query the list endpoint deliberately doesn't pay
+ * for — `module-service-library`'s own precedent, matching `Project` vs `ProjectDetail`).
+ * `internalDescription` may be absent (not merely `null`) when the record is `confidentiality:
+ * "restricted"` and the caller lacks `view_confidential` — an absent key is the redaction signal,
+ * the same convention `BusinessKnowledgeRecord.content`/`.notes` already establish, not a
+ * placeholder for "genuinely empty."
+ */
+export interface Service {
+  readonly id: string;
+  readonly publicId: string;
+  readonly canonicalName: string;
+  readonly publicName: string | null;
+  readonly categoryId: string;
+  readonly parentServiceId: string | null;
+  readonly shortPublicDescription: string | null;
+  readonly audience: string | null;
+  readonly problems: string | null;
+  readonly capabilities: string | null;
+  readonly outcomes: string | null;
+  readonly exclusions: string | null;
+  readonly internalDescription?: string | null;
+  readonly icpIds: readonly string[];
+  readonly relatedPageIds: readonly string[];
+  readonly relatedCaseStudyIds: readonly string[];
+  readonly confidentiality: ServiceConfidentiality;
+  readonly publicationStatus: ServicePublicationStatus;
+  readonly approvalStatus: ServiceApprovalStatus;
+  readonly ownerUserId: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** The detail page's and every write response's own shape — `create()`/`update()`/`findById()`
+ *  all return this enriched form (`ServiceWithRelationshipIds` on the backend), unlike the plain
+ *  list-endpoint rows above (`module-service-library`'s own code-review fix — a client couldn't
+ *  otherwise confirm what a create/update request actually linked without an extra `GET`). */
+export interface ServiceDetail extends Service {
+  readonly deliverableIds: readonly string[];
+  readonly platformIds: readonly string[];
+  readonly engagementModelIds: readonly string[];
+}
+
+/** One of the four read-only dimension tables (`GET /service-library/categories`) — `deliverables`/
+ *  `platforms_technologies`/`engagement_models` below share the same base shape; `categories` alone
+ *  self-nests via `parentCategoryId`. Authoring these is out of scope for V1 (read-only, per
+ *  `docs/task-packages/module-service-library.md` §3/§7) — this app only ever lists them to
+ *  populate a picker's option set. */
+export interface ServiceCategory {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly parentCategoryId: string | null;
+}
+
+export interface Deliverable {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+}
+
+export interface PlatformTechnology {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+}
+
+export interface EngagementModel {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+}
