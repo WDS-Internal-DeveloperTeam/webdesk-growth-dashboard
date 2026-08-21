@@ -1751,8 +1751,9 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
     `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
     `dashboard-web` file upload on the Business Knowledge Record create form is now genuinely
     live in production.**
-32. **Service Library module backend — built, fully validated, not yet reviewed, gated, or merged
-    (2026-08-21).** `docs/task-packages/module-service-library.md` and
+32. **Service Library module backend — built, fully validated, code-reviewed, security-reviewed,
+    second-role human reviewed, and gated (2026-08-21).**
+    `docs/task-packages/module-service-library.md` and
     `docs/implementation/module-service-library.md` record the full account. The third real
     business-module backend built on the Phase 1F application shell / canonical module registry,
     after Projects and Business Knowledge Center — module #3 in the project-owner-supplied
@@ -1782,13 +1783,50 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
     new `packages/database` integration tests (real disposable database), 15 new `dashboard-api` e2e
     tests (real disposable database + real seeded RBAC roles, including the full three-tier
     submit/review/approve matrix and a relationship round-trip test) — 447/447 `dashboard-api` unit
-    tests overall. Migration `00050`/`00051` up/down round-trip clean (51 migrations);
-    `pnpm validate:module-registry` unaffected (43 modules, 21 permission groups);
-    typecheck/lint/`nest build`/prettier all clean. Committed on branch `module-service-library`,
-    on top of the already-committed task-package commit. **Not yet pushed, not yet reviewed, gated,
-    or merged** — no `dashboard-web` UI exists yet, matching the Projects/BKC precedent; independent
-    code review, security review, second-role human review, a gate decision, push/PR, and merge each
-    remain their own separate, not-yet-requested next step.
+    tests overall at initial build. Migration `00050`/`00051` up/down round-trip clean (51
+    migrations); `pnpm validate:module-registry` unaffected (43 modules, 21 permission groups);
+    typecheck/lint/`nest build`/prettier all clean. **Independent code review then ran** (high
+    effort, 8 finder angles, 1-vote verification) — 8 candidates verified, all CONFIRMED, all 8
+    fixed: most severe, `requiredActionForTransition()` gated every transition to `draft` behind
+    the `approve` action, blocking a `marketing_editor` from ever reverting their own rejected/
+    revision-requested work to fix and resubmit, contradicting the canonical spec's own stated
+    intent — fixed by replacing the two independently-maintained `ALLOWED_TRANSITIONS`/
+    `requiredActionForTransition()` structures with one unified `TRANSITIONS` table. Also fixed:
+    five distinct missing FK-existence checks (`ownerUserId`/`parentServiceId`/`deliverableIds`/
+    `platformIds`/`engagementModelIds` all surfaced raw 500s instead of clean 400s); `create()`/
+    `update()` omitting the relationship ids they just wrote from their own response; an
+    unescaped SQL LIKE wildcard in search (`escapeLikePattern()`, exported and reused from
+    `UserRepository`); a redundant re-fetch/re-validation in `update()` (the identical bug class
+    already fixed once in the Projects module); six near-identical join-table repository methods
+    contradicting their own doc comment (refactored to two shared generic helpers); and a third
+    hand-duplicated auth-check pattern (closed by adding `AuthorizationService.assertAllowed()`).
+    One unrelated candidate (a `findOne()` return-type/Swagger-schema claim) was independently
+    refuted — this project has no `@nestjs/swagger` CLI plugin generating schemas from TS types.
+    **A separate `security-review` skill run then found 1 CONFIRMED finding** at confidence
+    8/10: the `confidentiality` field (`public`/`internal`/`restricted`) had zero read-side
+    enforcement anywhere — any caller holding baseline `service_persona_proof:view` (all 7 seeded
+    roles) could read a `restricted` record's `internalDescription`, closely paralleling Business
+    Knowledge Center's own already-shipped `restricted`-status enforcement, which Service Library
+    introduced both the field and every reading route for without replicating. Fixed by wiring
+    the same, already-shared `confidential-field.util.ts` mechanism BKC uses across
+    `list`/`findOne`/`create`/`update`/`changeStatus`. Final numbers after both review rounds:
+    461/461 `dashboard-api` unit tests, 21/21 `packages/database` integration tests (unchanged,
+    confirming the repository refactor is behavior-preserving), 21/21 `dashboard-api` e2e tests.
+    A review packet (published as a Claude artifact — code review + security review findings,
+    fixes, and validation evidence, with a decision section) was prepared for the required
+    second-role human review, since the implementing agent cannot also be its own reviewer
+    (ADR-0010). **Jitesh D reviewed it and returned "Approved,"** no disputes raised — 0 open
+    findings of any kind on this branch. **The gate (G4-service-library) was then separately
+    requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+    since the second-role review was already complete before the gate was requested), approved
+    commit `03856b8` on branch `module-service-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-service-library`) and
+    `docs/project-state/module-service-library-approval-checklist.md`'s "Sign-off" section. **This
+    gate approval does not itself authorize pushing the branch, opening a PR, or merging** — each
+    remains its own separate, not-yet-requested authorization, per this project's standing "no
+    auto-merge" rule. No `dashboard-web` UI exists yet for this module, matching the Projects/BKC
+    precedent — a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -4652,6 +4690,68 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
   Committed to the branch. **Not yet pushed, reviewed, gated, or merged** — each remains its own
   separate, not-yet-requested next step, matching this project's standing discipline for every
   prior module.
+- `[2026-08-21]` **Independent code review run on `module-service-library`, high effort — 8
+  finder angles, 1-vote verification.** 9 candidates surfaced after dedup, 8 CONFIRMED and 1
+  REFUTED. All 8 CONFIRMED findings fixed per explicit "fix the confirmed findings" instruction
+  — most severe a real workflow-blocking RBAC bug: `requiredActionForTransition()` gated every
+  transition targeting `draft` (including `submitted→draft`, `revision_requested→draft`,
+  `rejected→draft`) behind the `approve` action, so a `marketing_editor` (holds submit+review,
+  not approve) who authored a service and got it into `revision_requested`/`rejected` could
+  never revert it themselves to fix and resubmit — directly contradicting the canonical spec's
+  own stated intent that the submitter/editor drives that loop. Fixed by replacing the two
+  independently-maintained `ALLOWED_TRANSITIONS`/`requiredActionForTransition()` structures with
+  one unified `TRANSITIONS` table keyed by `(from, to)`, closing the structural drift risk too.
+  Also fixed: `ownerUserId`/`parentServiceId`(update)/`deliverableIds`/`platformIds`/
+  `engagementModelIds` were all FK-constrained but never existence-checked, surfacing raw 500s
+  instead of clean 400s (fixed with `assertOwnerExists()`, mirroring `ProjectService`'s own
+  precedent, and `assertIdsExist()`, reusing each dimension repository's previously-unused
+  `findByIds()`); `create()`/`update()` wrote relationship ids but never returned them (both now
+  return the enriched `ServiceWithRelationshipIds` shape `findById()` already used); an
+  unescaped `Op.iLike` search pattern let a literal `%`/`_` act as a SQL wildcard (fixed by
+  exporting and reusing `UserRepository`'s existing `escapeLikePattern()`); `update()` discarded
+  its own 404-check fetch then unconditionally re-validated `categoryId` even when unchanged —
+  the identical bug class already fixed once in the Projects module; `ServiceRelationshipRepository`'s
+  own doc comment claimed to avoid "three near-duplicate files" but still hand-wrote six
+  near-identical methods (refactored to two shared generic helpers); and the
+  `evaluate→recordAccessDenied→throw` pattern was hand-duplicated a third time (closed by adding
+  `AuthorizationService.assertAllowed()`). Re-validated: 461/461 `dashboard-api` unit tests (14
+  new), 21/21 `packages/database` integration tests (unchanged, confirming the repository
+  refactor is behavior-preserving), 20/20 `dashboard-api` e2e tests (5 new), typecheck/lint/
+  `nest build`/prettier all clean.
+- `[2026-08-21]` **Security review run on `module-service-library`, separately from the code
+  review.** 1 candidate surfaced, independently re-verified at confidence 8/10 (above threshold):
+  the `confidentiality` field (`public`/`internal`/`restricted`, sourced from the canonical
+  spec's own three named views for this exact module) had zero read-side enforcement anywhere —
+  `list()`/`findById()` returned full records, including `internalDescription`, to any caller
+  holding baseline `service_persona_proof:view`, which all 7 seeded RBAC roles hold. Business
+  Knowledge Center already ships the equivalent mechanism for its own `restricted` status;
+  Service Library introduced both the field and every route reading it without replicating it.
+  **Fixed**: wired the same, already-shared `confidential-field.util.ts` mechanism BKC uses —
+  `redactIfRestricted()`/`redactRestrictedRecords()` now gate `internalDescription` behind
+  `AuthorizationService.canViewConfidential()` across `list`/`findOne`/`create`/`update`/
+  `changeStatus` (unlike BKC, `create()` needed it too, since this schema accepts
+  `confidentiality` directly and can produce an already-restricted record on the first write).
+  New e2e regression test proves the fix end-to-end; `view_confidential` is zero-seeded today,
+  matching BKC's own current state. Re-validated: 461/461 `dashboard-api` unit tests, 21/21 e2e
+  tests (1 new), typecheck/lint/`nest build`/prettier all clean.
+- `[2026-08-21]` **Required second-role human review complete for `module-service-library`.** A
+  review packet (published as a Claude artifact — code review + security review findings, fixes,
+  and validation evidence, with a decision section) was prepared for the required second-role
+  human review, since the implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/module-service-library-approval-checklist.md`. **Jitesh D reviewed it and
+  returned "Approved,"** no disputes raised — 0 open findings of any kind on this branch (all 8
+  code-review findings and the 1 security-review finding were fixed, not merely accepted as
+  debt). A gate decision, push/PR, and merge authorization remain separate, not-yet-requested
+  next steps.
+- `[2026-08-21]` **The gate (G4-service-library) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `03856b8` on branch
+  `module-service-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-service-library`) and
+  `docs/project-state/module-service-library-approval-checklist.md`'s "Sign-off" section. **This
+  gate approval does not itself authorize pushing the branch, opening a PR, or merging** — each
+  remains its own separate, not-yet-requested authorization, per this project's standing "no
+  auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 
