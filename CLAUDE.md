@@ -1837,7 +1837,47 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming
     the session gate is intact. **The Service Library module backend is now genuinely live in
     production.** No `dashboard-web` UI exists yet for this module, matching the Projects/BKC
-    precedent — a separate, not-yet-requested next step.
+    precedent — a separate, not-yet-requested next step. **Update (2026-08-21): the
+    `dashboard-web` UI has since been built — see item 33 below.**
+33. **`dashboard-web` Service Library UI — built, fully validated, not yet reviewed, gated, or
+    merged (2026-08-21).** `docs/implementation/dashboard-web-service-library.md` records the full
+    account. Not started automatically — built directly on the explicit "Start the dashboard-web
+    UI for Service Library" instruction, following the backend's own build-to-production arc
+    (PR #47). Unlike Projects/Business Knowledge Center, a real design brief exists for this
+    module — `docs/design/dashboard-ui/15-representative-screen-specifications.md` §4 names
+    Service Library explicitly (list → detail → editor archetype, Identity/Positioning/
+    Relationships/Status field groups, and calls for the shared `ApprovalBlock` component) — built
+    to that brief's own grouping, with one deliberate, explicitly-flagged deviation. New
+    `packages/shared-types` (`Service`/`ServiceDetail` and the four dimension entity types);
+    `lib/service-library-query.ts`/`lib/service-library.ts` (mirroring `business-knowledge-query.ts`/
+    `business-knowledge.ts`'s own zero-non-type-import-file split); `ServiceLibraryForm` — the
+    first real use of `@webdesk/ui`'s `RelationshipPicker` in this codebase, for the three
+    FK-backed relationship fields (`deliverableIds`/`platformIds`/`engagementModelIds`), alongside
+    a hand-rolled `TagListField` for the three unvalidated identifier-list fields
+    (`icpIds`/`relatedPageIds`/`relatedCaseStudyIds`, per the backend's own D1 decision — no
+    backing entity exists yet to search against); `ServiceStatusActions` (mirrors the backend's
+    `TRANSITIONS` table by hand, same pattern as `ProjectStatusActions`/
+    `BusinessKnowledgeStatusActions`). **Deliberately does not use the design brief's own named
+    `ApprovalBlock` component** — it requires real `submitter`/`submittedAt`/`reviewer` identity
+    and a typed rejection reason, none of which `changeServiceApprovalStatusSchema` accepts or the
+    `services` table tracks; using it would mean fabricating data or silently discarding a typed
+    reason the backend can't persist — documented as an explicit, flagged deviation rather than a
+    silent substitution (see the implementation doc §4). Four routes under
+    `app/(shell)/service-library/`: list, detail, create, edit — a redacted `internalDescription`
+    (on a `restricted`-confidentiality record) renders an inert notice and is omitted from the
+    submit payload, the same convention `BusinessKnowledgeRecordForm` already establishes.
+    `parentServiceId`/`ownerUserId` exist on the entity but have no form field yet — neither is
+    named in the design brief's own field list, and `ownerUserId` follows the identical reasoning
+    that deferred Projects' own owner field — flagged as a known, out-of-scope gap rather than
+    silently omitted. Two real test bugs (not application bugs) were found and fixed while writing
+    tests: jsdom's native HTML constraint validation silently blocked a `submit` event (and
+    `handleSubmit`) from firing whenever a required field was left empty in a test, masking what
+    the test was trying to exercise — fixed by asserting `.toBeRequired()` directly and by filling
+    in the previously-missing required field in two other tests. 308/308 `dashboard-web` unit
+    tests (39 new), typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean.
+    Committed to branch `dashboard-web-service-library` — not yet pushed to `origin`, reviewed,
+    gated, or merged; each remains its own separate, not-yet-requested next step, matching this
+    project's standing discipline for every prior module's own UI slice.
 
 ## Recent decisions
 
@@ -4778,6 +4818,20 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   not a `404`, which would mean the module never actually deployed); and `dashboard-web`'s `/`
   resolves to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is
   intact. **The Service Library module backend is now genuinely live in production.**
+- `[2026-08-21]` **Built the `dashboard-web` UI for Service Library**, under the explicit "Start
+  the dashboard-web UI for Service Library" instruction, following the backend's own
+  build-to-production arc (PR #47). Unlike Projects/Business Knowledge Center, a real design brief
+  exists for this module (`docs/design/dashboard-ui/15-representative-screen-specifications.md`
+  §4) — built to its own field grouping and list/detail/editor archetype, with one deliberate,
+  explicitly-flagged deviation from it: the brief's own named `ApprovalBlock` component was not
+  used, since it requires real submitter/submittedAt/reviewer identity and a typed rejection
+  reason that the actual backend (`changeServiceApprovalStatusSchema`, the `services` table)
+  neither accepts nor tracks — using it would mean fabricating data or silently discarding a typed
+  reason, both against this project's standing practice. See item 33 under "Active tasks" and
+  `docs/implementation/dashboard-web-service-library.md` for the full account, including the
+  `RelationshipPicker`-vs-`TagListField` design split and the `parentServiceId`/`ownerUserId`
+  known-gap. 308/308 `dashboard-web` unit tests (39 new), full validation clean. Committed to
+  branch `dashboard-web-service-library` — not yet pushed to `origin`, reviewed, gated, or merged.
 
 ## Open client blockers
 
