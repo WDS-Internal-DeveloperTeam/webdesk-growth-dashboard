@@ -32,7 +32,7 @@ import {
   type UpdateServiceDto,
 } from "./service-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
-import { ServicesService } from "./services.service.js";
+import { ServicesService, type ServiceWithRelationshipIds } from "./services.service.js";
 
 type ServiceLibraryRequest = AuthenticatedRequest & RequestWithCorrelationId;
 
@@ -63,7 +63,7 @@ export class ServicesController {
   async findOne(
     @Param("id", new ParseUUIDPipe()) id: string,
     @Req() req: ServiceLibraryRequest,
-  ): Promise<ApiSuccessResponse<ServiceEntity>> {
+  ): Promise<ApiSuccessResponse<ServiceWithRelationshipIds>> {
     const data = await this.services.findById(id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
@@ -76,7 +76,7 @@ export class ServicesController {
   async create(
     @Body(new ZodValidationPipe(createServiceSchema)) body: CreateServiceDto,
     @Req() req: ServiceLibraryRequest,
-  ): Promise<ApiSuccessResponse<ServiceEntity>> {
+  ): Promise<ApiSuccessResponse<ServiceWithRelationshipIds>> {
     const data = await this.services.create(body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
@@ -90,7 +90,7 @@ export class ServicesController {
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(updateServiceSchema)) body: UpdateServiceDto,
     @Req() req: ServiceLibraryRequest,
-  ): Promise<ApiSuccessResponse<ServiceEntity>> {
+  ): Promise<ApiSuccessResponse<ServiceWithRelationshipIds>> {
     const data = await this.services.update(id, body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }

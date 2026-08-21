@@ -1,4 +1,5 @@
 import { Op, type Transaction } from "sequelize";
+import { escapeLikePattern } from "../auth/user.repository.js";
 import { getServiceLibraryModels } from "./models.js";
 import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type {
@@ -99,7 +100,7 @@ export class ServiceRepository {
       where.publicationStatus = filter.publicationStatus;
     }
     if (filter.search) {
-      where.canonicalName = { [Op.iLike]: `%${filter.search}%` };
+      where.canonicalName = { [Op.iLike]: `%${escapeLikePattern(filter.search)}%` };
     }
     const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
     const rows = await this.model.findAll({

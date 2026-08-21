@@ -8,8 +8,10 @@ const MAX_SEARCH_LIMIT = 200;
 /** Escapes `%`, `_`, and the escape character itself so a literal substring search (e.g. an email
  *  fragment containing a real underscore) isn't reinterpreted by Postgres as a partial ILIKE
  *  wildcard pattern — this is a match-correctness fix, not a SQL-injection concern (Sequelize
- *  already parameterizes the value). */
-function escapeLikePattern(value: string): string {
+ *  already parameterizes the value). Exported so other repositories' own `Op.iLike` search
+ *  filters can reuse it instead of hand-rolling (or omitting) the identical escape (code-review
+ *  finding, `module-service-library`). */
+export function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&");
 }
 

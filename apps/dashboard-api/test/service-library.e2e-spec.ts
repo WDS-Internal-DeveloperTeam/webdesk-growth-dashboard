@@ -107,7 +107,13 @@ describe("Service Library module endpoints (e2e, real disposable database)", () 
         ...overrides,
       })
       .expect(201);
-    return response.body.data as { id: string; approvalStatus: string };
+    return response.body.data as {
+      id: string;
+      approvalStatus: string;
+      deliverableIds: readonly string[];
+      platformIds: readonly string[];
+      engagementModelIds: readonly string[];
+    };
   }
 
   beforeAll(async () => {
@@ -227,6 +233,27 @@ describe("Service Library module endpoints (e2e, real disposable database)", () 
       .expect(200);
   });
 
+  it("list() search treats a literal % as literal text, not a SQL wildcard (escapeLikePattern)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const uniqueSuffix = uniquePublicId("PCT");
+    const wildcardMatch = await createDraftService(cookie, {
+      canonicalName: `50% Off Bundle ${uniqueSuffix}`,
+    });
+    const plainMatch = await createDraftService(cookie, {
+      canonicalName: `50X Off Bundle ${uniqueSuffix}`,
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/service-library/services")
+      .query({ search: `50% Off Bundle ${uniqueSuffix}` })
+      .set("Cookie", cookie)
+      .expect(200);
+    const ids = (response.body.data as Array<{ id: string }>).map((s) => s.id);
+    expect(ids).toContain(wildcardMatch.id);
+    // If "%" were treated as a wildcard, this would also incorrectly match — it must not.
+    expect(ids).not.toContain(plainMatch.id);
+  });
+
   it("rejects service creation with 400 when categoryId does not exist", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())
@@ -238,6 +265,47 @@ describe("Service Library module endpoints (e2e, real disposable database)", () 
         canonicalName: "No category",
         categoryId: randomUUID(),
       })
+      .expect(400);
+  });
+
+  it("rejects service creation with 400 (not a raw 500) when ownerUserId does not resolve to an active user", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    await request(app.getHttpServer())
+      .post("/service-library/services")
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({
+        publicId: uniquePublicId("SVC"),
+        canonicalName: "No owner",
+        categoryId,
+        ownerUserId: randomUUID(),
+      })
+      .expect(400);
+  });
+
+  it("rejects service creation with 400 (not a raw 500) when a deliverableId does not exist", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    await request(app.getHttpServer())
+      .post("/service-library/services")
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({
+        publicId: uniquePublicId("SVC"),
+        canonicalName: "No deliverable",
+        categoryId,
+        deliverableIds: [randomUUID()],
+      })
+      .expect(400);
+  });
+
+  it("rejects service update with 400 when parentServiceId does not exist", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createDraftService(cookie, { canonicalName: "Parent Update Fixture" });
+    await request(app.getHttpServer())
+      .post(`/service-library/services/${created.id}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ parentServiceId: randomUUID() })
       .expect(400);
   });
 
@@ -268,6 +336,11 @@ describe("Service Library module endpoints (e2e, real disposable database)", () 
       platformIds: [platform.id],
       engagementModelIds: [engagementModel.id],
     });
+    // The create response itself carries the just-written relationship ids — no extra GET needed
+    // (code-review finding: create()/update() previously returned the bare ServiceEntity).
+    expect(created.deliverableIds).toEqual([deliverable.id]);
+    expect(created.platformIds).toEqual([platform.id]);
+    expect(created.engagementModelIds).toEqual([engagementModel.id]);
 
     const getResponse = await request(app.getHttpServer())
       .get(`/service-library/services/${created.id}`)
@@ -280,13 +353,17 @@ describe("Service Library module endpoints (e2e, real disposable database)", () 
     expect(getResponse.body.data.platformIds).toEqual([platform.id]);
     expect(getResponse.body.data.engagementModelIds).toEqual([engagementModel.id]);
 
-    // update() replaces the relationship set wholesale — clearing to [] removes every link.
-    await request(app.getHttpServer())
+    // update() replaces the relationship set wholesale — clearing to [] removes every link. The
+    // update response itself reflects the clear immediately (no extra GET needed either).
+    const updateResponse = await request(app.getHttpServer())
       .post(`/service-library/services/${created.id}/update`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ deliverableIds: [] })
       .expect(200);
+    expect(updateResponse.body.data.deliverableIds).toEqual([]);
+    expect(updateResponse.body.data.platformIds).toEqual([platform.id]); // untouched
+
     const afterClear = await request(app.getHttpServer())
       .get(`/service-library/services/${created.id}`)
       .set("Cookie", cookie)
@@ -319,6 +396,54 @@ describe("Service Library module endpoints (e2e, real disposable database)", () 
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ approvalStatus: "approved" })
       .expect(403);
+  });
+
+  it("marketing_editor can revert their own submitted/revision_requested/rejected work back to draft (submit action, not approve)", async () => {
+    const editorCookie = await cookieForNewSession(marketingEditorUserId);
+    const adminCookie = await cookieForNewSession(superAdminUserId);
+
+    // submitted -> draft: the editor un-submits their own work.
+    const s1 = await createDraftService(editorCookie, { canonicalName: "Revert From Submitted" });
+    await request(app.getHttpServer())
+      .post(`/service-library/services/${s1.id}/status`)
+      .set("Cookie", editorCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "submitted" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/service-library/services/${s1.id}/status`)
+      .set("Cookie", editorCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "draft" })
+      .expect(200);
+
+    // rejected -> draft: the editor picks their rejected work back up to revise.
+    const s2 = await createDraftService(editorCookie, { canonicalName: "Revert From Rejected" });
+    await request(app.getHttpServer())
+      .post(`/service-library/services/${s2.id}/status`)
+      .set("Cookie", editorCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "submitted" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/service-library/services/${s2.id}/status`)
+      .set("Cookie", editorCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "under_review" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/service-library/services/${s2.id}/status`)
+      .set("Cookie", adminCookie) // only super_admin/owner_growth_approver hold "approve" (rejects too)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "rejected" })
+      .expect(200);
+    const revertResponse = await request(app.getHttpServer())
+      .post(`/service-library/services/${s2.id}/status`)
+      .set("Cookie", editorCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "draft" })
+      .expect(200);
+    expect(revertResponse.body.data.approvalStatus).toBe("draft");
   });
 
   it("owner_growth_approver (VCERAX, no S) is denied draft->submitted, but can review and approve once submitted", async () => {

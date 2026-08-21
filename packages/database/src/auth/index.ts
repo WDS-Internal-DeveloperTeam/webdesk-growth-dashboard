@@ -1,6 +1,6 @@
 export * from "./entities.js";
 export { getAuthModels, resetAuthModelsForTests, type AuthModels } from "./models.js";
-export { UserRepository } from "./user.repository.js";
+export { UserRepository, escapeLikePattern } from "./user.repository.js";
 export { ExternalAuthIdentityRepository } from "./external-auth-identity.repository.js";
 export { EmergencyAdminCredentialRepository } from "./emergency-admin-credential.repository.js";
 export { SessionRepository } from "./session.repository.js";

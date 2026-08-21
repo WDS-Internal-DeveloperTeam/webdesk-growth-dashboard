@@ -1,4 +1,7 @@
 import type {
+  DeliverableRepository,
+  EngagementModelRepository,
+  PlatformTechnologyRepository,
   ServiceCategoryEntity,
   ServiceCategoryRepository,
   ServiceEntity,
@@ -14,6 +17,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
 import type { AuthorizationService } from "../authz/authorization.service.js";
+import type { UsersService } from "../users/users.service.js";
 import { ServicesService } from "./services.service.js";
 
 // withTransaction() opens a real Sequelize connection (needs DATABASE_URL) — irrelevant to this
@@ -89,15 +93,19 @@ describe("ServicesService", () => {
     updateStatus: ReturnType<typeof vi.fn>;
   };
   let categories: { findById: ReturnType<typeof vi.fn> };
+  let deliverables: { findByIds: ReturnType<typeof vi.fn> };
+  let platforms: { findByIds: ReturnType<typeof vi.fn> };
+  let engagementModels: { findByIds: ReturnType<typeof vi.fn> };
   let relationships: {
     replaceDeliverables: ReturnType<typeof vi.fn>;
     replacePlatforms: ReturnType<typeof vi.fn>;
     replaceEngagementModels: ReturnType<typeof vi.fn>;
+    listDeliverableIds: ReturnType<typeof vi.fn>;
+    listPlatformIds: ReturnType<typeof vi.fn>;
+    listEngagementModelIds: ReturnType<typeof vi.fn>;
   };
-  let authorizationService: {
-    evaluate: ReturnType<typeof vi.fn>;
-    recordAccessDenied: ReturnType<typeof vi.fn>;
-  };
+  let usersService: { findById: ReturnType<typeof vi.fn> };
+  let authorizationService: { assertAllowed: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let svc: ServicesService;
 
@@ -111,17 +119,28 @@ describe("ServicesService", () => {
       updateStatus: vi.fn(),
     };
     categories = { findById: vi.fn() };
+    deliverables = { findByIds: vi.fn() };
+    platforms = { findByIds: vi.fn() };
+    engagementModels = { findByIds: vi.fn() };
     relationships = {
       replaceDeliverables: vi.fn(),
       replacePlatforms: vi.fn(),
       replaceEngagementModels: vi.fn(),
+      listDeliverableIds: vi.fn().mockResolvedValue([]),
+      listPlatformIds: vi.fn().mockResolvedValue([]),
+      listEngagementModelIds: vi.fn().mockResolvedValue([]),
     };
-    authorizationService = { evaluate: vi.fn(), recordAccessDenied: vi.fn() };
+    usersService = { findById: vi.fn() };
+    authorizationService = { assertAllowed: vi.fn() };
     auditService = { record: vi.fn() };
     svc = new ServicesService(
       services as unknown as ServiceRepository,
       categories as unknown as ServiceCategoryRepository,
+      deliverables as unknown as DeliverableRepository,
+      platforms as unknown as PlatformTechnologyRepository,
+      engagementModels as unknown as EngagementModelRepository,
       relationships as unknown as ServiceRelationshipRepository,
+      usersService as unknown as UsersService,
       authorizationService as unknown as AuthorizationService,
       auditService as unknown as AuditService,
     );
@@ -142,7 +161,12 @@ describe("ServicesService", () => {
         "actor-1",
       );
 
-      expect(result).toEqual(service());
+      expect(result).toEqual({
+        ...service(),
+        deliverableIds: [],
+        platformIds: [],
+        engagementModelIds: [],
+      });
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ action: "create", entityType: "service" }),
       );
@@ -189,12 +213,89 @@ describe("ServicesService", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("replaces the deliverable/platform/engagement-model links atomically when provided", async () => {
+    it("rejects when ownerUserId does not resolve to an active user", async () => {
+      categories.findById.mockResolvedValue(category());
+      services.findByPublicId.mockResolvedValue(null);
+      usersService.findById.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        svc.create(
+          {
+            publicId: "SVC-X",
+            canonicalName: "X",
+            categoryId: "category-1",
+            ownerUserId: "missing-owner",
+          },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(services.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects when a deliverableId does not exist", async () => {
+      categories.findById.mockResolvedValue(category());
+      services.findByPublicId.mockResolvedValue(null);
+      deliverables.findByIds.mockResolvedValue([]);
+
+      await expect(
+        svc.create(
+          {
+            publicId: "SVC-X",
+            canonicalName: "X",
+            categoryId: "category-1",
+            deliverableIds: ["missing-deliverable"],
+          },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(services.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects when a platformId does not exist", async () => {
+      categories.findById.mockResolvedValue(category());
+      services.findByPublicId.mockResolvedValue(null);
+      platforms.findByIds.mockResolvedValue([]);
+
+      await expect(
+        svc.create(
+          {
+            publicId: "SVC-X",
+            canonicalName: "X",
+            categoryId: "category-1",
+            platformIds: ["missing-platform"],
+          },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects when an engagementModelId does not exist", async () => {
+      categories.findById.mockResolvedValue(category());
+      services.findByPublicId.mockResolvedValue(null);
+      engagementModels.findByIds.mockResolvedValue([]);
+
+      await expect(
+        svc.create(
+          {
+            publicId: "SVC-X",
+            canonicalName: "X",
+            categoryId: "category-1",
+            engagementModelIds: ["missing-engagement-model"],
+          },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("replaces the deliverable/platform/engagement-model links atomically when provided, skipping the destroy step on a fresh row", async () => {
       categories.findById.mockResolvedValue(category());
       services.findByPublicId.mockResolvedValue(null);
       services.create.mockResolvedValue(service());
+      deliverables.findByIds.mockResolvedValue([{ id: "deliverable-1" }]);
+      platforms.findByIds.mockResolvedValue([{ id: "platform-1" }]);
+      engagementModels.findByIds.mockResolvedValue([{ id: "engagement-1" }]);
 
-      await svc.create(
+      const result = await svc.create(
         {
           publicId: "SVC-HEADLESS-COMMERCE",
           canonicalName: "Headless Commerce",
@@ -210,17 +311,26 @@ describe("ServicesService", () => {
         "service-1",
         ["deliverable-1"],
         expect.anything(),
+        { skipDestroy: true },
       );
       expect(relationships.replacePlatforms).toHaveBeenCalledWith(
         "service-1",
         ["platform-1"],
         expect.anything(),
+        { skipDestroy: true },
       );
       expect(relationships.replaceEngagementModels).toHaveBeenCalledWith(
         "service-1",
         ["engagement-1"],
         expect.anything(),
+        { skipDestroy: true },
       );
+      // The response reflects what was just written without a re-fetch (no relationships.list*
+      // call needed for create()).
+      expect(result.deliverableIds).toEqual(["deliverable-1"]);
+      expect(result.platformIds).toEqual(["platform-1"]);
+      expect(result.engagementModelIds).toEqual(["engagement-1"]);
+      expect(relationships.listDeliverableIds).not.toHaveBeenCalled();
     });
   });
 
@@ -249,6 +359,45 @@ describe("ServicesService", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it("does not re-validate categoryId when the patch resends the current, unchanged value", async () => {
+      services.findById.mockResolvedValue(service({ categoryId: "category-1" }));
+      services.update.mockResolvedValue(service({ canonicalName: "Renamed" }));
+
+      await svc.update(
+        "service-1",
+        { categoryId: "category-1", canonicalName: "Renamed" },
+        "actor-1",
+      );
+
+      expect(categories.findById).not.toHaveBeenCalled();
+    });
+
+    it("rejects when a new parentServiceId does not exist", async () => {
+      services.findById.mockResolvedValueOnce(service()).mockResolvedValueOnce(null);
+
+      await expect(
+        svc.update("service-1", { parentServiceId: "missing-parent" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects when a new ownerUserId does not resolve to an active user", async () => {
+      services.findById.mockResolvedValue(service());
+      usersService.findById.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        svc.update("service-1", { ownerUserId: "missing-owner" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("does not re-validate ownerUserId when the patch resends the current, unchanged value", async () => {
+      services.findById.mockResolvedValue(service({ ownerUserId: "owner-1" }));
+      services.update.mockResolvedValue(service({ ownerUserId: "owner-1" }));
+
+      await svc.update("service-1", { ownerUserId: "owner-1" }, "actor-1");
+
+      expect(usersService.findById).not.toHaveBeenCalled();
+    });
+
     it("never accepts approvalStatus through the general update patch", async () => {
       services.findById.mockResolvedValue(service());
       services.update.mockResolvedValue(service({ canonicalName: "Renamed" }));
@@ -260,6 +409,16 @@ describe("ServicesService", () => {
       const [, patchArg] = services.update.mock.calls[0] as [string, Record<string, unknown>];
       expect(patchArg).not.toHaveProperty("approvalStatus");
     });
+
+    it("returns the enriched shape (re-fetched, since an omitted relationship field means unchanged, not empty)", async () => {
+      services.findById.mockResolvedValue(service());
+      services.update.mockResolvedValue(service({ canonicalName: "Renamed" }));
+      relationships.listDeliverableIds.mockResolvedValue(["deliverable-1"]);
+
+      const result = await svc.update("service-1", { canonicalName: "Renamed" }, "actor-1");
+
+      expect(result.deliverableIds).toEqual(["deliverable-1"]);
+    });
   });
 
   describe("changeApprovalStatus", () => {
@@ -267,7 +426,7 @@ describe("ServicesService", () => {
       services.findById.mockResolvedValue(service({ approvalStatus: "draft" }));
       const result = await svc.changeApprovalStatus("service-1", "draft", "actor-1");
       expect(result.approvalStatus).toBe("draft");
-      expect(authorizationService.evaluate).not.toHaveBeenCalled();
+      expect(authorizationService.assertAllowed).not.toHaveBeenCalled();
     });
 
     it("rejects a transition not in the allowlist", async () => {
@@ -279,7 +438,7 @@ describe("ServicesService", () => {
 
     it("requires the 'submit' action for draft -> submitted", async () => {
       services.findById.mockResolvedValue(service({ approvalStatus: "draft" }));
-      authorizationService.evaluate.mockResolvedValue({ allowed: true });
+      authorizationService.assertAllowed.mockResolvedValue(undefined);
       services.updateStatus.mockResolvedValue({
         outcome: "updated",
         entity: service({ approvalStatus: "submitted" }),
@@ -287,7 +446,7 @@ describe("ServicesService", () => {
 
       await svc.changeApprovalStatus("service-1", "submitted", "actor-1");
 
-      expect(authorizationService.evaluate).toHaveBeenCalledWith(
+      expect(authorizationService.assertAllowed).toHaveBeenCalledWith(
         "actor-1",
         "service_persona_proof",
         "submit",
@@ -296,7 +455,7 @@ describe("ServicesService", () => {
 
     it("requires the 'review' action for submitted -> under_review", async () => {
       services.findById.mockResolvedValue(service({ approvalStatus: "submitted" }));
-      authorizationService.evaluate.mockResolvedValue({ allowed: true });
+      authorizationService.assertAllowed.mockResolvedValue(undefined);
       services.updateStatus.mockResolvedValue({
         outcome: "updated",
         entity: service({ approvalStatus: "under_review" }),
@@ -304,7 +463,7 @@ describe("ServicesService", () => {
 
       await svc.changeApprovalStatus("service-1", "under_review", "actor-1");
 
-      expect(authorizationService.evaluate).toHaveBeenCalledWith(
+      expect(authorizationService.assertAllowed).toHaveBeenCalledWith(
         "actor-1",
         "service_persona_proof",
         "review",
@@ -313,7 +472,7 @@ describe("ServicesService", () => {
 
     it("requires the 'approve' action for under_review -> approved", async () => {
       services.findById.mockResolvedValue(service({ approvalStatus: "under_review" }));
-      authorizationService.evaluate.mockResolvedValue({ allowed: true });
+      authorizationService.assertAllowed.mockResolvedValue(undefined);
       services.updateStatus.mockResolvedValue({
         outcome: "updated",
         entity: service({ approvalStatus: "approved" }),
@@ -321,32 +480,52 @@ describe("ServicesService", () => {
 
       await svc.changeApprovalStatus("service-1", "approved", "actor-1");
 
-      expect(authorizationService.evaluate).toHaveBeenCalledWith(
+      expect(authorizationService.assertAllowed).toHaveBeenCalledWith(
         "actor-1",
         "service_persona_proof",
         "approve",
       );
     });
 
-    it("throws ForbiddenException and records the denial when the actor lacks the required action", async () => {
+    it.each([
+      ["submitted", "draft"],
+      ["revision_requested", "draft"],
+      ["rejected", "draft"],
+    ] as const)(
+      "requires the 'submit' action for %s -> draft (the submitter/editor drives the revise loop, not the approver)",
+      async (from, to) => {
+        services.findById.mockResolvedValue(service({ approvalStatus: from }));
+        authorizationService.assertAllowed.mockResolvedValue(undefined);
+        services.updateStatus.mockResolvedValue({
+          outcome: "updated",
+          entity: service({ approvalStatus: to }),
+        });
+
+        await svc.changeApprovalStatus("service-1", to, "actor-1");
+
+        expect(authorizationService.assertAllowed).toHaveBeenCalledWith(
+          "actor-1",
+          "service_persona_proof",
+          "submit",
+        );
+      },
+    );
+
+    it("propagates a denial from assertAllowed and never attempts the status write", async () => {
       services.findById.mockResolvedValue(service({ approvalStatus: "under_review" }));
-      authorizationService.evaluate.mockResolvedValue({ allowed: false, reasonCode: "no_grant" });
+      authorizationService.assertAllowed.mockRejectedValue(
+        new ForbiddenException("Missing permission: service_persona_proof:approve"),
+      );
 
       await expect(svc.changeApprovalStatus("service-1", "approved", "actor-1")).rejects.toThrow(
         ForbiddenException,
-      );
-      expect(authorizationService.recordAccessDenied).toHaveBeenCalledWith(
-        "actor-1",
-        "service_persona_proof",
-        "approve",
-        "no_grant",
       );
       expect(services.updateStatus).not.toHaveBeenCalled();
     });
 
     it("throws ConflictException when the atomic status write loses a race", async () => {
       services.findById.mockResolvedValue(service({ approvalStatus: "draft" }));
-      authorizationService.evaluate.mockResolvedValue({ allowed: true });
+      authorizationService.assertAllowed.mockResolvedValue(undefined);
       services.updateStatus.mockResolvedValue({
         outcome: "conflict",
         entity: service({ approvalStatus: "archived" }),
@@ -360,7 +539,7 @@ describe("ServicesService", () => {
     it("logs (not throws) when the audit call fails after a successful status write", async () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       services.findById.mockResolvedValue(service({ approvalStatus: "draft" }));
-      authorizationService.evaluate.mockResolvedValue({ allowed: true });
+      authorizationService.assertAllowed.mockResolvedValue(undefined);
       services.updateStatus.mockResolvedValue({
         outcome: "updated",
         entity: service({ approvalStatus: "submitted" }),
