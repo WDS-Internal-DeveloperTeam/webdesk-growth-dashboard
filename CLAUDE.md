@@ -1825,11 +1825,19 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
     `docs/project-state/module-service-library-approval-checklist.md`'s "Sign-off" section.
     **"Push the branch and open a PR" was then separately requested and executed** — pushed to
     `origin`, opened as
-    [PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47).
-    **This does not itself authorize merging** — that remains its own separate, not-yet-requested
-    authorization, per this project's standing "no auto-merge" rule. No `dashboard-web` UI exists
-    yet for this module, matching the Projects/BKC precedent — a separate, not-yet-requested next
-    step.
+    [PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47), all
+    14 CI checks green. **"Merge PR #47" was then separately requested and executed** — merged
+    with a real merge commit (not squash/rebase), matching every prior merge in this project's
+    history — merge commit `d51e99cdfd0013d54c910949c0d431359d2bfe4a`. Both Vercel projects
+    auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+    status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is what's serving;
+    `GET /service-library/services` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming
+    the session gate is intact. **The Service Library module backend is now genuinely live in
+    production.** No `dashboard-web` UI exists yet for this module, matching the Projects/BKC
+    precedent — a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -4759,6 +4767,17 @@ adf9a6b`, confirming the exact merged commit is what's serving; `dashboard-web`'
   `module-service-library` — pushed to `origin`, opened as
   [PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47).
   Merge authorization remains a separate, not-yet-requested next step.
+- `[2026-08-21]` **CI status checked on PR #47 — all 14 checks green**, including both Vercel
+  preview deployments. **"Merge PR #47" was then separately requested and executed** — merged
+  with a real merge commit (not squash/rebase), matching every prior merge in this project's
+  history — merge commit `d51e99cdfd0013d54c910949c0d431359d2bfe4a`. Both Vercel projects
+  auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+  status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is what's serving;
+  `GET /service-library/services` returned a clean `401` (route live, `SessionGuard` enforcing —
+  not a `404`, which would mean the module never actually deployed); and `dashboard-web`'s `/`
+  resolves to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is
+  intact. **The Service Library module backend is now genuinely live in production.**
 
 ## Open client blockers
 

@@ -5,10 +5,11 @@ review complete (1 MEDIUM candidate verified at confidence 8/10, fixed). Require
 human review complete (2026-08-21, Jitesh D, "Approved," no disputes raised). **The gate
 (G4-service-library) was then separately requested and approved** — WebDesk Solution, decision
 CONFIRM, 2026-08-21, approved commit `03856b8` on branch `module-service-library` — see
-`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **"Push the branch and open a PR"
-was then separately requested and executed** — pushed to `origin`, opened as
-[PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47). Merge
-authorization remains a separate, not-yet-requested next step.
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Pushed to `origin` and opened as
+[PR #47](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/47), all 14
+CI checks green. **"Merge PR #47" was then separately requested and executed** — merge commit
+`d51e99cdfd0013d54c910949c0d431359d2bfe4a`, verified live in production directly. **The Service
+Library module backend is now genuinely live in production.**
 
 ## Completion condition
 
@@ -148,3 +149,22 @@ see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` 
 This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
 remains its own separate, not-yet-requested authorization, per this project's standing "no
 auto-merge" rule.
+
+## Merge — COMPLETE
+
+**"Merge PR #47" was separately requested and executed.** Waited for all 14 CI checks to go
+green first. Merged with a real merge commit (not squash/rebase), matching every prior merge in
+this project's history — merge commit `d51e99cdfd0013d54c910949c0d431359d2bfe4a`. Both Vercel
+projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+Vercel status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is what's serving.
+- `GET /service-library/services` returned a clean `401` (route live, `SessionGuard` enforcing —
+  not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming the
+  session gate is intact.
+
+**The Service Library module backend is now genuinely live in production.** No `dashboard-web` UI
+exists yet for this module — a separate, not-yet-requested next step, matching the Projects/BKC
+precedent.
