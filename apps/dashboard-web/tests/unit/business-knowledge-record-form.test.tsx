@@ -1,11 +1,18 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as BusinessKnowledgeAttachmentsModule from "../../lib/business-knowledge-attachments.js";
 
 const pushMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
 }));
+
+const uploadAttachmentMock = vi.fn();
+vi.mock("@/lib/business-knowledge-attachments", async (importOriginal) => {
+  const actual = await importOriginal<typeof BusinessKnowledgeAttachmentsModule>();
+  return { ...actual, uploadAttachment: (...args: unknown[]) => uploadAttachmentMock(...args) };
+});
 
 import { BusinessKnowledgeRecordForm } from "../../components/business-knowledge-record-form.js";
 
@@ -45,6 +52,7 @@ describe("BusinessKnowledgeRecordForm", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.example.com";
     pushMock.mockReset();
+    uploadAttachmentMock.mockReset();
   });
 
   afterEach(() => {
@@ -207,6 +215,95 @@ describe("BusinessKnowledgeRecordForm", () => {
       "Failed to save business knowledge record",
       networkError,
     );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("edit mode: does not render a file picker — attachments have their own control on the detail page", () => {
+    global.fetch = vi.fn() as typeof fetch;
+    render(
+      <BusinessKnowledgeRecordForm
+        mode="edit"
+        recordId={RECORD_ID}
+        initial={{ recordType: "vto", title: "VTO", content: "<p>x</p>", notes: null }}
+      />,
+    );
+    expect(screen.queryByText("Add file")).not.toBeInTheDocument();
+  });
+
+  it("create mode: staging a file shows it in a list with its size, and it can be removed before submit", () => {
+    global.fetch = vi.fn() as typeof fetch;
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+
+    const file = new File(["pdf bytes"], "report.pdf", { type: "application/pdf" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(screen.getByText("report.pdf")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.queryByText("report.pdf")).not.toBeInTheDocument();
+  });
+
+  it("create mode: rejects an invalid staged file with an inline error, without staging it", () => {
+    global.fetch = vi.fn() as typeof fetch;
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+
+    const file = new File(["exe bytes"], "malware.exe", { type: "application/x-msdownload" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/Only PDF, DOCX, XLSX/);
+    expect(screen.queryByText("malware.exe")).not.toBeInTheDocument();
+  });
+
+  it("create mode: after the record is created, uploads each staged file via uploadAttachment() and then navigates to the detail page", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
+    global.fetch = fetchMock as typeof fetch;
+    uploadAttachmentMock.mockResolvedValue({ id: "attachment-1" });
+
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Acme Corp" } });
+
+    const file1 = new File(["a"], "a.pdf", { type: "application/pdf" });
+    const file2 = new File(["b"], "b.md", { type: "text/markdown" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file1, file2] } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create record" }));
+
+    await waitFor(() => expect(uploadAttachmentMock).toHaveBeenCalledTimes(2));
+    expect(uploadAttachmentMock).toHaveBeenCalledWith(RECORD_ID, file1);
+    expect(uploadAttachmentMock).toHaveBeenCalledWith(RECORD_ID, file2);
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/business-knowledge-center/${RECORD_ID}`),
+    );
+  });
+
+  it("create mode: when a staged upload fails, the record is still kept (not resubmitted), the failure is shown, and the submit button becomes a 'View record' link instead of navigating automatically", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(RECORD_ID));
+    global.fetch = fetchMock as typeof fetch;
+    uploadAttachmentMock.mockRejectedValue(new Error("upload failed"));
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(<BusinessKnowledgeRecordForm mode="create" />);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Acme Corp" } });
+
+    const file = new File(["a"], "a.pdf", { type: "application/pdf" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create record" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /The record was created, but 1 of 1 file\(s\) failed to upload: a\.pdf/,
+    );
+    expect(pushMock).not.toHaveBeenCalled();
+    // The record itself was already created — POST must never fire a second time (a second
+    // click would otherwise create a duplicate record), so the button is replaced by a direct
+    // link to the record that does exist.
+    expect(screen.queryByRole("button", { name: "Create record" })).not.toBeInTheDocument();
+    const viewLink = screen.getByRole("link", { name: "View record" });
+    expect(viewLink).toHaveAttribute("href", `/business-knowledge-center/${RECORD_ID}`);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     consoleErrorSpy.mockRestore();
   });
 });

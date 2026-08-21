@@ -1,10 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { ApiSuccessResponse, BusinessKnowledgeRecord } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import {
+  ALLOWED_ATTACHMENT_EXTENSIONS,
+  formatAttachmentSize,
+  uploadAttachment,
+  validateAttachmentFile,
+} from "@/lib/business-knowledge-attachments";
 import { RECORD_TYPE_LABEL, RECORD_TYPE_VALUES } from "@/lib/business-knowledge-query";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./business-knowledge-record-form.module.css";
@@ -59,6 +65,16 @@ const NOTES_MAX_LENGTH = 10_000;
  *
  * Submits via a direct browser `fetch()` with `credentials: "include"`, the same pattern
  * `ProjectForm`/`BusinessKnowledgeStatusActions` already use.
+ *
+ * Create mode also offers a file picker (edit mode doesn't — attachments already have their own
+ * dedicated upload control on the detail page, `BusinessKnowledgeAttachmentsSection`). An
+ * attachment's `record_id` is a real database foreign key, so it can't be created before the
+ * record itself exists — files picked here are only staged client-side (never uploaded) until
+ * `handleSubmit` creates the record and learns its real id, at which point each staged file is
+ * uploaded via the same `uploadAttachment()` helper the detail page's own upload control uses. If
+ * the record is created but one or more staged uploads then fail, the failure is surfaced but
+ * navigation still proceeds — the record itself was saved successfully, and any attachment that
+ * didn't make it can be retried from the detail page's own upload control.
  */
 export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormProps): ReactNode {
   const router = useRouter();
@@ -78,6 +94,41 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
   const [notes, setNotes] = useState(redacted ? "" : (initial?.notes ?? ""));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<readonly File[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  // Set once the record itself has actually been created (create mode only) — even if some
+  // staged attachments then fail to upload. Once set, the form must never be resubmitted (a
+  // second submit would call POST /business-knowledge/records again and create a *second*,
+  // duplicate record) — the UI switches to a "View record" link instead.
+  const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFilesSelected(files: FileList): void {
+    setAttachmentError(null);
+    const accepted: File[] = [];
+    const rejections: string[] = [];
+    for (const file of Array.from(files)) {
+      const validationError = validateAttachmentFile(file);
+      if (validationError) {
+        rejections.push(`${file.name}: ${validationError}`);
+      } else {
+        accepted.push(file);
+      }
+    }
+    if (accepted.length > 0) {
+      setPendingFiles((current) => [...current, ...accepted]);
+    }
+    if (rejections.length > 0) {
+      setAttachmentError(rejections.join(" "));
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function handleRemoveStagedFile(index: number): void {
+    setPendingFiles((current) => current.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -136,7 +187,36 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
       }
 
       const body = (await response.json()) as ApiSuccessResponse<BusinessKnowledgeRecord>;
-      router.push(`/business-knowledge-center/${body.data.id}`);
+      const recordId = body.data.id;
+      if (props.mode === "create") {
+        setCreatedRecordId(recordId);
+      }
+
+      if (props.mode === "create" && pendingFiles.length > 0) {
+        const results = await Promise.allSettled(
+          pendingFiles.map((file) => uploadAttachment(recordId, file)),
+        );
+        const failed = results
+          .map((result, index) => ({ result, file: pendingFiles[index] }))
+          .filter(
+            (entry): entry is { result: PromiseRejectedResult; file: File } =>
+              entry.result.status === "rejected",
+          );
+        if (failed.length > 0) {
+          console.error(
+            "Some attachments failed to upload after record creation",
+            failed.map((entry) => entry.result.reason),
+          );
+          setError(
+            `The record was created, but ${failed.length} of ${pendingFiles.length} file(s) failed to upload: ${failed
+              .map((entry) => entry.file.name)
+              .join(", ")}. You can retry from the record's detail page.`,
+          );
+          return;
+        }
+      }
+
+      router.push(`/business-knowledge-center/${recordId}`);
     } catch (err) {
       console.error("Failed to save business knowledge record", err);
       setError("Something went wrong. Please try again.");
@@ -220,8 +300,9 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
               placeholder="Optional — leave blank if this record's content will live entirely in an attached file."
             />
             <span className={styles.helperText}>
-              Optional. You can attach a file (DOCX, XLSX, PDF, or Markdown) from the record's
-              detail page after saving, instead of or in addition to typed content.
+              {props.mode === "create"
+                ? "Optional. You can also attach a file (DOCX, XLSX, PDF, or Markdown) below, instead of or in addition to typed content."
+                : "Optional. You can attach a file (DOCX, XLSX, PDF, or Markdown) from the record's detail page, instead of or in addition to typed content."}
             </span>
           </>
         )}
@@ -247,6 +328,58 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
         )}
       </div>
 
+      {props.mode === "create" ? (
+        <div className={styles.field}>
+          <span className={styles.label}>Attachments</span>
+          <label className={styles.uploadButton}>
+            Add file
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ALLOWED_ATTACHMENT_EXTENSIONS}
+              multiple
+              disabled={submitting || createdRecordId !== null}
+              className={styles.fileInput}
+              onChange={(event) => {
+                if (event.target.files && event.target.files.length > 0) {
+                  handleFilesSelected(event.target.files);
+                }
+              }}
+            />
+          </label>
+          <span className={styles.helperText}>
+            PDF, DOCX, XLSX, or Markdown — up to 25 MB each.
+          </span>
+
+          {attachmentError ? (
+            <p role="alert" className={styles.error}>
+              {attachmentError}
+            </p>
+          ) : null}
+
+          {pendingFiles.length > 0 ? (
+            <ul className={styles.stagedList}>
+              {pendingFiles.map((file, index) => (
+                <li key={`${file.name}-${index}`} className={styles.stagedItem}>
+                  <span>
+                    <span className={styles.stagedName}>{file.name}</span>
+                    <span className={styles.stagedSize}>({formatAttachmentSize(file.size)})</span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={submitting || createdRecordId !== null}
+                    onClick={() => handleRemoveStagedFile(index)}
+                    className={styles.removeStagedButton}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
       {error ? (
         <p role="alert" className={styles.error}>
           {error}
@@ -254,9 +387,15 @@ export function BusinessKnowledgeRecordForm(props: BusinessKnowledgeRecordFormPr
       ) : null}
 
       <div className={styles.actions}>
-        <button type="submit" disabled={submitting} className={styles.submitButton}>
-          {submitting ? "Saving…" : props.mode === "create" ? "Create record" : "Save changes"}
-        </button>
+        {createdRecordId ? (
+          <a href={`/business-knowledge-center/${createdRecordId}`} className={styles.submitButton}>
+            View record
+          </a>
+        ) : (
+          <button type="submit" disabled={submitting} className={styles.submitButton}>
+            {submitting ? "Saving…" : props.mode === "create" ? "Create record" : "Save changes"}
+          </button>
+        )}
         <a
           href={
             props.mode === "create"

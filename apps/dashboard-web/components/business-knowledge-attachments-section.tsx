@@ -1,11 +1,17 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { BusinessKnowledgeAttachment } from "@webdesk/shared-types";
 import { EmptyState } from "@webdesk/ui";
-import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import {
+  ALLOWED_ATTACHMENT_EXTENSIONS,
+  AttachmentUploadApiError,
+  formatAttachmentSize,
+  uploadAttachment,
+  validateAttachmentFile,
+} from "@/lib/business-knowledge-attachments";
+import { parseApiErrorMessage } from "@/lib/api-errors";
 import { formatTimestamp } from "@/lib/format-timestamp";
 import { usePendingIds } from "@/lib/use-pending-ids";
 import styles from "./business-knowledge-attachments-section.module.css";
@@ -13,25 +19,6 @@ import styles from "./business-knowledge-attachments-section.module.css";
 export interface BusinessKnowledgeAttachmentsSectionProps {
   readonly recordId: string;
   readonly initialAttachments: readonly BusinessKnowledgeAttachment[];
-}
-
-// Mirrors apps/dashboard-api/src/business-knowledge/business-knowledge.constants.ts's
-// BUSINESS_KNOWLEDGE_ATTACHMENT_ALLOWED_MIME_TYPES/_MAX_SIZE_BYTES — kept in sync by hand, same
-// approach every other backend-DTO-mirroring file in this app already uses. Server-enforced
-// regardless (both at the Blob token level and again in confirm()); this is UX only.
-const ALLOWED_MIME_TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/markdown",
-];
-const ALLOWED_EXTENSIONS = ".pdf,.docx,.xlsx,.md";
-const MAX_SIZE_BYTES = 25 * 1024 * 1024;
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function contentUrl(recordId: string, attachmentId: string): string {
@@ -82,50 +69,31 @@ export function BusinessKnowledgeAttachmentsSection({
   async function handleFileSelected(file: File): Promise<void> {
     setError(null);
 
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      setError("Only PDF, DOCX, XLSX, and Markdown files are supported.");
-      return;
-    }
-    if (file.size > MAX_SIZE_BYTES) {
-      setError("Files must be 25 MB or smaller.");
+    const validationError = validateAttachmentFile(file);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     setUploading(true);
     try {
-      const pathname = `business-knowledge/${recordId}/${crypto.randomUUID()}-${file.name}`;
-      const blob = await upload(pathname, file, {
-        access: "private",
-        // A same-origin dashboard-web route, not dashboard-api directly — @vercel/blob/client's
-        // upload() has no way to attach the session cookie to a cross-origin request (no
-        // `credentials` option, and browsers forbid scripts from setting `Cookie` manually), so
-        // this route proxies server-to-server instead. See its own doc comment for the full
-        // account.
-        handleUploadUrl: `/business-knowledge-center/${recordId}/attachments/upload-route`,
-      });
-
-      const response = await fetch(
-        `${getApiBaseUrl()}/business-knowledge/records/${recordId}/attachments/confirm`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pathname: blob.pathname, filename: file.name }),
-        },
-      );
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
-        return;
-      }
-      const body = (await response.json()) as { data: BusinessKnowledgeAttachment };
+      const attachment = await uploadAttachment(recordId, file);
       // No router.refresh() here — this local state update is already sufficient. No other
       // section of the parent Record Detail page reads attachment data, so nothing on the page
       // goes stale without a full server re-fetch (the same redundant-refresh shape this project
       // already found and fixed once for ProjectTeamSection/ProjectApproversSection).
-      setAttachments((current) => [...current, body.data]);
+      setAttachments((current) => [...current, attachment]);
     } catch (err) {
-      console.error("Failed to upload attachment", err);
-      setError("Something went wrong uploading the file. Please try again.");
+      // AttachmentUploadApiError's message is already the safe, curated string
+      // parseApiErrorMessage() produced from a real backend response — safe to show verbatim.
+      // Anything else (the Blob PUT itself failing, a network-level rejection) gets the generic
+      // fallback, matching this project's standing rule against surfacing a raw, uncurated error.
+      if (err instanceof AttachmentUploadApiError) {
+        setError(err.message);
+      } else {
+        console.error("Failed to upload attachment", err);
+        setError("Something went wrong uploading the file. Please try again.");
+      }
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -165,7 +133,7 @@ export function BusinessKnowledgeAttachmentsSection({
           <input
             ref={fileInputRef}
             type="file"
-            accept={ALLOWED_EXTENSIONS}
+            accept={ALLOWED_ATTACHMENT_EXTENSIONS}
             disabled={uploading}
             className={styles.fileInput}
             onChange={(event) => {
@@ -198,7 +166,7 @@ export function BusinessKnowledgeAttachmentsSection({
                 <div>
                   <span className={styles.filename}>{attachment.filename}</span>
                   <span className={styles.meta}>
-                    {formatSize(attachment.sizeBytes)} · Uploaded{" "}
+                    {formatAttachmentSize(attachment.sizeBytes)} · Uploaded{" "}
                     {formatTimestamp(attachment.createdAt)}
                   </span>
                 </div>

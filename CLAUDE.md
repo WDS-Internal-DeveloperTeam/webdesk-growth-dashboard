@@ -1638,7 +1638,49 @@ e5c3910dd276739abf21ce713697f78b63b1f625`, and `dashboard-web`'s `/` correctly r
       `docs/implementation/business-knowledge-center-rich-content-attachments.md` §11 for the full
       incident account. **The Business Knowledge Center rich content & attachments slice,
       including the same-day production-incident fix, is now genuinely live and stable in
-      production.**
+      production.** **Two more real, independent production errors surfaced the next day and were
+      diagnosed and fixed the same way** — see
+      `docs/implementation/business-knowledge-center-rich-content-attachments.md` §12/§13 for the
+      full accounts: (1) an RSC function-prop crash on both `/projects` and
+      `/business-knowledge-center` (a Server Component passing a closure, not plain data, to the
+      `PageSizeSelect` Client Component — React Server Components rejects that at render time),
+      fixed by changing `PageSizeSelect`'s prop from a `buildHref` function to a precomputed
+      `hrefBySize` record and deployed as commit `600f88e`, verified resolved live; (2) a specific
+      record's detail page 500ing because migration `00049`
+      (`create-business-knowledge-attachments`) had never actually been run against production
+      after PR #45 merged — confirmed via a real, read-only `migrate:status` check, with the fix
+      (the user running the real `migrate` command themselves) given but its confirmed-applied
+      outcome not yet recorded here.
+31. **`dashboard-web` file upload on the Business Knowledge Record create form — built, fully
+    validated, not yet reviewed, gated, or merged (2026-08-21).**
+    `docs/implementation/dashboard-web-attachments-on-create.md` records the full account. Not
+    started automatically — built directly on the explicit "we need upload option in New business
+    knowledge record add not in view" instruction. Upload was previously detail-page-only (task
+    package D5's own deliberate scope decision, since an attachment's `record_id` is a real
+    foreign key that can't exist before the record itself does). Files picked on the create form
+    are now staged client-side (never uploaded) until the record is actually created, at which
+    point every staged file is uploaded via the exact same `uploadAttachment()` flow the detail
+    page's own control already uses — no new backend surface. A new
+    `lib/business-knowledge-attachments.ts` extracts the shared MIME/size allowlist and the
+    `upload()`-then-`confirm()` sequence out of `BusinessKnowledgeAttachmentsSection` (a pure
+    refactor, re-validated by that component's own unchanged 10-test suite) so the create form's
+    new file picker doesn't duplicate either. A `createdRecordId` state guards against the real
+    risk this design introduces: once the record is created, the form can never be resubmitted
+    (which would silently create a second, duplicate record) even if one or more staged
+    attachments then fail to upload — the submit button is replaced by a direct "View record"
+    link instead. The first pass at the shared-helper extraction silently dropped a real
+    behavioral distinction (a curated backend error message vs. a generic fallback for any other
+    failure) that the pre-existing attachments-section test suite caught immediately — fixed with
+    a new `AttachmentUploadApiError` class both consumers branch on. 264/264 `dashboard-web` unit
+    tests (5 new), typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean.
+    Live-rendered in the Browser pane: the unauthenticated redirect for `/business-knowledge-center/new`
+    confirmed clean, zero console/server errors; no local `dashboard-api` available in this
+    environment, so the authenticated file-picker rendering wasn't visually confirmed, the same
+    limitation noted on several prior slices. Pushed as branch
+    `dashboard-web-attachments-on-create`. Not yet reviewed, gated, or merged — code review,
+    security review, second-role human review, a gate decision, and merge authorization are each
+    their own separate, not-yet-requested next step, unchanged from this project's standing
+    discipline.
 
 ## Recent decisions
 
@@ -4359,6 +4401,43 @@ c2bc5194d5d0ff9f3aa3971b080b4486dfafb384`, confirming the exact merged commit is
   for the full account. **The Business Knowledge Center rich content & attachments slice,
   including the same-day production-incident fix, is now genuinely live and stable in
   production.**
+- `[2026-08-21]` **A second real production error, an RSC function-prop crash on both
+  `/projects` and `/business-knowledge-center`, diagnosed and fixed.** Reported by the user via a
+  live "Something went wrong" error screenshot. Diagnosed from real Vercel runtime logs: `Error:
+Functions cannot be passed directly to Client Components...` — `PageSizeSelect` (added by this
+  PR's own page-size selector, §2 of the implementation doc) took a `buildHref` function prop, and
+  both list pages (Server Components) passed a closure directly, which React Server Components
+  rejects at render time as non-serializable. Fixed by changing the prop to plain,
+  JSON-serializable data — a new `lib/pagination.ts#buildHrefBySize()` helper precomputes every
+  page-size option's real destination href up front, and both pages pass that record instead of a
+  closure. A new regression test (`page-size-select.test.tsx`) asserts the fixture round-trips
+  through `JSON.parse(JSON.stringify(...))` without throwing — a direct proxy for "safe to pass
+  across the RSC boundary." Deployed as commit `600f88e`; full validation clean before and after;
+  verified resolved live via clean `200`s in Vercel's runtime logs for `/business-knowledge-center`
+  requests. See
+  `docs/implementation/business-knowledge-center-rich-content-attachments.md` §12 for the full
+  account.
+- `[2026-08-21]` **A third real production error, on a specific record's detail page, diagnosed
+  as a pending production migration.** Reported by the user via a second, distinct live error
+  screenshot (a different digest, on `/business-knowledge-center/a8624947-1f5d-45b6-9f35-14ae123cdf47`).
+  Correlated Vercel logs showed `/health`/`/me`/`/me/navigation`/`/projects` all returning clean
+  `200`s in the same request bursts, isolating the failure to the attachment-listing route. The
+  user then ran the real, read-only `pnpm --filter @webdesk/database run migrate:status` against
+  production, confirming directly: migration `00049` (`create-business-knowledge-attachments`)
+  had never been run against production after PR #45 merged — unlike every other schema change in
+  this project's history. The user was given the real `pnpm --filter @webdesk/database run
+migrate` command to run themselves (same credential-handling discipline as every prior production
+  migration); its confirmed-applied outcome is not yet recorded in this file. See
+  `docs/implementation/business-knowledge-center-rich-content-attachments.md` §13.
+- `[2026-08-21]` **Built `dashboard-web` file upload on the Business Knowledge Record create
+  form**, under the explicit "we need upload option in New business knowledge record add not in
+  view" instruction — see "Active tasks" item 31 above and
+  `docs/implementation/dashboard-web-attachments-on-create.md` for the full account. Extracted a
+  new `lib/business-knowledge-attachments.ts` shared by both the detail page's existing upload
+  control and the new create-form file picker; a `createdRecordId` guard prevents a partial
+  attachment-upload failure from ever letting the form re-create a duplicate record. 264/264
+  `dashboard-web` unit tests (5 new), full validation clean. Pushed as branch
+  `dashboard-web-attachments-on-create`. Not yet reviewed, gated, or merged.
 
 ## Open client blockers
 

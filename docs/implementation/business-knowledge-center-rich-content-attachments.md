@@ -454,3 +454,62 @@ to `/auth/sign-in`. Outage window: approximately `2026-08-20T20:55Z` (merge) to
 
 **The Business Knowledge Center rich content & attachments slice, including the same-day
 production-incident fix, is now genuinely live and stable in production.**
+
+## 12. A second, independent production error: an RSC function-prop crash on both list pages
+
+Roughly a day after the merge, the user reported a live "Something went wrong" error (a Vercel
+error digest) when clicking into the Business Knowledge Center from production. Diagnosed via
+real Vercel runtime logs: the underlying error was
+
+```
+Error: Functions cannot be passed directly to Client Components unless you explicitly expose it
+by marking it with "use server". ... {value: 20, buildHref: function buildHref}
+```
+
+**Root cause**: `PageSizeSelect` (`components/page-size-select.tsx`, added by §2 above) took a
+`buildHref: (pageSize: PageSize) => string` prop. Both list pages (`/projects` and
+`/business-knowledge-center`, both Server Components) passed a closure —
+`(pageSize) => buildBusinessKnowledgeHref(query, { pageSize })` — as that prop. React Server
+Components rejects a function value crossing the server→client boundary this way; it is only
+serializable data, and a closure is not data. This is a genuine runtime error, not caught by
+`next build`'s own typecheck (which has no way to know a prop is destined for the client/server
+boundary) — it only surfaces on an actual request, once React tries to serialize the RSC payload.
+Both pages carried the identical bug from the moment §2's page-size selector was added; only
+`/business-knowledge-center` had actually been clicked into in production before this was
+reported, so only it had logged the error.
+
+**Fix**: `PageSizeSelect`'s prop contract changed from a function (`buildHref`) to plain,
+JSON-serializable data (`hrefBySize: Readonly<Record<PageSize, string>>`) — every option's real
+destination href, precomputed by the Server Component caller before render. A new
+`lib/pagination.ts#buildHrefBySize(buildHref)` helper does that precomputation once, so each page
+still only writes its own `buildXHref(query, { pageSize })` call, not five by hand. Both
+`/projects/page.tsx` and `/business-knowledge-center/page.tsx` updated to call
+`buildHrefBySize(...)` instead of passing a closure directly. `tests/unit/page-size-select.test.tsx`
+gained a dedicated regression test asserting the fixture round-trips through `JSON.parse(JSON.stringify(...))`
+without throwing — a direct proxy for "this is safe to pass across the RSC boundary" — alongside
+its two existing behavioral tests, which were updated to use `buildHrefBySize()`. Deployed as
+commit `600f88e`; re-validated (typecheck/lint/build/full unit suite) before and after. Verified
+live afterward via Vercel runtime logs showing clean `200`s for `/business-knowledge-center`
+requests with no further RSC serialization errors.
+
+## 13. A third, independent production error: migration `00049` never run against production
+
+A second, distinct "Something went wrong" error was reported the same day, on a specific record's
+detail page (`/business-knowledge-center/a8624947-1f5d-45b6-9f35-14ae123cdf47`), after the §12 fix
+was already live — so a different underlying cause. Correlated Vercel logs showed `/health`,
+`/me`, `/me/navigation`, and `/projects` all returning clean `200`s in the same request bursts,
+isolating the failure to the Business Knowledge Center's own new attachment-listing route.
+
+**Root cause, confirmed directly (not inferred) via the user running the real, read-only**
+`pnpm --filter @webdesk/database run migrate:status` **against production**: migrations `00047`
+(creates `business_knowledge_records`) and `00048` (marks the module `in_development`) had been
+applied, but migration `00049` — `create-business-knowledge-attachments`, the table this exact
+route (`GET .../attachments`) depends on — was still pending. Unlike every other schema change in
+this project's history, `00049` was never run against production after PR #45 merged; this was a
+real, previously-undocumented gap, not a code defect.
+
+**Fix**: the user was given the real `pnpm --filter @webdesk/database run migrate` command to run
+themselves, in their own terminal, sourcing `prod-db.env` — the same credential-handling
+discipline as every prior production migration in this project. _(Recorded here for completeness
+of the account; see `CLAUDE.md`'s "Recent decisions" for the migration's confirmed-applied status
+once available.)_
