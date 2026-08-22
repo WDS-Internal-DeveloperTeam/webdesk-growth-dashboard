@@ -1904,6 +1904,22 @@
       },
       "project_version_before": 56,
       "project_version_after": 57
+    },
+    {
+      "timestamp": "2026-08-22T11:49:53Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "requested and executed merge of PR #50 (module-persona-library) into main",
+      "details": {
+        "pr": 50,
+        "branch": "module-persona-library",
+        "merge_commit": "05c5eadd0edb38da1a9988828852cee48a4aedb0",
+        "ci_status": "All 14 CI checks green before merge (one Formatting validation failure on hand-edited gate-approval table rows was found and fixed first, whitespace only)",
+        "verification": "dashboard-api's /health returned build.commitSha == 05c5eadd0edb38da1a9988828852cee48a4aedb0. GET /persona-library/personas returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed). dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor. Both Vercel projects verified live directly, not just via CI's own Vercel status check.",
+        "result": "The Persona Library module backend is now genuinely live in production, closing out this slice's full build-to-production arc. No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching the Projects/BKC/Service Library precedent."
+      },
+      "project_version_before": 57,
+      "project_version_after": 58
     }
   ]
 }

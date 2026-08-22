@@ -2077,10 +2077,7 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     — Service Library's 7 Positioning fields and Projects' `description`, plus real backend HTML
     sanitization and the shared `SanitizedRichText` render component — is now genuinely live in
     production.**
-35. **Persona Library module backend — built, fully validated, code-reviewed (9/10 confirmed
-    findings fixed, 1 accepted as tracked debt), security-reviewed (0 findings above threshold),
-    pushed and opened as PR #50, required second-role human review complete (Jitesh D, "Approved
-    as-is"), gated (`G4-persona-library`, WebDesk Solution, CONFIRM); not yet merged
+35. **Persona Library module backend — built, reviewed, gated, merged; now live in production
     (2026-08-22).**
     `docs/implementation/module-persona-library.md` records the full account. The
     fourth real business-module backend on the Phase 1F application shell / canonical module
@@ -2171,8 +2168,24 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     [PR #50](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/50), all
     14 CI checks green. **A review packet for the required second-role human review was then
     prepared and published** — see
-    `docs/project-state/module-persona-library-approval-checklist.md`. **Awaiting that review** —
-    a gate decision and merge authorization each remain separate, not-yet-requested next steps.
+    `docs/project-state/module-persona-library-approval-checklist.md`. **Jitesh D reviewed it and
+    returned "Approved as-is,"** accepting the 1 open CONFIRMED code-review finding (the
+    duplicated `TRANSITIONS` table) as tracked debt. **The gate (G4-persona-library) was then
+    separately requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an
+    override, since the second-role review was already complete before the gate was requested),
+    approved commit `0c5115d` on branch `module-persona-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-persona-library`). **"Merge PR #50" was then separately requested and executed** — one CI
+    failure (Formatting validation, on the hand-edited gate-approval table rows) was found and
+    fixed first; merge commit `05c5eadd0edb38da1a9988828852cee48a4aedb0`, all 14 CI checks green
+    beforehand. Both Vercel projects auto-deployed on push to `main` and were verified live
+    directly — `dashboard-api`'s `/health` returned `build.commitSha ==
+05c5eadd0edb38da1a9988828852cee48a4aedb0`, `GET /persona-library/personas` returned a clean `401`
+    (route live, `SessionGuard` enforcing — not a `404`), and `dashboard-web`'s `/` resolves (via
+    the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The Persona
+    Library module backend is now genuinely live in production.** No `dashboard-web` UI exists yet
+    for this module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
+    Library precedent.
 
 ## Recent decisions
 
@@ -5364,6 +5377,22 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   gate approval does not itself authorize merging PR #50 or a production deployment** — merge
   remains its own separate, not-yet-requested authorization, per this project's standing "no
   auto-merge" rule.
+- `[2026-08-22]` **"Merge PR #50" was separately requested and executed.** One CI failure
+  (Formatting validation, on the hand-edited gate-approval table rows in
+  `module-persona-library-approval-checklist.md`) was found and fixed first — whitespace only, via
+  `pnpm exec prettier --write`. Waited for all 14 CI checks to go green, then merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `05c5eadd0edb38da1a9988828852cee48a4aedb0`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+05c5eadd0edb38da1a9988828852cee48a4aedb0`, confirming the exact merged commit is what's serving;
+  `GET /persona-library/personas` returned a clean `401` (route live, `SessionGuard` enforcing —
+  not a `404`, which would mean the module never actually deployed); and `dashboard-web`'s `/`
+  resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor,
+  confirming the session gate is intact. **The Persona Library module backend is now genuinely
+  live in production**, closing out this slice's full build-to-production arc. No `dashboard-web`
+  UI exists yet for this module — a separate, not-yet-requested next step, matching the
+  Projects/BKC/Service Library precedent.
 
 ## Open client blockers
 
