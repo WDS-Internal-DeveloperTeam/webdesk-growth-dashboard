@@ -2385,6 +2385,99 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
     not a `404`); and `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to
     `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
     Persona Library rich-text editor conversion is now genuinely live in production.**
+38. **Proof and Claims Library module backend — built, fully validated, code-reviewed (5 of 7
+    findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings above threshold);
+    review packet published, awaiting the required second-role human review (2026-08-22).** The
+    5th real business-module backend on the Phase 1F application shell / canonical module
+    registry, after Projects, Business Knowledge Center, Service Library, and Persona Library —
+    module #5 in the project-owner-supplied `Recommended_Module_Roadmap.md`. Built directly on
+    the explicit "Start the Proof & Claims Library" instruction. A real two-table schema
+    (`proof_claims` parent, `claim_sources` a genuine one-to-many child) rather than a JSONB
+    array — confirmed directly with the user (`AskUserQuestion`), since
+    `04_Data_Model_and_Ownership.md:119-120` explicitly names both tables separately, the same
+    class of storage-architecture decision Business Knowledge Center's own single-vs-multi-table
+    question was. Reuses the same `service_persona_proof` RBAC group Service Library and Persona
+    Library both use — no new RBAC migration. **No confidentiality field** — the module
+    registry's own seeded `confidentialityLevel` for `proof_and_claims_library` is `null`, the
+    identical value Persona Library's own entry has, and Persona Library's build already decided
+    not to add a Service-Library-style confidentiality mechanism for exactly that reason; the
+    advisory-only `Recommended_Module_Roadmap.md`'s "confidential claims need separate access
+    control" note "is recorded-for-reference only and authorizes nothing" per this project's own
+    standing rule — the module registry's own real seeded data wins. `relatedServiceIds` is
+    existence-validated against the real `services` table; `relatedCaseStudyIds`/
+    `relatedPageIds` stay unvalidated arrays — `case_study_studio`/`page_inventory` don't exist
+    yet. `verificationStatus` (`unverified`/`pending`/`verified`) is grounded directly in the
+    roadmap's own language ("Evidence first... public content cannot use an unverified claim") —
+    no enforcement point exists yet since no consuming module is built, none is fabricated here.
+    No `version` field, unlike Persona Library — the canonical spec names none for this module.
+    `approvalStatus` reuses Service Library's/Persona Library's exact `TRANSITIONS` table and
+    atomic compare-and-swap `updateStatus()` pattern verbatim, a 3rd occurrence of this identical
+    shape, deliberately not extracted into a shared helper (already-accepted, out-of-scope debt).
+    `claim_sources` is a genuine Projects-style sub-resource — its own repository/service/
+    controller, scoped CRUD, and IDOR-prevention at both the service and repository layers, built
+    correctly from day one. Backend-only pass — `claim`/`approvedWording`/`restrictions` are
+    plain unsanitized text fields, matching Persona Library's own original (pre-rich-text-editor)
+    backend build; no `dashboard-web` UI exists yet for this module. **Built by a background
+    agent with a highly directive, fully-specified prompt (exact schema, file list, exact
+    patterns to mirror per file), then independently re-verified in full by the orchestrating
+    session** — every file read directly, not just trusted from the agent's report: the
+    migration's `up()`/`down()` order, both `packages/database` barrel files (`index.ts` AND
+    `index.cjs.ts`, the documented production-outage gap), RBAC decorator placement (method-level
+    throughout, both controllers), the `TRANSITIONS` table's exact values, the atomic
+    compare-and-swap repository methods, and the IDOR-prevention scoping at both layers. All
+    validation re-run independently against a real local disposable PostgreSQL 17 database:
+    548/548 `dashboard-api` unit tests (44 new), 207/207 `packages/database` integration tests
+    (22 new), 192/192 `dashboard-api` e2e/integration tests (21 new, including the full 3-tier
+    submit/review/approve RBAC matrix and the IDOR-prevention test, verified in isolation), a
+    real migration down/up/down/up round-trip (55 migrations, 0 pending after),
+    `validate:module-registry` (43 modules, 21 permission groups, unaffected), `pnpm audit` (0
+    vulnerabilities), typecheck/lint (`--max-warnings=0`)/prettier all clean. **Independent code
+    review then ran** (this project's own `code-review` skill, high effort, 8 finder angles run
+    via parallel subagents, each self-verified against real code) — 7 candidates surfaced after
+    dedup (5 CONFIRMED, 2 PLAUSIBLE). 5 fixed — most notable: `sourceUrl` had no URL-scheme
+    validation (3 finder angles independently converged on this), repeating the exact stored-XSS
+    gap Projects' own `environment.url` shipped with once and had to fix after the fact; now uses
+    the shared `safeHttpUrlSchema` (`@webdesk/validation`), the helper that earlier fix was
+    promoted into specifically to prevent this recurring. Also fixed: the write-capable
+    `SERVICE_REPOSITORY` token being injected raw into a 2nd external consumer
+    (`ClaimsService`) — exactly the "surface grows" condition Persona Library's own security
+    review had named as the trigger for closing this exposure, fixed by adding
+    `ServicesService.existingServiceIds()` (a narrow, read-only delegating method returning only
+    a `Set<string>` of found ids) and removing `ServiceLibraryModule`'s direct export of
+    `SERVICE_REPOSITORY`, updating both `PersonasService` and `ClaimsService` together since
+    removing the export had to happen atomically for both; `claim-sources` `create()` never
+    checking the parent `claimId` existed before inserting, surfacing a raw 500 instead of a
+    clean 404 on a well-formed but nonexistent id (fixed with a `findById()` check first);
+    `ClaimSourceRepository.update()` being a non-atomic `findOne()` + `instance.update()`, unlike
+    every other scoped-write path in this module (fixed to a single atomic `UPDATE ...
+RETURNING`); and two byte-identical id-list Zod schemas declared twice under different names in
+    the same file (collapsed to one). **2 findings left as accepted, tracked debt, recorded
+    directly in code**: `assertServiceIdsExist()`'s wrapper shape is still a 2nd byte-for-byte
+    copy of `PersonasService`'s own, even after the `SERVICE_REPOSITORY` fix consolidated the
+    actual DB-query logic (a real fix means a shared `@webdesk/validation` helper, out of
+    proportion for a review-fix pass already touching a third module); and the audit-write
+    failure catch on `changeApprovalStatus()` only `console.error`'s, the byte-identical
+    already-accepted pattern `PersonasService`/`ServicesService` both have. Re-validated: 552/552
+    `dashboard-api` unit tests (48 new), 207/207 `packages/database` integration tests (22 new),
+    194/194 `dashboard-api` e2e/integration tests (23 new, including 2 new tests proving both the
+    claim-not-found 404 fix and the `javascript:` `sourceUrl` rejection), plus Persona Library's
+    and Service Library's own e2e suites re-run and confirmed passing after the shared DI wiring
+    change, typecheck/lint/prettier all clean, `pnpm audit` 0 vulnerabilities. **A separate
+    `security-review` skill run then found 0 findings above threshold** — confirmed every
+    `@RequirePermission` decorator is method-level in both controllers, the status-transition
+    RBAC gate matches the real seeded `service_persona_proof` matrix exactly (correct separation
+    of duties — `marketing_editor` can submit/review but never approve, `owner_growth_approver`/
+    `super_admin` can approve but never submit), claim-source IDOR scoping is real DB-level
+    `WHERE`-clause scoping, `existingServiceIds()` exposes only a `Set<string>` with no write
+    capability, `safeHttpUrlSchema` correctly allowlists only `http:`/`https:`, search correctly
+    uses `escapeLikePattern()`, and audit-log payloads carry only business data, never secrets. A
+    review packet (published as a Claude artifact, "Proof and Claims Library Review Packet" —
+    code review + security review findings, fixes, and validation evidence, with a decision
+    section) was then prepared for the required second-role human review, since the implementing
+    agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/module-proof-and-claims-library-approval-checklist.md`. **Awaiting that
+    review** — a gate decision, push/PR, and merge authorization each remain separate,
+    not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -5758,6 +5851,36 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
   `SessionGuard`, but a `401` returns before any database query runs, so it never independently
   proved the `personas` table itself existed in production. **The Persona Library backend's
   schema is now genuinely live in production**, alongside its already-verified code.
+- `[2026-08-22]` **Built the Proof and Claims Library module backend** (module #5 in
+  `Recommended_Module_Roadmap.md`), on the explicit "Start the Proof & Claims Library"
+  instruction. A real design fork was surfaced and confirmed with the user first
+  (`AskUserQuestion`): a genuine one-to-many `claim_sources` child table, not a JSONB array,
+  since `04_Data_Model_and_Ownership.md` explicitly names both tables separately. Built by a
+  background agent with a fully-specified prompt, then independently re-verified in full — every
+  high-risk file read directly (migration order, both `packages/database` barrel files, RBAC
+  decorator placement, the `TRANSITIONS` table, atomic repository methods, IDOR scoping) and
+  every test suite independently re-run against a real local disposable database, not trusted
+  from the agent's own report. See "Active tasks" item 38 for the full account.
+- `[2026-08-22]` **Independent code review then ran on `module-proof-and-claims-library`** (this
+  project's own `code-review` skill, high effort, 8 finder angles) — 7 candidates surfaced after
+  dedup, 5 fixed. Most notable: `sourceUrl` had no URL-scheme validation (3 independent finder
+  angles converged on this), repeating the exact stored-XSS gap Projects' own `environment.url`
+  shipped with once — fixed with the shared `safeHttpUrlSchema`. Also fixed: the write-capable
+  `SERVICE_REPOSITORY` token being injected raw into a 2nd external consumer, exactly the
+  "surface grows" condition Persona Library's own security review had flagged as the trigger for
+  closing it — fixed by adding `ServicesService.existingServiceIds()`, a narrow read-only
+  delegating method, and removing the direct repository export (both `PersonasService` and
+  `ClaimsService` updated together). 2 findings left as accepted, tracked debt, recorded directly
+  in code. **A separate `security-review` skill run then found 0 findings above threshold** —
+  confirmed correct RBAC decorator placement, correct separation-of-duties enforcement against the
+  real seeded matrix, real DB-level IDOR scoping, and a genuine read-only narrowing on the
+  repository-export fix. A review packet (published as a Claude artifact, "Proof and Claims
+  Library Review Packet" — code review + security review findings, fixes, and validation
+  evidence, with a decision section) was then prepared for the required second-role human review,
+  since the implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/module-proof-and-claims-library-approval-checklist.md`. **Awaiting that
+  review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
