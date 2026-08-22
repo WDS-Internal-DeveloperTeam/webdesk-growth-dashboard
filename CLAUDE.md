@@ -2291,9 +2291,10 @@ e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` retur
     status actions) are both live.
 37. **Persona Library's 8 narrative fields converted to the rich-text editor — built, fully
     validated, code-reviewed (5 of 8 findings fixed, 3 accepted as tracked debt), security-reviewed
-    (0 findings above threshold); review packet published, awaiting the required second-role human
-    review (2026-08-22).** Closes the gap the 2026-08-22 standing rule ("from now onward we must
-    have to use rich text html editor for all the text area") left open — Persona Library's own UI
+    (0 findings above threshold), required second-role human reviewed (Jitesh D, "Approved");
+    not yet gated or merged (2026-08-22).** Closes the gap the 2026-08-22 standing rule ("from now
+    onward we must have to use rich text html editor for all the text area") left open — Persona
+    Library's own UI
     (item 36) had shipped with plain `<textarea>` fields one day earlier, since it was built while
     the app-wide rich-text rollout (Service Library + Projects, item 34) was already scoped and in
     progress. Built directly on the explicit "change text area to rich text html editor in New
@@ -5684,8 +5685,19 @@ e879be801c780be7c0a2af18250071b017873e28`, confirming the exact merged commit is
   fixes, and validation evidence, with a decision section) was then prepared for the required
   second-role human review, since the implementing agent cannot also be its own reviewer
   (ADR-0010). See `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`.
-  **Awaiting that review** — a gate decision, push/PR, and merge authorization each remain
-  separate, not-yet-requested next steps.
+  **Jitesh D reviewed it and returned "Approved,"** accepting the 3 open findings as tracked
+  debt. **A gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.**
+- `[2026-08-22]` **Required second-role human review complete for
+  `persona-library-rich-text-editor`.** The review packet (code review + security review
+  findings, fixes, and the 3 open accepted-debt items, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved,"** no disputes raised — the 3 open findings (the
+  corrected overclaiming doc comment, the triplicated per-field sanitize boilerplate, and the
+  audit trail's raw-HTML `afterState`) were accepted as tracked debt rather than sent back for a
+  fix. See
+  `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`'s "Sign-off"
+  section. A gate decision, push/PR, and merge authorization remain separate, not-yet-requested
+  next steps.
 
 ## Open client blockers
 
