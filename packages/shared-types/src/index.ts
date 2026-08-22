@@ -528,3 +528,48 @@ export interface EngagementModel {
   readonly publicId: string;
   readonly name: string;
 }
+
+export type PersonaApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * The Persona Library module's single primary entity — every route (`list`/`findOne`/`create`/
+ * `update`/`changeStatus`) returns this exact shape (no `PersonaDetail` split like `Service`'s own
+ * `Service`/`ServiceDetail` pair — Persona Library has no sub-resource dimension tables to omit
+ * from the list view, so there's no N+1 concern motivating a narrower list-row projection).
+ * `relatedServiceIds` is a real, existence-validated identifier array (against the `services`
+ * table) — unlike Service Library's own `icpIds`/`relatedPageIds`/`relatedCaseStudyIds`, which stay
+ * genuinely unvalidated because their target modules don't exist yet.
+ */
+export interface Persona {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly buyerType: string | null;
+  readonly companySize: string | null;
+  readonly roles: readonly string[];
+  readonly industries: readonly string[];
+  readonly geography: string | null;
+  readonly goals: string | null;
+  readonly pains: string | null;
+  readonly triggers: string | null;
+  readonly objections: string | null;
+  readonly decisionCriteria: string | null;
+  readonly relatedServiceIds: readonly string[];
+  readonly badFitSignals: string | null;
+  readonly messagingTrack: string | null;
+  readonly ctaPreferences: string | null;
+  readonly approvalStatus: PersonaApprovalStatus;
+  readonly version: number;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
