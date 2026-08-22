@@ -2188,8 +2188,9 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     Library precedent.
 36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified, code-reviewed
     (6/8 confirmed findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings
-    above threshold), required second-role human review complete (Jitesh D, "Approved as-is");
-    not yet gated or merged (2026-08-22).** Closes the Persona Library module's last named gap,
+    above threshold), required second-role human review complete (Jitesh D, "Approved as-is"),
+    gated (`G4-dashboard-web-persona-library`, WebDesk Solution, CONFIRM); not yet merged
+    (2026-08-22).** Closes the Persona Library module's last named gap,
     following the backend's own build-to-production arc (PR #50). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
     instruction. No approved wireframe/screen spec exists for this module —
@@ -2271,9 +2272,13 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     implementing agent cannot also be its own reviewer (ADR-0010). See
     `docs/project-state/dashboard-web-persona-library-approval-checklist.md`. **Jitesh D
     reviewed it and returned "Approved as-is,"** accepting the 2 open CONFIRMED findings (the
-    RBAC module-key coupling and the transitions-table quadruplication) as tracked debt. A gate
-    decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-    steps.
+    RBAC module-key coupling and the transitions-table quadruplication) as tracked debt. **The
+    gate (`G4-dashboard-web-persona-library`) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role
+    review was already complete before the gate was requested), approved commit `b7ba3e8` on
+    branch `dashboard-web-persona-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-dashboard-web-persona-library`). Push/PR and merge
+    authorization each remain their own separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -5537,6 +5542,16 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `docs/project-state/dashboard-web-persona-library-approval-checklist.md`'s "Sign-off" section.
   A gate decision, push/PR, and merge authorization remain separate, not-yet-requested next
   steps.
+- `[2026-08-22]` **The gate (G4-dashboard-web-persona-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `b7ba3e8` on branch `dashboard-web-persona-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-persona-library`) and
+  `docs/project-state/dashboard-web-persona-library-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
+  production deployment** — each remains its own separate, not-yet-requested authorization, per
+  this project's standing "no auto-merge" rule.
 
 ## Open client blockers
 
