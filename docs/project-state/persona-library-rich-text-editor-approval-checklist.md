@@ -4,9 +4,11 @@
 self-verified against actual signatures/git history/sibling-module precedent; 5 fixed, 3 left as
 accepted, tracked debt). Security review complete (0 findings above threshold). Required
 second-role human review complete — Jitesh D, "Approved," accepting the 3 open findings as
-tracked debt. **Gate (G4-persona-library-rich-text) approved — WebDesk Solution, decision
-CONFIRM, approved commit `33a7f3c` on branch `persona-library-rich-text-editor`. Push/PR and
-merge authorization each remain separate, not-yet-requested next steps.**
+tracked debt. Gate (G4-persona-library-rich-text) approved — WebDesk Solution, decision CONFIRM,
+approved commit `33a7f3c` on branch `persona-library-rich-text-editor`. Pushed to `origin`,
+opened as
+[PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52).
+**Merge authorization remains a separate, not-yet-requested next step.**
 
 ## Completion condition
 
@@ -25,7 +27,7 @@ for this slice can be requested.
 | 8   | Live end-to-end verified                   | ✅ Real local `dashboard-api` + disposable database round trip via curl: a `<script>` tag and an `<img onerror>` payload both correctly stripped on create/update, safe formatting and sibling plain-text fields preserved, `version` incremented as expected |
 | 9   | Live-rendered / verified                   | ✅ `/persona-library/new` confirmed to redirect an unauthenticated visitor to sign-in cleanly in the Browser pane, zero console/server errors                                                                                                                 |
 | 10  | Documentation updated                      | ✅ `CLAUDE.md`'s Active tasks item 34/37 and the corresponding "Recent decisions" entries                                                                                                                                                                     |
-| 11  | Exact branch/commit verified and recorded  | ✅ Branch `persona-library-rich-text-editor`, latest commit `0425c85` — not yet pushed to `origin`                                                                                                                                                            |
+| 11  | Exact branch/commit verified and recorded  | ✅ Branch `persona-library-rich-text-editor`, approved commit `33a7f3c` — pushed to `origin`, opened as [PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52)                                                              |
 
 ## Forbidden-actions check
 
@@ -134,15 +136,22 @@ complete before the gate was requested), approved commit `33a7f3c` on branch
 `persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s
 `gates[]` (`current_gate` now `G4-persona-library-rich-text`).
 
-| Field                    | Value                                                                                                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Gate                     | G4-persona-library-rich-text                                                                                                                                              |
-| Approver (gate decision) | WebDesk Solution                                                                                                                                                          |
-| Gate date                | 2026-08-22                                                                                                                                                                |
-| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                         |
-| Approved commit          | `33a7f3c` on branch `persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`                                                  |
-| Scope                    | `persona-library-rich-text-editor` only (branch not yet pushed/opened as a PR). Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+| Field                    | Value                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-persona-library-rich-text                                                                                                       |
+| Approver (gate decision) | WebDesk Solution                                                                                                                   |
+| Gate date                | 2026-08-22                                                                                                                         |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                  |
+| Approved commit          | `33a7f3c` on branch `persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `persona-library-rich-text-editor` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
 
 This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
 production deployment — each remains its own separate, not-yet-requested authorization, per this
 project's standing "no auto-merge" rule.
+
+## Push/PR — COMPLETE
+
+**"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
+opened as
+[PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52). Merge
+authorization remains a separate, not-yet-requested next step.

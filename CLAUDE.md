@@ -2292,8 +2292,9 @@ e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` retur
 37. **Persona Library's 8 narrative fields converted to the rich-text editor — built, fully
     validated, code-reviewed (5 of 8 findings fixed, 3 accepted as tracked debt), security-reviewed
     (0 findings above threshold), required second-role human reviewed (Jitesh D, "Approved"),
-    gated (G4-persona-library-rich-text, WebDesk Solution, CONFIRM); not yet pushed or merged
-    (2026-08-22).** Closes the gap the 2026-08-22 standing rule ("from now
+    gated (G4-persona-library-rich-text, WebDesk Solution, CONFIRM), pushed and opened as
+    [PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52); not
+    yet merged (2026-08-22).** Closes the gap the 2026-08-22 standing rule ("from now
     onward we must have to use rich text html editor for all the text area") left open — Persona
     Library's own UI
     (item 36) had shipped with plain `<textarea>` fields one day earlier, since it was built while
@@ -2364,9 +2365,10 @@ e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` retur
     Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
     already complete before the gate was requested), approved commit `33a7f3c` on branch
     `persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s
-    `gates[]` (`current_gate` now `G4-persona-library-rich-text`). **This gate approval does not
-    itself authorize pushing the branch, opening a PR, or merging** — each remains its own
-    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    `gates[]` (`current_gate` now `G4-persona-library-rich-text`). **"Push the branch and open a
+    PR" was then separately requested and executed** — pushed to `origin`, opened as
+    [PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -5715,6 +5717,10 @@ e879be801c780be7c0a2af18250071b017873e28`, confirming the exact merged commit is
   section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
   merging** — each remains its own separate, not-yet-requested authorization, per this project's
   standing "no auto-merge" rule.
+- `[2026-08-22]` **"Push the branch and open a PR" was separately requested and executed** on
+  `persona-library-rich-text-editor` — pushed to `origin`, opened as
+  [PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 
