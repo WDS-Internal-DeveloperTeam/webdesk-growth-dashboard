@@ -6,6 +6,8 @@ import type { Persona, Service } from "@webdesk/shared-types";
 import { RelationshipPicker, TagListField, type RelationshipOption } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { findOverLongRichTextField, isEmptyRichTextHtml } from "@/lib/rich-text";
+import { RichTextEditor } from "./rich-text-editor";
 import styles from "./persona-library-form.module.css";
 
 // Mirrors apps/dashboard-api/src/persona-library/persona-library.dto.ts — kept in sync by hand,
@@ -13,7 +15,10 @@ import styles from "./persona-library-form.module.css";
 const PUBLIC_ID_MAX_LENGTH = 64;
 const NAME_MAX_LENGTH = 255;
 const SHORT_TEXT_MAX_LENGTH = 255;
-const LONG_TEXT_MAX_LENGTH = 20_000;
+// Raised from 20_000 alongside the backend's own LONG_TEXT_MAX_LENGTH bump — these 8 fields are
+// now HTML from the rich-text editor, carrying real markup overhead over the equivalent plain
+// text, same reasoning as service-library-form.tsx's own identical raise.
+const LONG_TEXT_MAX_LENGTH = 40_000;
 const ROLE_INDUSTRY_TAG_MAX_LENGTH = 255;
 const ROLE_INDUSTRY_TAG_MAX_COUNT = 100;
 const RELATED_SERVICE_MAX_COUNT = 200;
@@ -51,11 +56,14 @@ function toRelationshipOptions(
  * own precedent).
  *
  * Every long-text field here (`goals`/`pains`/`triggers`/`objections`/`decisionCriteria`/
- * `badFitSignals`/`messagingTrack`/`ctaPreferences`) is a plain `<textarea>`, not the
- * `RichTextEditor` Service Library and Projects' `description` use — this module was explicitly
- * out of scope for the dashboard-web rich-text editor rollout
- * (`docs/implementation/rich-text-editor-long-fields.md`), and the backend's own DTO stores these
- * fields unsanitized as plain text, so treating them as HTML here would be dishonest.
+ * `badFitSignals`/`messagingTrack`/`ctaPreferences`) uses `RichTextEditor` (Tiptap), per the
+ * 2026-08-22 standing rule requiring every dashboard-web long-text field to use the rich-text
+ * editor going forward — this module was originally excluded from
+ * (`docs/implementation/rich-text-editor-long-fields.md`)'s own rollout, but that exclusion no
+ * longer applies. The resulting HTML is sanitized server-side before it's ever stored
+ * (`personas.service.ts`'s `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`)
+ * and again at render time on the detail page, the same double-sanitization pattern
+ * `ServiceLibraryForm`'s own fields already establish.
  *
  * `roles`/`industries` are free-text tag lists (`TagListField`, unvalidated, matching Service
  * Library's own `icpIds` shape) — `relatedServiceIds` is a real, existence-validated identifier
@@ -129,6 +137,31 @@ export function PersonaLibraryForm(props: PersonaLibraryFormProps): ReactNode {
         return props.mode === "create" ? undefined : null;
       }
 
+      // Long-text fields: same nullish contract as textField() above, but isEmptyRichTextHtml()
+      // also treats a RichTextEditor field's own "nothing typed" output ("<p></p>") as empty, not
+      // just a genuinely blank string — matching service-library-form.tsx's own richTextField().
+      function richTextField(value: string): string | null | undefined {
+        const trimmed = value.trim();
+        if (!isEmptyRichTextHtml(trimmed)) return trimmed;
+        return props.mode === "create" ? undefined : null;
+      }
+
+      const richTextFields: ReadonlyArray<readonly [string, string]> = [
+        ["Goals", goals],
+        ["Pains", pains],
+        ["Triggers", triggers],
+        ["Objections", objections],
+        ["Decision criteria", decisionCriteria],
+        ["Bad-fit signals", badFitSignals],
+        ["Messaging track", messagingTrack],
+        ["CTA preferences", ctaPreferences],
+      ];
+      const lengthError = findOverLongRichTextField(richTextFields, LONG_TEXT_MAX_LENGTH);
+      if (lengthError) {
+        setError(lengthError);
+        return;
+      }
+
       const sharedFields = {
         name: trimmedName,
         buyerType: textField(buyerType),
@@ -136,14 +169,14 @@ export function PersonaLibraryForm(props: PersonaLibraryFormProps): ReactNode {
         geography: textField(geography),
         roles,
         industries,
-        goals: textField(goals),
-        pains: textField(pains),
-        triggers: textField(triggers),
-        objections: textField(objections),
-        decisionCriteria: textField(decisionCriteria),
-        badFitSignals: textField(badFitSignals),
-        messagingTrack: textField(messagingTrack),
-        ctaPreferences: textField(ctaPreferences),
+        goals: richTextField(goals),
+        pains: richTextField(pains),
+        triggers: richTextField(triggers),
+        objections: richTextField(objections),
+        decisionCriteria: richTextField(decisionCriteria),
+        badFitSignals: richTextField(badFitSignals),
+        messagingTrack: richTextField(messagingTrack),
+        ctaPreferences: richTextField(ctaPreferences),
         relatedServiceIds,
       };
 
@@ -291,61 +324,38 @@ export function PersonaLibraryForm(props: PersonaLibraryFormProps): ReactNode {
       <fieldset className={styles.fieldset}>
         <legend className={styles.fieldsetLegend}>Narrative</legend>
 
-        <TextAreaField
-          id="goals"
-          label="Goals"
-          value={goals}
-          onChange={setGoals}
-          maxLength={LONG_TEXT_MAX_LENGTH}
-        />
-        <TextAreaField
-          id="pains"
-          label="Pains"
-          value={pains}
-          onChange={setPains}
-          maxLength={LONG_TEXT_MAX_LENGTH}
-        />
-        <TextAreaField
-          id="triggers"
-          label="Triggers"
-          value={triggers}
-          onChange={setTriggers}
-          maxLength={LONG_TEXT_MAX_LENGTH}
-        />
-        <TextAreaField
+        <RichTextField id="goals" label="Goals" value={goals} onChange={setGoals} />
+        <RichTextField id="pains" label="Pains" value={pains} onChange={setPains} />
+        <RichTextField id="triggers" label="Triggers" value={triggers} onChange={setTriggers} />
+        <RichTextField
           id="objections"
           label="Objections"
           value={objections}
           onChange={setObjections}
-          maxLength={LONG_TEXT_MAX_LENGTH}
         />
-        <TextAreaField
+        <RichTextField
           id="decisionCriteria"
           label="Decision criteria"
           value={decisionCriteria}
           onChange={setDecisionCriteria}
-          maxLength={LONG_TEXT_MAX_LENGTH}
         />
-        <TextAreaField
+        <RichTextField
           id="badFitSignals"
           label="Bad-fit signals"
           value={badFitSignals}
           onChange={setBadFitSignals}
-          maxLength={LONG_TEXT_MAX_LENGTH}
         />
-        <TextAreaField
+        <RichTextField
           id="messagingTrack"
           label="Messaging track"
           value={messagingTrack}
           onChange={setMessagingTrack}
-          maxLength={LONG_TEXT_MAX_LENGTH}
         />
-        <TextAreaField
+        <RichTextField
           id="ctaPreferences"
           label="CTA preferences"
           value={ctaPreferences}
           onChange={setCtaPreferences}
-          maxLength={LONG_TEXT_MAX_LENGTH}
         />
       </fieldset>
 
@@ -402,32 +412,23 @@ export function PersonaLibraryForm(props: PersonaLibraryFormProps): ReactNode {
   );
 }
 
-function TextAreaField({
+function RichTextField({
   id,
   label,
   value,
   onChange,
-  maxLength,
 }: {
   readonly id: string;
   readonly label: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
-  readonly maxLength: number;
 }): ReactNode {
   return (
     <div className={styles.field}>
       <label htmlFor={id} className={styles.label}>
         {label}
       </label>
-      <textarea
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        maxLength={maxLength}
-        rows={4}
-        className={styles.textarea}
-      />
+      <RichTextEditor id={id} value={value} onChange={onChange} />
     </div>
   );
 }

@@ -43,11 +43,6 @@
   composes: input from "./form-fields.module.css";
 }
 
-.textarea {
-  composes: textarea from "./form-fields.module.css";
-  min-height: 6rem;
-}
-
 .error {
   composes: error from "./form-fields.module.css";
 }

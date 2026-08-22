@@ -12,6 +12,7 @@ import type {
   PersonaRepository,
   ServiceRepository,
 } from "@webdesk/database";
+import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import { PERSONA_REPOSITORY } from "./persona-library.constants.js";
 import type { CreatePersonaDto, UpdatePersonaDto } from "./persona-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -101,6 +102,14 @@ export class PersonasService {
     try {
       created = await this.personas.create({
         ...input,
+        goals: sanitizeNullableRichText(input.goals),
+        pains: sanitizeNullableRichText(input.pains),
+        triggers: sanitizeNullableRichText(input.triggers),
+        objections: sanitizeNullableRichText(input.objections),
+        decisionCriteria: sanitizeNullableRichText(input.decisionCriteria),
+        badFitSignals: sanitizeNullableRichText(input.badFitSignals),
+        messagingTrack: sanitizeNullableRichText(input.messagingTrack),
+        ctaPreferences: sanitizeNullableRichText(input.ctaPreferences),
         createdBy: actorUserId,
       });
     } catch (error) {
@@ -145,15 +154,41 @@ export class PersonasService {
   }
 
   async update(id: string, patch: UpdatePersonaDto, actorUserId: string): Promise<PersonaEntity> {
-    // No pre-fetch here (unlike ServicesService.update()'s own findServiceOrThrow()-first
-    // ordering, which this method previously, incorrectly, mirrored) — Persona Library has no FK
-    // fields to conditionally re-validate and no rich-text fields to diff against a "current"
-    // value, so the pre-fetch Service Library needs would have been a genuinely wasted SELECT
-    // here (code-review finding). The repository's own update() already 404s cleanly on a
-    // missing id via its `null`-on-zero-affected-rows return, handled right below.
+    // Pre-fetch reintroduced (2026-08-22, rich-text editor rollout) — a prior code-review pass
+    // removed this as a wasted SELECT when Persona Library had no rich-text fields to diff
+    // against; now that goals/pains/triggers/objections/decisionCriteria/badFitSignals/
+    // messagingTrack/ctaPreferences are real HTML, `sanitizeNullableRichTextIfChanged()` needs
+    // the current stored value to skip re-sanitizing a field the patch resends unchanged (the
+    // common case for a form that resends full record state), the same reasoning
+    // `ServicesService.update()`'s own `findServiceOrThrow()`-first ordering already established.
+    // `findById()` also 404s cleanly before anything else runs.
+    const current = await this.findById(id);
     await this.assertServiceIdsExist(patch.relatedServiceIds);
 
-    const updated = await this.personas.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.personas.update(id, {
+      ...patch,
+      goals: sanitizeNullableRichTextIfChanged(patch.goals, current.goals),
+      pains: sanitizeNullableRichTextIfChanged(patch.pains, current.pains),
+      triggers: sanitizeNullableRichTextIfChanged(patch.triggers, current.triggers),
+      objections: sanitizeNullableRichTextIfChanged(patch.objections, current.objections),
+      decisionCriteria: sanitizeNullableRichTextIfChanged(
+        patch.decisionCriteria,
+        current.decisionCriteria,
+      ),
+      badFitSignals: sanitizeNullableRichTextIfChanged(patch.badFitSignals, current.badFitSignals),
+      messagingTrack: sanitizeNullableRichTextIfChanged(
+        patch.messagingTrack,
+        current.messagingTrack,
+      ),
+      ctaPreferences: sanitizeNullableRichTextIfChanged(
+        patch.ctaPreferences,
+        current.ctaPreferences,
+      ),
+      updatedBy: actorUserId,
+    });
+    // A real TOCTOU-safety net, not dead code — Persona Library has no hard-delete today, but
+    // this still guards a hypothetical future one, matching `ServicesService.update()`'s own
+    // identical belt-and-suspenders check after its own pre-fetch.
     if (!updated) {
       throw new NotFoundException(`Persona not found: ${id}`);
     }
