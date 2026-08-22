@@ -2387,7 +2387,8 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
     Persona Library rich-text editor conversion is now genuinely live in production.**
 38. **Proof and Claims Library module backend — built, fully validated, code-reviewed (5 of 7
     findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings above threshold),
-    required second-role human reviewed (Jitesh D, "Approved"); not yet gated or merged
+    required second-role human reviewed (Jitesh D, "Approved"), gated
+    (G4-proof-and-claims-library, WebDesk Solution, CONFIRM); not yet pushed or merged
     (2026-08-22).** The
     5th real business-module backend on the Phase 1F application shell / canonical module
     registry, after Projects, Business Knowledge Center, Service Library, and Persona Library —
@@ -2477,9 +2478,14 @@ RETURNING`); and two byte-identical id-list Zod schemas declared twice under dif
     section) was then prepared for the required second-role human review, since the implementing
     agent cannot also be its own reviewer (ADR-0010). See
     `docs/project-state/module-proof-and-claims-library-approval-checklist.md`. **Jitesh D
-    reviewed it and returned "Approved,"** accepting the 2 open findings as tracked debt. **A
-    gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-    steps.**
+    reviewed it and returned "Approved,"** accepting the 2 open findings as tracked debt. **The
+    gate (G4-proof-and-claims-library) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+    already complete before the gate was requested), approved commit `d8cccc1` on branch
+    `module-proof-and-claims-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-proof-and-claims-library`). **This gate approval does not
+    itself authorize pushing the branch, opening a PR, or merging** — each remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -5891,6 +5897,16 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
   path) were accepted as tracked debt rather than sent back for a fix. See
   `docs/project-state/module-proof-and-claims-library-approval-checklist.md`'s "Sign-off" section.
   A gate decision, push/PR, and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-22]` **The gate (G4-proof-and-claims-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `d8cccc1` on branch `module-proof-and-claims-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-proof-and-claims-library`) and
+  `docs/project-state/module-proof-and-claims-library-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
+  merging** — each remains its own separate, not-yet-requested authorization, per this project's
+  standing "no auto-merge" rule.
 
 ## Open client blockers
 
