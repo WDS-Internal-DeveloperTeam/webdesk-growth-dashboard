@@ -2187,8 +2187,9 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     for this module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
     Library precedent.
 36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified, code-reviewed
-    (6/8 confirmed findings fixed, 2 accepted as tracked debt); not yet security-reviewed,
-    gated, or merged (2026-08-22).** Closes the Persona Library module's last named gap,
+    (6/8 confirmed findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings
+    above threshold), review packet published, awaiting the required second-role human review;
+    not yet gated or merged (2026-08-22).** Closes the Persona Library module's last named gap,
     following the backend's own build-to-production arc (PR #50). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
     instruction. No approved wireframe/screen spec exists for this module —
@@ -2258,9 +2259,19 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     `check-css-tokens.mjs`/`next build`/prettier all clean, `pnpm audit` 0 vulnerabilities.
     Live-rendered again in the Browser pane: Persona Library, Service Library, Business
     Knowledge Center, and Projects (list and detail — all touched by the style-extraction fixes)
-    all confirmed to redirect an unauthenticated visitor cleanly, zero server errors. Security
-    review, second-role human review, a gate decision, push/PR, and merge authorization each
-    remain their own separate, not-yet-requested next step.
+    all confirmed to redirect an unauthenticated visitor cleanly, zero server errors. **A
+    separate `security-review` skill run then found 0 findings above threshold** — focused
+    specifically on the new raw-id-fallback rendering (confirmed plain JSX text, no
+    `dangerouslySetInnerHTML`, not an XSS vector), the pure CSS/constant extraction (every
+    extracted value confirmed byte-identical to what it replaced), the `Pick<>` prop narrowing
+    (TypeScript-only, runtime payload unchanged), and the doc-comment-only backend edit
+    (confirmed no behavior change via diff). A review packet (published as a Claude artifact —
+    code review + security review findings, fixes, and validation evidence, with a decision
+    section) was then prepared for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/dashboard-web-persona-library-approval-checklist.md`. **Awaiting that
+    review** — a gate decision, push/PR, and merge authorization each remain separate,
+    not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -5496,6 +5507,25 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `dashboard-api` unit tests, typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all
   clean, `pnpm audit` 0 vulnerabilities. Security review, second-role human review, a gate
   decision, push/PR, and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-22]` **Security review run on `dashboard-web-persona-library`, separately from the
+  code review.** Focused specifically on the new raw-id-fallback rendering (a value ultimately
+  sourced from `relatedServiceIds`), the pure CSS/constant extraction, the `Pick<>` prop
+  narrowing, and the doc-comment-only backend edit. **0 findings above threshold.** Confirmed the
+  raw-id fallback chip renders only via plain JSX text (no `dangerouslySetInnerHTML` anywhere in
+  the touched files or in `RelationshipPicker`/`TagListField`), every extracted style/constant
+  value is byte-identical to what it replaced, the `Pick<Service, ...>` narrowing is
+  TypeScript-only with the runtime payload unchanged, the backend doc-comment edit is
+  confirmed comment-only via diff, the fetch-degrade-on-failure fix fails closed with the
+  underlying call still routed through cookie-forwarded auth/RBAC, and query-param handling
+  validates against a closed enum/length caps matching the already-reviewed sibling modules. A
+  review packet (published as a Claude artifact — code review + security review findings, fixes,
+  and validation evidence, with a decision section) was then prepared for the required
+  second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). See
+  [Persona Library UI Review Packet](https://claude.ai/code/artifact/ab9f58a8-58ee-452d-9472-0f8a16322df8)
+  and the new `docs/project-state/dashboard-web-persona-library-approval-checklist.md`.
+  **Awaiting that review** — a gate decision, push/PR, and merge authorization each remain
+  separate, not-yet-requested next steps.
 
 ## Open client blockers
 
