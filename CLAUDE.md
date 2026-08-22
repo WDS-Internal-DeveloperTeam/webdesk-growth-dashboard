@@ -2186,9 +2186,10 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     Library module backend is now genuinely live in production.** No `dashboard-web` UI exists yet
     for this module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
     Library precedent.
-36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified; not yet
-    reviewed, gated, or merged (2026-08-22).** Closes the Persona Library module's last named
-    gap, following the backend's own build-to-production arc (PR #50). Not started
+36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified, code-reviewed
+    (6/8 confirmed findings fixed, 2 accepted as tracked debt); not yet security-reviewed,
+    gated, or merged (2026-08-22).** Closes the Persona Library module's last named gap,
+    following the backend's own build-to-production arc (PR #50). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
     instruction. No approved wireframe/screen spec exists for this module —
     `03_Detailed_Module_Specifications.md §21`'s own flat field list is the only source; sections
@@ -2220,10 +2221,46 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     `dashboard-worker` (both consumers of the additive shared-types change); `pnpm audit` 0
     vulnerabilities. **Live-rendered in the Browser pane**: all four new `/persona-library`
     routes confirmed to redirect an unauthenticated visitor to `/auth/sign-in` cleanly, zero
-    console/server errors. Pushed as branch `dashboard-web-persona-library`. Not yet reviewed,
-    gated, or merged — code review, security review, second-role human review, a gate decision,
-    push/PR, and merge authorization are each their own separate, not-yet-requested next step,
-    unchanged from this project's standing discipline.
+    console/server errors. Committed to branch `dashboard-web-persona-library` (not yet pushed
+    to `origin` at build time). **Independent code review then ran** (this project's own
+    `code-review` skill, medium effort presented, 8-angle finder pass run in full, 1-vote
+    verification) — 8 candidates surfaced after dedup, **all 8 CONFIRMED**, 6 fixed and 2 left as
+    accepted, tracked debt. Most severe: the `RelationshipPicker`'s selected chips silently
+    dropped any `relatedServiceIds` entry outside the picker's 100-row fetch window with no
+    fallback, unlike the detail page's own raw-id fallback for the identical case — fixed to
+    show the raw id as its own chip, so a real relationship is never invisible or unremovable in
+    this UI (two independent finder angles converged on this one). Also fixed:
+    `getServicesForPersonaPicker()` had no failure isolation from the primary persona fetch, so a
+    transient Service Library outage crashed the entire detail/edit/new page — fixed to degrade
+    to an empty list on failure, logged server-side; the `services` prop was typed as the full
+    ~19-field `Service` entity when only 3 fields are ever read, diverging from the sibling
+    `Deliverable`/`PlatformTechnology`/`EngagementModel` narrow-type convention — narrowed to
+    `Pick<Service, "id" | "publicName" | "canonicalName">`; `APPROVAL_STATUS_LABEL`/
+    `APPROVAL_STATUS_BADGE` were byte-for-byte identical to Service Library's own maps with no
+    module-specific reason to diverge — extracted into a new shared
+    `lib/artifact-approval-status.ts`, consumed by both modules' query files; the detail page
+    re-declared 6 style constants as a 4th independent copy of the identical block already in 3
+    sibling detail pages (Projects/Service Library/Business Knowledge Center), past this
+    project's own documented "extract after the second occurrence" precedent — extracted into a
+    new shared `lib/detail-section-styles.ts`, consumed by all 4 detail pages (Projects' own real
+    `dlStyle` margin divergence preserved via composition, not silently dropped); and the list
+    page re-declared `selectStyle`/`submitButtonStyle` as a 3rd independent copy — extracted into
+    a new shared `lib/list-filter-styles.ts`, consumed by all 3 list pages. 2 CONFIRMED findings
+    left as accepted, tracked debt, recorded directly in code for the second-role reviewer:
+    Persona Library's picker depends on Service Library's RBAC module key by coincidence (both
+    independently declare the identical `MODULE_KEY` literal) — noted in
+    `personas.controller.ts`'s own doc comment; and `PersonaStatusActions` is now a 4th
+    independent hand-copy of the approval-transition table shape, meaning the earlier
+    "disproportionate for one consumer" debt-acceptance reasoning (first recorded for
+    `ServiceStatusActions`'s own 3rd-copy acceptance) needs re-litigating at 4 consumers — flagged
+    explicitly in the component's own doc comment. 3 new regression tests added. Re-validated:
+    366/366 `dashboard-web` unit tests, 500/500 `dashboard-api` unit tests, typecheck/lint/
+    `check-css-tokens.mjs`/`next build`/prettier all clean, `pnpm audit` 0 vulnerabilities.
+    Live-rendered again in the Browser pane: Persona Library, Service Library, Business
+    Knowledge Center, and Projects (list and detail — all touched by the style-extraction fixes)
+    all confirmed to redirect an unauthenticated visitor cleanly, zero server errors. Security
+    review, second-role human review, a gate decision, push/PR, and merge authorization each
+    remain their own separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -5433,10 +5470,32 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   Projects/BKC/Service Library precedent.
 - `[2026-08-22]` **Built the `dashboard-web` Persona Library UI**, under the explicit "Start the
   dashboard-web UI for it" instruction, following the backend's own build-to-production arc
-  (PR #50). See "Active tasks" item 36 above for the full account. Pushed as branch
-  `dashboard-web-persona-library`. Not yet reviewed, gated, or merged — code review, security
-  review, second-role human review, a gate decision, push/PR, and merge authorization each remain
-  their own separate, not-yet-requested next step.
+  (PR #50). See "Active tasks" item 36 above for the full account. Committed to branch
+  `dashboard-web-persona-library` (not yet pushed to `origin`).
+- `[2026-08-22]` **Independent code review run on `dashboard-web-persona-library`, then 6 of 8
+  confirmed findings fixed.** This project's own `code-review` skill (8-angle finder pass, 1-vote
+  verification) surfaced 8 candidates after dedup — all 8 CONFIRMED. Most severe: the
+  `RelationshipPicker`'s selected chips silently dropped any `relatedServiceIds` entry outside
+  the picker's 100-row fetch window, unlike the detail page's own raw-id fallback for the
+  identical case (two independent finder angles converged on this one) — fixed. Also fixed:
+  `getServicesForPersonaPicker()`'s lack of failure isolation (a transient Service Library
+  outage crashed the whole detail/edit/new page); the `services` prop typed as the full ~19-field
+  `Service` entity instead of a narrow type; and two real duplication findings — a byte-identical
+  `APPROVAL_STATUS_LABEL`/`APPROVAL_STATUS_BADGE` map already independently maintained twice
+  (extracted into a new shared `lib/artifact-approval-status.ts`) and a 4th/3rd independent copy
+  of the detail-page/list-page style constants respectively (extracted into new shared
+  `lib/detail-section-styles.ts`/`lib/list-filter-styles.ts`, retrofitted onto all 4/3 sibling
+  pages — Projects' own real `dlStyle` margin divergence preserved via composition). 2 CONFIRMED
+  findings left as accepted, tracked debt, recorded directly in code: Persona Library's picker
+  depending on Service Library's RBAC module key by coincidence, and `PersonaStatusActions` being
+  a 4th independent hand-copy of the approval-transition table shape (the earlier
+  "disproportionate for one consumer" debt-acceptance reasoning needs re-litigating at 4
+  consumers, flagged explicitly for the second-role reviewer). See
+  `docs/implementation/dashboard-web-persona-library.md` (if produced) and "Active tasks" item 36
+  above for the full account. 3 new regression tests; 366/366 `dashboard-web` + 500/500
+  `dashboard-api` unit tests, typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all
+  clean, `pnpm audit` 0 vulnerabilities. Security review, second-role human review, a gate
+  decision, push/PR, and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
