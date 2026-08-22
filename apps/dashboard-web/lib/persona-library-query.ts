@@ -1,64 +1,36 @@
 import type { PersonaApprovalStatus } from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
+import {
+  ARTIFACT_APPROVAL_STATUS_LABEL,
+  ARTIFACT_APPROVAL_STATUS_VALUES,
+  artifactApprovalStatusBadge,
+} from "./artifact-approval-status";
 import { DEFAULT_PAGE_SIZE, parsePageSize, type PageSize } from "./pagination";
 import { firstValue } from "./search-params";
 
 /**
- * `PersonaLibraryQuery`/`parsePersonaLibrarySearchParams`/`buildPersonaLibraryHref`/the status
- * label+badge maps live in their own file with zero non-type imports, rather than in
- * `lib/persona-library.ts` where the server-side fetch functions live — so a `"use client"`
- * component (the create/edit form, the status-actions island) can import the real functions
- * directly without pulling in `lib/persona-library.ts`'s `next/headers` import. Same precedent as
+ * `PersonaLibraryQuery`/`parsePersonaLibrarySearchParams`/`buildPersonaLibraryHref` live in their
+ * own file with zero non-type imports, rather than in `lib/persona-library.ts` where the
+ * server-side fetch functions live — so a `"use client"` component (the create/edit form, the
+ * status-actions island) can import the real functions directly without pulling in
+ * `lib/persona-library.ts`'s `next/headers` import. Same precedent as
  * `lib/service-library-query.ts`/`lib/business-knowledge-query.ts`.
  */
 
-// Mirrors packages/database/src/persona-library/entities.ts's PersonaApprovalStatus — reused
-// verbatim from Service Library's own identical 8-value workflow (D3).
-const APPROVAL_STATUS_VALUES: readonly PersonaApprovalStatus[] = [
-  "draft",
-  "submitted",
-  "under_review",
-  "approved",
-  "revision_requested",
-  "rejected",
-  "superseded",
-  "archived",
-];
+// PersonaApprovalStatus is structurally identical to ArtifactApprovalStatus (Service Library's
+// own identical 8-value workflow, reused verbatim per D3) — reused directly rather than
+// re-declared here, closing a byte-for-byte duplication a code review caught between the two
+// modules' own status-label/badge maps.
+const APPROVAL_STATUS_VALUES: readonly PersonaApprovalStatus[] = ARTIFACT_APPROVAL_STATUS_VALUES;
 
-export const APPROVAL_STATUS_LABEL: Readonly<Record<PersonaApprovalStatus, string>> = {
-  draft: "Draft",
-  submitted: "Submitted",
-  under_review: "Under Review",
-  approved: "Approved",
-  revision_requested: "Revision Requested",
-  rejected: "Rejected",
-  superseded: "Superseded",
-  archived: "Archived",
-};
-
-// Same 8-status-onto-5-token mapping as Service Library's own APPROVAL_STATUS_BADGE (reused
-// verbatim, not just structurally mirrored — the two modules share the identical status
-// vocabulary) — draft/submitted/approved each get a unique token; under_review/revision_requested
-// share `degraded` (both "still in progress"); rejected/superseded/archived share `unavailable`
-// (all terminal/no-longer-valid), so no live state collides with a dead one.
-const APPROVAL_STATUS_BADGE: Readonly<
-  Record<PersonaApprovalStatus, { token: StatusToken; label: string }>
-> = {
-  draft: { token: "unknown", label: "Draft" },
-  submitted: { token: "notConfigured", label: "Submitted" },
-  under_review: { token: "degraded", label: "Under Review" },
-  approved: { token: "healthy", label: "Approved" },
-  revision_requested: { token: "degraded", label: "Revision Requested" },
-  rejected: { token: "unavailable", label: "Rejected" },
-  superseded: { token: "unavailable", label: "Superseded" },
-  archived: { token: "unavailable", label: "Archived" },
-};
+export const APPROVAL_STATUS_LABEL: Readonly<Record<PersonaApprovalStatus, string>> =
+  ARTIFACT_APPROVAL_STATUS_LABEL;
 
 export function personaApprovalStatusBadge(status: PersonaApprovalStatus): {
   readonly token: StatusToken;
   readonly label: string;
 } {
-  return APPROVAL_STATUS_BADGE[status];
+  return artifactApprovalStatusBadge(status);
 }
 
 export interface PersonaLibraryQuery {

@@ -95,15 +95,27 @@ export async function getPersona(personaId: string): Promise<Persona | null> {
  * catalog larger than 100 rows silently shows only its first page here — the identical bound
  * every dimension-list-backed picker in this app already accepts (`ServiceLibraryForm`'s own
  * deliverable/platform/engagement-model pickers), not fixed in this pass.
+ *
+ * Degrades to an empty list on failure rather than throwing (code-review finding) — this is
+ * enrichment for the relationship picker, not the persona's own primary content, and every caller
+ * runs it alongside `getPersona()`/renders it on its own page. Without this, a transient Service
+ * Library outage would crash the entire detail/edit/new persona page even when the persona itself
+ * loaded fine. The one real cost is a silently-empty picker on failure, logged here so it's
+ * diagnosable server-side rather than invisible.
  */
 export async function getServicesForPersonaPicker(): Promise<readonly Service[]> {
-  const { items } = await getServices({
-    categoryId: null,
-    approvalStatus: null,
-    publicationStatus: null,
-    search: null,
-    offset: 0,
-    pageSize: 100,
-  });
-  return items;
+  try {
+    const { items } = await getServices({
+      categoryId: null,
+      approvalStatus: null,
+      publicationStatus: null,
+      search: null,
+      offset: 0,
+      pageSize: 100,
+    });
+    return items;
+  } catch (error) {
+    console.error("Failed to load services for the persona relationship picker:", error);
+    return [];
+  }
 }

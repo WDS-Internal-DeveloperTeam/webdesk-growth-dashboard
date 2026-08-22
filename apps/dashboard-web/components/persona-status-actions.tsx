@@ -22,6 +22,15 @@ export interface PersonaStatusActionsProps {
  * authoritative check either way, and a caller without the real grant still gets a clean 403,
  * shown via the same `parseApiErrorMessage()` allowlist every mutation in this app uses.
  * `superseded`/`archived` are both terminal (empty target lists).
+ *
+ * This is now the 4th independent hand-copy of this exact pattern (after `ProjectStatusActions`,
+ * `BusinessKnowledgeStatusActions`, `ServiceStatusActions`) — accepted, tracked debt (code-review
+ * finding), same as the prior 3. The earlier "a real fix means the backend's GET response
+ * computing and returning legal next transitions, disproportionate for a single new consumer"
+ * reasoning (recorded for `ServiceStatusActions`'s own 3rd-copy debt acceptance) is worth
+ * re-litigating now that a shared fix would serve 4 consumers, not 1 — left unfixed here since
+ * that's a larger architectural change out of scope for a single review-fix pass, not a decision
+ * this file can make silently.
  */
 const ALLOWED_TRANSITIONS: Readonly<
   Record<PersonaApprovalStatus, readonly PersonaApprovalStatus[]>

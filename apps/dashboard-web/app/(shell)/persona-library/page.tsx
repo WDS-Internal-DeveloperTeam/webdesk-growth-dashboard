@@ -3,6 +3,10 @@ import type { Persona } from "@webdesk/shared-types";
 import { ContentContainer, EmptyState, PageHeader, StatusBadge } from "@webdesk/ui";
 import { PageSizeSelect } from "@/components/page-size-select";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import {
+  filterSelectStyle as selectStyle,
+  filterSubmitButtonStyle as submitButtonStyle,
+} from "@/lib/list-filter-styles";
 import { listTableCellStyle, listTableHeaderCellStyle } from "@/lib/list-table-styles";
 import { buildHrefBySize } from "@/lib/pagination";
 import { getServerSession } from "@/lib/server-session";
@@ -218,24 +222,6 @@ export default async function PersonaLibraryListPage({
     </ContentContainer>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  padding: "0.4rem 0.6rem",
-  border: "1px solid var(--webdesk-dashboard-color-border)",
-  borderRadius: "0.25rem",
-  fontSize: "0.875rem",
-  minWidth: "12rem",
-};
-
-const submitButtonStyle: React.CSSProperties = {
-  alignSelf: "flex-end",
-  padding: "0.4rem 0.9rem",
-  border: "1px solid var(--webdesk-dashboard-color-border)",
-  borderRadius: "0.25rem",
-  background: "var(--webdesk-dashboard-color-surface)",
-  fontSize: "0.875rem",
-  cursor: "pointer",
-};
 
 const thStyle = listTableHeaderCellStyle;
 

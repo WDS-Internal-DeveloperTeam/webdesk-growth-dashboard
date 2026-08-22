@@ -324,4 +324,19 @@ describe("getServicesForPersonaPicker", () => {
 
     expect(await getServicesForPersonaPicker()).toEqual(items);
   });
+
+  it("degrades to an empty list instead of throwing when the fetch fails (code-review fix)", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+
+    await expect(getServicesForPersonaPicker()).resolves.toEqual([]);
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("degrades to an empty list instead of throwing on a network error", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    global.fetch = vi.fn().mockRejectedValue(new Error("network error"));
+
+    await expect(getServicesForPersonaPicker()).resolves.toEqual([]);
+  });
 });

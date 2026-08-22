@@ -3,6 +3,14 @@ import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
 import { PersonaStatusActions } from "@/components/persona-status-actions";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import {
+  dlStyle,
+  h2Style,
+  h3Style,
+  mutedStyle,
+  sectionStyle,
+  subsectionStyle,
+} from "@/lib/detail-section-styles";
 import { getServerSession } from "@/lib/server-session";
 import {
   formatTimestamp,
@@ -125,33 +133,6 @@ export default async function PersonaLibraryDetailPage({ params }: PersonaLibrar
   );
 }
 
-const sectionStyle: React.CSSProperties = {
-  marginBottom: "2rem",
-};
-
-const subsectionStyle: React.CSSProperties = {
-  marginBottom: "1rem",
-};
-
-const h2Style: React.CSSProperties = {
-  fontSize: "1.125rem",
-  fontWeight: 600,
-  marginBottom: "0.75rem",
-};
-
-const h3Style: React.CSSProperties = {
-  fontSize: "0.9375rem",
-  fontWeight: 600,
-  marginBottom: "0.375rem",
-};
-
-const dlStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(14rem, 1fr))",
-  gap: "0.75rem 1.5rem",
-  margin: 0,
-};
-
 // These fields are plain text (not HTML — this module was explicitly out of scope for the
 // dashboard-web rich-text editor rollout), so `whiteSpace: pre-wrap` is needed to preserve
 // newlines, unlike Service Library's own `richContentStyle`, which renders real structured HTML.
@@ -159,12 +140,6 @@ const plainContentStyle: React.CSSProperties = {
   fontSize: "0.9375rem",
   color: "var(--webdesk-dashboard-color-foreground)",
   whiteSpace: "pre-wrap",
-  margin: 0,
-};
-
-const mutedStyle: React.CSSProperties = {
-  fontSize: "0.875rem",
-  color: "var(--webdesk-dashboard-color-foreground-muted)",
   margin: 0,
 };
 

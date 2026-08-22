@@ -36,6 +36,17 @@ import { PersonasService } from "./personas.service.js";
 
 type PersonaLibraryRequest = AuthenticatedRequest & RequestWithCorrelationId;
 
+// Known, accepted coupling (code-review finding, dashboard-web-persona-library): this literal is
+// independently declared here, in personas.service.ts, and again in
+// service-library/services.controller.ts/services.service.ts, with no shared constant tying them
+// together. dashboard-web's own relationship picker (lib/persona-library.ts's
+// getServicesForPersonaPicker()) calls Service Library's own GET /service-library/services
+// endpoint, gated on this identical key, to populate Persona Library's create/edit form — that
+// only works today because both modules happen to share the same RBAC module key. If Persona
+// Library is ever given its own distinct module key, that fetch would start 403ing for any role
+// that can view personas but lacks the Service Library grant specifically, with nothing catching
+// the divergence at compile time. Left unfixed here — giving each module a real shared RBAC
+// constant is a larger architectural change out of scope for a dashboard-web-only review-fix pass.
 const MODULE_KEY = "service_persona_proof";
 
 @ApiTags("persona-library")

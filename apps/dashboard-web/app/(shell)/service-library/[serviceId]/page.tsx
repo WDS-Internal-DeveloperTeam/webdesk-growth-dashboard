@@ -4,6 +4,14 @@ import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
 import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { ServiceStatusActions } from "@/components/service-status-actions";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import {
+  dlStyle,
+  h2Style,
+  h3Style,
+  mutedStyle,
+  sectionStyle,
+  subsectionStyle,
+} from "@/lib/detail-section-styles";
 import { getServerSession } from "@/lib/server-session";
 import {
   formatTimestamp,
@@ -163,45 +171,12 @@ export default async function ServiceLibraryDetailPage({ params }: ServiceLibrar
   );
 }
 
-const sectionStyle: React.CSSProperties = {
-  marginBottom: "2rem",
-};
-
-const subsectionStyle: React.CSSProperties = {
-  marginBottom: "1rem",
-};
-
-const h2Style: React.CSSProperties = {
-  fontSize: "1.125rem",
-  fontWeight: 600,
-  marginBottom: "0.75rem",
-};
-
-const h3Style: React.CSSProperties = {
-  fontSize: "0.9375rem",
-  fontWeight: 600,
-  marginBottom: "0.375rem",
-};
-
-const dlStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(14rem, 1fr))",
-  gap: "0.75rem 1.5rem",
-  margin: 0,
-};
-
 // No `whiteSpace: pre-wrap` here — this wraps real HTML (already structured with its own <p>/<br>
 // tags from the rich-text editor), not plain text needing that treatment, matching Business
 // Knowledge Center's own `richContentStyle` precedent.
 const richContentStyle: React.CSSProperties = {
   fontSize: "0.9375rem",
   color: "var(--webdesk-dashboard-color-foreground)",
-};
-
-const mutedStyle: React.CSSProperties = {
-  fontSize: "0.875rem",
-  color: "var(--webdesk-dashboard-color-foreground-muted)",
-  margin: 0,
 };
 
 const redactedStyle: React.CSSProperties = {

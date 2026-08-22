@@ -222,4 +222,20 @@ describe("PersonaLibraryForm", () => {
     );
     expect(screen.getByLabelText("Goals")).toHaveValue("Reduce onboarding friction");
   });
+
+  it("edit mode: a relatedServiceIds entry outside the fetched services list falls back to a raw-id chip instead of vanishing (code-review fix)", () => {
+    const OUT_OF_WINDOW_SERVICE_ID = "99999999-9999-9999-9999-999999999999";
+    render(
+      <PersonaLibraryForm
+        mode="edit"
+        personaId={PERSONA_ID}
+        initial={personaFixture({ relatedServiceIds: [SERVICE_ID, OUT_OF_WINDOW_SERVICE_ID] })}
+        services={services}
+      />,
+    );
+    // The known service resolves to its real display name; the unknown one still renders as its
+    // own chip (the raw id), instead of being silently dropped from the "selected" list.
+    expect(screen.getByText("Headless Commerce")).toBeInTheDocument();
+    expect(screen.getByText(OUT_OF_WINDOW_SERVICE_ID)).toBeInTheDocument();
+  });
 });

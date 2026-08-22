@@ -18,14 +18,22 @@ const ROLE_INDUSTRY_TAG_MAX_LENGTH = 255;
 const ROLE_INDUSTRY_TAG_MAX_COUNT = 100;
 const RELATED_SERVICE_MAX_COUNT = 200;
 
+// Narrowed to only the fields this form actually reads — matches the established convention for
+// this exact relationship-picker use case (Deliverable/PlatformTechnology/EngagementModel, used by
+// ServiceLibraryForm's own sibling pickers, are each similarly narrow {id, publicId, name} types;
+// the full Service entity carries ~19 fields this form never touches, a code-review finding).
+export type PersonaServiceOption = Pick<Service, "id" | "publicName" | "canonicalName">;
+
 export type PersonaLibraryFormProps = (
   | { readonly mode: "create" }
   | { readonly mode: "edit"; readonly personaId: string; readonly initial: Persona }
 ) & {
-  readonly services: readonly Service[];
+  readonly services: readonly PersonaServiceOption[];
 };
 
-function toRelationshipOptions(services: readonly Service[]): readonly RelationshipOption[] {
+function toRelationshipOptions(
+  services: readonly PersonaServiceOption[],
+): readonly RelationshipOption[] {
   return services.map((service) => ({
     id: service.id,
     displayName: service.publicName ?? service.canonicalName,
@@ -349,11 +357,17 @@ export function PersonaLibraryForm(props: PersonaLibraryFormProps): ReactNode {
           query={serviceQuery}
           onQueryChange={setServiceQuery}
           options={serviceOptions}
-          selected={toRelationshipOptions(
-            relatedServiceIds
-              .map((id) => serviceOptionsById.get(id))
-              .filter((service): service is Service => !!service),
-          )}
+          // An id outside the picker's 100-row fetch window (code-review finding) falls back to
+          // showing the raw id itself as its own chip, rather than being silently filtered out —
+          // matches the detail page's own `serviceNameById.get(id) ?? id` fallback for the
+          // identical case, so a real relationship is never invisible or unremovable in this UI.
+          selected={relatedServiceIds.map((id) => {
+            const service = serviceOptionsById.get(id);
+            return {
+              id,
+              displayName: service ? (service.publicName ?? service.canonicalName) : id,
+            };
+          })}
           onSelect={(option) => {
             if (relatedServiceIds.length >= RELATED_SERVICE_MAX_COUNT) return;
             setRelatedServiceIds([...relatedServiceIds, option.id]);

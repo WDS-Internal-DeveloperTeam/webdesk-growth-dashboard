@@ -4,6 +4,11 @@ import type {
   ServicePublicationStatus,
 } from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
+import {
+  ARTIFACT_APPROVAL_STATUS_LABEL,
+  ARTIFACT_APPROVAL_STATUS_VALUES,
+  artifactApprovalStatusBadge,
+} from "./artifact-approval-status";
 import { DEFAULT_PAGE_SIZE, parsePageSize, type PageSize } from "./pagination";
 import { firstValue } from "./search-params";
 
@@ -16,17 +21,11 @@ import { firstValue } from "./search-params";
  * `lib/business-knowledge-query.ts`/`lib/projects-query.ts`.
  */
 
-// Mirrors packages/database/src/service-library/entities.ts's ServiceApprovalStatus.
-const APPROVAL_STATUS_VALUES: readonly ServiceApprovalStatus[] = [
-  "draft",
-  "submitted",
-  "under_review",
-  "approved",
-  "revision_requested",
-  "rejected",
-  "superseded",
-  "archived",
-];
+// ServiceApprovalStatus is structurally identical to ArtifactApprovalStatus (shared with Persona
+// Library, which reuses this exact 8-value workflow verbatim per D3) — reused directly rather than
+// re-declared here, closing a byte-for-byte duplication a code review caught between the two
+// modules' own status-label/badge maps.
+const APPROVAL_STATUS_VALUES: readonly ServiceApprovalStatus[] = ARTIFACT_APPROVAL_STATUS_VALUES;
 
 const PUBLICATION_STATUS_VALUES: readonly ServicePublicationStatus[] = [
   "draft",
@@ -40,16 +39,8 @@ const CONFIDENTIALITY_VALUES: readonly ServiceConfidentiality[] = [
   "restricted",
 ];
 
-export const APPROVAL_STATUS_LABEL: Readonly<Record<ServiceApprovalStatus, string>> = {
-  draft: "Draft",
-  submitted: "Submitted",
-  under_review: "Under Review",
-  approved: "Approved",
-  revision_requested: "Revision Requested",
-  rejected: "Rejected",
-  superseded: "Superseded",
-  archived: "Archived",
-};
+export const APPROVAL_STATUS_LABEL: Readonly<Record<ServiceApprovalStatus, string>> =
+  ARTIFACT_APPROVAL_STATUS_LABEL;
 
 export const PUBLICATION_STATUS_LABEL: Readonly<Record<ServicePublicationStatus, string>> = {
   draft: "Draft",
@@ -63,31 +54,11 @@ export const CONFIDENTIALITY_LABEL: Readonly<Record<ServiceConfidentiality, stri
   restricted: "Restricted",
 };
 
-// 8 real statuses onto a fixed 5-token badge palette necessarily doubles some up — chosen so the
-// two states most likely to be confused for each other (a live, editable state and a permanently
-// terminal one) never share a token: `draft`/`submitted`/`approved` each get their own unique
-// token; `under_review`/`revision_requested` share `degraded` (both are "still in progress, not
-// yet resolved" — a low-confusion pair); and the three genuinely terminal/no-longer-valid states
-// (`rejected`/`superseded`/`archived`) share `unavailable` together, rather than any of them
-// colliding with an everyday live state.
-const APPROVAL_STATUS_BADGE: Readonly<
-  Record<ServiceApprovalStatus, { token: StatusToken; label: string }>
-> = {
-  draft: { token: "unknown", label: "Draft" },
-  submitted: { token: "notConfigured", label: "Submitted" },
-  under_review: { token: "degraded", label: "Under Review" },
-  approved: { token: "healthy", label: "Approved" },
-  revision_requested: { token: "degraded", label: "Revision Requested" },
-  rejected: { token: "unavailable", label: "Rejected" },
-  superseded: { token: "unavailable", label: "Superseded" },
-  archived: { token: "unavailable", label: "Archived" },
-};
-
 export function serviceApprovalStatusBadge(status: ServiceApprovalStatus): {
   readonly token: StatusToken;
   readonly label: string;
 } {
-  return APPROVAL_STATUS_BADGE[status];
+  return artifactApprovalStatusBadge(status);
 }
 
 const PUBLICATION_STATUS_BADGE: Readonly<
