@@ -4,8 +4,9 @@
 self-verified against actual signatures/git history/sibling-module precedent; 5 fixed, 3 left as
 accepted, tracked debt). Security review complete (0 findings above threshold). Required
 second-role human review complete — Jitesh D, "Approved," accepting the 3 open findings as
-tracked debt. **A gate decision, push/PR, and merge authorization each remain separate,
-not-yet-requested next steps.**
+tracked debt. **Gate (G4-persona-library-rich-text) approved — WebDesk Solution, decision
+CONFIRM, approved commit `33a7f3c` on branch `persona-library-rich-text-editor`. Push/PR and
+merge authorization each remain separate, not-yet-requested next steps.**
 
 ## Completion condition
 
@@ -127,5 +128,21 @@ raw-HTML `afterState`) were accepted as tracked debt rather than sent back for a
 | Scope reviewed                | Full code-review disposition (8 findings, 5 fixed, 3 accepted as tracked debt) and full security-review disposition (0 findings above threshold), per the published review packet |
 | Disputes raised               | None recorded                                                                                                                                                                     |
 
-A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-steps, per this project's standing "no auto-merge" rule.
+**The gate (G4-persona-library-rich-text) was then separately requested and approved** — WebDesk
+Solution, decision CONFIRM (clean pass, not an override, since the second-role review was already
+complete before the gate was requested), approved commit `33a7f3c` on branch
+`persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s
+`gates[]` (`current_gate` now `G4-persona-library-rich-text`).
+
+| Field                    | Value                                                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-persona-library-rich-text                                                                                                                                              |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                                          |
+| Gate date                | 2026-08-22                                                                                                                                                                |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                         |
+| Approved commit          | `33a7f3c` on branch `persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`                                                  |
+| Scope                    | `persona-library-rich-text-editor` only (branch not yet pushed/opened as a PR). Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
+production deployment — each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule.

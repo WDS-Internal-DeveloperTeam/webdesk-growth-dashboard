@@ -2291,8 +2291,9 @@ e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` retur
     status actions) are both live.
 37. **Persona Library's 8 narrative fields converted to the rich-text editor — built, fully
     validated, code-reviewed (5 of 8 findings fixed, 3 accepted as tracked debt), security-reviewed
-    (0 findings above threshold), required second-role human reviewed (Jitesh D, "Approved");
-    not yet gated or merged (2026-08-22).** Closes the gap the 2026-08-22 standing rule ("from now
+    (0 findings above threshold), required second-role human reviewed (Jitesh D, "Approved"),
+    gated (G4-persona-library-rich-text, WebDesk Solution, CONFIRM); not yet pushed or merged
+    (2026-08-22).** Closes the gap the 2026-08-22 standing rule ("from now
     onward we must have to use rich text html editor for all the text area") left open — Persona
     Library's own UI
     (item 36) had shipped with plain `<textarea>` fields one day earlier, since it was built while
@@ -2357,9 +2358,15 @@ e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` retur
     Review Packet" — code review + security review findings, fixes, and validation evidence, with a
     decision section) was then prepared for the required second-role human review, since the
     implementing agent cannot also be its own reviewer (ADR-0010). See
-    `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`. **Awaiting that
-    review** — a gate decision, push/PR, and merge authorization each remain separate,
-    not-yet-requested next steps.
+    `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`. **Jitesh D
+    reviewed it and returned "Approved,"** accepting the 3 open findings as tracked debt. **The
+    gate (G4-persona-library-rich-text) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+    already complete before the gate was requested), approved commit `33a7f3c` on branch
+    `persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-persona-library-rich-text`). **This gate approval does not
+    itself authorize pushing the branch, opening a PR, or merging** — each remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -5698,6 +5705,16 @@ e879be801c780be7c0a2af18250071b017873e28`, confirming the exact merged commit is
   `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`'s "Sign-off"
   section. A gate decision, push/PR, and merge authorization remain separate, not-yet-requested
   next steps.
+- `[2026-08-22]` **The gate (G4-persona-library-rich-text) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `33a7f3c` on branch `persona-library-rich-text-editor` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-persona-library-rich-text`) and
+  `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
+  merging** — each remains its own separate, not-yet-requested authorization, per this project's
+  standing "no auto-merge" rule.
 
 ## Open client blockers
 
