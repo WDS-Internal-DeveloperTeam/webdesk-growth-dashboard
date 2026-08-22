@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-rich-text-editor",
+    "current_gate": "G4-persona-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -504,6 +504,20 @@
       "approved_commit": "69ab89e",
       "record": "docs/project-state/rich-text-editor-long-fields-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #49 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-persona-library",
+      "type": "qa-security-gate",
+      "scope": "module-persona-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-22T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Persona Library module backend (branch module-persona-library, pushed and opened as PR #50) -- the fourth real business-module backend on the Phase 1F application shell / canonical module registry, after Projects, Business Knowledge Center, and Service Library, module #4 in the project-owner-supplied Recommended_Module_Roadmap.md. Built using Service Library as the literal structural template (same service_persona_proof RBAC group, no new RBAC migration). Two scoping decisions confirmed directly with the user first (AskUserQuestion): content edits stay independent of approvalStatus, mirroring Service Library's own precedent; and Service Library's own icpIds field is not retrofitted to a real relationship in this pass -- Persona Library stays fully standalone (relatedServiceIds is a plain, existence-validated identifier array, not a foreign key). Single-table schema (personas, migration 00052); the approvalStatus workflow and its TRANSITIONS table are reused verbatim from Service Library's own already-code-reviewed version, including the atomic compare-and-swap status update; version is new behavior Service Library doesn't have, a server-managed integer incremented via a Postgres-evaluated version + 1 literal, avoiding a read-then-write race. Built by a background agent, then independently re-verified by the orchestrating session -- a first delegation attempt returned only a plan with zero real file changes, caught via a direct git status check before being trusted; the second attempt, with a more directive prompt, did the real work, and every test suite the agent reported was independently re-run and confirmed, not just trusted. Independent code review (high effort, 8 finder angles, 1-vote verification) surfaced 12 candidates after dedup, 11 CONFIRMED and 1 downgraded to PLAUSIBLE (inherited precedent), 10 kept in the final report, 9 fixed -- most severe update() unconditionally incrementing version even on a fully empty patch, burning a version number and an empty-afterState audit event for a no-op save, fixed with a Zod .refine() rejecting an empty patch; also fixed relatedServiceIds having zero existence validation despite the services table already existing (closed via a new ServiceRepository.findByIds()/assertServiceIdsExist(), with a malformed-UUID guard added along the way), a wasted findById() pre-fetch in update(), updateStatus() doing an extra read instead of returning: true, a missing pg_trgm trigram index on name, array fields rejecting an explicit null to clear while scalar fields accepted it, create()'s TOCTOU publicId race surfacing as a raw 500 (fixed via error.name === 'SequelizeUniqueConstraintError', not instanceof, per ADR-0006's own architectural boundary), list()'s pagination having no tiebreaker, and hand-typed repository input types (derived via Omit/Pick instead). 1 CONFIRMED finding left as accepted, tracked debt: the entire TRANSITIONS table and changeApprovalStatus() method is a byte-for-byte duplicate of Service Library's identical, already-code-reviewed pattern, with no shared 'artifact approval workflow' abstraction anywhere in packages/ -- extracting one for a single new consumer during a review-fix pass was judged disproportionate. Security review (run separately) found 0 findings above threshold -- confirmed every @RequirePermission decorator is method-level, the dynamic per-transition RBAC gate matches the real seeded service_persona_proof matrix exactly, all queries are parameterized, Zod strips unknown keys, the SequelizeUniqueConstraintError catch leaks no internal detail, and assertServiceIdsExist() exposes only .id from returned service rows. One sub-threshold (2/10) observation was noted for the record, not reported as a finding: the new SERVICE_REPOSITORY export from ServiceLibraryModule exposes the full write-capable repository across the module boundary for a read-only need, the identical pattern this project's own module-projects-backend-closeout review already flagged and fixed once for USER_ROLE_REPOSITORY/AuthzModule, currently unreachable since PersonasService only ever calls .findByIds() on it. Final numbers: 500/500 dashboard-api unit tests, 185/185 packages/database integration tests, 171/171 dashboard-api e2e tests, all against a real disposable PostgreSQL 17 database; migration up/down/up round-trip clean (53 migrations); pnpm validate:module-registry unaffected (43 modules, 21 permission groups); pnpm audit 0 vulnerabilities; boundaries:check 0 violations; typecheck/lint/prettier all clean; all 14 CI checks green on PR #50. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-22, decision 'Approved as-is', accepting the 1 open CONFIRMED code-review finding as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/module-persona-library-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "0c5115d",
+      "record": "docs/project-state/module-persona-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #50 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -1860,6 +1874,36 @@
       },
       "project_version_before": 54,
       "project_version_after": 55
+    },
+    {
+      "timestamp": "2026-08-22T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "reviewed the Persona Library Review Packet (module-persona-library) and returned 'Approved as-is'",
+      "details": {
+        "scope": "Full code-review disposition (12 candidates after dedup, 11 CONFIRMED / 1 PLAUSIBLE, 10 kept in the final report, 9 fixed, 1 accepted as tracked debt) and full security-review disposition (0 findings above threshold, 1 sub-threshold observation noted), for branch module-persona-library, reviewed via the code-review/security-review skill outputs recorded in docs/implementation/module-persona-library.md and the published review packet.",
+        "result": "Accepting the 1 open CONFIRMED code-review finding (the duplicated TRANSITIONS table/changeApprovalStatus() method) as tracked debt rather than requesting a fix. Satisfies ADR-0010's separation-of-duties requirement for this slice -- the implementing agent could not also be its own reviewer. Recorded in docs/project-state/module-persona-library-approval-checklist.md's 'Sign-off' section. A gate decision and merge authorization remain separate, not-yet-requested next steps.",
+        "reviewed_commit": "0c5115d",
+        "branch": "module-persona-library"
+      },
+      "project_version_before": 55,
+      "project_version_after": 56
+    },
+    {
+      "timestamp": "2026-08-22T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-persona-library for module-persona-library -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-persona-library",
+        "scope": "module-persona-library",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-22, decision 'Approved as-is', accepting the 1 open CONFIRMED finding as tracked debt, no disputes raised) was already complete before the gate was requested. See docs/project-state/module-persona-library-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "0c5115d",
+        "branch": "module-persona-library"
+      },
+      "project_version_before": 56,
+      "project_version_after": 57
     }
   ]
 }

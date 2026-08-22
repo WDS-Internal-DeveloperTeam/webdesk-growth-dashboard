@@ -2077,6 +2077,102 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     — Service Library's 7 Positioning fields and Projects' `description`, plus real backend HTML
     sanitization and the shared `SanitizedRichText` render component — is now genuinely live in
     production.**
+35. **Persona Library module backend — built, fully validated, code-reviewed (9/10 confirmed
+    findings fixed, 1 accepted as tracked debt), security-reviewed (0 findings above threshold),
+    pushed and opened as PR #50, required second-role human review complete (Jitesh D, "Approved
+    as-is"), gated (`G4-persona-library`, WebDesk Solution, CONFIRM); not yet merged
+    (2026-08-22).**
+    `docs/implementation/module-persona-library.md` records the full account. The
+    fourth real business-module backend on the Phase 1F application shell / canonical module
+    registry, after Projects, Business Knowledge Center, and Service Library — module #4 in the
+    project-owner-supplied `Recommended_Module_Roadmap.md`. Built directly on the explicit "Start
+    the Persona Library" instruction, using Service Library as the literal structural template
+    (same `service_persona_proof` RBAC group, no new RBAC migration). Two scoping decisions
+    confirmed directly with the user first (`AskUserQuestion`): content edits stay independent of
+    `approvalStatus`, mirroring Service Library's own precedent — the roadmap's "cannot silently
+    modify approved personas" rule (aimed at the dashboard's planned "Growth Director" AI agent,
+    not a human role) is already satisfied by the existing gated transition table; and Service
+    Library's own `icpIds` field is **not** retrofitted to a real relationship in this pass —
+    Persona Library stays fully standalone (`relatedServiceIds` is a plain unvalidated string
+    array, mirroring `icpIds`/`relatedPageIds`/`relatedCaseStudyIds`). Single-table schema
+    (`personas`, migration `00052`), since the canonical spec is a flat field list with no basis
+    for splitting across entities. The `approvalStatus` workflow and its `TRANSITIONS` table are
+    reused verbatim from Service Library's own already-code-reviewed version, including the atomic
+    compare-and-swap status update. `version` is new behavior Service Library doesn't have — a
+    server-managed integer incremented as part of the same `UPDATE` statement via a
+    Postgres-evaluated `version + 1` literal, satisfying the canonical spec's own explicit
+    "version" field without a read-then-write race. `@RequirePermission` is placed on every
+    individual controller method, never at class level — the exact bug Service Library's own
+    dimensions controller had and fixed. Both `packages/database` barrel entrypoints (`index.ts`
+    and `index.cjs.ts`) were updated, per this project's own documented caution about the
+    separately-maintained CJS build Vercel's bundler actually uses in production. **Built by a
+    background agent, then independently re-verified by the orchestrating session** — a first
+    attempt at delegating this build returned only a description of a plan with zero real file
+    changes (caught via a direct `git status` check before it was trusted); the second attempt,
+    with a more directive prompt, did the real work. Every test suite the agent reported was
+    re-run directly (not just trusted): 493/493 `dashboard-api` unit tests (28 new), 28/28
+    `packages/database` unit tests (unaffected), 184/184 `packages/database` integration tests (14
+    new, real disposable PostgreSQL), 168/168 `dashboard-api` e2e tests (15 new, real disposable
+    database + real seeded RBAC, including the full 3-tier submit/review/approve matrix), a real
+    migration up/down/up round-trip, `validate:module-registry` (43 modules, 21 permission groups),
+    `pnpm audit` (0 vulnerabilities), and prettier — all independently confirmed clean, plus a
+    direct code read of the highest-risk files (migration, controller RBAC placement, service
+    transition table, repository's atomic update/compare-and-swap). `apps/dashboard-web` is
+    untouched — backend only, matching every prior module's own precedent. **Independent code
+    review then ran** (high effort, 8 finder angles, 1-vote verification) — 12 candidates surfaced
+    after dedup, 11 CONFIRMED and 1 downgraded to PLAUSIBLE (inherited precedent), 10 kept in the
+    final report per the review's own cap, **9 fixed, 1 left as accepted, tracked debt**. Most
+    severe: `update()` unconditionally incremented `version` even on a fully empty patch (`{}`),
+    burning a version number and an empty-`afterState` audit event for a no-op save — fixed with a
+    Zod `.refine()` rejecting an empty patch with a clean 400. Also fixed: `relatedServiceIds` had
+    zero existence validation despite the `services` table already existing (weaker than the
+    precedent it claimed to follow — Service Library's own unvalidated fields point at genuinely
+    nonexistent modules), closed by adding `findByIds()` to `ServiceRepository`, exporting
+    `SERVICE_REPOSITORY` from `ServiceLibraryModule`, and wiring a new
+    `assertServiceIdsExist()` — with a malformed-UUID guard added along the way, since a raw
+    non-UUID id would otherwise crash Postgres's `uuid` column type with a 500 instead of a clean
+    400 (caught during the fix itself, not the original review); `update()` pre-fetching a persona
+    via `findById()` it never used (unlike Service Library's identical-looking pattern, where the
+    fetched value is load-bearing); `updateStatus()` doing a separate `findByPk` read instead of
+    `returning: true`, inconsistent with its own sibling method; a missing `pg_trgm` trigram index
+    on `name`, unlike Service Library's own migration one module earlier; array fields rejecting
+    an explicit `null` to clear while every scalar field accepted it; `create()`'s TOCTOU `publicId`
+    race surfacing as a raw 500 (fixed via `error.name === "SequelizeUniqueConstraintError"`, not
+    `instanceof`, since `dashboard-api` never imports `sequelize` directly per ADR-0006's own
+    architectural boundary — a real compile error the typecheck step caught, not something assumed
+    up front); `list()`'s pagination having no tiebreaker on `updatedAt`; and the repository's
+    `create()`/`update()` input types being hand-typed instead of derived via `Omit`/`Pick` from
+    `PersonaEntity`. **1 CONFIRMED finding left as accepted, tracked debt**: the entire 8-state
+    `TRANSITIONS` table and `changeApprovalStatus()` method is a byte-for-byte duplicate of Service
+    Library's identical, already-code-reviewed pattern, with no shared "artifact approval workflow"
+    abstraction anywhere in `packages/` — extracting one for a single new consumer during a
+    review-fix pass was judged disproportionate. Re-validated: 500/500 `dashboard-api` unit tests (7
+    new), 185/185 `packages/database` integration tests (1 new), 171/171 `dashboard-api` e2e tests
+    (3 new plus a rewrite of one existing test whose premise the fix changed), migration up/down/up
+    round-trip clean, `validate:module-registry` passing, `pnpm audit` 0 vulnerabilities,
+    `boundaries:check` 0 violations, typecheck/lint/prettier all clean. See
+    `docs/implementation/module-persona-library.md` §7 for the full account. **A separate
+    `security-review` skill run then found 0 findings above threshold** — confirmed every
+    `@RequirePermission` decorator is method-level (never class-level), the dynamic per-transition
+    RBAC gate in `changeApprovalStatus()` matches the real seeded `service_persona_proof` matrix
+    exactly, all queries are parameterized, Zod strips unknown keys (no mass-assignment path), the
+    `SequelizeUniqueConstraintError` catch leaks no internal SQL/constraint detail, the UUID guard
+    correctly blocks a malformed id before it reaches the database, and `assertServiceIdsExist()`
+    exposes only `.id` from returned service rows (no confidential-field leak). One low-confidence
+    (2/10) design-quality observation was noted for the record, not reported as a finding: the new
+    `SERVICE_REPOSITORY` export from `ServiceLibraryModule` (needed for the read-only
+    `findByIds()` existence check) exposes the full write-capable repository across the module
+    boundary rather than a narrow delegating method — the identical pattern this project's own
+    `module-projects-backend-closeout` review already flagged and fixed once for
+    `USER_ROLE_REPOSITORY`/`AuthzModule` — currently unreachable since `PersonasService` only ever
+    calls `.findByIds()` on it, but worth closing the same way if this module's surface grows.
+    **"Push the branch and open a PR" was then separately requested and executed** — pushed to
+    `origin`, opened as
+    [PR #50](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/50), all
+    14 CI checks green. **A review packet for the required second-role human review was then
+    prepared and published** — see
+    `docs/project-state/module-persona-library-approval-checklist.md`. **Awaiting that review** —
+    a gate decision and merge authorization each remain separate, not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -5183,6 +5279,91 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   navigation/filter behavior (the one place a "current project" already has a real, self-contained
   meaning), or something else. **The user again chose to defer** ("for now we will record this
   will do it later") — nothing was built; only this entry and item 13 record the outcome.
+- `[2026-08-22]` **Built the Persona Library module backend**, under the explicit "Start the
+  Persona Library" instruction — module #4 in the Recommended Module Roadmap. Two scoping
+  decisions confirmed directly with the user first (`AskUserQuestion`): content edits stay
+  independent of `approvalStatus` (mirrors Service Library's own precedent), and Service Library's
+  own `icpIds` is not retrofitted in this pass (Persona Library stays standalone). Full account,
+  including a caught delegation failure (a first background-agent attempt returned only a
+  description of a plan with zero real file changes — caught via a direct `git status` check
+  before being trusted, then redone properly with a more directive prompt) and every test suite
+  independently re-run and confirmed by the orchestrating session rather than just trusted from
+  the build's own report, in `docs/implementation/module-persona-library.md`. 493/493
+  `dashboard-api` unit tests (28 new), 184/184 `packages/database` integration tests (14 new, real
+  disposable database), 168/168 `dashboard-api` e2e tests (15 new, real disposable database + real
+  seeded RBAC), full validation clean. Committed to branch `module-persona-library` — not yet
+  pushed, reviewed, gated, or merged.
+- `[2026-08-22]` **Independent code review run on `module-persona-library`, then 9 of 10 confirmed
+  findings fixed.** High effort, 8 finder angles, 1-vote verification — 12 candidates surfaced
+  after dedup, 11 CONFIRMED and 1 downgraded to PLAUSIBLE (inherited precedent), 10 kept in the
+  final report. Most severe: `version` incremented even on a fully empty update patch, burning a
+  version number and an empty-`afterState` audit event for a no-op save — fixed with a Zod
+  `.refine()` rejecting an empty patch. Also fixed: `relatedServiceIds` had zero existence
+  validation despite `services` already existing (closed by adding `ServiceRepository.findByIds()`,
+  exporting `SERVICE_REPOSITORY` from `ServiceLibraryModule`, and a new
+  `assertServiceIdsExist()` — with a malformed-UUID guard added along the way, since a raw non-UUID
+  id would otherwise crash Postgres's `uuid` column type with a 500); a wasted `findById()`
+  pre-fetch in `update()`; `updateStatus()` doing an extra read instead of `returning: true`; a
+  missing `pg_trgm` trigram index on `name`; array fields rejecting an explicit `null` to clear;
+  `create()`'s TOCTOU `publicId` race surfacing as a raw 500 (fixed via
+  `error.name === "SequelizeUniqueConstraintError"`, not `instanceof` — `dashboard-api` never
+  imports `sequelize` directly per ADR-0006's own architectural boundary, a real compile error the
+  typecheck step caught); `list()`'s pagination having no tiebreaker; and the repository's
+  `create()`/`update()` types being hand-typed instead of derived via `Omit`/`Pick`. **1 CONFIRMED
+  finding left as accepted, tracked debt**: the entire approval-workflow state machine
+  (`TRANSITIONS` table + `changeApprovalStatus()`) is a byte-for-byte duplicate of Service
+  Library's identical pattern, with no shared abstraction anywhere in `packages/` — extracting one
+  for a single new consumer during a review-fix pass was judged disproportionate. Re-validated:
+  500/500 `dashboard-api` unit tests, 185/185 `packages/database` integration tests, 171/171
+  `dashboard-api` e2e tests, migration up/down/up round-trip clean, `validate:module-registry`
+  passing, `pnpm audit` 0 vulnerabilities, `boundaries:check` 0 violations, typecheck/lint/prettier
+  all clean. See `docs/implementation/module-persona-library.md` §7 for the full account. Security
+  review, second-role human review, a gate decision, push/PR, and merge authorization each remain
+  their own separate, not-yet-requested next step.
+- `[2026-08-22]` **Security review run on `module-persona-library`, separately from the code
+  review.** Focused on the branch's genuinely new security-relevant surface — the cross-module
+  `SERVICE_REPOSITORY` dependency injection, the UUID-guarded existence check, the
+  `error.name`-based unique-constraint handling required by ADR-0006's own-database-package-
+  touches-sequelize boundary, and RBAC wiring on every route. **0 findings above threshold.**
+  Confirmed every `@RequirePermission` decorator is method-level, the dynamic per-transition RBAC
+  gate matches the real seeded `service_persona_proof` matrix exactly, all queries are
+  parameterized, Zod strips unknown keys, no internal SQL/constraint detail leaks on the
+  uniqueness-race path, and `assertServiceIdsExist()` exposes only `.id` from returned service rows.
+  One candidate was identified and independently re-verified at confidence 2/10 (not reported as a
+  finding): the new `SERVICE_REPOSITORY` export from `ServiceLibraryModule` exposes the full
+  write-capable repository across the module boundary for a read-only need — the identical pattern
+  this project's own `module-projects-backend-closeout` review already flagged and fixed once for
+  `USER_ROLE_REPOSITORY`/`AuthzModule` — currently unreachable since `PersonasService` only ever
+  calls `.findByIds()` on it.
+- `[2026-08-22]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-persona-library` — pushed to `origin`, opened as
+  [PR #50](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/50). A
+  review packet for the required second-role human review, a gate decision, and merge
+  authorization each remain separate, not-yet-requested next steps.
+- `[2026-08-22]` **Confirmed all 14 CI checks green on PR #50**, then prepared and published the
+  required second-role human review packet for `module-persona-library` — a Claude artifact (code
+  review + security review findings, fixes, and validation evidence, with a decision section),
+  since the implementing agent cannot also be its own reviewer (ADR-0010). See
+  [Persona Library Review Packet](https://claude.ai/code/artifact/2d54fdfc-5893-4940-b68d-dacbb4002efb)
+  and the new `docs/project-state/module-persona-library-approval-checklist.md`. **Awaiting that
+  review** — a gate decision and merge authorization each remain separate, not-yet-requested next
+  steps.
+- `[2026-08-22]` **Required second-role human review complete for `module-persona-library`
+  (PR #50).** The review packet (code review + security review findings, fixes, and the 1 open
+  accepted-debt item, with a decision section) was reviewed. **Jitesh D reviewed it and returned
+  "Approved as-is,"** accepting the 1 open CONFIRMED code-review finding (the duplicated
+  `TRANSITIONS` table) as tracked debt rather than requesting a fix. See
+  `docs/project-state/module-persona-library-approval-checklist.md`'s "Sign-off" section. A gate
+  decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-22]` **The gate (G4-persona-library) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `0c5115d` on branch
+  `module-persona-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-persona-library`) and
+  `docs/project-state/module-persona-library-approval-checklist.md`'s "Sign-off" section. **This
+  gate approval does not itself authorize merging PR #50 or a production deployment** — merge
+  remains its own separate, not-yet-requested authorization, per this project's standing "no
+  auto-merge" rule.
 
 ## Open client blockers
 

@@ -14,6 +14,7 @@ import { HealthModule } from "./health/health.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
+import { PersonaLibraryModule } from "./persona-library/persona-library.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
@@ -58,6 +59,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     JobsModule,
     NotificationsModule,
     OperationalContactsModule,
+    PersonaLibraryModule,
     ProjectsModule,
     RetentionModule,
     ServiceLibraryModule,
