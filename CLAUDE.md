@@ -2188,7 +2188,7 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     Library precedent.
 36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified, code-reviewed
     (6/8 confirmed findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings
-    above threshold), review packet published, awaiting the required second-role human review;
+    above threshold), required second-role human review complete (Jitesh D, "Approved as-is");
     not yet gated or merged (2026-08-22).** Closes the Persona Library module's last named gap,
     following the backend's own build-to-production arc (PR #50). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
@@ -2269,9 +2269,11 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     code review + security review findings, fixes, and validation evidence, with a decision
     section) was then prepared for the required second-role human review, since the
     implementing agent cannot also be its own reviewer (ADR-0010). See
-    `docs/project-state/dashboard-web-persona-library-approval-checklist.md`. **Awaiting that
-    review** — a gate decision, push/PR, and merge authorization each remain separate,
-    not-yet-requested next steps.
+    `docs/project-state/dashboard-web-persona-library-approval-checklist.md`. **Jitesh D
+    reviewed it and returned "Approved as-is,"** accepting the 2 open CONFIRMED findings (the
+    RBAC module-key coupling and the transitions-table quadruplication) as tracked debt. A gate
+    decision, push/PR, and merge authorization each remain separate, not-yet-requested next
+    steps.
 
 ## Recent decisions
 
@@ -5526,6 +5528,15 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   and the new `docs/project-state/dashboard-web-persona-library-approval-checklist.md`.
   **Awaiting that review** — a gate decision, push/PR, and merge authorization each remain
   separate, not-yet-requested next steps.
+- `[2026-08-22]` **Required second-role human review complete for
+  `dashboard-web-persona-library`.** The review packet (code review + security review findings,
+  fixes, and the 2 open accepted-debt items, with a decision section) was reviewed. **Jitesh D
+  reviewed it and returned "Approved as-is,"** accepting the 2 open CONFIRMED code-review
+  findings (the RBAC module-key coupling and the transitions-table quadruplication, findings
+  07–08) as tracked debt rather than requesting fixes. See
+  `docs/project-state/dashboard-web-persona-library-approval-checklist.md`'s "Sign-off" section.
+  A gate decision, push/PR, and merge authorization remain separate, not-yet-requested next
+  steps.
 
 ## Open client blockers
 
