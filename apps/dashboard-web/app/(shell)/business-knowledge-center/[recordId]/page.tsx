@@ -13,6 +13,7 @@ import {
   RECORD_TYPE_LABEL,
   tolerateDiscard,
 } from "@/lib/business-knowledge";
+import { dlStyle, h2Style, mutedStyle, sectionStyle } from "@/lib/detail-section-styles";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -123,23 +124,6 @@ export default async function BusinessKnowledgeDetailPage({
   );
 }
 
-const sectionStyle: React.CSSProperties = {
-  marginBottom: "2rem",
-};
-
-const h2Style: React.CSSProperties = {
-  fontSize: "1.125rem",
-  fontWeight: 600,
-  marginBottom: "0.75rem",
-};
-
-const dlStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(14rem, 1fr))",
-  gap: "0.75rem 1.5rem",
-  margin: 0,
-};
-
 const contentStyle: React.CSSProperties = {
   fontSize: "0.9375rem",
   color: "var(--webdesk-dashboard-color-foreground)",
@@ -152,12 +136,6 @@ const contentStyle: React.CSSProperties = {
 const richContentStyle: React.CSSProperties = {
   fontSize: "0.9375rem",
   color: "var(--webdesk-dashboard-color-foreground)",
-};
-
-const mutedStyle: React.CSSProperties = {
-  fontSize: "0.875rem",
-  color: "var(--webdesk-dashboard-color-foreground-muted)",
-  margin: 0,
 };
 
 const redactedStyle: React.CSSProperties = {

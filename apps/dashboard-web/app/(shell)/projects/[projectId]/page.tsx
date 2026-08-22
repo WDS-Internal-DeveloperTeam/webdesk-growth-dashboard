@@ -10,6 +10,12 @@ import { ProjectStatusActions } from "@/components/project-status-actions";
 import { ProjectTeamSection } from "@/components/project-team-section";
 import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import {
+  dlStyle as sharedDlStyle,
+  h2Style,
+  mutedStyle,
+  sectionStyle,
+} from "@/lib/detail-section-styles";
 import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
 import { formatTimestamp, getProjectDetail, projectStatusBadge } from "@/lib/projects";
 import { getApproverRoleId } from "@/lib/roles";
@@ -142,20 +148,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   );
 }
 
-const sectionStyle: React.CSSProperties = {
-  marginBottom: "2rem",
-};
-
-const h2Style: React.CSSProperties = {
-  fontSize: "1.125rem",
-  fontWeight: 600,
-  marginBottom: "0.75rem",
-};
-
+// This page's own `dlStyle` genuinely differs from the shared base (a real, pre-existing
+// `margin-bottom` this page relies on) — composed from the shared base rather than duplicated
+// outright, so the one real divergence stays visible instead of silently reappearing as a copy.
 const dlStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(14rem, 1fr))",
-  gap: "0.75rem 1.5rem",
+  ...sharedDlStyle,
   margin: "0 0 0.75rem",
 };
 
@@ -165,12 +162,6 @@ const monoStyle: React.CSSProperties = {
 
 const descriptionStyle: React.CSSProperties = {
   fontSize: "0.9375rem",
-  color: "var(--webdesk-dashboard-color-foreground-muted)",
-  margin: 0,
-};
-
-const mutedStyle: React.CSSProperties = {
-  fontSize: "0.875rem",
   color: "var(--webdesk-dashboard-color-foreground-muted)",
   margin: 0,
 };

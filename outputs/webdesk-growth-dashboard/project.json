@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-persona-library",
+    "current_gate": "G4-dashboard-web-persona-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -518,6 +518,20 @@
       "approved_commit": "0c5115d",
       "record": "docs/project-state/module-persona-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #50 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-persona-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-persona-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-22T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web Persona Library UI (branch dashboard-web-persona-library, not yet pushed/opened as a PR) -- list, detail, create/edit form, and status-actions screens for the already-live Persona Library backend (PR #50), closing the module's last named gap and its full build-to-production arc. No approved wireframe/screen spec exists for this module -- 03_Detailed_Module_Specifications.md section 21's own flat field list is the only source; sections mirror its grouping (Identity, Buyer profile, Narrative, Relationships, Status), the smallest honest reading of the backend's actual field set, matching the Projects/BKC/Service Library list/detail/form pages' own precedent for an unsourced screen. New packages/shared-types Persona/PersonaApprovalStatus -- a single flat shape, unlike Service Library's own Service/ServiceDetail split, since Persona Library has no sub-resource dimension tables to omit from the list view. Every long-text field is a plain textarea, not the RichTextEditor Service Library/Projects use -- this module was explicitly out of scope for the rich-text editor rollout, and the backend's own DTO stores these fields unsanitized as plain text. relatedServiceIds is a real, existence-validated RelationshipPicker against the services table, populated via a new getServicesForPersonaPicker(). PersonaStatusActions mirrors the backend's TRANSITIONS table by hand, reused verbatim from ServiceStatusActions since the backend's own table is itself a direct copy of Service Library's. Independent code review (this project's own code-review skill, 8-angle finder pass, 1-vote verification) surfaced 8 candidates after dedup, all 8 CONFIRMED, 6 fixed and 2 left as accepted, tracked debt -- most severe the RelationshipPicker's selected chips silently dropping any relatedServiceIds entry outside the picker's 100-row fetch window with no fallback, unlike the detail page's own raw-id fallback for the identical case (two independent finder angles converged on this one), fixed to render the raw id as its own chip; also fixed getServicesForPersonaPicker() having no failure isolation from the primary persona fetch (a transient Service Library outage crashed the whole detail/edit/new page, fixed to degrade to an empty list on failure), the services prop typed as the full ~19-field Service entity instead of a narrow type (narrowed via Pick<>), and two real duplication findings -- a byte-identical APPROVAL_STATUS_LABEL/APPROVAL_STATUS_BADGE map already independently maintained twice (extracted into a new shared lib/artifact-approval-status.ts) and a 4th/3rd independent copy of the detail-page/list-page style constants respectively (extracted into new shared lib/detail-section-styles.ts/lib/list-filter-styles.ts, retrofitted onto all 4/3 sibling pages -- Projects' own real dlStyle margin divergence preserved via composition). 2 CONFIRMED findings left as accepted, tracked debt, recorded directly in code: Persona Library's picker depending on Service Library's RBAC module key by coincidence (both backend modules independently declare the identical MODULE_KEY literal, noted in personas.controller.ts's own doc comment), and PersonaStatusActions being a 4th independent hand-copy of the approval-transition table shape (the earlier 'disproportionate for one consumer' debt-acceptance reasoning, first recorded for ServiceStatusActions's own 3rd-copy acceptance, needs re-litigating at 4 consumers, flagged explicitly in the component's own doc comment). Security review (run separately) found 0 findings above threshold -- confirmed the new raw-id-fallback rendering is plain JSX text with no dangerouslySetInnerHTML, every extracted style/constant value is byte-identical to what it replaced, the Pick<> narrowing is TypeScript-only with the runtime payload unchanged, the doc-comment-only backend edit has no behavior change, and the fetch-degrade-on-failure fix fails closed with the underlying call still routed through cookie-forwarded auth/RBAC. Final numbers: 366/366 dashboard-web unit tests (43 new), 500/500 dashboard-api unit tests (unaffected), typecheck/lint/check-css-tokens.mjs/next build/prettier all clean across packages/shared-types, dashboard-web, and dashboard-api, pnpm audit 0 vulnerabilities. Live-rendered in the Browser pane: all four new /persona-library routes plus every touched sibling route (Service Library, Business Knowledge Center, Projects list and detail) confirmed to redirect an unauthenticated visitor cleanly, zero console/server errors. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-22, decision 'Approved as-is', accepting the 2 open CONFIRMED code-review findings as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-persona-library-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "b7ba3e8",
+      "record": "docs/project-state/dashboard-web-persona-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -1920,6 +1934,36 @@
       },
       "project_version_before": 57,
       "project_version_after": 58
+    },
+    {
+      "timestamp": "2026-08-22T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "reviewed the Persona Library UI Review Packet (dashboard-web-persona-library) and returned 'Approved as-is'",
+      "details": {
+        "scope": "Full code-review disposition (8 candidates after dedup, all 8 CONFIRMED, 6 fixed, 2 accepted as tracked debt) and full security-review disposition (0 findings above threshold), for branch dashboard-web-persona-library, reviewed via the code-review/security-review skill outputs recorded in CLAUDE.md's Active tasks item 36 and the published review packet.",
+        "result": "Accepting the 2 open CONFIRMED code-review findings (the RBAC module-key coupling between Persona Library and Service Library, and the approval-transition table now quadruplicated across 4 dashboard-web components) as tracked debt rather than requesting fixes. Satisfies ADR-0010's separation-of-duties requirement for this slice -- the implementing agent could not also be its own reviewer. Recorded in docs/project-state/dashboard-web-persona-library-approval-checklist.md's 'Sign-off' section. A gate decision, push/PR, and merge authorization remain separate, not-yet-requested next steps.",
+        "reviewed_commit": "b7ba3e8",
+        "branch": "dashboard-web-persona-library"
+      },
+      "project_version_before": 58,
+      "project_version_after": 59
+    },
+    {
+      "timestamp": "2026-08-22T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-dashboard-web-persona-library for dashboard-web-persona-library -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-dashboard-web-persona-library",
+        "scope": "dashboard-web-persona-library",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-22, decision 'Approved as-is', accepting the 2 open CONFIRMED findings as tracked debt, no disputes raised) was already complete before the gate was requested. See docs/project-state/dashboard-web-persona-library-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "b7ba3e8",
+        "branch": "dashboard-web-persona-library"
+      },
+      "project_version_before": 59,
+      "project_version_after": 60
     }
   ]
 }

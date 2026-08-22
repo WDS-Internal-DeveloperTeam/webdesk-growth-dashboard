@@ -1,17 +1,8 @@
 import Link from "next/link";
-import type { BusinessKnowledgeRecord } from "@webdesk/shared-types";
+import type { Persona } from "@webdesk/shared-types";
 import { ContentContainer, EmptyState, PageHeader, StatusBadge } from "@webdesk/ui";
 import { PageSizeSelect } from "@/components/page-size-select";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
-import {
-  buildBusinessKnowledgeHref,
-  businessKnowledgeStatusBadge,
-  formatTimestamp,
-  getBusinessKnowledgeRecords,
-  parseBusinessKnowledgeSearchParams,
-  RECORD_TYPE_LABEL,
-} from "@/lib/business-knowledge";
-import { RECORD_TYPE_VALUES, STATUS_VALUES } from "@/lib/business-knowledge-query";
 import {
   filterSelectStyle as selectStyle,
   filterSubmitButtonStyle as submitButtonStyle,
@@ -19,42 +10,51 @@ import {
 import { listTableCellStyle, listTableHeaderCellStyle } from "@/lib/list-table-styles";
 import { buildHrefBySize } from "@/lib/pagination";
 import { getServerSession } from "@/lib/server-session";
+import {
+  buildPersonaLibraryHref,
+  formatTimestamp,
+  getPersonas,
+  parsePersonaLibrarySearchParams,
+  personaApprovalStatusBadge,
+} from "@/lib/persona-library";
+import { APPROVAL_STATUS_LABEL, APPROVAL_STATUS_VALUES } from "@/lib/persona-library-query";
 
 export const dynamic = "force-dynamic";
 
-interface BusinessKnowledgeListPageProps {
+interface PersonaLibraryListPageProps {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** No approved wireframe or spec exists for this screen (the canonical spec names 10 record types
- *  and a 5-value status vocabulary, but no field schema or screens) — renders exactly what
- *  `GET /business-knowledge/records` actually returns and supports: `recordType`/`status` filters
- *  and offset pagination, no search or sort (the backend's `list()` has neither), matching the
- *  Projects list page's own "smallest honest reading" precedent. Each row's title links to
- *  `/business-knowledge-center/:id`, the real detail page. */
-export default async function BusinessKnowledgeListPage({
+/**
+ * No approved wireframe/screen spec exists for this module (`03_Detailed_Module_Specifications.md
+ * §21` is a flat field list, no screen description) — renders exactly what
+ * `GET /persona-library/personas` returns and supports (an `approvalStatus` filter, `search`, and
+ * offset pagination, no sort), matching the Projects/Business Knowledge Center list pages' own
+ * "smallest honest reading" precedent for an unsourced screen.
+ */
+export default async function PersonaLibraryListPage({
   searchParams,
-}: BusinessKnowledgeListPageProps) {
+}: PersonaLibraryListPageProps) {
   // The (shell) layout already redirects unauthenticated callers to sign-in before this page
-  // renders — this defensive fallback avoids firing getBusinessKnowledgeRecords() in parallel with
-  // a redirect that would just discard the result, matching every other page in this app.
+  // renders — this defensive fallback avoids firing the list fetch in parallel with a redirect
+  // that would just discard the result, matching every other page in this app.
   const session = await getServerSession();
   if (!session) {
     return null;
   }
 
-  const query = parseBusinessKnowledgeSearchParams(await searchParams);
-  const { items: records, hasNextPage } = await getBusinessKnowledgeRecords(query);
-  const hasFilters = query.recordType !== null || query.status !== null;
-  const isPastLastPage = records.length === 0 && query.offset > 0;
+  const query = parsePersonaLibrarySearchParams(await searchParams);
+  const { items: personas, hasNextPage } = await getPersonas(query);
+  const hasFilters = query.approvalStatus !== null;
+  const isPastLastPage = personas.length === 0 && query.offset > 0;
 
   return (
     <ContentContainer>
       <PageHeader
-        title="Business Knowledge Center"
+        title="Persona Library"
         contextActions={
-          <Link href="/business-knowledge-center/new" style={primaryActionLinkStyle}>
-            New record
+          <Link href="/persona-library/new" style={primaryActionLinkStyle}>
+            New persona
           </Link>
         }
       />
@@ -63,6 +63,10 @@ export default async function BusinessKnowledgeListPage({
         method="get"
         style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.5rem" }}
       >
+        {/* Preserves the reader's page-size choice across a filter submit — without it, a native
+            GET form submission builds its target URL purely from this form's own named fields,
+            silently dropping any existing `?pageSize=` and resetting it back to the default. */}
+        <input type="hidden" name="pageSize" value={query.pageSize} />
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
           <span
             style={{
@@ -70,24 +74,22 @@ export default async function BusinessKnowledgeListPage({
               color: "var(--webdesk-dashboard-color-foreground-muted)",
             }}
           >
-            Record type
+            Approval status
           </span>
-          {/* `key` forces React to remount this select whenever the underlying filter value
-              changes, including back to "" on Clear filters. Without it, a Next.js `<Link>`
-              soft-navigation re-renders this same DOM node in place, and an uncontrolled
-              `<select>`'s `defaultValue` is only honored on the node's *first* mount — the
-              browser keeps showing whatever the reader last picked even after the URL (and every
-              other prop) has reset. */}
+          {/* `key` forces a remount whenever the underlying filter value changes, including back
+              to "" on Clear filters — a Next.js <Link> soft-navigation otherwise re-renders this
+              same DOM node in place, and an uncontrolled <select>'s defaultValue only takes effect
+              on first mount (see business-knowledge-center/page.tsx's own identical note). */}
           <select
-            key={query.recordType ?? "all-record-types"}
-            name="recordType"
-            defaultValue={query.recordType ?? ""}
+            key={query.approvalStatus ?? "all-approval-statuses"}
+            name="approvalStatus"
+            defaultValue={query.approvalStatus ?? ""}
             style={selectStyle}
           >
-            <option value="">All record types</option>
-            {RECORD_TYPE_VALUES.map((value) => (
+            <option value="">All approval statuses</option>
+            {APPROVAL_STATUS_VALUES.map((value) => (
               <option key={value} value={value}>
-                {RECORD_TYPE_LABEL[value]}
+                {APPROVAL_STATUS_LABEL[value]}
               </option>
             ))}
           </select>
@@ -99,28 +101,23 @@ export default async function BusinessKnowledgeListPage({
               color: "var(--webdesk-dashboard-color-foreground-muted)",
             }}
           >
-            Status
+            Search
           </span>
-          <select
-            key={query.status ?? "all-statuses"}
-            name="status"
-            defaultValue={query.status ?? ""}
+          <input
+            key={query.search ?? "no-search"}
+            type="text"
+            name="search"
+            defaultValue={query.search ?? ""}
+            maxLength={255}
             style={selectStyle}
-          >
-            <option value="">All statuses</option>
-            {STATUS_VALUES.map((value) => (
-              <option key={value} value={value}>
-                {businessKnowledgeStatusBadge(value).label}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <button type="submit" style={submitButtonStyle}>
           Apply
         </button>
-        {hasFilters ? (
+        {hasFilters || query.search ? (
           <Link
-            href="/business-knowledge-center"
+            href="/persona-library"
             style={{ alignSelf: "flex-end", fontSize: "0.875rem", padding: "0.4rem 0" }}
           >
             Clear filters
@@ -128,34 +125,34 @@ export default async function BusinessKnowledgeListPage({
         ) : null}
       </form>
 
-      {records.length === 0 ? (
+      {personas.length === 0 ? (
         <EmptyState
           title={
             isPastLastPage
-              ? "No more records"
-              : hasFilters
-                ? "No records match your filters"
-                : "No records yet"
+              ? "No more personas"
+              : hasFilters || query.search
+                ? "No personas match your filters"
+                : "No personas yet"
           }
           description={
             isPastLastPage
               ? "You've gone past the last page of results."
-              : hasFilters
-                ? "Try a different record type or status."
-                : "Business knowledge records created for this organization will appear here."
+              : hasFilters || query.search
+                ? "Try a different status or search term."
+                : "Personas created for this organization will appear here."
           }
           action={
             isPastLastPage ? (
               <Link
-                href={buildBusinessKnowledgeHref(query, {
+                href={buildPersonaLibraryHref(query, {
                   offset: Math.max(0, query.offset - query.pageSize),
                 })}
                 style={{ fontSize: "0.875rem" }}
               >
                 Previous
               </Link>
-            ) : hasFilters ? (
-              <Link href="/business-knowledge-center" style={{ fontSize: "0.875rem" }}>
+            ) : hasFilters || query.search ? (
+              <Link href="/persona-library" style={{ fontSize: "0.875rem" }}>
                 Clear filters
               </Link>
             ) : undefined
@@ -167,15 +164,15 @@ export default async function BusinessKnowledgeListPage({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
                 <tr>
-                  <th style={thStyle}>Title</th>
-                  <th style={thStyle}>Record type</th>
-                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Buyer type</th>
+                  <th style={thStyle}>Approval</th>
                   <th style={thStyle}>Updated</th>
                 </tr>
               </thead>
               <tbody>
-                {records.map((record) => (
-                  <RecordRow key={record.id} record={record} />
+                {personas.map((persona) => (
+                  <PersonaRow key={persona.id} persona={persona} />
                 ))}
               </tbody>
             </table>
@@ -191,19 +188,19 @@ export default async function BusinessKnowledgeListPage({
             }}
           >
             <span style={{ color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
-              Showing {query.offset + 1}–{query.offset + records.length}
+              Showing {query.offset + 1}–{query.offset + personas.length}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
               <PageSizeSelect
                 value={query.pageSize}
                 hrefBySize={buildHrefBySize((pageSize) =>
-                  buildBusinessKnowledgeHref(query, { pageSize }),
+                  buildPersonaLibraryHref(query, { pageSize }),
                 )}
               />
               <div style={{ display: "flex", gap: "0.75rem" }}>
                 {query.offset > 0 ? (
                   <Link
-                    href={buildBusinessKnowledgeHref(query, {
+                    href={buildPersonaLibraryHref(query, {
                       offset: Math.max(0, query.offset - query.pageSize),
                     })}
                   >
@@ -212,9 +209,7 @@ export default async function BusinessKnowledgeListPage({
                 ) : null}
                 {hasNextPage ? (
                   <Link
-                    href={buildBusinessKnowledgeHref(query, {
-                      offset: query.offset + query.pageSize,
-                    })}
+                    href={buildPersonaLibraryHref(query, { offset: query.offset + query.pageSize })}
                   >
                     Next
                   </Link>
@@ -232,21 +227,21 @@ const thStyle = listTableHeaderCellStyle;
 
 const tdStyle = listTableCellStyle;
 
-function RecordRow({ record }: { readonly record: BusinessKnowledgeRecord }) {
-  const badge = businessKnowledgeStatusBadge(record.status);
+function PersonaRow({ persona }: { readonly persona: Persona }) {
+  const approvalBadge = personaApprovalStatusBadge(persona.approvalStatus);
   return (
     <tr>
       <td style={tdStyle}>
-        <Link href={`/business-knowledge-center/${record.id}`}>{record.title}</Link>
+        <Link href={`/persona-library/${persona.id}`}>{persona.name}</Link>
       </td>
       <td style={{ ...tdStyle, color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
-        {RECORD_TYPE_LABEL[record.recordType]}
+        {persona.buyerType ?? "—"}
       </td>
       <td style={tdStyle}>
-        <StatusBadge status={badge.token} label={badge.label} />
+        <StatusBadge status={approvalBadge.token} label={approvalBadge.label} />
       </td>
       <td style={{ ...tdStyle, color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
-        {formatTimestamp(record.updatedAt)}
+        {formatTimestamp(persona.updatedAt)}
       </td>
     </tr>
   );
