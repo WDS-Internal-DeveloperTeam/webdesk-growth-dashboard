@@ -2186,6 +2186,44 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     Library module backend is now genuinely live in production.** No `dashboard-web` UI exists yet
     for this module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
     Library precedent.
+36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified; not yet
+    reviewed, gated, or merged (2026-08-22).** Closes the Persona Library module's last named
+    gap, following the backend's own build-to-production arc (PR #50). Not started
+    automatically — built directly on the explicit "Start the dashboard-web UI for it"
+    instruction. No approved wireframe/screen spec exists for this module —
+    `03_Detailed_Module_Specifications.md §21`'s own flat field list is the only source; sections
+    mirror its grouping (Identity, Buyer profile, Narrative, Relationships, Status), the smallest
+    honest reading of the backend's actual field set, matching the Projects/BKC/Service Library
+    list/detail/form pages' own precedent for an unsourced screen. New `packages/shared-types`
+    `Persona`/`PersonaApprovalStatus` — a single flat shape, unlike Service's own `Service`/
+    `ServiceDetail` split, since Persona Library has no sub-resource dimension tables to omit
+    from the list view. `lib/persona-library-query.ts`/`lib/persona-library.ts` mirror
+    `lib/service-library-query.ts`/`lib/service-library.ts`'s own zero-non-type-import-file
+    split. Every long-text field (`goals`/`pains`/`triggers`/`objections`/`decisionCriteria`/
+    `badFitSignals`/`messagingTrack`/`ctaPreferences`) is a plain `<textarea>`, not the
+    `RichTextEditor` Service Library/Projects use — this module was explicitly out of scope for
+    the rich-text editor rollout, and the backend's own DTO stores these fields unsanitized as
+    plain text, so treating them as HTML would be dishonest. `roles`/`industries` are free-text
+    `TagListField`s (unvalidated, matching Service Library's own `icpIds` shape);
+    `relatedServiceIds` is a real, existence-validated `RelationshipPicker` against the
+    `services` table — the one genuine cross-module relationship this module has, populated via
+    a new `getServicesForPersonaPicker()` that reuses the existing `getServices()` fetch at its
+    largest real page size (100), rather than a new fetch function. `PersonaStatusActions`
+    mirrors the backend's `TRANSITIONS` table by hand, reused verbatim from
+    `ServiceStatusActions` since the backend's own table is itself a direct copy of Service
+    Library's (D3) — same deliberate non-use of the shared `ApprovalBlock` component, for the
+    identical reason `ServiceStatusActions` already documents (the backend's status-transition
+    endpoint captures no submitter/reviewer identity or reason). 40 new `dashboard-web` unit
+    tests (22 lib, 8 form, 10 status-actions), 363/363 overall passing;
+    typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean across
+    `packages/shared-types` and `dashboard-web`, also re-verified clean on `dashboard-api` and
+    `dashboard-worker` (both consumers of the additive shared-types change); `pnpm audit` 0
+    vulnerabilities. **Live-rendered in the Browser pane**: all four new `/persona-library`
+    routes confirmed to redirect an unauthenticated visitor to `/auth/sign-in` cleanly, zero
+    console/server errors. Pushed as branch `dashboard-web-persona-library`. Not yet reviewed,
+    gated, or merged — code review, security review, second-role human review, a gate decision,
+    push/PR, and merge authorization are each their own separate, not-yet-requested next step,
+    unchanged from this project's standing discipline.
 
 ## Recent decisions
 
@@ -5393,6 +5431,12 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   live in production**, closing out this slice's full build-to-production arc. No `dashboard-web`
   UI exists yet for this module — a separate, not-yet-requested next step, matching the
   Projects/BKC/Service Library precedent.
+- `[2026-08-22]` **Built the `dashboard-web` Persona Library UI**, under the explicit "Start the
+  dashboard-web UI for it" instruction, following the backend's own build-to-production arc
+  (PR #50). See "Active tasks" item 36 above for the full account. Pushed as branch
+  `dashboard-web-persona-library`. Not yet reviewed, gated, or merged — code review, security
+  review, second-role human review, a gate decision, push/PR, and merge authorization each remain
+  their own separate, not-yet-requested next step.
 
 ## Open client blockers
 
