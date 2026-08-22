@@ -4,6 +4,38 @@ import { getPersonaLibraryModels } from "./models.js";
 import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { PersonaApprovalStatus, PersonaEntity } from "./entities.js";
 
+/** The three array fields additionally accept an explicit `null` — meaning "clear to empty" —
+ *  matching the scalar fields' own null-to-clear convention (code-review finding: arrays
+ *  previously accepted only `[]` to clear, `null` was rejected with a 400). Applies to both
+ *  `create()` and `update()`: on create, `null` is equivalent to omitting the field (both default
+ *  to `[]`); on update, `null` actively clears a previously-set value. */
+type PersonaArrayFieldOverrides = {
+  readonly roles?: readonly string[] | null;
+  readonly industries?: readonly string[] | null;
+  readonly relatedServiceIds?: readonly string[] | null;
+};
+
+/** Every field a caller may set/change, i.e. `PersonaEntity` minus its server-only-managed
+ *  columns (`id`, `approvalStatus`, `version`, `createdAt`, `updatedAt`) — derived, not
+ *  hand-retyped, so a future field added to `PersonaEntity` is a compile error here until it's
+ *  also handled by `create()`/`update()`, not a silent gap (code-review finding). */
+type PersonaContentFields = Omit<
+  PersonaEntity,
+  | "id"
+  | "approvalStatus"
+  | "version"
+  | "createdAt"
+  | "updatedAt"
+  | "roles"
+  | "industries"
+  | "relatedServiceIds"
+> &
+  PersonaArrayFieldOverrides;
+
+/** `update()`'s patch shape: every content field is optional (a partial edit), `publicId` is
+ *  excluded (immutable after create). */
+type PersonaUpdateFields = Omit<PersonaContentFields, "publicId">;
+
 export interface PersonaListFilter {
   readonly approvalStatus?: PersonaApprovalStatus;
   readonly search?: string;
@@ -25,25 +57,9 @@ const MAX_LIST_LIMIT = 200;
 export class PersonaRepository {
   private readonly model = getPersonaLibraryModels().Persona;
 
-  async create(input: {
-    publicId: string;
-    name: string;
-    buyerType?: string | null;
-    companySize?: string | null;
-    roles?: readonly string[];
-    industries?: readonly string[];
-    geography?: string | null;
-    goals?: string | null;
-    pains?: string | null;
-    triggers?: string | null;
-    objections?: string | null;
-    decisionCriteria?: string | null;
-    relatedServiceIds?: readonly string[];
-    badFitSignals?: string | null;
-    messagingTrack?: string | null;
-    ctaPreferences?: string | null;
-    createdBy?: string | null;
-  }): Promise<PersonaEntity> {
+  async create(
+    input: Partial<PersonaContentFields> & Pick<PersonaContentFields, "publicId" | "name">,
+  ): Promise<PersonaEntity> {
     const instance = await this.model.create({
       publicId: input.publicId,
       name: input.name,
@@ -90,7 +106,13 @@ export class PersonaRepository {
     const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
     const rows = await this.model.findAll({
       where,
-      order: [["updatedAt", "DESC"]],
+      // `id` is a secondary sort key so ties on `updatedAt` (realistic for a bulk import/seed)
+      // don't shift order between two separate paginated queries, which could otherwise
+      // duplicate or skip a row across pages (code-review finding).
+      order: [
+        ["updatedAt", "DESC"],
+        ["id", "ASC"],
+      ],
       limit,
       offset: filter.offset ?? 0,
     });
@@ -106,29 +128,24 @@ export class PersonaRepository {
    * gets the post-update row, including the server-computed `version`, back from the `UPDATE`
    * itself rather than a second round trip.
    */
-  async update(
-    id: string,
-    patch: Partial<{
-      name: string;
-      buyerType: string | null;
-      companySize: string | null;
-      roles: readonly string[];
-      industries: readonly string[];
-      geography: string | null;
-      goals: string | null;
-      pains: string | null;
-      triggers: string | null;
-      objections: string | null;
-      decisionCriteria: string | null;
-      relatedServiceIds: readonly string[];
-      badFitSignals: string | null;
-      messagingTrack: string | null;
-      ctaPreferences: string | null;
-      updatedBy: string | null;
-    }>,
-  ): Promise<PersonaEntity | null> {
+  async update(id: string, patch: Partial<PersonaUpdateFields>): Promise<PersonaEntity | null> {
+    // The three array columns are NOT NULL — an explicit `null` in the patch (see
+    // PersonaUpdateFields) means "clear to empty", not "store null", so it's normalized here
+    // before the write; `undefined` (the key omitted entirely) is left untouched, leaving the
+    // column unchanged, same as every other field.
+    const normalized: Record<string, unknown> = { ...patch };
+    if (patch.roles !== undefined) {
+      normalized.roles = patch.roles ?? [];
+    }
+    if (patch.industries !== undefined) {
+      normalized.industries = patch.industries ?? [];
+    }
+    if (patch.relatedServiceIds !== undefined) {
+      normalized.relatedServiceIds = patch.relatedServiceIds ?? [];
+    }
+
     const [affectedCount, affectedRows] = await this.model.update(
-      { ...patch, version: literal("version + 1") },
+      { ...normalized, version: literal("version + 1") },
       { where: { id }, returning: true },
     );
     if (affectedCount === 0 || !affectedRows[0]) {
@@ -148,14 +165,17 @@ export class PersonaRepository {
     nextStatus: PersonaApprovalStatus,
     updatedBy: string | null,
   ): Promise<UpdatePersonaStatusResult> {
-    const [affectedCount] = await this.model.update(
+    // `returning: true` gets the post-update row from the same statement — avoiding both a
+    // second round trip and the narrow window a separate `findByPk` read would otherwise leave
+    // between this write and reading it back, where a concurrent write could make the entity
+    // returned to the caller reflect a different status than the one this call just wrote
+    // (code-review finding; mirrors `update()`'s own already-correct use of `returning: true`).
+    const [affectedCount, affectedRows] = await this.model.update(
       { approvalStatus: nextStatus, updatedBy },
-      { where: { id, approvalStatus: expectedCurrentStatus } },
+      { where: { id, approvalStatus: expectedCurrentStatus }, returning: true },
     );
-    if (affectedCount > 0) {
-      const instance = await this.model.findByPk(id);
-      // Can't be missing: the UPDATE above just matched this exact id.
-      return { outcome: "updated", entity: toEntityWithIsoDates<PersonaEntity>(instance!) };
+    if (affectedCount > 0 && affectedRows[0]) {
+      return { outcome: "updated", entity: toEntityWithIsoDates<PersonaEntity>(affectedRows[0]) };
     }
     const current = await this.model.findOne({ where: { id } });
     if (!current) {

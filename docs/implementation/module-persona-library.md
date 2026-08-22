@@ -1,7 +1,8 @@
 # Persona Library module backend (as-built)
 
 **Status:** Built, fully validated (independently re-verified, not just trusted from the build's
-own report), not yet reviewed, gated, or merged. Branch `module-persona-library`, off `main` at
+own report), independently code-reviewed (9/10 confirmed findings fixed, 1 accepted as tracked
+debt), not yet security-reviewed, gated, or merged. Branch `module-persona-library`, off `main` at
 the commit recording PR #49's merge as live in production.
 
 ## 1. Why this exists, and its scope
@@ -123,9 +124,81 @@ already-hardened precedent.
   own e2e suite doesn't attempt this race either. The atomic compare-and-swap conflict path is
   instead covered deterministically at the repository-integration-test and mocked-service-unit-
   test levels.
-- **No trigram/fuzzy-search index** — Service Library added one because the canonical data-model
-  doc explicitly required it for that module only. Persona Library uses plain `ILIKE` +
-  `escapeLikePattern()` search, matching Projects'/Business Knowledge Center's own precedent.
+- **No trigram/fuzzy-search index** at initial build — since fixed in the code-review round below
+  (§7), Persona Library now has the same `pg_trgm` GIN index on `name` Service Library has on
+  `canonical_name`.
 
 `apps/dashboard-web` is untouched — this is a backend-only slice, matching every prior module's
 own build-the-backend-first precedent. No UI exists yet for this module.
+
+## 7. Independent code review
+
+Ran this project's own `code-review` skill (high effort, 8 finder angles, 1-vote verification) —
+12 candidates surfaced after dedup, 11 CONFIRMED and 1 downgraded to PLAUSIBLE (inherited
+precedent). 10 kept in the final report per the review's own cap; 9 fixed, 1 left as accepted,
+tracked debt:
+
+- **Most severe (correctness):** `update()` unconditionally incremented `version` even on a fully
+  empty patch (`{}`), since `updatePersonaSchema` had no minimum-field guard — burning a version
+  number and an empty-`afterState` audit event for a no-op save. Fixed with a `.refine()` on the
+  schema rejecting an empty object with a clean 400.
+- **Correctness:** `relatedServiceIds` had zero existence validation despite the target table
+  (`services`) already existing — weaker than the precedent it claimed to follow (Service
+  Library's own unvalidated fields point at genuinely-nonexistent modules). Fixed by adding
+  `findByIds()` to `ServiceRepository` (additive, mirroring the dimension repositories' own
+  method), exporting `SERVICE_REPOSITORY` from `ServiceLibraryModule`, and wiring a new
+  `PersonasService.assertServiceIdsExist()` (mirroring `ServicesService.assertIdsExist()`) into
+  both `create()` and `update()`. A malformed (non-UUID) id is filtered out before ever reaching
+  the query — the same guard `UsersService.findById()` already uses — since Postgres's `uuid`
+  column type would otherwise reject it with a raw driver error instead of a clean 400.
+- **Efficiency:** `update()` pre-fetched the full persona via `findById()` purely to 404-check,
+  then never used the result — unlike Service Library's identical-looking pattern, where the
+  fetched value is load-bearing (FK re-validation, rich-text diffing). Fixed by removing the
+  wasted read; the repository's own `update()` already 404s cleanly via its
+  null-on-zero-affected-rows return.
+- **Efficiency:** `updateStatus()`'s compare-and-swap `UPDATE` omitted `returning: true` and did a
+  separate `findByPk` read afterward, inconsistent with the sibling `update()` method in the same
+  file, and opening a narrow window where a concurrent write could make the returned entity
+  reflect a different write than the one just performed. Fixed to use `returning: true` directly,
+  matching `update()`'s own already-correct pattern.
+- **Efficiency:** no `pg_trgm` trigram index on `name`, despite Service Library's own migration one
+  module earlier adding one for the identical `ILIKE` search shape, citing the same canonical
+  requirement. Fixed by adding the extension + GIN trigram index to migration `00052`.
+- **Correctness:** array fields (`roles`/`industries`/`relatedServiceIds`) rejected an explicit
+  `null` (400) while every scalar field accepted `null` to clear — a real asymmetry within the
+  same DTO. Fixed by widening the array Zod schemas to `.nullish()` and normalizing `null` → `[]`
+  in the repository's `update()` (the array columns are `NOT NULL`, so `null` can never be stored
+  literally).
+- **Correctness:** `create()`'s `publicId` uniqueness pre-check is TOCTOU — a losing concurrent
+  request's real unique-index violation had no catch, surfacing as a raw 500. Fixed with a
+  try/catch around the insert, checked by `error.name === "SequelizeUniqueConstraintError"` (not
+  `instanceof`, since `dashboard-api` never imports `sequelize` directly per ADR-0006's
+  `only-database-package-touches-sequelize` boundary — this was caught by the typecheck step, not
+  assumed).
+- **Correctness:** `list()` sorted only by `updatedAt DESC` with no tiebreaker, risking a
+  duplicated or skipped row across paginated queries when rows share a timestamp (realistic for a
+  bulk import). Fixed by adding `id ASC` as a secondary sort key.
+- **Simplification:** `create()`'s and `update()`'s repository input types were hand-typed
+  anonymous object literals independently re-listing `PersonaEntity`'s fields, with no
+  compiler-enforced relationship to it. Fixed by deriving both via `Omit`/`Pick` from
+  `PersonaEntity`, so a future field added there is a compile error here until also handled.
+- **1 CONFIRMED finding left as accepted, tracked debt** (altitude): the entire 8-state
+  `TRANSITIONS` table and `changeApprovalStatus()` method is a byte-for-byte duplicate of Service
+  Library's identical, already-code-reviewed pattern (with its own real bug history — the
+  already-fixed `-> draft` RBAC-action bug), with no shared "artifact approval workflow"
+  abstraction anywhere in `packages/`. Extracting one would mean new shared infrastructure serving
+  a single new consumer during a review-fix pass — judged disproportionate; recorded as a known
+  follow-up rather than built speculatively.
+
+New/updated coverage: 7 new `dashboard-api` unit tests (relatedServiceIds validation in both
+`create()`/`update()`, the malformed-id guard, the TOCTOU translation, a non-uniqueness-error
+passthrough — 35/35 total), 1 new `packages/database` integration test (the array-null-clearing
+normalization), 3 new `dashboard-api` e2e tests (real relatedServiceIds validated against a real
+service fixture, an empty-patch 400, an explicit-null array clear) plus a rewrite of the one
+existing e2e test that assumed `relatedServiceIds` was unvalidated. Re-validated: 500/500
+`dashboard-api` unit tests, 185/185 `packages/database` integration tests, 171/171 `dashboard-api`
+e2e tests, migration up/down/up round-trip clean, `validate:module-registry` passing, `pnpm audit`
+0 vulnerabilities, `boundaries:check` 0 violations (confirming the new `PersonaLibraryModule` →
+`ServiceLibraryModule` import and the deliberate avoidance of a direct `sequelize` import in
+`dashboard-api` are both architecturally clean), typecheck/lint/prettier all clean across
+`apps/dashboard-api` and `packages/database`.

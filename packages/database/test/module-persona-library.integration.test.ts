@@ -129,6 +129,27 @@ describe("Persona Library module (real disposable database)", () => {
       ).toBeNull();
     });
 
+    it("update() normalizes an explicit null on an array field to an empty array, and leaves an omitted array field untouched", async () => {
+      const created = await personas.create({
+        publicId: uniqueId("PERSONA"),
+        name: "Array Clearing Fixture",
+        roles: ["CTO"],
+        industries: ["SaaS"],
+        relatedServiceIds: ["SVC-1"],
+      });
+
+      // roles: null means "clear it"; industries omitted entirely means "leave it as-is" — the
+      // NOT NULL array column can never actually store null, so this proves the repository's own
+      // null-to-empty-array normalization, not a raw pass-through to Postgres (code-review
+      // finding: this previously only accepted `[]` to clear, rejecting `null` with a 400 at the
+      // DTO layer before it ever reached here — this test exercises the repository's own half of
+      // that fix directly).
+      const updated = await personas.update(created.id, { roles: null });
+      expect(updated?.roles).toEqual([]);
+      expect(updated?.industries).toEqual(["SaaS"]);
+      expect(updated?.relatedServiceIds).toEqual(["SVC-1"]);
+    });
+
     it("updateStatus() changes approvalStatus when the expected current status matches, and does not touch version", async () => {
       const created = await personas.create({
         publicId: uniqueId("PERSONA"),

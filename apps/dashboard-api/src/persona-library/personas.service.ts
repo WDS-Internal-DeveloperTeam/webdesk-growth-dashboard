@@ -10,6 +10,7 @@ import type {
   PersonaEntity,
   PersonaListFilter,
   PersonaRepository,
+  ServiceRepository,
 } from "@webdesk/database";
 import { PERSONA_REPOSITORY } from "./persona-library.constants.js";
 import type { CreatePersonaDto, UpdatePersonaDto } from "./persona-library.dto.js";
@@ -17,8 +18,15 @@ import type { CreatePersonaDto, UpdatePersonaDto } from "./persona-library.dto.j
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuthorizationService } from "../authz/authorization.service.js";
+import { SERVICE_REPOSITORY } from "../service-library/service-library.constants.js";
 
 const MODULE_KEY = "service_persona_proof";
+
+/** A malformed (non-UUID) id can never resolve to a real service — filtered out before querying
+ *  rather than sent to Postgres, whose `uuid` column type would otherwise reject it with a raw
+ *  driver error the global exception filter turns into an opaque 500 instead of a clean 400 (same
+ *  guard `UsersService.findById()` already uses for the identical reason). */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The real, seeded RBAC action (`06_Roles_and_Permissions.md:42`) required for a given
  *  `approvalStatus` transition — identical vocabulary to Service Library's own. */
@@ -58,20 +66,57 @@ const TRANSITIONS: Readonly<
 export class PersonasService {
   constructor(
     @Inject(PERSONA_REPOSITORY) private readonly personas: PersonaRepository,
+    @Inject(SERVICE_REPOSITORY) private readonly services: ServiceRepository,
     private readonly authorizationService: AuthorizationService,
     private readonly auditService: AuditService,
   ) {}
 
+  /** Validates `relatedServiceIds` against the real, already-existing `services` table — mirrors
+   *  `ServicesService.assertIdsExist()` exactly (code-review finding: this field previously had no
+   *  validation at all, weaker than the precedent it claimed to follow, since Service Library's
+   *  own unvalidated fields point at modules that genuinely don't exist yet, unlike `services`). */
+  private async assertServiceIdsExist(ids: readonly string[] | null | undefined): Promise<void> {
+    if (!ids || ids.length === 0) {
+      return;
+    }
+    const wellFormedIds = ids.filter((id) => UUID_PATTERN.test(id));
+    const found = wellFormedIds.length > 0 ? await this.services.findByIds(wellFormedIds) : [];
+    const foundIds = new Set(found.map((row) => row.id));
+    const missing = ids.filter((id) => !foundIds.has(id));
+    if (missing.length > 0) {
+      throw new BadRequestException(`relatedServiceIds not found: ${missing.join(", ")}`);
+    }
+  }
+
   async create(input: CreatePersonaDto, actorUserId: string): Promise<PersonaEntity> {
-    const existing = await this.personas.findByPublicId(input.publicId);
+    const [existing] = await Promise.all([
+      this.personas.findByPublicId(input.publicId),
+      this.assertServiceIdsExist(input.relatedServiceIds),
+    ]);
     if (existing) {
       throw new BadRequestException(`publicId already in use: ${input.publicId}`);
     }
 
-    const created = await this.personas.create({
-      ...input,
-      createdBy: actorUserId,
-    });
+    let created: PersonaEntity;
+    try {
+      created = await this.personas.create({
+        ...input,
+        createdBy: actorUserId,
+      });
+    } catch (error) {
+      // The publicId uniqueness check above is TOCTOU (two concurrent creates with the same
+      // publicId can both pass it before either INSERT commits) — the real unique index catches
+      // the race loser, but without this catch it would otherwise surface as a raw 500 instead of
+      // the same clean 400 the check above already gives the non-racing caller (code-review
+      // finding). Checked by `.name`, not `instanceof`, since `dashboard-api` never imports
+      // `sequelize` directly (ADR-0006/`only-database-package-touches-sequelize` — only
+      // `packages/database` may) — `SequelizeUniqueConstraintError` is the fixed, documented name
+      // Sequelize's own `UniqueConstraintError` class always carries.
+      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+        throw new BadRequestException(`publicId already in use: ${input.publicId}`);
+      }
+      throw error;
+    }
 
     await this.auditService.record({
       eventType: "data_change",
@@ -100,9 +145,13 @@ export class PersonasService {
   }
 
   async update(id: string, patch: UpdatePersonaDto, actorUserId: string): Promise<PersonaEntity> {
-    // 404s cleanly before touching anything else — mirrors ServicesService.update()'s own
-    // findServiceOrThrow()-first ordering.
-    await this.findById(id);
+    // No pre-fetch here (unlike ServicesService.update()'s own findServiceOrThrow()-first
+    // ordering, which this method previously, incorrectly, mirrored) — Persona Library has no FK
+    // fields to conditionally re-validate and no rich-text fields to diff against a "current"
+    // value, so the pre-fetch Service Library needs would have been a genuinely wasted SELECT
+    // here (code-review finding). The repository's own update() already 404s cleanly on a
+    // missing id via its `null`-on-zero-affected-rows return, handled right below.
+    await this.assertServiceIdsExist(patch.relatedServiceIds);
 
     const updated = await this.personas.update(id, { ...patch, updatedBy: actorUserId });
     if (!updated) {

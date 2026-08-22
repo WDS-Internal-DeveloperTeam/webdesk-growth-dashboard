@@ -4,6 +4,7 @@ import { AuthModule } from "../auth/auth.module.js";
 import { AuthzModule } from "../authz/authz.module.js";
 import { UsersModule } from "../users/users.module.js";
 import { serviceLibraryRepositoryProviders } from "./database.providers.js";
+import { SERVICE_REPOSITORY } from "./service-library.constants.js";
 import { ServicesService } from "./services.service.js";
 import { ServicesController } from "./services.controller.js";
 import { ServiceLibraryDimensionsService } from "./service-library-dimensions.service.js";
@@ -17,7 +18,11 @@ import { ServiceLibraryDimensionsController } from "./service-library-dimensions
  * (the dynamic per-transition permission check in `ServicesService.changeApprovalStatus()`),
  * `AuditModule` for `AuditService` (create/update/status transitions are all audited), and
  * `UsersModule` for `UsersService` (`ownerUserId` existence validation, mirroring
- * `ProjectService.assertOwnerExists()`'s own precedent — code-review finding).
+ * `ProjectService.assertOwnerExists()`'s own precedent — code-review finding). Also exports
+ * `SERVICE_REPOSITORY` — reused by `PersonaLibraryModule` to validate `relatedServiceIds` against
+ * real services (code-review finding, `module-persona-library` branch), the same
+ * cross-module-repository-reuse pattern `AuthzModule` already establishes for
+ * `ROLE_REPOSITORY`/`RoleAssignmentService`.
  */
 @Module({
   imports: [AuthModule, AuthzModule, AuditModule, UsersModule],
@@ -27,6 +32,6 @@ import { ServiceLibraryDimensionsController } from "./service-library-dimensions
     ServicesService,
     ServiceLibraryDimensionsService,
   ],
-  exports: [ServicesService],
+  exports: [ServicesService, SERVICE_REPOSITORY],
 })
 export class ServiceLibraryModule {}

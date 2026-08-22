@@ -88,6 +88,18 @@ export class ServiceRepository {
     return instance ? toEntityWithIsoDates<ServiceEntity>(instance) : null;
   }
 
+  /** Existence check for a set of service ids, mirroring the dimension repositories' own
+   *  `findByIds()` (e.g. `DeliverableRepository.findByIds()`) — added so another module
+   *  (Persona Library's `relatedServiceIds`) can validate real, existing services without
+   *  duplicating this query. */
+  async findByIds(ids: readonly string[]): Promise<readonly ServiceEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({ where: { id: ids } });
+    return rows.map((row) => toEntityWithIsoDates<ServiceEntity>(row));
+  }
+
   async list(filter: ServiceListFilter = {}): Promise<readonly ServiceEntity[]> {
     const where: Record<string, unknown> = {};
     if (filter.categoryId) {

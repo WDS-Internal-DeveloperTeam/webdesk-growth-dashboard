@@ -90,6 +90,13 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
     name: "personas_approval_status_idx",
   });
   await context.addIndex("personas", ["updated_at"], { name: "personas_updated_at_idx" });
+  // Fuzzy-search support, mirroring services_canonical_name_trgm_idx (migration 00050) — the same
+  // `04_Data_Model_and_Ownership.md:241` trigram-index requirement applies equally to a name field
+  // searched via a leading-wildcard ILIKE (code-review finding).
+  await context.sequelize.query("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+  await context.sequelize.query(
+    "CREATE INDEX personas_name_trgm_idx ON personas USING gin (name gin_trgm_ops);",
+  );
 }
 
 export async function down({ context }: { context: QueryInterface }): Promise<void> {

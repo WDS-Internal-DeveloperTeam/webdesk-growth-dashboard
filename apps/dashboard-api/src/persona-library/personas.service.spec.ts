@@ -1,4 +1,4 @@
-import type { PersonaEntity, PersonaRepository } from "@webdesk/database";
+import type { PersonaEntity, PersonaRepository, ServiceRepository } from "@webdesk/database";
 import {
   BadRequestException,
   ConflictException,
@@ -11,6 +11,19 @@ import type { AuthorizationService } from "../authz/authorization.service.js";
 import { PersonasService } from "./personas.service.js";
 
 const NOW = new Date("2026-08-22T00:00:00.000Z");
+// A well-formed UUID for tests that need a relatedServiceIds entry to actually reach
+// services.findByIds() — assertServiceIdsExist() filters out non-UUID-shaped entries before
+// querying, so a plain string like "service-1" would never be looked up at all.
+const FAKE_SERVICE_ID = "11111111-1111-4111-8111-111111111111";
+
+/** A stand-in for Sequelize's real `UniqueConstraintError` — checked by `.name` in
+ *  `PersonasService.create()` rather than `instanceof`, since `dashboard-api` never imports
+ *  `sequelize` directly (only `packages/database` may). */
+function uniqueConstraintError(): Error {
+  const error = new Error("Validation error");
+  error.name = "SequelizeUniqueConstraintError";
+  return error;
+}
 
 function persona(overrides: Partial<PersonaEntity> = {}): PersonaEntity {
   return {
@@ -50,6 +63,7 @@ describe("PersonasService", () => {
     update: ReturnType<typeof vi.fn>;
     updateStatus: ReturnType<typeof vi.fn>;
   };
+  let services: { findByIds: ReturnType<typeof vi.fn> };
   let authorizationService: { assertAllowed: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let svc: PersonasService;
@@ -63,10 +77,14 @@ describe("PersonasService", () => {
       update: vi.fn(),
       updateStatus: vi.fn(),
     };
+    // Defaults to "every id resolves" so tests that don't care about relatedServiceIds
+    // validation (the majority) don't need to stub this themselves.
+    services = { findByIds: vi.fn().mockResolvedValue([]) };
     authorizationService = { assertAllowed: vi.fn() };
     auditService = { record: vi.fn() };
     svc = new PersonasService(
       personas as unknown as PersonaRepository,
+      services as unknown as ServiceRepository,
       authorizationService as unknown as AuthorizationService,
       auditService as unknown as AuditService,
     );
@@ -113,6 +131,67 @@ describe("PersonasService", () => {
       const [writtenInput] = personas.create.mock.calls[0] as [Record<string, unknown>];
       expect(writtenInput.goals).toBe("<script>alert(1)</script>");
     });
+
+    it("validates relatedServiceIds against the real services table before creating", async () => {
+      personas.findByPublicId.mockResolvedValue(null);
+      personas.create.mockResolvedValue(persona());
+      services.findByIds.mockResolvedValue([{ id: FAKE_SERVICE_ID }]);
+
+      await svc.create(
+        { publicId: "PERSONA-X", name: "X", relatedServiceIds: [FAKE_SERVICE_ID] },
+        "actor-1",
+      );
+
+      expect(services.findByIds).toHaveBeenCalledWith([FAKE_SERVICE_ID]);
+      expect(personas.create).toHaveBeenCalled();
+    });
+
+    it("treats a malformed (non-UUID) relatedServiceIds entry as not-found, without querying it", async () => {
+      personas.findByPublicId.mockResolvedValue(null);
+
+      await expect(
+        svc.create(
+          { publicId: "PERSONA-X", name: "X", relatedServiceIds: ["not-even-a-uuid"] },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      // A malformed id must never be sent to services.findByIds() — Postgres's uuid column type
+      // would reject it with a raw driver error instead of this clean 400.
+      expect(services.findByIds).not.toHaveBeenCalled();
+    });
+
+    it("rejects relatedServiceIds that don't resolve to real services, without creating", async () => {
+      personas.findByPublicId.mockResolvedValue(null);
+      // Well-formed UUID, but findByIds() reports it doesn't exist as a real service.
+      services.findByIds.mockResolvedValue([]);
+
+      await expect(
+        svc.create(
+          { publicId: "PERSONA-X", name: "X", relatedServiceIds: [FAKE_SERVICE_ID] },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(personas.create).not.toHaveBeenCalled();
+    });
+
+    it("translates a concurrent publicId collision into a clean 400, not a raw 500", async () => {
+      personas.findByPublicId.mockResolvedValue(null);
+      personas.create.mockRejectedValue(uniqueConstraintError());
+
+      await expect(svc.create({ publicId: "PERSONA-RACE", name: "X" }, "actor-1")).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it("re-throws a non-uniqueness error from create() unchanged", async () => {
+      personas.findByPublicId.mockResolvedValue(null);
+      const dbError = new Error("connection reset");
+      personas.create.mockRejectedValue(dbError);
+
+      await expect(svc.create({ publicId: "PERSONA-X", name: "X" }, "actor-1")).rejects.toBe(
+        dbError,
+      );
+    });
   });
 
   describe("findById", () => {
@@ -137,16 +216,28 @@ describe("PersonasService", () => {
   });
 
   describe("update", () => {
-    it("404s cleanly before touching anything else when the persona does not exist", async () => {
-      personas.findById.mockResolvedValue(null);
+    it("does not pre-fetch the persona before updating (no wasted read)", async () => {
+      // Regression test for a code-review finding: this method previously pre-fetched via
+      // findById() purely to 404-check, mirroring ServicesService.update()'s own pattern where
+      // that read is load-bearing (FK re-validation, rich-text diffing) — Persona Library has
+      // neither, so the mirrored read was a wasted SELECT. The repository's own update() already
+      // 404s cleanly via its null-on-zero-affected-rows return.
+      personas.update.mockResolvedValue(persona({ name: "Renamed" }));
+
+      await svc.update("persona-1", { name: "Renamed" }, "actor-1");
+
+      expect(personas.findById).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException when the repository update finds nothing to update", async () => {
+      personas.update.mockResolvedValue(null);
+
       await expect(svc.update("missing", { name: "New" }, "actor-1")).rejects.toThrow(
         NotFoundException,
       );
-      expect(personas.update).not.toHaveBeenCalled();
     });
 
     it("never accepts approvalStatus or version through the general update patch", async () => {
-      personas.findById.mockResolvedValue(persona());
       personas.update.mockResolvedValue(persona({ name: "Renamed", version: 2 }));
 
       // TypeScript's own UpdatePersonaDto type already excludes approvalStatus/version; this
@@ -159,7 +250,6 @@ describe("PersonasService", () => {
     });
 
     it("returns the repository's updated entity, with version incremented server-side", async () => {
-      personas.findById.mockResolvedValue(persona({ version: 3 }));
       personas.update.mockResolvedValue(persona({ name: "Renamed", version: 4 }));
 
       const result = await svc.update("persona-1", { name: "Renamed" }, "actor-1");
@@ -170,13 +260,23 @@ describe("PersonasService", () => {
       );
     });
 
-    it("throws NotFoundException if the repository update races a deletion and returns null", async () => {
-      personas.findById.mockResolvedValue(persona());
-      personas.update.mockResolvedValue(null);
+    it("validates relatedServiceIds against the real services table before writing", async () => {
+      services.findByIds.mockResolvedValue([{ id: FAKE_SERVICE_ID }]);
+      personas.update.mockResolvedValue(persona());
 
-      await expect(svc.update("persona-1", { name: "Renamed" }, "actor-1")).rejects.toThrow(
-        NotFoundException,
-      );
+      await svc.update("persona-1", { relatedServiceIds: [FAKE_SERVICE_ID] }, "actor-1");
+
+      expect(services.findByIds).toHaveBeenCalledWith([FAKE_SERVICE_ID]);
+      expect(personas.update).toHaveBeenCalled();
+    });
+
+    it("rejects relatedServiceIds that don't resolve to real services, without writing", async () => {
+      services.findByIds.mockResolvedValue([]);
+
+      await expect(
+        svc.update("persona-1", { relatedServiceIds: ["missing"] }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(personas.update).not.toHaveBeenCalled();
     });
   });
 

@@ -5,6 +5,8 @@ import {
   buildMigrator,
   closeConnection,
   RoleRepository,
+  ServiceCategoryRepository,
+  ServiceRepository,
   UserRepository,
   UserRoleRepository,
 } from "@webdesk/database";
@@ -51,6 +53,8 @@ describe("Persona Library module endpoints (e2e, real disposable database)", () 
   let users: UserRepository;
   let roles: RoleRepository;
   let userRoles: UserRoleRepository;
+  let services: ServiceRepository;
+  let serviceCategories: ServiceCategoryRepository;
   let sessionService: SessionService;
   let authEnv: AuthEnv;
 
@@ -143,6 +147,8 @@ describe("Persona Library module endpoints (e2e, real disposable database)", () 
     users = new UserRepository();
     roles = new RoleRepository();
     userRoles = new UserRoleRepository();
+    services = new ServiceRepository();
+    serviceCategories = new ServiceCategoryRepository();
 
     superAdminUserId = await createUserWithRole("personalib.super-admin", "super_admin");
     readOnlyUserId = await createUserWithRole("personalib.read-only", "read_only");
@@ -258,13 +264,28 @@ describe("Persona Library module endpoints (e2e, real disposable database)", () 
       .expect(400);
   });
 
-  it("creates a persona with unvalidated relatedServiceIds/roles/industries and round-trips them on GET", async () => {
+  it("creates a persona with real relatedServiceIds and round-trips roles/industries on GET", async () => {
+    // relatedServiceIds is now validated against the real services table (code-review finding) —
+    // unlike Service Library's own icpIds/relatedPageIds, whose target modules genuinely don't
+    // exist yet, `services` does exist, so real ids are used here via a direct-repository fixture
+    // (bypassing the full Service Library HTTP surface, which needs its own category/RBAC setup
+    // out of scope for this test).
+    const category = await serviceCategories.create({
+      publicId: uniquePublicId("SVC-CATEGORY"),
+      name: "E2E Fixture Category",
+    });
+    const service = await services.create({
+      publicId: uniquePublicId("SVC"),
+      canonicalName: "E2E Fixture Service",
+      categoryId: category.id,
+    });
+
     const cookie = await cookieForNewSession(superAdminUserId);
     const created = await createDraftPersona(cookie, {
       name: "Relationship Fixture Persona",
       roles: ["VP Marketing", "Growth Lead"],
       industries: ["SaaS"],
-      relatedServiceIds: [randomUUID(), "not-even-a-uuid"],
+      relatedServiceIds: [service.id],
     });
 
     const getResponse = await request(app.getHttpServer())
@@ -273,7 +294,47 @@ describe("Persona Library module endpoints (e2e, real disposable database)", () 
       .expect(200);
     expect(getResponse.body.data.roles).toEqual(["VP Marketing", "Growth Lead"]);
     expect(getResponse.body.data.industries).toEqual(["SaaS"]);
-    expect(getResponse.body.data.relatedServiceIds).toHaveLength(2);
+    expect(getResponse.body.data.relatedServiceIds).toEqual([service.id]);
+  });
+
+  it("rejects persona creation with 400 when relatedServiceIds don't resolve to real services", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    await request(app.getHttpServer())
+      .post("/persona-library/personas")
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({
+        publicId: uniquePublicId("PERSONA"),
+        name: "X",
+        relatedServiceIds: [randomUUID(), "not-even-a-uuid"],
+      })
+      .expect(400);
+  });
+
+  it("rejects an empty update patch with 400 (no-op saves shouldn't burn a version)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createDraftPersona(cookie);
+    await request(app.getHttpServer())
+      .post(`/persona-library/personas/${created.id}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({})
+      .expect(400);
+  });
+
+  it("clears an array field with an explicit null, distinct from omitting it", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createDraftPersona(cookie, { roles: ["CTO"], industries: ["SaaS"] });
+
+    const updateResponse = await request(app.getHttpServer())
+      .post(`/persona-library/personas/${created.id}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ roles: null })
+      .expect(200);
+
+    expect(updateResponse.body.data.roles).toEqual([]);
+    expect(updateResponse.body.data.industries).toEqual(["SaaS"]);
   });
 
   it("marketing_editor (VCESR) can submit and review, but is denied approve (draft->submitted->under_review->approved)", async () => {
