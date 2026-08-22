@@ -2077,6 +2077,46 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     — Service Library's 7 Positioning fields and Projects' `description`, plus real backend HTML
     sanitization and the shared `SanitizedRichText` render component — is now genuinely live in
     production.**
+35. **Persona Library module backend — built, fully validated, not yet reviewed, gated, or merged
+    (2026-08-22).** `docs/implementation/module-persona-library.md` records the full account. The
+    fourth real business-module backend on the Phase 1F application shell / canonical module
+    registry, after Projects, Business Knowledge Center, and Service Library — module #4 in the
+    project-owner-supplied `Recommended_Module_Roadmap.md`. Built directly on the explicit "Start
+    the Persona Library" instruction, using Service Library as the literal structural template
+    (same `service_persona_proof` RBAC group, no new RBAC migration). Two scoping decisions
+    confirmed directly with the user first (`AskUserQuestion`): content edits stay independent of
+    `approvalStatus`, mirroring Service Library's own precedent — the roadmap's "cannot silently
+    modify approved personas" rule (aimed at the dashboard's planned "Growth Director" AI agent,
+    not a human role) is already satisfied by the existing gated transition table; and Service
+    Library's own `icpIds` field is **not** retrofitted to a real relationship in this pass —
+    Persona Library stays fully standalone (`relatedServiceIds` is a plain unvalidated string
+    array, mirroring `icpIds`/`relatedPageIds`/`relatedCaseStudyIds`). Single-table schema
+    (`personas`, migration `00052`), since the canonical spec is a flat field list with no basis
+    for splitting across entities. The `approvalStatus` workflow and its `TRANSITIONS` table are
+    reused verbatim from Service Library's own already-code-reviewed version, including the atomic
+    compare-and-swap status update. `version` is new behavior Service Library doesn't have — a
+    server-managed integer incremented as part of the same `UPDATE` statement via a
+    Postgres-evaluated `version + 1` literal, satisfying the canonical spec's own explicit
+    "version" field without a read-then-write race. `@RequirePermission` is placed on every
+    individual controller method, never at class level — the exact bug Service Library's own
+    dimensions controller had and fixed. Both `packages/database` barrel entrypoints (`index.ts`
+    and `index.cjs.ts`) were updated, per this project's own documented caution about the
+    separately-maintained CJS build Vercel's bundler actually uses in production. **Built by a
+    background agent, then independently re-verified by the orchestrating session** — a first
+    attempt at delegating this build returned only a description of a plan with zero real file
+    changes (caught via a direct `git status` check before it was trusted); the second attempt,
+    with a more directive prompt, did the real work. Every test suite the agent reported was
+    re-run directly (not just trusted): 493/493 `dashboard-api` unit tests (28 new), 28/28
+    `packages/database` unit tests (unaffected), 184/184 `packages/database` integration tests (14
+    new, real disposable PostgreSQL), 168/168 `dashboard-api` e2e tests (15 new, real disposable
+    database + real seeded RBAC, including the full 3-tier submit/review/approve matrix), a real
+    migration up/down/up round-trip, `validate:module-registry` (43 modules, 21 permission groups),
+    `pnpm audit` (0 vulnerabilities), and prettier — all independently confirmed clean, plus a
+    direct code read of the highest-risk files (migration, controller RBAC placement, service
+    transition table, repository's atomic update/compare-and-swap). `apps/dashboard-web` is
+    untouched — backend only, matching every prior module's own precedent. Committed to branch
+    `module-persona-library` — not yet pushed, reviewed, gated, or merged; each remains its own
+    separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -5183,6 +5223,20 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   navigation/filter behavior (the one place a "current project" already has a real, self-contained
   meaning), or something else. **The user again chose to defer** ("for now we will record this
   will do it later") — nothing was built; only this entry and item 13 record the outcome.
+- `[2026-08-22]` **Built the Persona Library module backend**, under the explicit "Start the
+  Persona Library" instruction — module #4 in the Recommended Module Roadmap. Two scoping
+  decisions confirmed directly with the user first (`AskUserQuestion`): content edits stay
+  independent of `approvalStatus` (mirrors Service Library's own precedent), and Service Library's
+  own `icpIds` is not retrofitted in this pass (Persona Library stays standalone). Full account,
+  including a caught delegation failure (a first background-agent attempt returned only a
+  description of a plan with zero real file changes — caught via a direct `git status` check
+  before being trusted, then redone properly with a more directive prompt) and every test suite
+  independently re-run and confirmed by the orchestrating session rather than just trusted from
+  the build's own report, in `docs/implementation/module-persona-library.md`. 493/493
+  `dashboard-api` unit tests (28 new), 184/184 `packages/database` integration tests (14 new, real
+  disposable database), 168/168 `dashboard-api` e2e tests (15 new, real disposable database + real
+  seeded RBAC), full validation clean. Committed to branch `module-persona-library` — not yet
+  pushed, reviewed, gated, or merged.
 
 ## Open client blockers
 
