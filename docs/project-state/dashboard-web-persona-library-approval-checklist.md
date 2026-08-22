@@ -5,10 +5,17 @@
 second-role human review complete — Jitesh D, "Approved as-is", accepting the 2 open CONFIRMED
 findings (the RBAC module-key coupling and the transitions-table quadruplication, both findings
 07–08) as tracked debt. Gate (G4-dashboard-web-persona-library) approved — WebDesk Solution,
-decision CONFIRM, approved commit `b7ba3e8` on branch `dashboard-web-persona-library`. Pushed to
-`origin` and opened as
-[PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51).
-**Merge authorization remains a separate, not-yet-requested next step.**
+decision CONFIRM, approved commit `b7ba3e8` on branch `dashboard-web-persona-library`. **"Merge
+PR #51" was then separately requested and executed** — merge commit
+`e879be801c780be7c0a2af18250071b017873e28`, all 14 CI checks green beforehand. Both Vercel
+projects auto-deployed on push to `main` and were verified live directly:
+`dashboard-api`'s `/health` returned `build.commitSha ==
+e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` returned a clean `401`
+(route live, `SessionGuard` enforcing — not a `404`), and `dashboard-web`'s `/persona-library`
+resolves (307) to `/auth/sign-in` for an unauthenticated visitor (a transient stale-edge-cache
+`404` on the very first check was ruled out via repeated checks, not a real defect). **The
+`dashboard-web` Persona Library UI is now genuinely live in production**, closing out this
+slice's full build-to-production arc.
 
 ## Completion condition
 
@@ -147,3 +154,32 @@ already complete before the gate was requested), approved commit `b7ba3e8` on br
 This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
 production deployment — each remains its own separate, not-yet-requested authorization, per this
 project's standing "no auto-merge" rule.
+
+## Push/PR — COMPLETE
+
+**"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
+opened as
+[PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51). Review
+(code review, security review, second-role human review, and the gate) all happened locally
+before the branch was ever pushed, matching the `dashboard-web-attachments-on-create` precedent.
+All 14 CI checks green.
+
+## Merge — COMPLETE
+
+**"Merge PR #51" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `e879be801c780be7c0a2af18250071b017873e28`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+e879be801c780be7c0a2af18250071b017873e28`, confirming the exact merged commit is what's serving.
+- `GET /persona-library/personas` returned a clean `401` (route live, `SessionGuard` enforcing —
+  not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/persona-library` resolves (307) to `/auth/sign-in` for an unauthenticated
+  visitor, confirming the session gate is intact. A transient stale-edge-cache `404` on the very
+  first check was ruled out via repeated cache-busted checks, not a real defect.
+
+**The `dashboard-web` Persona Library UI is now genuinely live in production**, closing out the
+Persona Library module's full build-to-production arc — backend and now the full UI (list,
+detail, create/edit form, status actions) are both live.

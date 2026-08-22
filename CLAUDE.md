@@ -2186,11 +2186,8 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     Library module backend is now genuinely live in production.** No `dashboard-web` UI exists yet
     for this module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
     Library precedent.
-36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified, code-reviewed
-    (6/8 confirmed findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings
-    above threshold), required second-role human review complete (Jitesh D, "Approved as-is"),
-    gated (`G4-dashboard-web-persona-library`, WebDesk Solution, CONFIRM), pushed and opened as
-    PR #51; not yet merged (2026-08-22).** Closes the Persona Library module's last named gap,
+36. **`dashboard-web` Persona Library UI — built, reviewed, gated, merged; now live in
+    production (2026-08-22).** Closes the Persona Library module's last named gap,
     following the backend's own build-to-production arc (PR #50). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
     instruction. No approved wireframe/screen spec exists for this module —
@@ -2279,8 +2276,19 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     branch `dashboard-web-persona-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
     `gates[]` (`current_gate` now `G4-dashboard-web-persona-library`). **"Push the branch and
     open a PR" was then separately requested and executed** — pushed to `origin`, opened as
-    [PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51).
-    Merge authorization remains a separate, not-yet-requested next step.
+    [PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51), all
+    14 CI checks green. **"Merge PR #51" was then separately requested and executed** — merge
+    commit `e879be801c780be7c0a2af18250071b017873e28`, all 14 CI checks green beforehand. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` returned a clean
+    `401` (route live, `SessionGuard` enforcing — not a `404`), and `dashboard-web`'s
+    `/persona-library` resolves (307) to `/auth/sign-in` for an unauthenticated visitor (a
+    transient stale-edge-cache `404` on the very first check was ruled out via repeated
+    cache-busted checks, not a real defect). **The `dashboard-web` Persona Library UI is now
+    genuinely live in production**, closing out the Persona Library module's full
+    build-to-production arc — backend and now the full UI (list, detail, create/edit form,
+    status actions) are both live.
 
 ## Recent decisions
 
@@ -5560,6 +5568,20 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `dashboard-web-attachments-on-create` before it, review (code review, security review,
   second-role human review, and the gate) all happened locally before the branch was ever pushed
   or opened as a PR. Merge authorization remains a separate, not-yet-requested next step.
+- `[2026-08-22]` **"Merge PR #51" was separately requested and executed.** All 14 CI checks
+  green first. Merged with a real merge commit (not squash/rebase), matching every prior merge
+  in this project's history — merge commit `e879be801c780be7c0a2af18250071b017873e28`. Both
+  Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+  CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+e879be801c780be7c0a2af18250071b017873e28`, confirming the exact merged commit is what's serving;
+  `GET /persona-library/personas` returned a clean `401` (route live, `SessionGuard` enforcing —
+  not a `404`, which would mean the module never actually deployed); and `dashboard-web`'s
+  `/persona-library` resolves (307) to `/auth/sign-in` for an unauthenticated visitor (a
+  transient stale-edge-cache `404` on the very first check was ruled out via repeated
+  cache-busted checks, not a real defect). **The `dashboard-web` Persona Library UI is now
+  genuinely live in production**, closing out the Persona Library module's full
+  build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
+  actions) are both live.
 
 ## Open client blockers
 
