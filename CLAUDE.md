@@ -447,7 +447,12 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     (2026-08-18): gaps (2) and (3) built — see item 18.** **Update (2026-08-20): gap (4)
     (sub-resource editing) built, reviewed, gated, and merged — see item 27.** **Update
     (2026-08-20): gap (5) (current-project context propagation) scoped and explicitly deferred, not
-    built — see the 2026-08-20 "Recent decisions" entry below for the full reasoning.**
+    built — see the 2026-08-20 "Recent decisions" entry below for the full reasoning.** **Update
+    (2026-08-22): re-asked directly ("Start current-project context propagation"); the same
+    blocker still holds (neither Business Knowledge Center nor Service Library ended up
+    project-scoped — both are organization-wide), presented again (`AskUserQuestion`), and the
+    user again chose to defer, recording it for later rather than building now — see the
+    2026-08-22 "Recent decisions" entry.**
 14. **User lookup capability + Project owner assignment — built, validated, code-reviewed,
     security-reviewed, second-role human reviewed, gated, merged, and live in production
     (2026-08-17).**
@@ -5167,6 +5172,17 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
   unauthenticated visitor, confirming the session gate is intact. **The rich-text editor rollout is
   now genuinely live in production.**
+- `[2026-08-22]` **"Start current-project context propagation" was requested, then deferred again
+  after re-confirming the same blocker still holds.** Before building anything, flagged directly
+  that this is the identical gap scoped and deferred on 2026-08-20, and that the underlying reason
+  hasn't changed: both business modules built since then (Business Knowledge Center, Service
+  Library) ended up organization-wide, not project-scoped, so there is still no second real
+  consumer for a "current project" filter beyond the header switcher pre-selecting its own
+  dropdown. Presented the same real tradeoff directly (`AskUserQuestion`): build reusable
+  server-side plumbing with no consumer yet, wire the switcher's selection into an actual Projects
+  navigation/filter behavior (the one place a "current project" already has a real, self-contained
+  meaning), or something else. **The user again chose to defer** ("for now we will record this
+  will do it later") — nothing was built; only this entry and item 13 record the outcome.
 
 ## Open client blockers
 
