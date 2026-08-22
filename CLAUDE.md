@@ -2189,8 +2189,8 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
 36. **`dashboard-web` Persona Library UI — built, fully validated, live-verified, code-reviewed
     (6/8 confirmed findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings
     above threshold), required second-role human review complete (Jitesh D, "Approved as-is"),
-    gated (`G4-dashboard-web-persona-library`, WebDesk Solution, CONFIRM); not yet merged
-    (2026-08-22).** Closes the Persona Library module's last named gap,
+    gated (`G4-dashboard-web-persona-library`, WebDesk Solution, CONFIRM), pushed and opened as
+    PR #51; not yet merged (2026-08-22).** Closes the Persona Library module's last named gap,
     following the backend's own build-to-production arc (PR #50). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
     instruction. No approved wireframe/screen spec exists for this module —
@@ -2277,8 +2277,10 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role
     review was already complete before the gate was requested), approved commit `b7ba3e8` on
     branch `dashboard-web-persona-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
-    `gates[]` (`current_gate` now `G4-dashboard-web-persona-library`). Push/PR and merge
-    authorization each remain their own separate, not-yet-requested next step.
+    `gates[]` (`current_gate` now `G4-dashboard-web-persona-library`). **"Push the branch and
+    open a PR" was then separately requested and executed** — pushed to `origin`, opened as
+    [PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -5552,6 +5554,12 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   **This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
   production deployment** — each remains its own separate, not-yet-requested authorization, per
   this project's standing "no auto-merge" rule.
+- `[2026-08-22]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-persona-library` — pushed to `origin`, opened as
+  [PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51). Like
+  `dashboard-web-attachments-on-create` before it, review (code review, security review,
+  second-role human review, and the gate) all happened locally before the branch was ever pushed
+  or opened as a PR. Merge authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

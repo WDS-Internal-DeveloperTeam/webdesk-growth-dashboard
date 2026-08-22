@@ -5,8 +5,10 @@
 second-role human review complete — Jitesh D, "Approved as-is", accepting the 2 open CONFIRMED
 findings (the RBAC module-key coupling and the transitions-table quadruplication, both findings
 07–08) as tracked debt. Gate (G4-dashboard-web-persona-library) approved — WebDesk Solution,
-decision CONFIRM, approved commit `b7ba3e8` on branch `dashboard-web-persona-library`. **Push/PR
-and merge authorization each remain separate, not-yet-requested next steps.**
+decision CONFIRM, approved commit `b7ba3e8` on branch `dashboard-web-persona-library`. Pushed to
+`origin` and opened as
+[PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51).
+**Merge authorization remains a separate, not-yet-requested next step.**
 
 ## Completion condition
 
@@ -24,7 +26,7 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ The RBAC module-key coupling (finding 07) and the transitions-table quadruplication (finding 08) are both real but left as accepted debt, recorded directly in code for the second-role reviewer                                              |
 | 8   | Live-rendered / verified                   | ✅ All new `/persona-library` routes plus every touched sibling route (Service Library, Business Knowledge Center, Projects list and detail) confirmed live in the Browser pane — clean unauthenticated redirects, zero console/server errors    |
 | 9   | Documentation updated                      | ✅ `CLAUDE.md`'s Active tasks item 36 and the corresponding "Recent decisions" entries                                                                                                                                                           |
-| 10  | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-persona-library`, latest commit `e1f4076` — not yet pushed to `origin`                                                                                                                                                  |
+| 10  | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-persona-library`, latest commit `294bf39` — pushed to `origin`, [PR #51](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/51) opened                                                         |
 
 ## Forbidden-actions check
 
