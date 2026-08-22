@@ -1,6 +1,13 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { ClaimSourceEntity, ClaimSourceRepository } from "@webdesk/database";
-import { CLAIM_SOURCE_REPOSITORY } from "./proof-and-claims-library.constants.js";
+import type {
+  ClaimSourceEntity,
+  ClaimSourceRepository,
+  ProofClaimRepository,
+} from "@webdesk/database";
+import {
+  CLAIM_SOURCE_REPOSITORY,
+  PROOF_CLAIM_REPOSITORY,
+} from "./proof-and-claims-library.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuditService } from "../audit/audit.service.js";
 
@@ -16,14 +23,24 @@ import { AuditService } from "../audit/audit.service.js";
 export class ClaimSourcesService {
   constructor(
     @Inject(CLAIM_SOURCE_REPOSITORY) private readonly claimSources: ClaimSourceRepository,
+    @Inject(PROOF_CLAIM_REPOSITORY) private readonly claims: ProofClaimRepository,
     private readonly auditService: AuditService,
   ) {}
 
+  /** `claim_sources.claim_id` is FK-constrained (migration `00054`), but a well-formed, nonexistent
+   *  `claimId` was previously only caught at the database layer — surfacing as a raw, unhandled 500
+   *  instead of a clean 404 (code-review finding, mirrors `RoadmapItemsService`'s own equivalent
+   *  gap for the identical reason). */
   async create(
     claimId: string,
     input: { source: string; sourceUrl?: string | null },
     actorUserId: string,
   ): Promise<ClaimSourceEntity> {
+    const claim = await this.claims.findById(claimId);
+    if (!claim) {
+      throw new NotFoundException(`Proof claim not found: ${claimId}`);
+    }
+
     const created = await this.claimSources.create({
       claimId,
       source: input.source,

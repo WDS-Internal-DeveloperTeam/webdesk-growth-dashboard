@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeHttpUrlSchema } from "@webdesk/validation";
 
 // Mirrors packages/database/src/proof-and-claims-library/entities.ts's ProofClaimApprovalStatus —
 // identical vocabulary to Service Library's/Persona Library's own, reused verbatim.
@@ -27,15 +28,16 @@ const longTextField = z.string().max(LONG_TEXT_MAX_LENGTH).nullish();
 
 const shortTextField = z.string().max(255).nullish();
 
-// Existence-validated against the real `services` table (relatedServiceIds only — see
-// ProofClaimsService.assertServiceIdsExist()), mirroring Persona Library's own idListField
-// exactly — `services` already exists, unlike relatedCaseStudyIds/relatedPageIds's own target
-// modules. `.nullish()` so an explicit `null` can clear the field on update.
+// One shared shape for every identifier-list field this module has — `relatedServiceIds` is
+// additionally existence-validated against the real `services` table at the service layer (see
+// ClaimsService.assertServiceIdsExist()), mirroring Persona Library's own idListField; `services`
+// already exists, unlike relatedCaseStudyIds/relatedPageIds's own target modules
+// (`case_study_studio`/`page_inventory`, which don't exist yet, mirroring Service Library's own
+// icpIds/relatedPageIds/relatedCaseStudyIds precedent) — the Zod shape itself is identical either
+// way, since the existence check happens in the service, not the schema (code-review finding: this
+// was previously two byte-identical schemas under two names in this same file). `.nullish()` so an
+// explicit `null` can clear the field on update.
 const idListField = z.array(z.string().min(1).max(128)).max(200).nullish();
-
-// Unvalidated identifier lists — `case_study_studio`/`page_inventory` don't exist yet, mirroring
-// Service Library's own icpIds/relatedPageIds/relatedCaseStudyIds precedent.
-const unvalidatedIdListField = z.array(z.string().min(1).max(128)).max(200).nullish();
 
 export const listProofClaimsQuerySchema = z.object({
   approvalStatus: proofClaimApprovalStatusSchema.optional(),
@@ -56,8 +58,8 @@ export const createProofClaimSchema = z.object({
   restrictions: longTextField,
   expiryReviewDate: z.string().date().nullish(),
   relatedServiceIds: idListField,
-  relatedCaseStudyIds: unvalidatedIdListField,
-  relatedPageIds: unvalidatedIdListField,
+  relatedCaseStudyIds: idListField,
+  relatedPageIds: idListField,
 });
 export type CreateProofClaimDto = z.infer<typeof createProofClaimSchema>;
 
@@ -75,8 +77,8 @@ export const updateProofClaimSchema = z
     restrictions: longTextField,
     expiryReviewDate: z.string().date().nullish(),
     relatedServiceIds: idListField,
-    relatedCaseStudyIds: unvalidatedIdListField,
-    relatedPageIds: unvalidatedIdListField,
+    relatedCaseStudyIds: idListField,
+    relatedPageIds: idListField,
   })
   // Rejects a genuinely empty patch (`{}`) with a clean 400 instead of silently succeeding as a
   // no-op that still writes an essentially-empty audit event, mirroring Persona Library's own
@@ -95,16 +97,21 @@ export type ChangeProofClaimApprovalStatusDto = z.infer<
 
 // --- claim_sources (child sub-resource) ---
 
+// safeHttpUrlSchema (@webdesk/validation), not a bare z.string() — a stored `javascript:` value
+// here would be a real stored-XSS vector once any future dashboard-web UI renders a source as a
+// clickable link, the exact class of finding Projects' own environment.url shipped once and had
+// to fix after the fact (code-review finding: this field repeated that same gap on its first
+// pass).
 export const createClaimSourceSchema = z.object({
   source: z.string().min(1).max(LONG_TEXT_MAX_LENGTH),
-  sourceUrl: z.string().max(2048).nullish(),
+  sourceUrl: safeHttpUrlSchema.nullish(),
 });
 export type CreateClaimSourceDto = z.infer<typeof createClaimSourceSchema>;
 
 export const updateClaimSourceSchema = z
   .object({
     source: z.string().min(1).max(LONG_TEXT_MAX_LENGTH).optional(),
-    sourceUrl: z.string().max(2048).nullish(),
+    sourceUrl: safeHttpUrlSchema.nullish(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided",

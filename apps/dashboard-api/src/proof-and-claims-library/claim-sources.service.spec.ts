@@ -1,4 +1,9 @@
-import type { ClaimSourceEntity, ClaimSourceRepository } from "@webdesk/database";
+import type {
+  ClaimSourceEntity,
+  ClaimSourceRepository,
+  ProofClaimEntity,
+  ProofClaimRepository,
+} from "@webdesk/database";
 import { NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
@@ -18,6 +23,30 @@ function source(overrides: Partial<ClaimSourceEntity> = {}): ClaimSourceEntity {
   };
 }
 
+function claim(overrides: Partial<ProofClaimEntity> = {}): ProofClaimEntity {
+  return {
+    id: "claim-1",
+    publicId: "PROOF-99-UPTIME",
+    claim: "99.9% uptime SLA",
+    claimType: null,
+    beforeValue: null,
+    afterValue: null,
+    verificationStatus: "unverified",
+    approvedWording: null,
+    restrictions: null,
+    expiryReviewDate: null,
+    relatedServiceIds: [],
+    relatedCaseStudyIds: [],
+    relatedPageIds: [],
+    approvalStatus: "draft",
+    createdBy: "actor-1",
+    updatedBy: "actor-1",
+    createdAt: NOW.toISOString(),
+    updatedAt: NOW.toISOString(),
+    ...overrides,
+  };
+}
+
 describe("ClaimSourcesService", () => {
   let claimSources: {
     create: ReturnType<typeof vi.fn>;
@@ -26,6 +55,7 @@ describe("ClaimSourcesService", () => {
     update: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
   };
+  let claims: { findById: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let svc: ClaimSourcesService;
 
@@ -37,9 +67,13 @@ describe("ClaimSourcesService", () => {
       update: vi.fn(),
       remove: vi.fn(),
     };
+    // Defaults to "the parent claim exists" so tests that don't care about this check (the
+    // majority) don't need to stub it themselves.
+    claims = { findById: vi.fn().mockResolvedValue(claim()) };
     auditService = { record: vi.fn() };
     svc = new ClaimSourcesService(
       claimSources as unknown as ClaimSourceRepository,
+      claims as unknown as ProofClaimRepository,
       auditService as unknown as AuditService,
     );
   });
@@ -61,6 +95,15 @@ describe("ClaimSourcesService", () => {
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ action: "create", entityType: "claim_source" }),
       );
+    });
+
+    it("throws NotFoundException (not a raw FK-constraint 500) when the parent claim doesn't exist", async () => {
+      claims.findById.mockResolvedValue(null);
+
+      await expect(svc.create("missing-claim", { source: "X" }, "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(claimSources.create).not.toHaveBeenCalled();
     });
   });
 

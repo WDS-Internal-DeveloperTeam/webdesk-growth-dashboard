@@ -36,18 +36,24 @@ export class ClaimSourceRepository {
 
   /** `claimId`-scoped — the same IDOR-prevention shape every sub-resource repository in this
    *  codebase already has (`RoadmapItemRepository.update()`'s own doc comment records the fix this
-   *  mirrors from day one). A source belonging to a different claim is treated as not found. */
+   *  mirrors from day one). A source belonging to a different claim is treated as not found. A
+   *  single atomic `UPDATE ... RETURNING`, not a separate `findOne()` + `instance.update()` — the
+   *  two-step form let a source deleted between the read and the write silently return a
+   *  fabricated "success" entity reflecting values that were never actually persisted (code-review
+   *  finding; mirrors `ProofClaimRepository.update()`'s own already-atomic shape). */
   async update(
     id: string,
     claimId: string,
     patch: Partial<{ source: string; sourceUrl: string | null }>,
   ): Promise<ClaimSourceEntity | null> {
-    const instance = await this.model.findOne({ where: { id, claimId } });
-    if (!instance) {
+    const [affectedCount, affectedRows] = await this.model.update(patch, {
+      where: { id, claimId },
+      returning: true,
+    });
+    if (affectedCount === 0 || !affectedRows[0]) {
       return null;
     }
-    await instance.update(patch);
-    return toEntityWithIsoDates<ClaimSourceEntity>(instance);
+    return toEntityWithIsoDates<ClaimSourceEntity>(affectedRows[0]);
   }
 
   /** `claimId`-scoped (IDOR fix). Hard delete — a source has no dependent records of its own. */

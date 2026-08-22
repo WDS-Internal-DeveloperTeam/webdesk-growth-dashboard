@@ -10,7 +10,6 @@ import type {
   ProofClaimEntity,
   ProofClaimListFilter,
   ProofClaimRepository,
-  ServiceRepository,
 } from "@webdesk/database";
 import { PROOF_CLAIM_REPOSITORY } from "./proof-and-claims-library.constants.js";
 import type { CreateProofClaimDto, UpdateProofClaimDto } from "./proof-and-claims-library.dto.js";
@@ -18,7 +17,8 @@ import type { CreateProofClaimDto, UpdateProofClaimDto } from "./proof-and-claim
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuthorizationService } from "../authz/authorization.service.js";
-import { SERVICE_REPOSITORY } from "../service-library/service-library.constants.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
+import { ServicesService } from "../service-library/services.service.js";
 
 const MODULE_KEY = "service_persona_proof";
 
@@ -67,20 +67,31 @@ const TRANSITIONS: Readonly<
 export class ClaimsService {
   constructor(
     @Inject(PROOF_CLAIM_REPOSITORY) private readonly claims: ProofClaimRepository,
-    @Inject(SERVICE_REPOSITORY) private readonly services: ServiceRepository,
+    private readonly services: ServicesService,
     private readonly authorizationService: AuthorizationService,
     private readonly auditService: AuditService,
   ) {}
 
-  /** Validates `relatedServiceIds` against the real, already-existing `services` table — mirrors
-   *  `PersonasService.assertServiceIdsExist()` exactly. */
+  /** Validates `relatedServiceIds` against the real, already-existing `services` table, via
+   *  `ServicesService.existingServiceIds()` — a narrow, read-only delegating method, not the
+   *  write-capable `SERVICE_REPOSITORY` token directly (code-review finding: this module was the
+   *  2nd external consumer to inject the raw repository, exactly the "surface grows" condition
+   *  Persona Library's own security review had flagged as needing this closed — mirrors
+   *  `PersonasService.assertServiceIdsExist()`'s own identical shape, now both updated together).
+   *  This wrapper method itself (the UUID filter + missing-ids `BadRequestException`) is still a
+   *  byte-for-byte 2nd copy of `PersonasService`'s own — left as accepted, tracked debt (code-review
+   *  finding): a real fix means a shared `@webdesk/validation` helper taking a field-name/error-
+   *  message pair, out of proportion for a review-fix pass touching a third module's DTO/service
+   *  layer as well. */
   private async assertServiceIdsExist(ids: readonly string[] | null | undefined): Promise<void> {
     if (!ids || ids.length === 0) {
       return;
     }
     const wellFormedIds = ids.filter((id) => UUID_PATTERN.test(id));
-    const found = wellFormedIds.length > 0 ? await this.services.findByIds(wellFormedIds) : [];
-    const foundIds = new Set(found.map((row) => row.id));
+    const foundIds =
+      wellFormedIds.length > 0
+        ? await this.services.existingServiceIds(wellFormedIds)
+        : new Set<string>();
     const missing = ids.filter((id) => !foundIds.has(id));
     if (missing.length > 0) {
       throw new BadRequestException(`relatedServiceIds not found: ${missing.join(", ")}`);
@@ -209,6 +220,13 @@ export class ClaimsService {
       );
     }
 
+    // A failed audit write here is caught and only console.error'd, not retried or alerted on —
+    // the byte-identical, already-accepted pattern PersonasService.changeApprovalStatus()/
+    // ServicesService.changeApprovalStatus() both have (code-review finding: left as accepted,
+    // tracked debt again here — higher-consequence on an "approved" transition specifically,
+    // since this module's own stated purpose is evidence/compliance for public claims, but a real
+    // fix, e.g. an audit-write retry/alerting mechanism, is a cross-cutting change to
+    // AuditService itself, out of scope for this module).
     const isApproval = nextStatus === "approved";
     try {
       await this.auditService.record({

@@ -161,6 +161,22 @@ export class ServicesService {
     }
   }
 
+  /**
+   * A narrow, read-only delegating method for other modules validating a `relatedServiceIds`-style
+   * field against real services (Persona Library, Proof and Claims Library) — returns only the
+   * subset of `ids` that resolve to a real service, never a full `ServiceEntity`. Exists so
+   * `ServiceLibraryModule` can export just `ServicesService`, not the write-capable
+   * `SERVICE_REPOSITORY` token directly (code-review finding, `module-proof-and-claims-library`:
+   * a second external consumer injecting the raw repository was exactly the "surface grows"
+   * condition Persona Library's own security review had flagged this exposure as needing to be
+   * closed for — see `packages/database/src/authz/*` for the analogous
+   * `USER_ROLE_REPOSITORY`/`AuthzModule` fix this mirrors).
+   */
+  async existingServiceIds(ids: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.services.findByIds(ids);
+    return new Set(found.map((row) => row.id));
+  }
+
   async create(input: CreateServiceDto, actorUserId: string): Promise<ServiceWithRelationshipIds> {
     // Independent checks (different tables, none consumes another's result) — run concurrently
     // rather than as up to 6 sequential round trips (code-review finding).

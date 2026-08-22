@@ -564,6 +564,30 @@ describe("Proof and Claims Library module endpoints (e2e, real disposable databa
     );
   });
 
+  it("returns 404 (not a raw 500) when creating a source under a well-formed but nonexistent claim id", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const nonexistentClaimId = "00000000-0000-4000-8000-000000000000";
+
+    await request(app.getHttpServer())
+      .post(`/proof-and-claims-library/claims/${nonexistentClaimId}/sources`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ source: "Orphaned source attempt" })
+      .expect(404);
+  });
+
+  it("rejects a claim source with a javascript: sourceUrl (stored-XSS prevention, safeHttpUrlSchema)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createDraftClaim(cookie, { claim: "Unsafe Source URL Fixture" });
+
+    await request(app.getHttpServer())
+      .post(`/proof-and-claims-library/claims/${created.id}/sources`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ source: "Malicious", sourceUrl: "javascript:alert(document.cookie)" })
+      .expect(400);
+  });
+
   it("denies claim-source creation with 403 for a read_only session (only V grant, not E)", async () => {
     const adminCookie = await cookieForNewSession(superAdminUserId);
     const created = await createDraftClaim(adminCookie, { claim: "Read Only Source Fixture" });

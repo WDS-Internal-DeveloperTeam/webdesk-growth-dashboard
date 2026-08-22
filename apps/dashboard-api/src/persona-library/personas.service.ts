@@ -10,7 +10,6 @@ import type {
   PersonaEntity,
   PersonaListFilter,
   PersonaRepository,
-  ServiceRepository,
 } from "@webdesk/database";
 import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import { PERSONA_REPOSITORY } from "./persona-library.constants.js";
@@ -19,7 +18,8 @@ import type { CreatePersonaDto, UpdatePersonaDto } from "./persona-library.dto.j
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuthorizationService } from "../authz/authorization.service.js";
-import { SERVICE_REPOSITORY } from "../service-library/service-library.constants.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
+import { ServicesService } from "../service-library/services.service.js";
 
 const MODULE_KEY = "service_persona_proof";
 
@@ -67,22 +67,26 @@ const TRANSITIONS: Readonly<
 export class PersonasService {
   constructor(
     @Inject(PERSONA_REPOSITORY) private readonly personas: PersonaRepository,
-    @Inject(SERVICE_REPOSITORY) private readonly services: ServiceRepository,
+    private readonly services: ServicesService,
     private readonly authorizationService: AuthorizationService,
     private readonly auditService: AuditService,
   ) {}
 
-  /** Validates `relatedServiceIds` against the real, already-existing `services` table — mirrors
-   *  `ServicesService.assertIdsExist()` exactly (code-review finding: this field previously had no
-   *  validation at all, weaker than the precedent it claimed to follow, since Service Library's
-   *  own unvalidated fields point at modules that genuinely don't exist yet, unlike `services`). */
+  /** Validates `relatedServiceIds` against the real, already-existing `services` table, via
+   *  `ServicesService.existingServiceIds()` — a narrow, read-only delegating method, not the
+   *  write-capable `SERVICE_REPOSITORY` token directly (code-review finding,
+   *  `module-proof-and-claims-library` branch: injecting the raw repository here was accepted as
+   *  debt on the explicit condition it be closed once a second module also needed it — Proof and
+   *  Claims Library was that second module). */
   private async assertServiceIdsExist(ids: readonly string[] | null | undefined): Promise<void> {
     if (!ids || ids.length === 0) {
       return;
     }
     const wellFormedIds = ids.filter((id) => UUID_PATTERN.test(id));
-    const found = wellFormedIds.length > 0 ? await this.services.findByIds(wellFormedIds) : [];
-    const foundIds = new Set(found.map((row) => row.id));
+    const foundIds =
+      wellFormedIds.length > 0
+        ? await this.services.existingServiceIds(wellFormedIds)
+        : new Set<string>();
     const missing = ids.filter((id) => !foundIds.has(id));
     if (missing.length > 0) {
       throw new BadRequestException(`relatedServiceIds not found: ${missing.join(", ")}`);

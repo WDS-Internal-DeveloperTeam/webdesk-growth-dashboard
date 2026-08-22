@@ -1,4 +1,4 @@
-import type { ProofClaimEntity, ProofClaimRepository, ServiceRepository } from "@webdesk/database";
+import type { ProofClaimEntity, ProofClaimRepository } from "@webdesk/database";
 import {
   BadRequestException,
   ConflictException,
@@ -8,12 +8,13 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
 import type { AuthorizationService } from "../authz/authorization.service.js";
+import type { ServicesService } from "../service-library/services.service.js";
 import { ClaimsService } from "./claims.service.js";
 
 const NOW = new Date("2026-08-22T00:00:00.000Z");
 // A well-formed UUID for tests that need a relatedServiceIds entry to actually reach
-// services.findByIds() — assertServiceIdsExist() filters out non-UUID-shaped entries before
-// querying, so a plain string like "service-1" would never be looked up at all.
+// services.existingServiceIds() — assertServiceIdsExist() filters out non-UUID-shaped entries
+// before querying, so a plain string like "service-1" would never be looked up at all.
 const FAKE_SERVICE_ID = "11111111-1111-4111-8111-111111111111";
 
 /** A stand-in for Sequelize's real `UniqueConstraintError` — checked by `.name` in
@@ -58,7 +59,7 @@ describe("ClaimsService", () => {
     update: ReturnType<typeof vi.fn>;
     updateStatus: ReturnType<typeof vi.fn>;
   };
-  let services: { findByIds: ReturnType<typeof vi.fn> };
+  let services: { existingServiceIds: ReturnType<typeof vi.fn> };
   let authorizationService: { assertAllowed: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let svc: ClaimsService;
@@ -74,12 +75,12 @@ describe("ClaimsService", () => {
     };
     // Defaults to "every id resolves" so tests that don't care about relatedServiceIds
     // validation (the majority) don't need to stub this themselves.
-    services = { findByIds: vi.fn().mockResolvedValue([]) };
+    services = { existingServiceIds: vi.fn().mockResolvedValue(new Set()) };
     authorizationService = { assertAllowed: vi.fn() };
     auditService = { record: vi.fn() };
     svc = new ClaimsService(
       claims as unknown as ProofClaimRepository,
-      services as unknown as ServiceRepository,
+      services as unknown as ServicesService,
       authorizationService as unknown as AuthorizationService,
       auditService as unknown as AuditService,
     );
@@ -130,14 +131,14 @@ describe("ClaimsService", () => {
     it("validates relatedServiceIds against the real services table before creating", async () => {
       claims.findByPublicId.mockResolvedValue(null);
       claims.create.mockResolvedValue(claim());
-      services.findByIds.mockResolvedValue([{ id: FAKE_SERVICE_ID }]);
+      services.existingServiceIds.mockResolvedValue(new Set([FAKE_SERVICE_ID]));
 
       await svc.create(
         { publicId: "PROOF-X", claim: "X", relatedServiceIds: [FAKE_SERVICE_ID] },
         "actor-1",
       );
 
-      expect(services.findByIds).toHaveBeenCalledWith([FAKE_SERVICE_ID]);
+      expect(services.existingServiceIds).toHaveBeenCalledWith([FAKE_SERVICE_ID]);
       expect(claims.create).toHaveBeenCalled();
     });
 
@@ -150,15 +151,15 @@ describe("ClaimsService", () => {
           "actor-1",
         ),
       ).rejects.toThrow(BadRequestException);
-      // A malformed id must never be sent to services.findByIds() — Postgres's uuid column type
+      // A malformed id must never be sent to services.existingServiceIds() — Postgres's uuid column type
       // would reject it with a raw driver error instead of this clean 400.
-      expect(services.findByIds).not.toHaveBeenCalled();
+      expect(services.existingServiceIds).not.toHaveBeenCalled();
     });
 
     it("rejects relatedServiceIds that don't resolve to real services, without creating", async () => {
       claims.findByPublicId.mockResolvedValue(null);
       // Well-formed UUID, but findByIds() reports it doesn't exist as a real service.
-      services.findByIds.mockResolvedValue([]);
+      services.existingServiceIds.mockResolvedValue(new Set());
 
       await expect(
         svc.create(
@@ -183,7 +184,7 @@ describe("ClaimsService", () => {
         "actor-1",
       );
 
-      expect(services.findByIds).not.toHaveBeenCalled();
+      expect(services.existingServiceIds).not.toHaveBeenCalled();
       expect(claims.create).toHaveBeenCalled();
     });
 
@@ -268,17 +269,17 @@ describe("ClaimsService", () => {
     });
 
     it("validates relatedServiceIds against the real services table before writing", async () => {
-      services.findByIds.mockResolvedValue([{ id: FAKE_SERVICE_ID }]);
+      services.existingServiceIds.mockResolvedValue(new Set([FAKE_SERVICE_ID]));
       claims.update.mockResolvedValue(claim());
 
       await svc.update("claim-1", { relatedServiceIds: [FAKE_SERVICE_ID] }, "actor-1");
 
-      expect(services.findByIds).toHaveBeenCalledWith([FAKE_SERVICE_ID]);
+      expect(services.existingServiceIds).toHaveBeenCalledWith([FAKE_SERVICE_ID]);
       expect(claims.update).toHaveBeenCalled();
     });
 
     it("rejects relatedServiceIds that don't resolve to real services, without writing", async () => {
-      services.findByIds.mockResolvedValue([]);
+      services.existingServiceIds.mockResolvedValue(new Set());
 
       await expect(
         svc.update("claim-1", { relatedServiceIds: ["missing"] }, "actor-1"),

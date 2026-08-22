@@ -16,9 +16,11 @@ import { ClaimSourcesController } from "./claim-sources.controller.js";
  * `SessionGuard`/`OriginCheckGuard`, `AuthzModule` for `PermissionGuard`/`AuthorizationService`
  * (the dynamic per-transition permission check in `ClaimsService.changeApprovalStatus()`),
  * `AuditModule` for `AuditService` (claim/source create/update/delete and status transitions are
- * all audited), and `ServiceLibraryModule` for its exported `SERVICE_REPOSITORY`
- * (`relatedServiceIds` existence validation — mirrors `PersonaLibraryModule`'s own identical
- * reuse). No `UsersModule` import — this module has no `ownerUserId`/`parentServiceId`-style
+ * all audited), and `ServiceLibraryModule` for its exported `ServicesService`
+ * (`relatedServiceIds` existence validation via `ServicesService.existingServiceIds()`, a narrow
+ * read-only delegating method — this module was the 2nd external consumer to need it, which is
+ * exactly why `SERVICE_REPOSITORY` itself is no longer exported directly, code-review finding).
+ * No `UsersModule` import — this module has no `ownerUserId`/`parentServiceId`-style
  * field needing existence validation. No `AuthorizationService.canViewConfidential()` usage — no
  * confidential-field mechanism exists here, matching Persona Library: the module registry's own
  * seeded `confidentialityLevel` for `proof_and_claims_library` is `null` (migration `00035`), the
