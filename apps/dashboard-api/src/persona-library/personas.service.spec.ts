@@ -115,7 +115,7 @@ describe("PersonasService", () => {
       expect(personas.create).not.toHaveBeenCalled();
     });
 
-    it("passes the plain-text fields through unchanged (no sanitization for this module)", async () => {
+    it("sanitizes rich-text fields before writing, stripping a disallowed tag (2026-08-22 rich-text editor rollout)", async () => {
       personas.findByPublicId.mockResolvedValue(null);
       personas.create.mockResolvedValue(persona());
 
@@ -123,13 +123,49 @@ describe("PersonasService", () => {
         {
           publicId: "PERSONA-X",
           name: "X",
-          goals: "<script>alert(1)</script>",
+          goals: "<script>alert(1)</script><p>Reduce cost</p>",
+          pains: null,
+          triggers: undefined,
         },
         "actor-1",
       );
 
       const [writtenInput] = personas.create.mock.calls[0] as [Record<string, unknown>];
-      expect(writtenInput.goals).toBe("<script>alert(1)</script>");
+      expect(writtenInput.goals).toBe("<p>Reduce cost</p>");
+      // null/undefined pass through unchanged rather than being coerced into an empty string.
+      expect(writtenInput.pains).toBeNull();
+      expect(writtenInput.triggers).toBeUndefined();
+    });
+
+    it("sanitizes every one of the 8 narrative fields on create, not just goals", async () => {
+      personas.findByPublicId.mockResolvedValue(null);
+      personas.create.mockResolvedValue(persona());
+      const dirty = "<p>Text</p><script>bad</script>";
+      const clean = "<p>Text</p>";
+
+      await svc.create(
+        {
+          publicId: "PERSONA-X",
+          name: "X",
+          pains: dirty,
+          triggers: dirty,
+          objections: dirty,
+          decisionCriteria: dirty,
+          badFitSignals: dirty,
+          messagingTrack: dirty,
+          ctaPreferences: dirty,
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = personas.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.pains).toBe(clean);
+      expect(writtenInput.triggers).toBe(clean);
+      expect(writtenInput.objections).toBe(clean);
+      expect(writtenInput.decisionCriteria).toBe(clean);
+      expect(writtenInput.badFitSignals).toBe(clean);
+      expect(writtenInput.messagingTrack).toBe(clean);
+      expect(writtenInput.ctaPreferences).toBe(clean);
     });
 
     it("validates relatedServiceIds against the real services table before creating", async () => {
@@ -216,25 +252,76 @@ describe("PersonasService", () => {
   });
 
   describe("update", () => {
-    it("does not pre-fetch the persona before updating (no wasted read)", async () => {
-      // Regression test for a code-review finding: this method previously pre-fetched via
-      // findById() purely to 404-check, mirroring ServicesService.update()'s own pattern where
-      // that read is load-bearing (FK re-validation, rich-text diffing) — Persona Library has
-      // neither, so the mirrored read was a wasted SELECT. The repository's own update() already
-      // 404s cleanly via its null-on-zero-affected-rows return.
-      personas.update.mockResolvedValue(persona({ name: "Renamed" }));
-
-      await svc.update("persona-1", { name: "Renamed" }, "actor-1");
-
-      expect(personas.findById).not.toHaveBeenCalled();
+    beforeEach(() => {
+      // The pre-fetch reintroduced by the 2026-08-22 rich-text editor rollout (see below) needs
+      // a "current" persona to diff rich-text fields against — default every update() test to a
+      // successful pre-fetch so tests unrelated to that behavior don't need to stub it themselves.
+      personas.findById.mockResolvedValue(persona());
     });
 
-    it("throws NotFoundException when the repository update finds nothing to update", async () => {
-      personas.update.mockResolvedValue(null);
+    it("pre-fetches the persona before updating, 404ing cleanly before any write is attempted (reintroduced 2026-08-22 for the rich-text editor rollout)", async () => {
+      // A prior code-review pass removed this pre-fetch as a wasted SELECT when Persona Library
+      // had no rich-text fields to diff against a "current" value. Now that it does
+      // (sanitizeNullableRichTextIfChanged() needs `current` to skip re-sanitizing an unchanged
+      // field), the pre-fetch is load-bearing again, mirroring ServicesService.update()'s own
+      // findServiceOrThrow()-first ordering.
+      personas.findById.mockResolvedValue(null);
 
       await expect(svc.update("missing", { name: "New" }, "actor-1")).rejects.toThrow(
         NotFoundException,
       );
+      expect(personas.update).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException when the repository update finds nothing to update (a TOCTOU race after a successful pre-fetch)", async () => {
+      personas.update.mockResolvedValue(null);
+
+      await expect(svc.update("persona-1", { name: "New" }, "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it("sanitizes rich-text fields before writing, stripping a disallowed tag", async () => {
+      personas.update.mockResolvedValue(persona());
+
+      await svc.update(
+        "persona-1",
+        { pains: "<script>alert(1)</script><p>Budget freeze</p>" },
+        "actor-1",
+      );
+
+      const [, writtenPatch] = personas.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.pains).toBe("<p>Budget freeze</p>");
+    });
+
+    it("skips re-sanitizing a rich-text field the patch resends unchanged from the current stored value", async () => {
+      personas.findById.mockResolvedValue(persona({ goals: "<p>Reduce cost</p>" }));
+      personas.update.mockResolvedValue(persona());
+
+      // Resends goals byte-for-byte unchanged, alongside a real change to a different field.
+      await svc.update("persona-1", { goals: "<p>Reduce cost</p>", name: "Renamed" }, "actor-1");
+
+      const [, writtenPatch] = personas.update.mock.calls[0] as [string, Record<string, unknown>];
+      // Unchanged and returned verbatim — proves the real HTML parse/allowlist-filter was
+      // skipped, not just that the value happens to look the same afterward.
+      expect(writtenPatch.goals).toBe("<p>Reduce cost</p>");
+      expect(writtenPatch.name).toBe("Renamed");
+    });
+
+    it("proves the skip is a real skip, not a run that happens to produce identical output (code-review finding: the prior version of this test used an already-clean fixture, so it couldn't distinguish the two)", async () => {
+      // A value containing a tag the sanitizer's own allowlist would strip if it ran, stored as
+      // the "current" value (representing e.g. a row written before this sanitizer existed) and
+      // resent unchanged. If sanitizeNullableRichTextIfChanged() actually skipped re-sanitizing,
+      // the disallowed tag survives verbatim; if it re-ran the real sanitizer despite the values
+      // matching, the tag would be stripped and this assertion would fail.
+      const dirty = "<script>alert(1)</script><p>Reduce cost</p>";
+      personas.findById.mockResolvedValue(persona({ goals: dirty }));
+      personas.update.mockResolvedValue(persona());
+
+      await svc.update("persona-1", { goals: dirty }, "actor-1");
+
+      const [, writtenPatch] = personas.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.goals).toBe(dirty);
     });
 
     it("never accepts approvalStatus or version through the general update patch", async () => {

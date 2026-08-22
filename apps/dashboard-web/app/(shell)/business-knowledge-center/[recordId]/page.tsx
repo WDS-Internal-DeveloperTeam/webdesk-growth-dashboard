@@ -13,7 +13,13 @@ import {
   RECORD_TYPE_LABEL,
   tolerateDiscard,
 } from "@/lib/business-knowledge";
-import { dlStyle, h2Style, mutedStyle, sectionStyle } from "@/lib/detail-section-styles";
+import {
+  dlStyle,
+  h2Style,
+  mutedStyle,
+  richContentStyle,
+  sectionStyle,
+} from "@/lib/detail-section-styles";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -129,13 +135,6 @@ const contentStyle: React.CSSProperties = {
   color: "var(--webdesk-dashboard-color-foreground)",
   whiteSpace: "pre-wrap",
   margin: 0,
-};
-
-// No `whiteSpace: pre-wrap` here, unlike `contentStyle` above — this wraps real HTML (already
-// structured with its own <p>/<br> tags from the editor), not plain text needing that treatment.
-const richContentStyle: React.CSSProperties = {
-  fontSize: "0.9375rem",
-  color: "var(--webdesk-dashboard-color-foreground)",
 };
 
 const redactedStyle: React.CSSProperties = {

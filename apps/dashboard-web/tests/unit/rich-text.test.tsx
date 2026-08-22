@@ -3,6 +3,7 @@ import {
   EMPTY_RICH_TEXT_HTML,
   findOverLongRichTextField,
   isEmptyRichTextHtml,
+  richTextFieldValue,
   toSafeRichTextValue,
 } from "@/lib/rich-text";
 
@@ -51,6 +52,29 @@ describe("toSafeRichTextValue", () => {
 
   it("escapes ampersands in legacy plain text", () => {
     expect(toSafeRichTextValue("Ships & handles")).toBe("<p>Ships &amp; handles</p>");
+  });
+
+  it("converts embedded newlines to <br> instead of silently collapsing them (code-review finding: a legacy multi-line value used to render as one run-on line once the old textarea's pre-wrap styling was removed)", () => {
+    expect(toSafeRichTextValue("- Grow revenue\n- Reduce churn\n- Improve retention")).toBe(
+      "<p>- Grow revenue<br>- Reduce churn<br>- Improve retention</p>",
+    );
+  });
+});
+
+describe("richTextFieldValue", () => {
+  it("create mode: omits an empty field entirely (undefined), matching plain-text fields' own create-mode contract", () => {
+    expect(richTextFieldValue("", "create")).toBeUndefined();
+    expect(richTextFieldValue(EMPTY_RICH_TEXT_HTML, "create")).toBeUndefined();
+  });
+
+  it("edit mode: sends an explicit null for an emptied field, so it actually clears rather than being left unchanged", () => {
+    expect(richTextFieldValue("", "edit")).toBeNull();
+    expect(richTextFieldValue(EMPTY_RICH_TEXT_HTML, "edit")).toBeNull();
+  });
+
+  it("returns the trimmed value verbatim when real content is present, in either mode", () => {
+    expect(richTextFieldValue("  <p>Hello</p>  ", "create")).toBe("<p>Hello</p>");
+    expect(richTextFieldValue("  <p>Hello</p>  ", "edit")).toBe("<p>Hello</p>");
   });
 });
 

@@ -14,7 +14,7 @@ import type {
 import { RelationshipPicker, TagListField, type RelationshipOption } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
-import { findOverLongRichTextField, isEmptyRichTextHtml } from "@/lib/rich-text";
+import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { CONFIDENTIALITY_VALUES, PUBLICATION_STATUS_VALUES } from "@/lib/service-library-query";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./service-library-form.module.css";
@@ -180,17 +180,10 @@ export function ServiceLibraryForm(props: ServiceLibraryFormProps): ReactNode {
         return props.mode === "create" ? undefined : null;
       }
 
-      // Long-text fields: omitted entirely (create) or sent as an explicit null (edit) when
-      // empty — omission on create avoids an unnecessary null write for a field never touched;
-      // an explicit null on edit is what actually clears an existing value back to "none",
-      // matching updateServiceSchema's own nullish contract (an omitted key leaves it unchanged).
-      // isEmptyRichTextHtml() also treats the 7 rich-text fields' own "nothing typed" output
-      // ("<p></p>") as empty, same as business-knowledge-record-form.tsx's own isContentEmpty
-      // check.
+      // The actual nullish-contract logic lives in lib/rich-text.ts's richTextFieldValue() — shared
+      // with persona-library-form.tsx (code-review finding: was hand-duplicated in both files).
       function richTextField(value: string): string | null | undefined {
-        const trimmed = value.trim();
-        if (!isEmptyRichTextHtml(trimmed)) return trimmed;
-        return props.mode === "create" ? undefined : null;
+        return richTextFieldValue(value, props.mode);
       }
 
       const richTextFields: ReadonlyArray<readonly [string, string]> = [

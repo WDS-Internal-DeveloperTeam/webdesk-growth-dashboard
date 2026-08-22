@@ -27,7 +27,19 @@ const LOOKS_LIKE_RICH_TEXT_HTML =
   /^\s*<(p|h[1-6]|ul|ol|li|blockquote|pre|table|a|strong|b|em|i|u|s|strike|code|br|hr)[\s/>]/i;
 
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return (
+    text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      // A plain-text value's newlines carry real line-structure the old <textarea>'s `pre-wrap`
+      // rendering preserved visually. A bare escaped string wrapped in one <p> has no equivalent —
+      // code-review finding (persona-library-rich-text-editor): a legacy multi-line value silently
+      // collapsed onto one run-on line once this <p>-wrap replaced the old pre-wrap rendering.
+      // Converting to <br> here keeps that structure through both the editor and the sanitized
+      // render path (<br> is on sanitizeRichTextHtml's own allowlist).
+      .replace(/\n/g, "<br>")
+  );
 }
 
 /**
@@ -41,15 +53,32 @@ function escapeHtml(text: string): string {
  * silently stripped by the sanitizer.
  *
  * Detects that case (the value doesn't start with a recognized rich-text tag) and escapes + wraps
- * it as a single paragraph, so it keeps displaying and editing exactly as it always did. A no-op
- * for any value this app's own sanitizer has ever produced, since that output always starts with
- * a real tag.
+ * it as a single paragraph, so it keeps displaying and editing exactly as it always did (including
+ * any embedded newlines, converted to `<br>`). A no-op for any value this app's own sanitizer has
+ * ever produced, since that output always starts with a real tag.
  */
 export function toSafeRichTextValue(value: string): string {
   if (value === "" || LOOKS_LIKE_RICH_TEXT_HTML.test(value)) {
     return value;
   }
   return `<p>${escapeHtml(value)}</p>`;
+}
+
+/**
+ * Shared nullish-contract logic behind every form's local `richTextField()` wrapper (code-review
+ * finding: hand-duplicated verbatim between `service-library-form.tsx` and
+ * `persona-library-form.tsx`). An omitted key leaves an existing value unchanged on update
+ * (matching each module's own `update*Schema`'s nullish contract); an explicit `null` is what
+ * actually clears a value back to "none". `isEmptyRichTextHtml()` treats a `RichTextEditor`
+ * field's own "nothing typed" output (`"<p></p>"`) as empty, not just a genuinely blank string.
+ */
+export function richTextFieldValue(
+  value: string,
+  mode: "create" | "edit",
+): string | null | undefined {
+  const trimmed = value.trim();
+  if (!isEmptyRichTextHtml(trimmed)) return trimmed;
+  return mode === "create" ? undefined : null;
 }
 
 /**

@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
 import { PersonaStatusActions } from "@/components/persona-status-actions";
+import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import {
   dlStyle,
   h2Style,
   h3Style,
   mutedStyle,
+  richContentStyle,
   sectionStyle,
   subsectionStyle,
 } from "@/lib/detail-section-styles";
@@ -133,21 +135,15 @@ export default async function PersonaLibraryDetailPage({ params }: PersonaLibrar
   );
 }
 
-// These fields are plain text (not HTML — this module was explicitly out of scope for the
-// dashboard-web rich-text editor rollout), so `whiteSpace: pre-wrap` is needed to preserve
-// newlines, unlike Service Library's own `richContentStyle`, which renders real structured HTML.
-const plainContentStyle: React.CSSProperties = {
-  fontSize: "0.9375rem",
-  color: "var(--webdesk-dashboard-color-foreground)",
-  whiteSpace: "pre-wrap",
-  margin: 0,
-};
-
 function TextBlock({ label, value }: { readonly label: string; readonly value: string | null }) {
   return (
     <div style={subsectionStyle}>
       <h3 style={h3Style}>{label}</h3>
-      {value ? <p style={plainContentStyle}>{value}</p> : <p style={mutedStyle}>Not set.</p>}
+      {value ? (
+        <SanitizedRichText html={value} style={richContentStyle} />
+      ) : (
+        <p style={mutedStyle}>Not set.</p>
+      )}
     </div>
   );
 }

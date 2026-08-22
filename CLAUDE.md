@@ -2289,6 +2289,86 @@ e879be801c780be7c0a2af18250071b017873e28`, `GET /persona-library/personas` retur
     genuinely live in production**, closing out the Persona Library module's full
     build-to-production arc — backend and now the full UI (list, detail, create/edit form,
     status actions) are both live.
+37. **Persona Library's 8 narrative fields converted to the rich-text editor — built, fully
+    validated, code-reviewed (5 of 8 findings fixed, 3 accepted as tracked debt), security-reviewed
+    (0 findings above threshold), required second-role human reviewed (Jitesh D, "Approved"),
+    gated (G4-persona-library-rich-text, WebDesk Solution, CONFIRM), pushed and opened as
+    [PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52); not
+    yet merged (2026-08-22).** Closes the gap the 2026-08-22 standing rule ("from now
+    onward we must have to use rich text html editor for all the text area") left open — Persona
+    Library's own UI
+    (item 36) had shipped with plain `<textarea>` fields one day earlier, since it was built while
+    the app-wide rich-text rollout (Service Library + Projects, item 34) was already scoped and in
+    progress. Built directly on the explicit "change text area to rich text html editor in New
+    persona" instruction. Mirrors Service Library's own already-reviewed pattern exactly:
+    `goals`/`pains`/`triggers`/`objections`/`decisionCriteria`/`badFitSignals`/`messagingTrack`/
+    `ctaPreferences` now render via the existing `RichTextEditor` component (unmodified);
+    `LONG_TEXT_MAX_LENGTH` raised 20,000 → 40,000 on both frontend and backend, the same
+    markup-overhead ratio Business Knowledge Center/Service Library already established;
+    `personas.service.ts` wires `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`
+    into `create()`/`update()` for all 8 fields, reintroducing a pre-fetch a prior code-review pass
+    had removed (now load-bearing again for the skip-if-unchanged optimization); the detail page
+    renders each field via the shared `SanitizedRichText` component instead of plain text.
+    **Live end-to-end verified** against a real local `dashboard-api` instance and disposable
+    database, not just typechecked/built blind: a real create call with an embedded `<script>` tag
+    returned the sanitized HTML with the script stripped and safe `<strong>` formatting preserved;
+    a real update call with an `<img onerror>` payload was likewise stripped, the sibling
+    plain-text `buyerType` field updated correctly, and `version` incremented as expected. 503/503
+    `dashboard-api` unit tests (3 new), 366/366 `dashboard-web` unit tests, typecheck/lint/
+    `check-css-tokens.mjs`/`next build`/`nest build`/prettier all clean, `pnpm audit` 0
+    vulnerabilities. Committed to branch `persona-library-rich-text-editor` (not yet pushed).
+    **Independent code review then ran** (this project's own `code-review` skill, 8 finder angles
+    run via parallel subagents, each self-verified against real signatures/git history/sibling-
+    module precedent) — 8 candidates surfaced after dedup (5 CONFIRMED, 3 PLAUSIBLE). 5 fixed per
+    explicit "fix the confirmed findings" instruction — most notable: `toSafeRichTextValue()`'s
+    legacy-plain-text escaping never converted embedded newlines to `<br>`, so a pre-existing
+    multi-line value (in Persona Library, Service Library, or Projects — this is shared rendering
+    infrastructure) collapsed onto one run-on line once the old textarea's `pre-wrap` rendering was
+    removed; fixed generically in `lib/rich-text.ts`'s `escapeHtml()`, benefiting every module
+    sharing the helper, not just Persona Library. Also fixed: `update()`'s reintroduced pre-fetch
+    ran sequentially before an independent FK check (now parallelized via `Promise.all`, matching
+    `create()`'s own pattern); `richTextField()`'s nullish-contract logic was hand-duplicated
+    verbatim between `persona-library-form.tsx` and `service-library-form.tsx` (extracted into a
+    new `richTextFieldValue()` export in `lib/rich-text.ts`); `richContentStyle` was independently
+    declared a 3rd time across three detail pages that already import 6 other constants from the
+    shared `lib/detail-section-styles.ts` module built to stop exactly this (extracted, retrofitted
+    onto all three); and the "skips re-sanitizing an unchanged field" test used an already-clean
+    fixture, unable to distinguish "skipped" from "ran and produced identical output" (a second
+    test added using a value the real sanitizer would visibly change if it ran). **3 findings left
+    as accepted, tracked debt, recorded directly in code**: a doc comment overclaiming "sanitized
+    before storage" for every field, true only for a field a caller actually changes (corrected,
+    not an active exploit since render-time sanitization still protects every read); the per-field
+    sanitize-call boilerplate being a 3rd near-identical hand-enumerated occurrence after Service
+    Library/Projects with no shared helper (a real fix means retrofitting already-shipped call
+    sites, out of scope for a Persona-Library-only branch); and the audit event's `afterState`
+    recording raw, pre-sanitization HTML, the byte-identical pattern Service Library's own
+    `update()` already has (not a new deviation this diff introduces). Re-validated: 504/504
+    `dashboard-api` unit tests (4 new), 370/370 `dashboard-web` unit tests (7 new), 15/15 Playwright
+    tests (including both authenticated-shell axe-core scans), typecheck/lint/
+    `check-css-tokens.mjs`/`next build`/`nest build`/prettier all clean, `pnpm audit` 0
+    vulnerabilities. **A separate `security-review` skill run then found 0 findings above
+    threshold** — a dedicated sub-task traced the new `\n`→`<br>` conversion end-to-end through
+    both the client-side editor and the render-time sanitizer, confirming the `<br>` literal is
+    fixed and hardcoded (never attacker-derived), runs strictly after `&`/`<`/`>` are already
+    escaped (no ordering bypass), and that `sanitizeRenderedHtml`/`sanitizeRichTextHtml` still runs
+    unconditionally afterward on every render — this new code path does not bypass sanitization for
+    legacy plain-text values. The `Promise.all` parallelization was also confirmed to introduce no
+    authorization-bypass window (RBAC enforcement happens in the guard layer before either read
+    runs), and both pure-refactor extractions were confirmed behaviorally identical to what they
+    replaced. A review packet (published as a Claude artifact, "Persona Library Rich-Text Editor
+    Review Packet" — code review + security review findings, fixes, and validation evidence, with a
+    decision section) was then prepared for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`. **Jitesh D
+    reviewed it and returned "Approved,"** accepting the 3 open findings as tracked debt. **The
+    gate (G4-persona-library-rich-text) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+    already complete before the gate was requested), approved commit `33a7f3c` on branch
+    `persona-library-rich-text-editor` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-persona-library-rich-text`). **"Push the branch and open a
+    PR" was then separately requested and executed** — pushed to `origin`, opened as
+    [PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -5582,6 +5662,65 @@ e879be801c780be7c0a2af18250071b017873e28`, confirming the exact merged commit is
   genuinely live in production**, closing out the Persona Library module's full
   build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
   actions) are both live.
+- `[2026-08-22]` **Two standing rules recorded from direct user feedback**: (1) every new
+  `dashboard-web` long-text field must use `RichTextEditor`, never a plain `<textarea>`, going
+  forward — given right after Persona Library's UI shipped with 8 plain-textarea fields (a
+  deliberate scope decision at build time, since that module was explicitly excluded from the
+  earlier `rich-text-editor-long-fields.md` rollout). (2) direct concern about the volume of
+  independent-code-review findings per slice (8–10 recently), with an explicit "do the code
+  properly" ask — acknowledged directly, with the real avoidable pattern identified (duplication/
+  reuse misses, sibling-convention consistency gaps, failure-isolation gaps on new enrichment
+  fetches) and recorded as a standing feedback memory and in this file's own Cautions section. The
+  review process itself stays in place — the goal is to reduce how much it has to find, not
+  remove it.
+- `[2026-08-22]` **"Change text area to rich text html editor in New persona" — Persona Library's
+  8 narrative fields converted to the rich-text editor, with real backend HTML sanitization
+  added.** Built on branch `persona-library-rich-text-editor`, off `main` at the PR #51 merge
+  commit. Mirrors Service Library's own already-reviewed pattern exactly — see "Active tasks" item
+  37 above for the full account. Live end-to-end verified against a real local `dashboard-api`
+  instance and disposable database (a real `<script>` tag stripped on create, a real
+  `<img onerror>` payload stripped on update, sibling plain-text fields and `version` handled
+  correctly). **Independent code review then ran** (8-angle finder pass, 5 of 8 findings fixed) —
+  most notable: `toSafeRichTextValue()`'s legacy-plain-text escaping never converted embedded
+  newlines to `<br>`, silently collapsing a pre-existing multi-line value onto one run-on line —
+  fixed generically in the shared `lib/rich-text.ts` helper, benefiting Service Library's and
+  Projects' own pre-existing plain-text data too, not just Persona Library. 3 findings left as
+  accepted, tracked debt (an overclaiming doc comment, now corrected; triplicated per-field
+  sanitize boilerplate; the audit trail recording raw pre-sanitization HTML, an already-accepted
+  pattern from Service Library). **A separate `security-review` skill run then found 0 findings
+  above threshold** — a dedicated sub-task traced the new `\n`→`<br>` conversion end-to-end through
+  both sanitization passes, confirming no bypass. A review packet (published as a Claude artifact,
+  "Persona Library Rich-Text Editor Review Packet" — code review + security review findings,
+  fixes, and validation evidence, with a decision section) was then prepared for the required
+  second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). See `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`.
+  **Jitesh D reviewed it and returned "Approved,"** accepting the 3 open findings as tracked
+  debt. **A gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.**
+- `[2026-08-22]` **Required second-role human review complete for
+  `persona-library-rich-text-editor`.** The review packet (code review + security review
+  findings, fixes, and the 3 open accepted-debt items, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved,"** no disputes raised — the 3 open findings (the
+  corrected overclaiming doc comment, the triplicated per-field sanitize boilerplate, and the
+  audit trail's raw-HTML `afterState`) were accepted as tracked debt rather than sent back for a
+  fix. See
+  `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`'s "Sign-off"
+  section. A gate decision, push/PR, and merge authorization remain separate, not-yet-requested
+  next steps.
+- `[2026-08-22]` **The gate (G4-persona-library-rich-text) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `33a7f3c` on branch `persona-library-rich-text-editor` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-persona-library-rich-text`) and
+  `docs/project-state/persona-library-rich-text-editor-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
+  merging** — each remains its own separate, not-yet-requested authorization, per this project's
+  standing "no auto-merge" rule.
+- `[2026-08-22]` **"Push the branch and open a PR" was separately requested and executed** on
+  `persona-library-rich-text-editor` — pushed to `origin`, opened as
+  [PR #52](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/52). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

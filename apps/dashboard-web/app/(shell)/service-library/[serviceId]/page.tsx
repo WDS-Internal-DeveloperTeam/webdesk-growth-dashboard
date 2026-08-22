@@ -9,6 +9,7 @@ import {
   h2Style,
   h3Style,
   mutedStyle,
+  richContentStyle,
   sectionStyle,
   subsectionStyle,
 } from "@/lib/detail-section-styles";
@@ -170,14 +171,6 @@ export default async function ServiceLibraryDetailPage({ params }: ServiceLibrar
     </ContentContainer>
   );
 }
-
-// No `whiteSpace: pre-wrap` here — this wraps real HTML (already structured with its own <p>/<br>
-// tags from the rich-text editor), not plain text needing that treatment, matching Business
-// Knowledge Center's own `richContentStyle` precedent.
-const richContentStyle: React.CSSProperties = {
-  fontSize: "0.9375rem",
-  color: "var(--webdesk-dashboard-color-foreground)",
-};
 
 const redactedStyle: React.CSSProperties = {
   fontSize: "0.875rem",

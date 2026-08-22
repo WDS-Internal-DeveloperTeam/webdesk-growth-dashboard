@@ -95,10 +95,10 @@ describe("PersonaLibraryForm", () => {
     expect(screen.getByLabelText("Name")).toBeRequired();
   });
 
-  it("renders every long-text field as a plain textarea, not a rich-text editor", () => {
+  it("renders a rich-text editor (not a plain textarea) for all 8 Narrative fields", () => {
     render(<PersonaLibraryForm mode="create" services={services} />);
-    expect(document.querySelectorAll("textarea")).toHaveLength(8);
-    expect(document.querySelectorAll('[contenteditable="true"]')).toHaveLength(0);
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
+    expect(document.querySelectorAll('[contenteditable="true"]')).toHaveLength(8);
   });
 
   it("create mode: submits publicId/name, omitting untouched text fields entirely", async () => {
@@ -211,16 +211,16 @@ describe("PersonaLibraryForm", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("edit mode: a plain-text field's initial content loads into its textarea", () => {
+  it("edit mode: a rich-text field's initial HTML content loads into its editor", async () => {
     render(
       <PersonaLibraryForm
         mode="edit"
         personaId={PERSONA_ID}
-        initial={personaFixture({ goals: "Reduce onboarding friction" })}
+        initial={personaFixture({ goals: "<p>Reduce onboarding friction</p>" })}
         services={services}
       />,
     );
-    expect(screen.getByLabelText("Goals")).toHaveValue("Reduce onboarding friction");
+    await waitFor(() => expect(screen.getByText("Reduce onboarding friction")).toBeInTheDocument());
   });
 
   it("edit mode: a relatedServiceIds entry outside the fetched services list falls back to a raw-id chip instead of vanishing (code-review fix)", () => {
