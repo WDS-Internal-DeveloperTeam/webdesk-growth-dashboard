@@ -16,12 +16,18 @@ const APPROVAL_STATUS_VALUES = [
 
 export const personaApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
-// These 8 fields are now real HTML from the dashboard-web RichTextEditor (sanitized in
-// personas.service.ts before being stored, and again at render time via the shared
-// SanitizedRichText component) — a 2026-08-22 standing rule requiring every dashboard-web
-// long-text field to use the rich-text editor going forward. Raised from 20_000, same
-// markup-overhead reasoning as Service Library's/Business Knowledge Center's own raise: real HTML
-// carries more bytes than the equivalent plain text for the same visible content.
+// These 8 fields are now real HTML from the dashboard-web RichTextEditor — a 2026-08-22 standing
+// rule requiring every dashboard-web long-text field to use the rich-text editor going forward.
+// personas.service.ts sanitizes a field's *submitted* value on every create/update it's actually
+// present in; an update() patch that resends an untouched field's current stored value unchanged
+// skips re-sanitizing it (an efficiency optimization, not a gap — that value already went through
+// this same sanitizer on write, or, for a persona created before this rollout, is real plain text
+// with nothing to strip). Every read still goes through the render-time SanitizedRichText
+// component regardless (code-review finding, persona-library-rich-text-editor: an earlier doc
+// comment here overclaimed "always sanitized before storage," true only for a field a caller
+// actually changes). Raised from 20_000, same markup-overhead reasoning as Service Library's/
+// Business Knowledge Center's own raise: real HTML carries more bytes than the equivalent plain
+// text for the same visible content.
 const LONG_TEXT_MAX_LENGTH = 40_000;
 const longTextField = z.string().max(LONG_TEXT_MAX_LENGTH).nullish();
 

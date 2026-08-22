@@ -308,6 +308,22 @@ describe("PersonasService", () => {
       expect(writtenPatch.name).toBe("Renamed");
     });
 
+    it("proves the skip is a real skip, not a run that happens to produce identical output (code-review finding: the prior version of this test used an already-clean fixture, so it couldn't distinguish the two)", async () => {
+      // A value containing a tag the sanitizer's own allowlist would strip if it ran, stored as
+      // the "current" value (representing e.g. a row written before this sanitizer existed) and
+      // resent unchanged. If sanitizeNullableRichTextIfChanged() actually skipped re-sanitizing,
+      // the disallowed tag survives verbatim; if it re-ran the real sanitizer despite the values
+      // matching, the tag would be stripped and this assertion would fail.
+      const dirty = "<script>alert(1)</script><p>Reduce cost</p>";
+      personas.findById.mockResolvedValue(persona({ goals: dirty }));
+      personas.update.mockResolvedValue(persona());
+
+      await svc.update("persona-1", { goals: dirty }, "actor-1");
+
+      const [, writtenPatch] = personas.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.goals).toBe(dirty);
+    });
+
     it("never accepts approvalStatus or version through the general update patch", async () => {
       personas.update.mockResolvedValue(persona({ name: "Renamed", version: 2 }));
 

@@ -6,7 +6,7 @@ import type { Persona, Service } from "@webdesk/shared-types";
 import { RelationshipPicker, TagListField, type RelationshipOption } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
-import { findOverLongRichTextField, isEmptyRichTextHtml } from "@/lib/rich-text";
+import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./persona-library-form.module.css";
 
@@ -137,13 +137,10 @@ export function PersonaLibraryForm(props: PersonaLibraryFormProps): ReactNode {
         return props.mode === "create" ? undefined : null;
       }
 
-      // Long-text fields: same nullish contract as textField() above, but isEmptyRichTextHtml()
-      // also treats a RichTextEditor field's own "nothing typed" output ("<p></p>") as empty, not
-      // just a genuinely blank string — matching service-library-form.tsx's own richTextField().
+      // The actual nullish-contract logic lives in lib/rich-text.ts's richTextFieldValue() — shared
+      // with service-library-form.tsx (code-review finding: was hand-duplicated in both files).
       function richTextField(value: string): string | null | undefined {
-        const trimmed = value.trim();
-        if (!isEmptyRichTextHtml(trimmed)) return trimmed;
-        return props.mode === "create" ? undefined : null;
+        return richTextFieldValue(value, props.mode);
       }
 
       const richTextFields: ReadonlyArray<readonly [string, string]> = [

@@ -45,3 +45,13 @@ export const mutedStyle: CSSProperties = {
   color: "var(--webdesk-dashboard-color-foreground-muted)",
   margin: 0,
 };
+
+// No `whiteSpace: pre-wrap` here — this wraps real HTML (already structured with its own <p>/<br>
+// tags from the rich-text editor), not plain text needing that treatment. Extracted from a 3rd
+// independent copy across Service Library/Business Knowledge Center/Persona Library's own detail
+// pages (code-review finding, persona-library-rich-text-editor) — the same duplication pattern
+// this module's other exports were already extracted to stop.
+export const richContentStyle: CSSProperties = {
+  fontSize: "0.9375rem",
+  color: "var(--webdesk-dashboard-color-foreground)",
+};

@@ -100,6 +100,12 @@ export class PersonasService {
 
     let created: PersonaEntity;
     try {
+      // Each field hand-enumerated once, the same shape as Service Library's/Projects' own
+      // create()/update() rich-text wiring — a 3rd near-identical occurrence with no shared
+      // `@webdesk/validation` helper collapsing "sanitize these N named fields" into one call
+      // (code-review finding, persona-library-rich-text-editor). Left as accepted, tracked debt:
+      // a real fix means retrofitting Service Library's already-shipped call sites too (or living
+      // with a 4th inconsistent shape), out of scope for a Persona-Library-only branch.
       created = await this.personas.create({
         ...input,
         goals: sanitizeNullableRichText(input.goals),
@@ -161,9 +167,14 @@ export class PersonasService {
     // the current stored value to skip re-sanitizing a field the patch resends unchanged (the
     // common case for a form that resends full record state), the same reasoning
     // `ServicesService.update()`'s own `findServiceOrThrow()`-first ordering already established.
-    // `findById()` also 404s cleanly before anything else runs.
-    const current = await this.findById(id);
-    await this.assertServiceIdsExist(patch.relatedServiceIds);
+    // `findById()` also 404s cleanly before anything else runs. Unlike Service Library's own
+    // pre-fetch, `assertServiceIdsExist()` has no dependency on `current` at all — run in parallel
+    // (code-review finding: this diff's first version ran them sequentially, an unnecessary extra
+    // round trip `create()`'s own `Promise.all` two lines above doesn't pay).
+    const [current] = await Promise.all([
+      this.findById(id),
+      this.assertServiceIdsExist(patch.relatedServiceIds),
+    ]);
 
     const updated = await this.personas.update(id, {
       ...patch,
@@ -193,6 +204,12 @@ export class PersonasService {
       throw new NotFoundException(`Persona not found: ${id}`);
     }
 
+    // afterState records the raw, pre-sanitization patch, not the sanitized value actually
+    // written above — the byte-identical pattern `ServicesService.update()` already has
+    // (code-review finding, persona-library-rich-text-editor: flagged as an already-accepted
+    // architectural pattern being replicated, not a new deviation this diff introduces; a real
+    // fix means sanitizing the audit payload too, out of scope for a Persona-Library-only branch
+    // since it'd need to land identically for Service Library's own call site).
     await this.auditService.record({
       eventType: "data_change",
       actorUserId,

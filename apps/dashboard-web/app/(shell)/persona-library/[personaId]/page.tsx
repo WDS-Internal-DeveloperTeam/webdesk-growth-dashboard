@@ -9,6 +9,7 @@ import {
   h2Style,
   h3Style,
   mutedStyle,
+  richContentStyle,
   sectionStyle,
   subsectionStyle,
 } from "@/lib/detail-section-styles";
@@ -133,14 +134,6 @@ export default async function PersonaLibraryDetailPage({ params }: PersonaLibrar
     </ContentContainer>
   );
 }
-
-// No `whiteSpace: pre-wrap` here — these 8 fields are now real HTML (already structured with
-// their own <p>/<br> tags from the rich-text editor), not plain text needing that treatment,
-// matching Service Library's own `richContentStyle` precedent.
-const richContentStyle: React.CSSProperties = {
-  fontSize: "0.9375rem",
-  color: "var(--webdesk-dashboard-color-foreground)",
-};
 
 function TextBlock({ label, value }: { readonly label: string; readonly value: string | null }) {
   return (
