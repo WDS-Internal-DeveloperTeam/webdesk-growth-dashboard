@@ -22,8 +22,11 @@ export const serviceApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
 // Long free-text fields (task package D6 — the source workbook's own sample cells run to
 // hundreds of characters); bounded so a single field can't grow unbounded, not because a real
-// length limit is specified anywhere.
-const LONG_TEXT_MAX_LENGTH = 20_000;
+// length limit is specified anywhere. Raised from 20_000 — these 7 fields are now HTML from the
+// dashboard-web rich-text editor (sanitized in services.service.ts before being stored), carrying
+// real markup overhead over the equivalent plain text, same reasoning as the Business Knowledge
+// Center module's own CONTENT_MAX_LENGTH raise.
+const LONG_TEXT_MAX_LENGTH = 40_000;
 const longTextField = z.string().max(LONG_TEXT_MAX_LENGTH).nullish();
 
 // Unvalidated identifier lists (task package D1) — plain strings, capped in count so a single

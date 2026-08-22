@@ -6,6 +6,8 @@ import type { ApiSuccessResponse, Project, UserSummary } from "@webdesk/shared-t
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CONFIDENTIALITY_LABEL, CONFIDENTIALITY_VALUES } from "@/lib/project-confidentiality";
+import { findOverLongRichTextField, isEmptyRichTextHtml } from "@/lib/rich-text";
+import { RichTextEditor } from "./rich-text-editor";
 import { UserPicker } from "./user-picker";
 import styles from "./project-form.module.css";
 
@@ -42,7 +44,10 @@ export type ProjectFormProps =
 // approach lib/projects.ts's parseProjectsSearchParams already uses for the list page's query.
 const PUBLIC_ID_MAX_LENGTH = 64;
 const NAME_MAX_LENGTH = 255;
-const DESCRIPTION_MAX_LENGTH = 10_000;
+// Raised from 10_000 alongside the backend's own DESCRIPTION_MAX_LENGTH bump — description is now
+// HTML from the rich-text editor, carrying real markup overhead over the equivalent plain text,
+// same reasoning as business-knowledge-record-form.tsx's own CONTENT_MAX_LENGTH raise.
+const DESCRIPTION_MAX_LENGTH = 20_000;
 
 /**
  * The Projects module's own unapproved list-screen proposal (`module-projects-foundation.md` §8)
@@ -55,6 +60,11 @@ const DESCRIPTION_MAX_LENGTH = 10_000;
  * `GET /users` lookup capability existed to resolve a search into a real identity, closing the
  * gap the list/detail pages' own doc comments previously recorded ("no user-lookup endpoint
  * exists yet").
+ *
+ * `description` uses `RichTextEditor` (Tiptap), not a plain `<textarea>` — the resulting HTML is
+ * sanitized server-side before it's ever stored (`project.service.ts`'s `sanitizeLongTextField()`)
+ * and again at render time on the detail page, the same double-sanitization pattern
+ * `BusinessKnowledgeRecordForm`'s own `content` field already established.
  *
  * Submits with a direct browser `fetch()` (not a Next.js Server Action), `credentials: "include"`,
  * following the one existing real-mutation precedent in this app
@@ -91,11 +101,25 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
     setSubmitting(true);
     try {
       const trimmedName = name.trim();
-      // Sent as-is (may be ""), never coerced to `null` — the schema accepts an empty string just
-      // as validly as null, and coercing would silently overwrite a project's existing stored ""
-      // with null on any edit that left this field untouched (both render identically either way,
-      // so there's no display reason to prefer one over the other).
+      // Never coerced to `null` — the schema accepts either "" or null just as validly, and
+      // coercing to null would silently overwrite a project's existing stored value on any edit
+      // that left this field untouched. Tiptap's own "nothing typed" output ("<p></p>") is
+      // normalized to "" here (matching ServiceLibraryForm's own textField() convention) — left
+      // as-is, it renders as truthy on the detail page, permanently showing an empty content box
+      // instead of "No description." (code-review finding, this branch).
       const trimmedDescription = description.trim();
+      const normalizedDescription = isEmptyRichTextHtml(trimmedDescription)
+        ? ""
+        : trimmedDescription;
+
+      const lengthError = findOverLongRichTextField(
+        [["Description", description]],
+        DESCRIPTION_MAX_LENGTH,
+      );
+      if (lengthError) {
+        setError(lengthError);
+        return;
+      }
       // If the owner picker was never touched, preserve the project's existing ownerUserId exactly
       // as-is — including an unresolvable one (a disabled/removed account) — rather than collapsing
       // it to null just because `owner` (the resolved display summary) happens to be null. Only an
@@ -107,13 +131,13 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
           ? {
               publicId: publicId.trim(),
               name: trimmedName,
-              description: trimmedDescription,
+              description: normalizedDescription,
               confidentiality,
               ownerUserId,
             }
           : {
               name: trimmedName,
-              description: trimmedDescription,
+              description: normalizedDescription,
               confidentiality,
               ownerUserId,
             };
@@ -190,14 +214,7 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
         <label htmlFor="description" className={styles.label}>
           Description
         </label>
-        <textarea
-          id="description"
-          rows={4}
-          maxLength={DESCRIPTION_MAX_LENGTH}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          className={styles.textarea}
-        />
+        <RichTextEditor id="description" value={description} onChange={setDescription} />
       </div>
 
       <UserPicker

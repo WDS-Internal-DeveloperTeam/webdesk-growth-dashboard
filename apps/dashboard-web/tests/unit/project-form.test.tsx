@@ -52,7 +52,7 @@ describe("ProjectForm", () => {
     vi.restoreAllMocks();
   });
 
-  it("create mode: submits publicId/name/description/confidentiality to POST /projects", async () => {
+  it("create mode: submits publicId/name/confidentiality to POST /projects", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
     global.fetch = fetchMock as typeof fetch;
 
@@ -60,7 +60,10 @@ describe("ProjectForm", () => {
 
     fireEvent.change(screen.getByLabelText("Public ID"), { target: { value: "acme" } });
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Acme" } });
-    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "A project" } });
+    // Description isn't typed into here — RichTextEditor is a Tiptap contentEditable div, not a
+    // real form control, so fireEvent.change doesn't drive it; its own empty-description behavior
+    // is covered separately below. Matches business-knowledge-record-form.test.tsx's own
+    // precedent of never simulating typing into a RichTextEditor field.
     fireEvent.click(screen.getByRole("button", { name: "Create project" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -72,7 +75,7 @@ describe("ProjectForm", () => {
         body: JSON.stringify({
           publicId: "acme",
           name: "Acme",
-          description: "A project",
+          description: "",
           confidentiality: "internal",
           ownerUserId: null,
         }),
@@ -95,7 +98,7 @@ describe("ProjectForm", () => {
     expect(body.description).toBe("");
   });
 
-  it("edit mode: shows the public ID as read-only text, not an input", () => {
+  it("edit mode: shows the public ID as read-only text, not an input", async () => {
     global.fetch = vi.fn() as typeof fetch;
     render(
       <ProjectForm
@@ -115,7 +118,10 @@ describe("ProjectForm", () => {
     expect(screen.getByText("acme")).toBeInTheDocument();
     expect(screen.queryByLabelText("Public ID")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Name")).toHaveValue("Acme");
-    expect(screen.getByLabelText("Description")).toHaveValue("Existing description");
+    // RichTextEditor is a Tiptap contentEditable div, not a real form control — toHaveValue()
+    // doesn't apply. Confirms the initial description loaded into the editor the same way
+    // business-knowledge-record-form.test.tsx's own edit-mode test does.
+    await waitFor(() => expect(screen.getByText("Existing description")).toBeInTheDocument());
     expect(screen.getByLabelText("Confidentiality")).toHaveValue("confidential");
   });
 
@@ -153,6 +159,68 @@ describe("ProjectForm", () => {
       ownerUserId: null,
     });
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/projects/${PROJECT_ID}`));
+  });
+
+  it("edit mode: loads a stored description and submits it unchanged", async () => {
+    // Restores the coverage lost when the plain <textarea> (fireEvent.change-able) was replaced
+    // by RichTextEditor, a Tiptap contentEditable div that can't be driven the same way in jsdom —
+    // matches this file's own "renders a rich-text editor" test note and
+    // business-knowledge-record-form.test.tsx's established convention: prove a value reaches the
+    // submitted request body via the `initial` prop, not simulated typing (code-review finding,
+    // test-coverage).
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: "<p>Existing description</p>",
+          confidentiality: "internal",
+          owner: null,
+          ownerUserId: null,
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Existing description")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body.description).toBe("<p>Existing description</p>");
+  });
+
+  it("edit mode: normalizes a stored empty-document value ('<p></p>') to an empty string on submit", async () => {
+    // A cleared RichTextEditor field serializes to "<p></p>", not "" — left unnormalized, this
+    // renders as truthy on the detail page, permanently showing an empty content box instead of
+    // "No description." (code-review finding, correctness).
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(PROJECT_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ProjectForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        initial={{
+          publicId: "acme",
+          name: "Acme",
+          description: "<p></p>",
+          confidentiality: "internal",
+          owner: null,
+          ownerUserId: null,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body.description).toBe("");
   });
 
   it("edit mode: leaving a stored empty-string description untouched preserves it (never nulled)", async () => {
@@ -390,5 +458,12 @@ describe("ProjectForm", () => {
         }),
       ),
     );
+  });
+
+  it("renders a rich-text editor (not a plain textarea) for Description", () => {
+    global.fetch = vi.fn() as typeof fetch;
+    render(<ProjectForm mode="create" />);
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
+    expect(document.querySelector('[contenteditable="true"]')).not.toBeNull();
   });
 });

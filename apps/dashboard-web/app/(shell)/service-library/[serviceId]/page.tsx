@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
+import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { ServiceStatusActions } from "@/components/service-status-actions";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { getServerSession } from "@/lib/server-session";
@@ -189,11 +190,12 @@ const dlStyle: React.CSSProperties = {
   margin: 0,
 };
 
-const contentStyle: React.CSSProperties = {
+// No `whiteSpace: pre-wrap` here — this wraps real HTML (already structured with its own <p>/<br>
+// tags from the rich-text editor), not plain text needing that treatment, matching Business
+// Knowledge Center's own `richContentStyle` precedent.
+const richContentStyle: React.CSSProperties = {
   fontSize: "0.9375rem",
   color: "var(--webdesk-dashboard-color-foreground)",
-  whiteSpace: "pre-wrap",
-  margin: 0,
 };
 
 const mutedStyle: React.CSSProperties = {
@@ -216,7 +218,11 @@ function TextBlock({ label, value }: { readonly label: string; readonly value: s
   return (
     <div style={subsectionStyle}>
       <h3 style={h3Style}>{label}</h3>
-      {value ? <p style={contentStyle}>{value}</p> : <p style={mutedStyle}>Not set.</p>}
+      {value ? (
+        <SanitizedRichText html={value} style={richContentStyle} />
+      ) : (
+        <p style={mutedStyle}>Not set.</p>
+      )}
     </div>
   );
 }

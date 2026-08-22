@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { withTransaction } from "@webdesk/database";
+import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import type {
   ProjectConfidentiality,
   ProjectEntity,
@@ -75,7 +76,7 @@ export class ProjectService {
     const project = await this.projects.create({
       publicId: input.publicId,
       name: input.name,
-      description: input.description ?? null,
+      description: sanitizeNullableRichText(input.description) ?? null,
       ownerUserId: input.ownerUserId ?? null,
       confidentiality: input.confidentiality,
       createdBy: actorUserId,
@@ -119,7 +120,15 @@ export class ProjectService {
     if (patch.ownerUserId && patch.ownerUserId !== project.ownerUserId) {
       await this.assertOwnerExists(patch.ownerUserId);
     }
-    const updated = await this.projects.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.projects.update(id, {
+      ...patch,
+      // Skips the real HTML parse when the patch resends the project's own unchanged description
+      // (the common case for a form that resends full record state) — the previous unconditional
+      // re-sanitize wasted a real parse/allowlist-filter on every save (code-review finding,
+      // efficiency).
+      description: sanitizeNullableRichTextIfChanged(patch.description, project.description),
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Project not found: ${id}`);
     }

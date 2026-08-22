@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ContentContainer, Fact, PageHeader, StatusBadge } from "@webdesk/ui";
 import { BusinessKnowledgeAttachmentsSection } from "@/components/business-knowledge-attachments-section";
 import { BusinessKnowledgeStatusActions } from "@/components/business-knowledge-status-actions";
+import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import {
   businessKnowledgeStatusBadge,
@@ -12,7 +13,6 @@ import {
   RECORD_TYPE_LABEL,
   tolerateDiscard,
 } from "@/lib/business-knowledge";
-import { sanitizeRenderedHtml } from "@/lib/sanitize-html";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -99,13 +99,7 @@ export default async function BusinessKnowledgeDetailPage({
             This record is restricted — its content isn&apos;t visible to your account.
           </p>
         ) : record.content ? (
-          <div
-            style={richContentStyle}
-            // Sanitized twice: dashboard-api's own write-time pass (sanitize-html.util.ts) before
-            // this was ever stored, and again here at render time as defense-in-depth
-            // (lib/sanitize-html.ts) — see D3 in the task package for why both passes exist.
-            dangerouslySetInnerHTML={{ __html: sanitizeRenderedHtml(record.content) }}
-          />
+          <SanitizedRichText html={record.content} style={richContentStyle} />
         ) : (
           <p style={mutedStyle}>No content — see this record&apos;s attachments below.</p>
         )}

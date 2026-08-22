@@ -1939,6 +1939,127 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     is now genuinely live in production**, closing out this slice's full build-to-production arc.
     Backend and now the full UI (list, detail, create/edit form, status actions) are both live for
     the Service Library module.
+34. **Rich-text editor rollout — Service Library (all 7 Positioning fields) + Projects
+    (`description` only) — built, fully validated, live-verified end-to-end against a real local
+    stack, code-reviewed (all 9 confirmed findings fixed), security-reviewed (0 findings above
+    threshold), pushed and opened as PR #49, second-role human reviewed (Jitesh D, "Approved"),
+    gated (`G4-rich-text-editor`, WebDesk Solution, CONFIRM), not yet merged (2026-08-21/22).**
+    `docs/implementation/rich-text-editor-long-fields.md` records the full account. Not started
+    automatically — requested directly ("use the rich html editor in place of the text area...
+    at every place"). Surveyed every plain `<textarea>` in `apps/dashboard-web/components/` first
+    (15 sites, 6 files) and flagged that this also means real backend changes, since neither
+    Service Library's nor Projects' DTOs/services sanitize HTML today (only Business Knowledge
+    Center's `content` field has that precedent) — two scope questions
+    (`AskUserQuestion`) resolved this directly: **which fields switch** (Service Library's all 7 —
+    no clear primary/secondary split exists among them; Projects' `description` only — its own
+    Objectives/Repositories/Environments sub-resource fields stay plain text) and **whether backend
+    sanitization is included in this pass** (yes — mirror Business Knowledge Center's write-time +
+    render-time sanitization pattern exactly, not a frontend-only swap that would persist
+    unsanitized HTML with only a length cap). `RichTextEditor` (the existing Tiptap component,
+    unmodified) replaces the plain `<textarea>`s; `LONG_TEXT_MAX_LENGTH`/`DESCRIPTION_MAX_LENGTH`
+    raised (2× — matching Business Knowledge Center's own markup-overhead-driven raise ratio) on
+    both frontend and backend; both `services.service.ts` and `project.service.ts` gained a
+    `sanitizeLongTextField()` helper (mirroring `sanitize-html.util.ts`'s existing
+    `sanitizeContentOrNull()` pattern) wired into `create()`/`update()`; both detail pages switched
+    their render sites to `dangerouslySetInnerHTML` + `sanitizeRenderedHtml()`, the same
+    defense-in-depth pattern Business Knowledge Center's own detail page already establishes. Two
+    real test-writing lessons recorded for this codebase: `RichTextEditor` is a Tiptap
+    contentEditable div, not a real form control, so `fireEvent.change`/`toHaveValue` don't apply —
+    two existing `project-form.test.tsx` tests that assumed otherwise were fixed to match
+    `business-knowledge-record-form.test.tsx`'s own established convention (verify rich-text
+    content only via the `initial` prop, never simulated typing). 4 new `dashboard-api` unit tests
+    (2 per service) prove a disallowed tag is stripped before reaching the repository layer; 3 new
+    `dashboard-web` unit tests add structural "N contenteditable, 0 textarea" + "initial content
+    loads" checks. Deliberately not tested: the new submit-time max-length rejection path —
+    reliably typing 40,000+ characters via jsdom isn't practical, and Business Knowledge Center's
+    own equivalent `CONTENT_MAX_LENGTH` check isn't tested either; this branch follows that same
+    accepted gap. 465/465 `dashboard-api` unit tests (4 new), 153/153 `dashboard-api`
+    e2e/integration tests (unchanged), 311/311 `dashboard-web` unit tests (3 new), typecheck/lint/
+    `check-css-tokens.mjs`/`next build`/prettier all clean across both apps. **Live-verified
+    end-to-end**, not just typechecked/built blind — unlike most prior slices, stood up a genuinely
+    live local stack (both `dashboard-web` and `dashboard-api` running locally against the
+    project's existing disposable-database convention, `webdesk_phase1b_dev`, all 51 migrations
+    applied, a real provisioned Super Admin user, a real minted session cookie via a throwaway
+    script deleted immediately after use, never committed): confirmed all 7 Service Library
+    editors and the 1 Projects editor render with a working toolbar; confirmed typing and Bold
+    formatting genuinely work (real `<strong>` output); confirmed a full real create → sanitize →
+    persist → re-fetch → render round trip for both modules, with the bold-formatted text
+    surviving sanitization and rendering as genuinely bold HTML on each detail page; confirmed
+    zero new console/server errors throughout. See
+    `docs/implementation/rich-text-editor-long-fields.md` §5 for the full account. **Independent
+    code review then ran** (high effort, 8 finder angles, 1-vote verification) — 9 candidates
+    surfaced after dedup, all 9 CONFIRMED (0 PLAUSIBLE, 0 REFUTED), **all 9 fixed**. Most severe: a
+    real correctness bug where `ProjectForm` never normalized Tiptap's own empty-document output
+    (`"<p></p>"`) to an empty string the way Service Library's own `textField()` already did for
+    the identical string, so a cleared description was stored and rendered as truthy content,
+    permanently showing an empty content box on the detail page instead of "No description." Also
+    fixed: a real, previously-undiscovered legacy-data risk — Projects' `description` has held
+    real, unsanitized plain-text data since PR #28 (2026-08-17), roughly 4 days of production
+    availability before this branch started treating that same stored value as HTML on both the
+    edit form (parsed by Tiptap) and the detail page (sanitized), with no migration step for
+    existing rows — closed generically, not per-field, via a new `toSafeRichTextValue()` helper
+    wired directly into `RichTextEditor` itself (both its initial content and its external-reset
+    effect), so every current and future consumer is protected by construction; the lost
+    onChange-to-submit test coverage in `project-form.test.tsx` (restored, matching Business
+    Knowledge Center's own `initial`-prop testing convention, since jsdom can't simulate typing
+    into a Tiptap contentEditable div); `sanitizeLongTextField()` triplicated across two new
+    services plus a pre-existing Business Knowledge Center copy (two new shared
+    `@webdesk/validation` exports — `sanitizeNullableRichText()`/
+    `sanitizeNullableRichTextIfChanged()` — close the two new copies; the pre-existing BKC one is
+    left as known, out-of-scope debt); both `update()` methods unconditionally re-sanitizing every
+    rich-text field on every save regardless of whether it changed (fixed via
+    `sanitizeNullableRichTextIfChanged()`, mirroring the in-file precedent already established for
+    `ownerUserId`/`categoryId`); the `"<p></p>"` literal and the submit-time max-length check each
+    independently re-implemented per form with no shared helper (both promoted into a new
+    `apps/dashboard-web/lib/rich-text.ts`); the `dangerouslySetInnerHTML` +
+    `sanitizeRenderedHtml()` pairing hand-rolled at all three detail-page call sites with nothing
+    enforcing it — notable given this project's own prior confirmed HIGH stored-XSS finding from
+    exactly this kind of unenforced rendering convention — promoted into a new server-only
+    `SanitizedRichText` component, now the only place any of the three pages may use
+    `dangerouslySetInnerHTML` for rich-text content (including Business Knowledge Center's own
+    pre-existing call site, a safe, purely mechanical convergence); and the rich-text-aware empty
+    check leaking onto `publicName`, a plain `<input>` (split into `plainTextField()`/
+    `richTextField()`). New coverage: `apps/dashboard-web/tests/unit/rich-text.test.tsx` (10 tests
+    for the new shared helpers) plus 2 new `project-form.test.tsx` tests. Re-validated: 465/465
+    `dashboard-api` unit tests, 323/323 `dashboard-web` unit tests (12 new), `pnpm audit` 0
+    vulnerabilities, typecheck/lint/`check-css-tokens.mjs`/`next build`/`nest build`/prettier all
+    clean across `apps/dashboard-api`, `apps/dashboard-web`, and `packages/validation`. See
+    `docs/implementation/rich-text-editor-long-fields.md` §6 for the full account. **A separate
+    `security-review` skill run then found 0 findings above threshold** — focused specifically on
+    the sanitization boundary this branch touches directly (`dangerouslySetInnerHTML` via the new
+    `SanitizedRichText` component, `toSafeRichTextValue()`'s tag-prefix regex, and the two new
+    `@webdesk/validation` sanitize wrappers), confirming: the sanitizer allowlist itself is
+    byte-identical to `main` (only new wrapper functions were added around it); every rich-text
+    render site across all three detail pages routes exclusively through the new
+    `SanitizedRichText` component with no bypass path; `toSafeRichTextValue()`'s
+    "already-looks-like-rich-text" branch is not a sanitization bypass, since the render-time
+    sanitizer still runs afterward regardless of which branch executes; and
+    `sanitizeNullableRichTextIfChanged()`'s skip-if-unchanged optimization introduces no new
+    exposure, since render-time sanitization still runs on every read regardless of what's stored.
+    Also directly verified (via inspecting the installed `@tiptap/extension-link` package's own
+    source) that Tiptap's own Link extension independently blocks non-allowlisted URL schemes
+    (`javascript:`/`data:`) at parse/render/command time, closing the one client-side edit-path
+    scenario considered. **"Push the branch and open a PR" was then separately requested and
+    executed** — pushed to `origin`, opened as
+    [PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49), all
+    14 CI checks green. **"Merge PR #49" was then requested directly** — held per this project's
+    standing discipline (required second-role human review, then a gate decision, each separate,
+    before merge — neither had happened yet). Asked the user directly whether to prepare the
+    review packet first or proceed as an explicit override (the Phase 1C G4-1C pattern); the user
+    chose to prepare the packet first. A review packet (published as a Claude artifact, "Rich-Text
+    Editor Review Packet" — code review + security review findings, fixes, and validation
+    evidence, with a decision section) was prepared for the required second-role human review,
+    since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed
+    it and returned "Approved,"** no disputes raised — 0 open findings of any kind on this branch.
+    See `docs/project-state/rich-text-editor-long-fields-approval-checklist.md`'s "Sign-off"
+    section. **The gate (`G4-rich-text-editor`) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit `69ab89e` on branch
+    `rich-text-editor-long-fields` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-rich-text-editor`) and the approval checklist's "Sign-off"
+    section. **This gate approval does not itself authorize merging PR #49 or a production
+    deployment** — merge remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -4982,6 +5103,48 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   was ruled out via repeated checks, not a real defect. **The `dashboard-web` Service Library UI
   is now genuinely live in production.** Backend and now the full UI (list, detail, create/edit
   form, status actions) are both live for the Service Library module.
+- `[2026-08-21]` **Built the rich-text editor rollout — Service Library (all 7 Positioning
+  fields) + Projects (`description` only)**, under the explicit "use the rich html editor in
+  place of the text area... at every place" instruction. Surveyed every plain `<textarea>` first
+  (15 sites, 6 files) and surfaced that this also means real backend changes — neither Service
+  Library's nor Projects' DTOs/services sanitize HTML today. Two genuine scope questions were put
+  to the user directly rather than guessed: which fields switch (Service Library's all 7 — no
+  clear primary/secondary split exists; Projects' `description` only, sub-resource fields stay
+  plain) and whether backend sanitization is included (yes — mirror Business Knowledge Center's
+  write-time + render-time pattern exactly). Full account, including two new test-writing
+  conventions this codebase now has (RichTextEditor can't be driven via `fireEvent.change`) and a
+  genuinely live end-to-end verification (a real local `dashboard-web` + `dashboard-api` stack, a
+  real provisioned Super Admin user, a real minted session, confirming the full create → sanitize
+  → persist → render round trip for both modules with bold formatting surviving intact) in
+  `docs/implementation/rich-text-editor-long-fields.md`. 465/465 `dashboard-api` unit tests (4
+  new), 153/153 `dashboard-api` e2e tests (unchanged), 311/311 `dashboard-web` unit tests (3 new),
+  full validation clean. Committed to branch `rich-text-editor-long-fields` — not yet pushed,
+  reviewed, gated, or merged. **Update (2026-08-21/22): independent code review (9/9 CONFIRMED
+  findings fixed), security review (0 findings above threshold), branch pushed and opened as
+  [PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49, all 14
+  CI checks green), required second-role human review complete, and the gate approved — see the
+  2026-08-22 entries below and item 34 in "Active tasks" for the full account.**
+- `[2026-08-22]` **Required second-role human review complete for `rich-text-editor-long-fields`
+  (PR #49).** "Merge PR #49" was requested directly but held per this project's standing
+  discipline — the required second-role human review and a gate decision hadn't happened yet.
+  Asked the user directly whether to prepare the review packet first or proceed as an explicit
+  override (the Phase 1C G4-1C pattern); the user chose to prepare the packet first. A review
+  packet (published as a Claude artifact, "Rich-Text Editor Review Packet" — code review + security
+  review findings, fixes, and validation evidence, with a decision section) was prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved,"** no disputes raised — 0 open
+  findings of any kind on this branch. See
+  `docs/project-state/rich-text-editor-long-fields-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-22]` **The gate (`G4-rich-text-editor`) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit `69ab89e` on branch
+  `rich-text-editor-long-fields` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-rich-text-editor`) and
+  `docs/project-state/rich-text-editor-long-fields-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #49 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

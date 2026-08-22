@@ -8,6 +8,7 @@ import { ProjectRepositoriesSection } from "@/components/project-repositories-se
 import { ProjectRoadmapSection } from "@/components/project-roadmap-section";
 import { ProjectStatusActions } from "@/components/project-status-actions";
 import { ProjectTeamSection } from "@/components/project-team-section";
+import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { CONFIDENTIALITY_LABEL } from "@/lib/project-confidentiality";
 import { formatTimestamp, getProjectDetail, projectStatusBadge } from "@/lib/projects";
@@ -88,7 +89,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           <Fact label="Updated">{formatTimestamp(project.updatedAt)}</Fact>
         </dl>
         {project.description ? (
-          <p style={descriptionStyle}>{project.description}</p>
+          <SanitizedRichText html={project.description} style={descriptionStyle} />
         ) : (
           <p style={mutedStyle}>No description.</p>
         )}
