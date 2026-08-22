@@ -2,7 +2,9 @@
 
 **Status:** Code review complete (7 candidates surfaced after dedup — 5 CONFIRMED, 2 PLAUSIBLE —
 5 fixed, 2 left as accepted, tracked debt). Security review complete (0 findings above
-threshold). Review packet published. **Awaiting the required second-role human review.**
+threshold). Required second-role human review complete — Jitesh D, "Approved," accepting the 2
+open findings as tracked debt. **A gate decision, push/PR, and merge authorization each remain
+separate, not-yet-requested next steps.**
 
 ## Completion condition
 
@@ -108,11 +110,12 @@ findings above threshold.** Confirmed:
   claim is accurate with no bypass, since no confidential-field mechanism exists to bypass;
   audit-log payloads carry only business data, never secrets.
 
-## Required second-role human review — awaiting
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (7 kept — 5 CONFIRMED/PLAUSIBLE fixed, 2 accepted as tracked debt) —
-      awaiting review by: **Jitesh D**.
-- [ ] Security-review findings (0 above threshold) — awaiting review by: **Jitesh D**.
+- [x] Code-review findings (7 kept — 5 CONFIRMED/PLAUSIBLE fixed, 2 accepted as tracked debt) —
+      reviewed by: **Jitesh D**, 2026-08-22, **Approved**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-22,
+      **Approved**.
 
 Review packet:
 [Proof and Claims Library Review Packet](https://claude.ai/code/artifact/8a32ed61-b561-4d9a-81f6-c224d492824e)
@@ -121,5 +124,17 @@ evidence, with a decision section).
 
 ## Sign-off
 
-**Not yet complete.** A gate decision, push/PR, and merge authorization each remain separate,
-not-yet-requested next steps, per this project's standing "no auto-merge" rule.
+**Second-role human review: complete.** No disputes raised — the 2 open findings (the
+`assertServiceIdsExist()` wrapper duplication and the audit-write failure `console.error`-only
+path) were accepted as tracked debt rather than sent back for a fix.
+
+| Field                         | Value                                                                                                                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                                                          |
+| Review date                   | 2026-08-22                                                                                                                                                                        |
+| Decision                      | Approved                                                                                                                                                                          |
+| Scope reviewed                | Full code-review disposition (7 findings, 5 fixed, 2 accepted as tracked debt) and full security-review disposition (0 findings above threshold), per the published review packet |
+| Disputes raised               | None recorded                                                                                                                                                                     |
+
+A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
+steps, per this project's standing "no auto-merge" rule.
