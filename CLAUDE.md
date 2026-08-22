@@ -1942,7 +1942,8 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
 34. **Rich-text editor rollout — Service Library (all 7 Positioning fields) + Projects
     (`description` only) — built, fully validated, live-verified end-to-end against a real local
     stack, code-reviewed (all 9 confirmed findings fixed), security-reviewed (0 findings above
-    threshold), pushed and opened as PR #49, not yet gated or merged (2026-08-21).**
+    threshold), pushed and opened as PR #49, second-role human reviewed (Jitesh D, "Approved"),
+    gated (`G4-rich-text-editor`, WebDesk Solution, CONFIRM), not yet merged (2026-08-21/22).**
     `docs/implementation/rich-text-editor-long-fields.md` records the full account. Not started
     automatically — requested directly ("use the rich html editor in place of the text area...
     at every place"). Surveyed every plain `<textarea>` in `apps/dashboard-web/components/` first
@@ -2048,10 +2049,17 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     chose to prepare the packet first. A review packet (published as a Claude artifact, "Rich-Text
     Editor Review Packet" — code review + security review findings, fixes, and validation
     evidence, with a decision section) was prepared for the required second-role human review,
-    since the implementing agent cannot also be its own reviewer (ADR-0010). See
-    `docs/project-state/rich-text-editor-long-fields-approval-checklist.md` — **awaiting that
-    review.** A gate decision and merge authorization each remain separate, not-yet-requested next
-    steps.
+    since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed
+    it and returned "Approved,"** no disputes raised — 0 open findings of any kind on this branch.
+    See `docs/project-state/rich-text-editor-long-fields-approval-checklist.md`'s "Sign-off"
+    section. **The gate (`G4-rich-text-editor`) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+    was already complete before the gate was requested), approved commit `69ab89e` on branch
+    `rich-text-editor-long-fields` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-rich-text-editor`) and the approval checklist's "Sign-off"
+    section. **This gate approval does not itself authorize merging PR #49 or a production
+    deployment** — merge remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -5111,7 +5119,32 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `docs/implementation/rich-text-editor-long-fields.md`. 465/465 `dashboard-api` unit tests (4
   new), 153/153 `dashboard-api` e2e tests (unchanged), 311/311 `dashboard-web` unit tests (3 new),
   full validation clean. Committed to branch `rich-text-editor-long-fields` — not yet pushed,
-  reviewed, gated, or merged.
+  reviewed, gated, or merged. **Update (2026-08-21/22): independent code review (9/9 CONFIRMED
+  findings fixed), security review (0 findings above threshold), branch pushed and opened as
+  [PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49, all 14
+  CI checks green), required second-role human review complete, and the gate approved — see the
+  2026-08-22 entries below and item 34 in "Active tasks" for the full account.**
+- `[2026-08-22]` **Required second-role human review complete for `rich-text-editor-long-fields`
+  (PR #49).** "Merge PR #49" was requested directly but held per this project's standing
+  discipline — the required second-role human review and a gate decision hadn't happened yet.
+  Asked the user directly whether to prepare the review packet first or proceed as an explicit
+  override (the Phase 1C G4-1C pattern); the user chose to prepare the packet first. A review
+  packet (published as a Claude artifact, "Rich-Text Editor Review Packet" — code review + security
+  review findings, fixes, and validation evidence, with a decision section) was prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved,"** no disputes raised — 0 open
+  findings of any kind on this branch. See
+  `docs/project-state/rich-text-editor-long-fields-approval-checklist.md`'s "Sign-off" section. A
+  gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-22]` **The gate (`G4-rich-text-editor`) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+  already complete before the gate was requested), approved commit `69ab89e` on branch
+  `rich-text-editor-long-fields` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-rich-text-editor`) and
+  `docs/project-state/rich-text-editor-long-fields-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize merging PR #49 or a production deployment** —
+  merge remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule (same pattern as every prior gate).
 
 ## Open client blockers
 

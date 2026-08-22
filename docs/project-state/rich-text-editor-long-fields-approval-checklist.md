@@ -4,8 +4,11 @@
 Independent code review complete (8 finder angles, high effort, 9/9 CONFIRMED findings fixed, 0
 open). Security review complete (0 findings above threshold). Branch pushed and opened as
 [PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49) — all 14
-CI checks green. Review packet published for the required second-role human review — **awaiting
-that review.** No gate decision or merge authorization has been requested yet.
+CI checks green. Required second-role human review complete (2026-08-22, Jitesh D, "Approved", no
+disputes raised). Gate `G4-rich-text-editor` approved (2026-08-22, WebDesk Solution, decision
+CONFIRM, approved commit `69ab89e`) — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Merge authorization remains its own
+separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -40,17 +43,40 @@ for this slice can be requested.
 - Zero findings were left open or accepted as tracked debt on this branch — every code-review
   finding came back CONFIRMED and was fixed; the security review found nothing above threshold.
 
-## Required second-role human review — AWAITING
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (9/9 CONFIRMED, all fixed) — reviewer, decision, and date to be
-      recorded here once complete.
-- [ ] Security-review findings (0 above threshold) — reviewer, decision, and date to be recorded
-      here once complete.
+- [x] Code-review findings (9/9 CONFIRMED, all fixed) — reviewed by: **Jitesh D**, 2026-08-22,
+      **Approved**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-22,
+      **Approved**.
 
 Review packet: published as a Claude artifact ("Rich-Text Editor Review Packet") — code review
 findings/fixes, security review disposition, and validation evidence, with a decision section.
 
 ## Sign-off
 
-**Not yet complete.** A gate decision and merge authorization each remain their own separate,
-not-yet-requested next steps until the required second-role human review above is recorded.
+**Second-role human review: complete. Gate `G4-rich-text-editor`: approved.** Both were their own
+separate, explicit human step — the gate was requested, and approved, only after the review above
+was already recorded as complete.
+
+| Field                         | Value                                                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                   |
+| Review date                   | 2026-08-22                                                                                                                                 |
+| Decision                      | Approved                                                                                                                                   |
+| Scope reviewed                | Full code-review disposition (9/9 CONFIRMED, all fixed) and full security-review disposition (0 findings), via the published review packet |
+| Disputes raised               | None recorded — 0 open findings of any kind on this branch                                                                                 |
+
+| Field                    | Value                                                                                                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | `G4-rich-text-editor`                                                                                                                                     |
+| Approver (gate decision) | WebDesk Solution                                                                                                                                          |
+| Gate date                | 2026-08-22                                                                                                                                                |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                         |
+| Approved commit          | `69ab89e` on branch `rich-text-editor-long-fields` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` for the full record                  |
+| Scope                    | This gate approval does not itself authorize merging PR #49 or a production deployment — merge remains its own separate, not-yet-requested authorization. |
+
+| Role                          | Name             | Decision   | Date       |
+| ----------------------------- | ---------------- | ---------- | ---------- |
+| Reviewer (second-role review) | Jitesh D         | ☑ Approved | 2026-08-22 |
+| Approver (gate decision)      | WebDesk Solution | ☑ CONFIRM  | 2026-08-22 |
