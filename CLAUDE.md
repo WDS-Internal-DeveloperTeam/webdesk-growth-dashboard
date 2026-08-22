@@ -2185,7 +2185,14 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The Persona
     Library module backend is now genuinely live in production.** No `dashboard-web` UI exists yet
     for this module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
-    Library precedent.
+    Library precedent. **The production migration was then run** — user ran migrations `00052`
+    (`create-persona-library`) and `00053` (`mark-persona-library-in-development`) themselves,
+    same credential-handling discipline as every prior production migration. The earlier "verified
+    live" check above confirmed the deployed Function boots and the route exists (`SessionGuard`
+    rejecting an unauthenticated request with a clean `401`), but a `401` returns before any
+    database query runs, so it didn't independently prove the `personas` table itself existed —
+    this migration closes that specific gap. **The Persona Library backend's schema is now
+    genuinely live in production.**
 36. **`dashboard-web` Persona Library UI — built, reviewed, gated, merged; now live in
     production (2026-08-22).** Closes the Persona Library module's last named gap,
     following the backend's own build-to-production arc (PR #50). Not started
@@ -5742,6 +5749,15 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
   resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor,
   confirming the session gate is intact. **The Persona Library rich-text editor conversion is
   now genuinely live in production.**
+- `[2026-08-22]` **Migrations `00052` (`create-persona-library`) and `00053`
+  (`mark-persona-library-in-development`) run against the real production database** — user ran
+  `pnpm --filter @webdesk/database run migrate` themselves in their own terminal, same
+  credential-handling discipline as every prior production migration this project. This closes
+  the last unverified piece of the Persona Library backend's own "verified live" check (PR #50):
+  that check confirmed the deployed Function boots and the route exists via a clean `401` from
+  `SessionGuard`, but a `401` returns before any database query runs, so it never independently
+  proved the `personas` table itself existed in production. **The Persona Library backend's
+  schema is now genuinely live in production**, alongside its already-verified code.
 
 ## Open client blockers
 
