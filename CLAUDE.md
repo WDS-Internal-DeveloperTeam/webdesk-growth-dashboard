@@ -2078,8 +2078,9 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     sanitization and the shared `SanitizedRichText` render component — is now genuinely live in
     production.**
 35. **Persona Library module backend — built, fully validated, code-reviewed (9/10 confirmed
-    findings fixed, 1 accepted as tracked debt), not yet security-reviewed, gated, or merged
-    (2026-08-22).** `docs/implementation/module-persona-library.md` records the full account. The
+    findings fixed, 1 accepted as tracked debt), security-reviewed (0 findings above threshold),
+    pushed and opened as PR #50, not yet gated or merged (2026-08-22).**
+    `docs/implementation/module-persona-library.md` records the full account. The
     fourth real business-module backend on the Phase 1F application shell / canonical module
     registry, after Projects, Business Knowledge Center, and Service Library — module #4 in the
     project-owner-supplied `Recommended_Module_Roadmap.md`. Built directly on the explicit "Start
@@ -2148,9 +2149,26 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     (3 new plus a rewrite of one existing test whose premise the fix changed), migration up/down/up
     round-trip clean, `validate:module-registry` passing, `pnpm audit` 0 vulnerabilities,
     `boundaries:check` 0 violations, typecheck/lint/prettier all clean. See
-    `docs/implementation/module-persona-library.md` §7 for the full account. Committed to branch
-    `module-persona-library` — not yet pushed, security-reviewed, gated, or merged; each remains
-    its own separate, not-yet-requested next step.
+    `docs/implementation/module-persona-library.md` §7 for the full account. **A separate
+    `security-review` skill run then found 0 findings above threshold** — confirmed every
+    `@RequirePermission` decorator is method-level (never class-level), the dynamic per-transition
+    RBAC gate in `changeApprovalStatus()` matches the real seeded `service_persona_proof` matrix
+    exactly, all queries are parameterized, Zod strips unknown keys (no mass-assignment path), the
+    `SequelizeUniqueConstraintError` catch leaks no internal SQL/constraint detail, the UUID guard
+    correctly blocks a malformed id before it reaches the database, and `assertServiceIdsExist()`
+    exposes only `.id` from returned service rows (no confidential-field leak). One low-confidence
+    (2/10) design-quality observation was noted for the record, not reported as a finding: the new
+    `SERVICE_REPOSITORY` export from `ServiceLibraryModule` (needed for the read-only
+    `findByIds()` existence check) exposes the full write-capable repository across the module
+    boundary rather than a narrow delegating method — the identical pattern this project's own
+    `module-projects-backend-closeout` review already flagged and fixed once for
+    `USER_ROLE_REPOSITORY`/`AuthzModule` — currently unreachable since `PersonasService` only ever
+    calls `.findByIds()` on it, but worth closing the same way if this module's surface grows.
+    **"Push the branch and open a PR" was then separately requested and executed** — pushed to
+    `origin`, opened as
+    [PR #50](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/50). A
+    review packet for the required second-role human review, a gate decision, and merge
+    authorization each remain separate, not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -5298,6 +5316,26 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   all clean. See `docs/implementation/module-persona-library.md` §7 for the full account. Security
   review, second-role human review, a gate decision, push/PR, and merge authorization each remain
   their own separate, not-yet-requested next step.
+- `[2026-08-22]` **Security review run on `module-persona-library`, separately from the code
+  review.** Focused on the branch's genuinely new security-relevant surface — the cross-module
+  `SERVICE_REPOSITORY` dependency injection, the UUID-guarded existence check, the
+  `error.name`-based unique-constraint handling required by ADR-0006's own-database-package-
+  touches-sequelize boundary, and RBAC wiring on every route. **0 findings above threshold.**
+  Confirmed every `@RequirePermission` decorator is method-level, the dynamic per-transition RBAC
+  gate matches the real seeded `service_persona_proof` matrix exactly, all queries are
+  parameterized, Zod strips unknown keys, no internal SQL/constraint detail leaks on the
+  uniqueness-race path, and `assertServiceIdsExist()` exposes only `.id` from returned service rows.
+  One candidate was identified and independently re-verified at confidence 2/10 (not reported as a
+  finding): the new `SERVICE_REPOSITORY` export from `ServiceLibraryModule` exposes the full
+  write-capable repository across the module boundary for a read-only need — the identical pattern
+  this project's own `module-projects-backend-closeout` review already flagged and fixed once for
+  `USER_ROLE_REPOSITORY`/`AuthzModule` — currently unreachable since `PersonasService` only ever
+  calls `.findByIds()` on it.
+- `[2026-08-22]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-persona-library` — pushed to `origin`, opened as
+  [PR #50](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/50). A
+  review packet for the required second-role human review, a gate decision, and merge
+  authorization each remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 
