@@ -7,8 +7,9 @@ observation noted for the record, not reported as a finding). Pushed to `origin`
 [PR #50](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/50), all 14
 CI checks green. Required second-role human review complete — Jitesh D, "Approved as-is",
 accepting the 1 open CONFIRMED code-review finding (the duplicated `TRANSITIONS` table) as tracked
-debt. **A gate decision and merge authorization each remain separate, not-yet-requested next
-steps.**
+debt. **The gate (G4-persona-library) was then separately requested and approved** — WebDesk
+Solution, decision CONFIRM, approved commit `0c5115d` on branch `module-persona-library`. **Merge
+authorization remains a separate, not-yet-requested next step.**
 
 ## Completion condition
 
@@ -150,5 +151,21 @@ sent back for a fix.
 | Scope reviewed                  | Full code-review disposition (10 findings, 9 fixed, 1 accepted as tracked debt) and full security-review disposition (0 findings above threshold, 1 sub-threshold observation), per the published review packet |
 | Disputes raised                 | None recorded                                                                                                                                                                                     |
 
-A gate decision (G4-persona-library) and merge authorization each remain separate,
-not-yet-requested next steps, per this project's standing "no auto-merge" rule.
+**The gate (G4-persona-library) was then separately requested and approved** — WebDesk Solution,
+decision CONFIRM (clean pass, not an override, since the second-role review was already complete
+before the gate was requested), approved commit `0c5115d` on branch `module-persona-library` —
+see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-persona-library`).
+
+| Field                     | Value                                                                                                                                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                       | G4-persona-library                                                                                                                                                                              |
+| Approver (gate decision)   | WebDesk Solution                                                                                                                                                                                |
+| Gate date                  | 2026-08-22                                                                                                                                                                                       |
+| Decision                   | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                                                                              |
+| Approved commit            | `0c5115d` on branch `module-persona-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`                                                                                  |
+| Scope                      | Persona Library module backend only ([PR #50](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/50)). Merge authorization is a separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize merging PR #50 or a production deployment — merge
+remains its own separate, not-yet-requested authorization, per this project's standing "no
+auto-merge" rule.

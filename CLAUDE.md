@@ -2080,7 +2080,8 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
 35. **Persona Library module backend — built, fully validated, code-reviewed (9/10 confirmed
     findings fixed, 1 accepted as tracked debt), security-reviewed (0 findings above threshold),
     pushed and opened as PR #50, required second-role human review complete (Jitesh D, "Approved
-    as-is"); not yet gated or merged (2026-08-22).**
+    as-is"), gated (`G4-persona-library`, WebDesk Solution, CONFIRM); not yet merged
+    (2026-08-22).**
     `docs/implementation/module-persona-library.md` records the full account. The
     fourth real business-module backend on the Phase 1F application shell / canonical module
     registry, after Projects, Business Knowledge Center, and Service Library — module #4 in the
@@ -5354,6 +5355,15 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   `TRANSITIONS` table) as tracked debt rather than requesting a fix. See
   `docs/project-state/module-persona-library-approval-checklist.md`'s "Sign-off" section. A gate
   decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-22]` **The gate (G4-persona-library) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `0c5115d` on branch
+  `module-persona-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-persona-library`) and
+  `docs/project-state/module-persona-library-approval-checklist.md`'s "Sign-off" section. **This
+  gate approval does not itself authorize merging PR #50 or a production deployment** — merge
+  remains its own separate, not-yet-requested authorization, per this project's standing "no
+  auto-merge" rule.
 
 ## Open client blockers
 
