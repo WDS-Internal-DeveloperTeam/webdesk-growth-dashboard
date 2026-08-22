@@ -2,13 +2,17 @@
 
 **Status:** Built, fully validated, live-verified end-to-end against a real local stack.
 Independent code review complete (8 finder angles, high effort, 9/9 CONFIRMED findings fixed, 0
-open). Security review complete (0 findings above threshold). Branch pushed and opened as
-[PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49) — all 14
-CI checks green. Required second-role human review complete (2026-08-22, Jitesh D, "Approved", no
-disputes raised). Gate `G4-rich-text-editor` approved (2026-08-22, WebDesk Solution, decision
-CONFIRM, approved commit `69ab89e`) — see
-`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Merge authorization remains its own
-separate, not-yet-requested next step.
+open). Security review complete (0 findings above threshold). Required second-role human review
+complete (2026-08-22, Jitesh D, "Approved", no disputes raised). Gate `G4-rich-text-editor`
+approved (2026-08-22, WebDesk Solution, decision CONFIRM, approved commit `69ab89e`) — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. **"Merge PR #49" was then separately
+requested and executed** — merge commit
+[`214da2c`](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49), all
+14 CI checks green beforehand. Both Vercel projects auto-deployed on push to `main` and were
+verified live directly — `dashboard-api`'s `/health` returned `build.commitSha ==
+214da2c1984bd27b41d5e399349df3e86e3b0ea1`, and `dashboard-web`'s `/` resolves (via the intermediate
+`/home` hop) to `/auth/sign-in` for an unauthenticated visitor. **The rich-text editor rollout is
+now genuinely live in production.**
 
 ## Completion condition
 

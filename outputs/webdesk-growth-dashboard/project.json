@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-22T00:00:00Z",
-    "version": 54
+    "version": 55
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -1844,6 +1844,22 @@
       },
       "project_version_before": 53,
       "project_version_after": 54
+    },
+    {
+      "timestamp": "2026-08-22T09:41:36Z",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "action": "requested and executed merge of PR #49 (rich-text-editor-long-fields) into main",
+      "details": {
+        "pr": 49,
+        "branch": "rich-text-editor-long-fields",
+        "merge_commit": "214da2c1984bd27b41d5e399349df3e86e3b0ea1",
+        "ci_status": "All 14 CI checks green before merge",
+        "verification": "dashboard-api's /health returned build.commitSha == 214da2c1984bd27b41d5e399349df3e86e3b0ea1. dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor. Both Vercel projects verified live directly, not just via CI's own Vercel status check.",
+        "result": "The rich-text editor rollout -- Service Library's 7 Positioning fields and Projects' description, plus real backend HTML sanitization and the shared SanitizedRichText render component -- is now genuinely live in production."
+      },
+      "project_version_before": 54,
+      "project_version_after": 55
     }
   ]
 }

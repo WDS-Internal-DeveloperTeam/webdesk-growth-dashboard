@@ -1942,8 +1942,11 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
 34. **Rich-text editor rollout — Service Library (all 7 Positioning fields) + Projects
     (`description` only) — built, fully validated, live-verified end-to-end against a real local
     stack, code-reviewed (all 9 confirmed findings fixed), security-reviewed (0 findings above
-    threshold), pushed and opened as PR #49, second-role human reviewed (Jitesh D, "Approved"),
-    gated (`G4-rich-text-editor`, WebDesk Solution, CONFIRM), not yet merged (2026-08-21/22).**
+    threshold), second-role human reviewed (Jitesh D, "Approved"), gated (`G4-rich-text-editor`,
+    WebDesk Solution, CONFIRM), and merged
+    ([PR #49](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/49),
+    merge commit `214da2c1984bd27b41d5e399349df3e86e3b0ea1`) — now genuinely live in production
+    (2026-08-21/22).**
     `docs/implementation/rich-text-editor-long-fields.md` records the full account. Not started
     automatically — requested directly ("use the rich html editor in place of the text area...
     at every place"). Surveyed every plain `<textarea>` in `apps/dashboard-web/components/` first
@@ -2057,9 +2060,18 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
     was already complete before the gate was requested), approved commit `69ab89e` on branch
     `rich-text-editor-long-fields` — see `outputs/webdesk-growth-dashboard/project.json`'s
     `gates[]` (`current_gate` now `G4-rich-text-editor`) and the approval checklist's "Sign-off"
-    section. **This gate approval does not itself authorize merging PR #49 or a production
-    deployment** — merge remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule.
+    section. **"Merge PR #49" was then separately requested and executed** — waited for the
+    latest CI run (triggered by the review-packet/gate docs commit) to finish, all 14 checks
+    green, then merged with a real merge commit (not squash/rebase), matching every prior merge in
+    this project's history — merge commit `214da2c1984bd27b41d5e399349df3e86e3b0ea1`. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+    Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+214da2c1984bd27b41d5e399349df3e86e3b0ea1`, confirming the exact merged commit is what's serving;
+    `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+    unauthenticated visitor, confirming the session gate is intact. **The rich-text editor rollout
+    — Service Library's 7 Positioning fields and Projects' `description`, plus real backend HTML
+    sanitization and the shared `SanitizedRichText` render component — is now genuinely live in
+    production.**
 
 ## Recent decisions
 
@@ -5145,6 +5157,16 @@ d51e99cdfd0013d54c910949c0d431359d2bfe4a`, confirming the exact merged commit is
   **This gate approval does not itself authorize merging PR #49 or a production deployment** —
   merge remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule (same pattern as every prior gate).
+- `[2026-08-22]` **"Merge PR #49" was separately requested and executed.** Waited for the latest CI
+  run (triggered by the review-packet/gate docs commit) to finish, all 14 checks green. Merged with
+  a real merge commit (not squash/rebase), matching every prior merge in this project's history —
+  merge commit `214da2c1984bd27b41d5e399349df3e86e3b0ea1`. Both Vercel projects auto-deployed on
+  push to `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+214da2c1984bd27b41d5e399349df3e86e3b0ea1`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The rich-text editor rollout is
+  now genuinely live in production.**
 
 ## Open client blockers
 
