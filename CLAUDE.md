@@ -5650,6 +5650,36 @@ e879be801c780be7c0a2af18250071b017873e28`, confirming the exact merged commit is
 
 ## Cautions
 
+- **Standing rule, effective 2026-08-22: every long-text field in `dashboard-web` must use the
+  existing `RichTextEditor` (Tiptap) component — never a plain `<textarea>`.** Given directly by
+  the user right after the Persona Library UI shipped with 8 plain-textarea fields (a deliberate
+  scope decision at the time, since Persona Library was explicitly excluded from the
+  `rich-text-editor-long-fields.md` rollout — its backend DTO stored those fields as unsanitized
+  plain text). This rule is forward-looking, not retroactive — Persona Library's own existing
+  fields were not converted by this instruction; converting them would be its own separate,
+  explicit authorization. Any NEW long-text field from this point forward: (1) uses
+  `RichTextEditor` on the frontend, matching `ServiceLibraryForm`/`ProjectForm`'s established
+  pattern; (2) needs a real backend change too, not just a frontend swap — write-time
+  sanitization via `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`
+  (`@webdesk/validation`) and render-time sanitization via the shared `SanitizedRichText`
+  component, mirroring exactly what the original rollout did for Service Library/Projects. Flag
+  this backend dependency explicitly when scoping any new long-text field — don't treat it as a
+  frontend-only change.
+- **Standing feedback, 2026-08-22: reduce the volume of independent-code-review findings by
+  writing more carefully up front, not just relying on the review to catch issues.** The user
+  raised direct concern that recent slices (e.g. the Persona Library UI, 8/8 CONFIRMED findings)
+  keep surfacing 8-10 findings each. A real pattern in what gets found: (1) duplication/reuse
+  misses — copy-adapting a sibling module's file without first checking whether a shared
+  constant/style/table already exists or should be extracted; (2) consistency gaps against an
+  established sibling convention (narrow relationship-picker types, a fallback-on-missing-id
+  pattern) that a full read of the closest sibling implementation would have caught; (3)
+  failure-isolation gaps on a new enrichment fetch added inside a `Promise.all` with no thought
+  given to whether its own failure should take down the whole page. Before building a new
+  module/page that mirrors an existing one, read the sibling's FULL implementation (not a skim)
+  and proactively apply the same reuse/consistency/failure-isolation reasoning it already
+  encodes, rather than mechanically copying structure and letting review catch the gaps
+  afterward. This does not mean skip the review process — it stays in place; the ask is to
+  reduce how much it has to find, not to remove it.
 - When adding a new export to `packages/database/src/index.ts` (the ESM barrel), you MUST also add
   it to `packages/database/src/index.cjs.ts` — a **separate, manually-maintained** CommonJS
   entrypoint that Vercel's Function bundler actually `require()`s in production. Missing this
