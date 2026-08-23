@@ -634,3 +634,62 @@ export interface ClaimSource {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/** Task package D5 — the spec's own 9 "Primary records," snake_case. Immutable across a record's
+ *  own version chain (set once at creation; a real type change is a different record, not a new
+ *  version of this one — never accepted through `update()`). */
+export type WebsiteStrategyRecordType =
+  | "navigation_plan"
+  | "page_clusters"
+  | "pillar_strategy"
+  | "platform_strategy"
+  | "industry_strategy"
+  | "location_strategy"
+  | "conversion_plan"
+  | "search_plan"
+  | "internal_link_plan";
+
+// Structurally identical to PersonaApprovalStatus/ServiceApprovalStatus/ProofClaimApprovalStatus
+// (the shared 8-value artifact-approval workflow, D6) — reused as its own named type rather than
+// an alias so this module's own `-query.ts` file can still narrow to it directly without a cast,
+// matching PersonaApprovalStatus's/ProofClaimApprovalStatus's own precedent.
+export type WebsiteStrategyApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * One row per VERSION, not one row per record — unlike every other module built so far (Business
+ * Knowledge Center, Service Library, Persona Library, Proof and Claims Library — each one mutable
+ * row per record, no real history), this module implements REAL version history
+ * (`packages/database/src/website-strategy-center/entities.ts`'s own doc comment). `id` is unique
+ * per physical row/version; `recordId` is the stable logical-record identity shared by every
+ * version of the same record (the history/comparison key, and the identifier every `dashboard-web`
+ * route/link uses — never `id`, which changes across a fork). `publicId` is likewise stable across
+ * every version. `isCurrent` is true for exactly one row per `recordId` at any time. No separate
+ * `WebsiteStrategyRecordDetail` shape exists — every version's own row (from `GET
+ * .../:recordId/versions`) already carries full `title`/`content`/`notes`, so there is nothing a
+ * detail fetch would need to enrich beyond what `GET .../:recordId` (the current version alone)
+ * already returns.
+ */
+export interface WebsiteStrategyRecord {
+  readonly id: string;
+  readonly recordId: string;
+  readonly publicId: string;
+  readonly recordType: WebsiteStrategyRecordType;
+  readonly versionNumber: number;
+  readonly isCurrent: boolean;
+  readonly title: string;
+  readonly content: string | null;
+  readonly notes: string | null;
+  readonly approvalStatus: WebsiteStrategyApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
