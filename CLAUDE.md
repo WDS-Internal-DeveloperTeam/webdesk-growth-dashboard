@@ -2584,6 +2584,72 @@ query,}.ts` mirror `lib/persona-library{-query,}.ts`'s own zero-non-type-import-
       **The `dashboard-web` Proof and Claims Library UI is now genuinely live in production**,
       closing out this slice's full build-to-production arc — backend and now the full UI (list,
       detail, create/edit form, status actions, `claim_sources` sub-resource editing) are both live.
+40. **Website Strategy Center module backend — built, code-reviewed, security-reviewed;
+    awaiting the required second-role human review (2026-08-23).** The 6th real
+    business-module backend on the Phase 1F application shell / canonical module registry, and
+    the first with genuine real multi-row version history — module #6 in the
+    project-owner-supplied `Recommended_Module_Roadmap.md`. Not started automatically — built
+    directly on the explicit "Start the Website Strategy Center" instruction, presented as the
+    recommended next candidate once modules #1-5 (Projects, Business Knowledge Center, Service
+    Library, Persona Library, Proof and Claims Library) were all confirmed live. Two genuine
+    design forks were surfaced and confirmed directly with the user (`AskUserQuestion`) before
+    building: **D1** — a single generic `website_strategy_records` table with a `recordType`
+    enum (the spec's own 9 "Primary records," from navigation plans through internal-link
+    plans), mirroring Business Knowledge Center's own precedent, over 9 separate tables; **D2**
+    — REAL version history, not the single-mutable-row pattern every prior module uses, since
+    the roadmap explicitly requires "Preserve versions when WebDesk changes business direction"
+    and the spec names "compare versions" as its own action. Concretely: every version is its
+    own physical row — `recordId` is the stable logical-record identity, copied forward
+    unchanged across every version (the grouping/history key, distinct from the per-row `id`);
+    `publicId` is likewise copied forward, its uniqueness enforced via a PARTIAL unique index
+    `WHERE is_current = true` (not a bare column constraint, which would incorrectly reject
+    version 2+ of the same record); `recordType` is immutable across a record's own version
+    chain (a real type change is a different record, never accepted through the update route).
+    "Supersede" is not a separate user action — it's an automatic consequence of a NEW version's
+    own `-> approved` transition succeeding: the same database transaction flips whichever OTHER
+    version of the same `recordId` currently holds `approved` to `superseded`. `content`/`notes`
+    stay plain text for this backend-only pass, matching every sibling module's own original
+    backend-first precedent — no `dashboard-web` UI exists yet. Reuses the already-seeded
+    `website_strategy` RBAC permission group verbatim — no new RBAC migration. Built by a
+    background agent with a fully-specified prompt embedding the full design, then independently
+    re-verified in full by the orchestrating session — every high-risk file read directly, every
+    test suite independently re-run against a fresh local disposable PostgreSQL 17 database, not
+    trusted from the agent's own report. **Independent code review then ran** (this project's
+    own `code-review` skill, high effort, 8-angle finder pass, 1-vote verification) — 5
+    candidates survived dedup, 3 CONFIRMED and fixed, 2 REFUTED. Most severe: `update()`'s
+    in-place-edit branch had no compare-and-swap guard on `approvalStatus` (independently found
+    by 2 separate finder angles) — a concurrent approval, or an already-terminal
+    archived/superseded row, could be silently mutated in place instead of forking a new
+    version; fixed by giving `updateInPlace()` an optional `expectedApprovalStatus` CAS
+    parameter and rejecting terminal-state edits outright. Also fixed: a concurrent
+    new-version-creation race on the `(record_id, version_number)` unique index surfaced as a
+    raw 500 instead of a clean 409 (3-way convergence across finder angles); and
+    `approved -> superseded` was directly reachable via the generic status route, contradicting
+    the module's own explicit "supersede is automatic-only" design — both fixed. Two candidates
+    were REFUTED by dedicated verifiers: an audit-gap claim matched an already-accepted
+    precedent (`ProjectService.setActivePhase()`'s identical shape); a missing-index performance
+    claim was empirically disproven with `EXPLAIN ANALYZE` against a real 53,770-row synthetic
+    dataset in a disposable database — Postgres already serves the query via the `public_id`
+    partial unique index's implied predicate. **A separate `security-review` skill run then
+    found 1 CONFIRMED finding at 9/10 confidence**: the code-review fix above had only added the
+    CAS guard to `update()`'s non-approved branch — the approved/fork branch's own
+    `updateInPlace()` call (the one flipping the old row's `isCurrent` to false) still carried no
+    guard, letting an edit-only caller (holds `edit`, never `approve`) resurrect a
+    just-concurrently-archived record into a fresh editable draft, using only the edit grant for
+    the resurrection half of the race — directly contradicting the module's own documented
+    "archived/superseded are permanently terminal" invariant. Fixed by passing
+    `current.approvalStatus` as the CAS guard on this call too. A re-scan security-review pass
+    then confirmed the fix was complete, introduced no new issue, and found **0 findings above
+    threshold**. Final numbers: 596/596 `dashboard-api` unit tests (44 new across this module),
+    228/228 `packages/database` integration tests (21 new), 21/21 module e2e tests, a real
+    migration up/down round-trip, typecheck/lint (`--max-warnings=0`)/prettier all clean, `pnpm
+audit` 0 vulnerabilities. A review packet (published as a Claude artifact, "Website Strategy
+    Center Review Packet" — code review + security review findings, fixes, and validation
+    evidence, with a decision section) was prepared for the required second-role human review,
+    since the implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/module-website-strategy-center-approval-checklist.md`. **Awaiting that
+    review** — a gate decision, push/PR, and merge authorization each remain separate,
+    not-yet-requested next steps, matching every prior module's own standing discipline.
 
 ## Recent decisions
 
@@ -6102,6 +6168,58 @@ source` had silently inherited the parent module's rich-text-sized `LONG_TEXT_MA
   Claims Library UI is now genuinely live in production**, closing out this slice's full
   build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
   actions, `claim_sources` sub-resource editing) are both live.
+- `[2026-08-23]` **Built the Website Strategy Center module backend** — module #6 per
+  `Recommended_Module_Roadmap.md`, and the first with genuine real multi-row version history.
+  Two design forks (single generic table vs. 9; real version history vs. single mutable row)
+  confirmed directly with the user first. Branch `module-website-strategy-center`, off `main` at
+  the PR #54 merge commit. Built by a background agent with a fully-specified prompt, then
+  independently re-verified in full — every high-risk file read directly, every test suite
+  re-run against a fresh local disposable database. 33/33 `dashboard-api` unit, 19/19
+  `packages/database` integration, 19/19 e2e tests at initial build; migration up/down
+  round-trip clean; typecheck/lint/prettier clean; `pnpm audit` 0 vulnerabilities. See item 40
+  under "Active tasks" for the full design account.
+- `[2026-08-23]` **Independent code review run on `module-website-strategy-center`, then all 3
+  CONFIRMED findings fixed.** High effort, 8-angle finder pass, 1-vote verification — 5
+  candidates survived dedup (3 CONFIRMED, 2 REFUTED). Most severe: `update()`'s in-place-edit
+  branch had no CAS guard on `approvalStatus` (found independently by 2 finder angles) — fixed
+  by giving `updateInPlace()` an optional `expectedApprovalStatus` parameter and rejecting
+  terminal-state edits outright. Also fixed: an unhandled concurrent-version-creation race on
+  the `(record_id, version_number)` unique index (3-way convergence across finder angles,
+  surfaced as a raw 500) — fixed with a `try/catch` mirroring `create()`'s own pattern,
+  converting it to a 409; and a directly-reachable `approved -> superseded` transition
+  contradicting the module's own "supersede is automatic-only" design — fixed by removing the
+  edge from the `TRANSITIONS` table. 2 candidates REFUTED by dedicated verifiers: an
+  audit-gap claim matched an already-accepted precedent (`ProjectService.setActivePhase()`);
+  a missing-index performance claim was empirically disproven with `EXPLAIN ANALYZE` against a
+  real 53,770-row synthetic dataset — Postgres already serves the query via the `public_id`
+  partial unique index's implied predicate. Re-validated: 39/39 module unit tests (595/595
+  `dashboard-api` overall), 228/228 `packages/database` integration tests, 21/21 module e2e
+  tests, a real migration up/down round-trip, typecheck/lint/prettier all clean, `pnpm audit` 0
+  vulnerabilities. Committed as `b2333a5`.
+- `[2026-08-23]` **Security review run on `module-website-strategy-center`, then the 1 CONFIRMED
+  finding fixed, then re-scanned.** Focused on RBAC decorator placement, the dynamic
+  submit/review/approve permission split, the CAS/terminal-state fixes' authorization
+  implications, and SQL-injection surface. Found 1 CONFIRMED finding at 9/10 confidence (an
+  independent false-positive-filtering pass verified it against the real seeded RBAC grants and
+  the actual write path before confirming): the code-review fix above had only closed the CAS
+  race in `update()`'s non-approved branch — the approved/fork branch's own `updateInPlace()`
+  call (flipping the old row's `isCurrent` to false) still carried no guard, letting an
+  edit-only caller (`edit`, never `approve`) resurrect a just-concurrently-archived record into
+  a fresh editable draft, using only the edit grant for the resurrection half of the race —
+  contradicting the module's own documented "archived/superseded are permanently terminal"
+  invariant. **Fixed** by passing `current.approvalStatus` as the CAS guard on this call too,
+  matching the non-approved branch exactly; a null result now throws `ConflictException`. A
+  re-scan pass then confirmed the fix was complete, leaked no sensitive detail in the new
+  exception message, preserved correct transaction-rollback semantics, and left no remaining gap
+  of the same class — **0 findings above threshold**. Re-validated: 40/40 module unit tests
+  (596/596 `dashboard-api` overall), 21/21 module e2e tests, typecheck/lint/prettier clean.
+  Committed as `087c2e5`. A review packet (published as a Claude artifact, "Website Strategy
+  Center Review Packet" — code review + security review findings, fixes, and validation
+  evidence, with a decision section) was then prepared for the required second-role human
+  review, since the implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/module-website-strategy-center-approval-checklist.md`. **Awaiting that
+  review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
