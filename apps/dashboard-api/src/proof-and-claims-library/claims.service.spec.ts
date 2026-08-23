@@ -111,7 +111,28 @@ describe("ClaimsService", () => {
       expect(claims.create).not.toHaveBeenCalled();
     });
 
-    it("passes plain-text fields through unchanged (no sanitization for this backend-only pass)", async () => {
+    it("sanitizes claim/approvedWording/restrictions before writing, stripping a disallowed tag (2026-08-23 rich-text editor rollout)", async () => {
+      claims.findByPublicId.mockResolvedValue(null);
+      claims.create.mockResolvedValue(claim());
+
+      await svc.create(
+        {
+          publicId: "PROOF-X",
+          claim: "<script>alert(1)</script><p>99.9% uptime</p>",
+          approvedWording: "<script>alert(1)</script><p>Approved</p>",
+          restrictions: null,
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = claims.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.claim).toBe("<p>99.9% uptime</p>");
+      expect(writtenInput.approvedWording).toBe("<p>Approved</p>");
+      // null passes through unchanged rather than being coerced into an empty string.
+      expect(writtenInput.restrictions).toBeNull();
+    });
+
+    it("sanitizes a real (non-null) restrictions value on create, not just the null-passthrough case above (code-review coverage gap)", async () => {
       claims.findByPublicId.mockResolvedValue(null);
       claims.create.mockResolvedValue(claim());
 
@@ -119,13 +140,13 @@ describe("ClaimsService", () => {
         {
           publicId: "PROOF-X",
           claim: "X",
-          approvedWording: "<script>alert(1)</script>",
+          restrictions: "<script>alert(1)</script><p>Internal use only</p>",
         },
         "actor-1",
       );
 
       const [writtenInput] = claims.create.mock.calls[0] as [Record<string, unknown>];
-      expect(writtenInput.approvedWording).toBe("<script>alert(1)</script>");
+      expect(writtenInput.restrictions).toBe("<p>Internal use only</p>");
     });
 
     it("validates relatedServiceIds against the real services table before creating", async () => {
@@ -230,20 +251,77 @@ describe("ClaimsService", () => {
   });
 
   describe("update", () => {
-    it("does not pre-fetch the claim before updating (no wasted read)", async () => {
-      claims.update.mockResolvedValue(claim({ claim: "Renamed" }));
-
-      await svc.update("claim-1", { claim: "Renamed" }, "actor-1");
-
-      expect(claims.findById).not.toHaveBeenCalled();
+    beforeEach(() => {
+      // The pre-fetch reintroduced by the 2026-08-23 rich-text editor rollout (see below) needs a
+      // "current" claim to diff rich-text fields against — default every update() test to a
+      // successful pre-fetch so tests unrelated to that behavior don't need to stub it themselves.
+      claims.findById.mockResolvedValue(claim());
     });
 
-    it("throws NotFoundException when the repository update finds nothing to update", async () => {
+    it("pre-fetches the claim before updating, 404ing cleanly before any write is attempted (reintroduced 2026-08-23 for the rich-text editor rollout)", async () => {
+      // The original build deliberately skipped this pre-fetch as a wasted SELECT, since this
+      // module had no rich-text fields to diff against a "current" value at that point. Now that
+      // it does (sanitizeNullableRichTextIfChanged()/sanitizeRequiredRichTextIfChanged() need
+      // `current` to skip re-sanitizing an unchanged field), the pre-fetch is load-bearing,
+      // mirroring PersonasService.update()'s own identical reversal.
+      claims.findById.mockResolvedValue(null);
+
+      await expect(svc.update("missing", { claim: "New" }, "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(claims.update).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException when the repository update finds nothing to update (a TOCTOU race after a successful pre-fetch)", async () => {
       claims.update.mockResolvedValue(null);
 
       await expect(svc.update("missing", { claim: "New" }, "actor-1")).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it("sanitizes claim/approvedWording/restrictions before writing, stripping a disallowed tag", async () => {
+      claims.update.mockResolvedValue(claim());
+
+      await svc.update(
+        "claim-1",
+        {
+          claim: "<script>alert(1)</script><p>Renamed claim</p>",
+          approvedWording: "<script>alert(1)</script><p>New wording</p>",
+        },
+        "actor-1",
+      );
+
+      const [, writtenPatch] = claims.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.claim).toBe("<p>Renamed claim</p>");
+      expect(writtenPatch.approvedWording).toBe("<p>New wording</p>");
+    });
+
+    it("skips re-sanitizing claim when the patch resends it unchanged from the current stored value", async () => {
+      // A value containing a tag the sanitizer's own allowlist would strip if it ran, stored as
+      // the "current" value (representing e.g. a row written before this sanitizer existed) and
+      // resent unchanged. If sanitizeRequiredRichTextIfChanged() actually skipped re-sanitizing,
+      // the disallowed tag survives verbatim.
+      const dirty = "<script>alert(1)</script><p>99.9% uptime</p>";
+      claims.findById.mockResolvedValue(claim({ claim: dirty }));
+      claims.update.mockResolvedValue(claim());
+
+      await svc.update("claim-1", { claim: dirty, claimType: "SLA" }, "actor-1");
+
+      const [, writtenPatch] = claims.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.claim).toBe(dirty);
+      expect(writtenPatch.claimType).toBe("SLA");
+    });
+
+    it("skips re-sanitizing approvedWording when the patch resends it unchanged from the current stored value", async () => {
+      const dirty = "<script>alert(1)</script><p>Approved</p>";
+      claims.findById.mockResolvedValue(claim({ approvedWording: dirty }));
+      claims.update.mockResolvedValue(claim());
+
+      await svc.update("claim-1", { approvedWording: dirty }, "actor-1");
+
+      const [, writtenPatch] = claims.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.approvedWording).toBe(dirty);
     });
 
     it("never accepts approvalStatus through the general update patch", async () => {

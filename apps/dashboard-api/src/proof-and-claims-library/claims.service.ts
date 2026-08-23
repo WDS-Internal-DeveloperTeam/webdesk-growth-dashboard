@@ -11,6 +11,11 @@ import type {
   ProofClaimListFilter,
   ProofClaimRepository,
 } from "@webdesk/database";
+import {
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+  sanitizeRichTextHtml,
+} from "@webdesk/validation";
 import { PROOF_CLAIM_REPOSITORY } from "./proof-and-claims-library.constants.js";
 import type { CreateProofClaimDto, UpdateProofClaimDto } from "./proof-and-claims-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -21,6 +26,25 @@ import { AuthorizationService } from "../authz/authorization.service.js";
 import { ServicesService } from "../service-library/services.service.js";
 
 const MODULE_KEY = "service_persona_proof";
+
+/**
+ * `sanitizeNullableRichTextIfChanged()` (`@webdesk/validation`) is typed for a field that may be
+ * `null`/`undefined` — `claim` is neither (required, `.min(1)`, never `.nullish()`), so its return
+ * type (`string | null | undefined`) doesn't structurally fit `claim`'s own `string | undefined`
+ * update-patch shape. This is a type-only narrowing wrapper, not a re-implementation (code-review
+ * finding: an earlier version hand-copied the "skip re-sanitizing an unchanged value" branching
+ * instead of delegating) — for `claim`'s actual input domain (`string | undefined`, never `null`),
+ * `sanitizeNullableRichTextIfChanged()` already produces the identical output for every reachable
+ * case, so this only narrows the result type, it doesn't duplicate the logic. Kept local to this
+ * file rather than promoted to `@webdesk/validation` — this is the only required rich-text field
+ * anywhere in this app so far, so a shared generic helper for one call site is out of proportion.
+ */
+function sanitizeRequiredRichTextIfChanged(
+  value: string | undefined,
+  current: string,
+): string | undefined {
+  return sanitizeNullableRichTextIfChanged(value, current) as string | undefined;
+}
 
 /** A malformed (non-UUID) id can never resolve to a real service — filtered out before querying
  *  rather than sent to Postgres, whose `uuid` column type would otherwise reject it with a raw
@@ -109,8 +133,16 @@ export class ClaimsService {
 
     let created: ProofClaimEntity;
     try {
+      // claim/approvedWording/restrictions are now real HTML from dashboard-web's RichTextEditor
+      // (dashboard-web-proof-and-claims-library UI build, 2026-08-23) — sanitized server-side
+      // before storage, mirroring PersonasService.create()'s own identical wiring. `claim` is
+      // required and never null, so it uses `sanitizeRichTextHtml()` directly rather than the
+      // nullable-contract wrapper the two optional fields use.
       created = await this.claims.create({
         ...input,
+        claim: sanitizeRichTextHtml(input.claim),
+        approvedWording: sanitizeNullableRichText(input.approvedWording),
+        restrictions: sanitizeNullableRichText(input.restrictions),
         createdBy: actorUserId,
       });
     } catch (error) {
@@ -159,19 +191,50 @@ export class ClaimsService {
     patch: UpdateProofClaimDto,
     actorUserId: string,
   ): Promise<ProofClaimEntity> {
-    // No pre-fetch here — Proof and Claims Library has no rich-text fields to diff against a
-    // "current" value (backend-only pass, no sanitization yet) and its one FK field
-    // (relatedServiceIds) needs no prior state to re-validate, mirroring Persona Library's own
-    // original (pre-rich-text) update() — a genuinely wasted SELECT would result from mirroring
-    // ServicesService.update()'s own pre-fetch-first ordering here. The repository's own update()
-    // already 404s cleanly on a missing id via its null-on-zero-affected-rows return.
-    await this.assertServiceIdsExist(patch.relatedServiceIds);
+    // Pre-fetch reintroduced (2026-08-23, rich-text editor rollout) — the original build
+    // deliberately skipped this as a wasted SELECT, since this module had no rich-text fields to
+    // diff against a "current" value at that point (backend-only pass, no dashboard-web UI yet).
+    // Now that claim/approvedWording/restrictions are real HTML,
+    // `sanitizeNullableRichTextIfChanged()`/`sanitizeRequiredRichTextIfChanged()` (below) need the
+    // current stored value to skip re-sanitizing a field the patch resends unchanged — the same
+    // reasoning `PersonasService.update()`'s own identical reversal already established. `findById()`
+    // also 404s cleanly before anything else runs; `assertServiceIdsExist()` has no dependency on
+    // `current` at all, so it runs in parallel, matching `PersonasService.update()`'s own ordering.
+    //
+    // Accepted, tracked debt (code-review finding): running both concurrently means a request that
+    // is BOTH for a missing `id` AND carries an invalid `relatedServiceIds` entry gets whichever
+    // exception (404 vs 400) its underlying query happens to settle first, rather than
+    // deterministically the 404 — a real behavior gap, but one this diff only re-exposes, not
+    // introduces: `PersonasService.update()`/`ServicesService.update()` already have the identical
+    // shape, already shipped. A real fix (e.g. awaiting `findById()` first, then racing
+    // `assertServiceIdsExist()` only once existence is confirmed) means resequencing all three
+    // services together, out of scope for a single module's review-fix pass.
+    const [current] = await Promise.all([
+      this.findById(id),
+      this.assertServiceIdsExist(patch.relatedServiceIds),
+    ]);
 
-    const updated = await this.claims.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.claims.update(id, {
+      ...patch,
+      claim: sanitizeRequiredRichTextIfChanged(patch.claim, current.claim),
+      approvedWording: sanitizeNullableRichTextIfChanged(
+        patch.approvedWording,
+        current.approvedWording,
+      ),
+      restrictions: sanitizeNullableRichTextIfChanged(patch.restrictions, current.restrictions),
+      updatedBy: actorUserId,
+    });
+    // A real TOCTOU-safety net, not dead code — this module has no hard-delete today, but this
+    // still guards a hypothetical future one, matching `PersonasService.update()`'s/
+    // `ServicesService.update()`'s own identical belt-and-suspenders check after their own
+    // pre-fetch.
     if (!updated) {
       throw new NotFoundException(`Proof claim not found: ${id}`);
     }
 
+    // afterState records the raw, pre-sanitization patch, not the sanitized value actually
+    // written above — the byte-identical, already-accepted pattern `PersonasService.update()`/
+    // `ServicesService.update()` both have.
     await this.auditService.record({
       eventType: "data_change",
       actorUserId,

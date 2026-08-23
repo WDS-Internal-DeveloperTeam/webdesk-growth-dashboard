@@ -2497,6 +2497,83 @@ b7f6575a5e0d1860e32864528cc9f005b77d1477`, confirming the exact merged commit is
     enforcing — not a `404`); and `dashboard-web`'s `/` resolves (via the intermediate `/home`
     hop) to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is
     intact. **The Proof and Claims Library module backend is now genuinely live in production.**
+39. **`dashboard-web` Proof and Claims Library UI — built, independently code-reviewed (6 of 8
+    findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings above threshold),
+    pushed and opened as
+    [PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54), all
+    14 CI checks green, required second-role human reviewed — Jitesh D, "Approved", accepting the
+    2 open findings as tracked debt — and gated
+    (`G4-dashboard-web-proof-and-claims-library`, WebDesk Solution, CONFIRM) (2026-08-23).**
+    Closes this module's last named gap, following the backend's own build-to-production arc
+    (PR #53). Not started automatically — built directly on the explicit "Start the dashboard-web
+    UI for it" instruction. No approved wireframe exists for this module —
+    `04_Data_Model_and_Ownership.md:119-120`'s own field grouping is the only source; sections
+    mirror it (Identity, Verification, Content, Relationships, Sources, Status), matching every
+    prior module's own "smallest honest reading" precedent for an unsourced screen. New
+    `packages/shared-types` `ProofClaim`/`ClaimSource`/`ProofClaimApprovalStatus`/
+    `ProofClaimVerificationStatus` (no `ProofClaimDetail` split — `claim_sources` is fetched
+    separately, not inlined; no `version` field, unlike Persona). `lib/proof-and-claims-library{-
+query,}.ts` mirror `lib/persona-library{-query,}.ts`'s own zero-non-type-import-file split.
+    `ProofAndClaimsLibraryForm`, `ProofClaimStatusActions`, and `ClaimSourcesSection` (a real
+    one-to-many sub-resource with full add/edit/delete CRUD from day one, matching Projects' own
+    sub-resource-editing precedent — composes its CSS from the existing
+    `project-subresource-section.module.css` base despite its Projects-specific filename, flagged
+    in a doc comment). Per the 2026-08-22 standing rule requiring every dashboard-web long-text
+    field to use `RichTextEditor` going forward, `claim`/`approvedWording`/`restrictions` now use
+    it — the backend's original build deliberately kept these plain specifically because no UI
+    existed yet, and this build is that same follow-up point. This required a real backend
+    change alongside the UI, not just a frontend swap: `LONG_TEXT_MAX_LENGTH` raised
+    20,000 → 40,000, and `ClaimsService.create()`/`update()` now sanitize via
+    `sanitizeRichTextHtml()`/`sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`
+    (`@webdesk/validation`). `claim` is this app's first REQUIRED rich-text field — `update()`'s
+    pre-fetch was reintroduced (mirroring Persona Library's own identical reversal) and a new
+    `sanitizeRequiredRichTextIfChanged()` local helper handles the type mismatch between the
+    nullable-contract sanitize helpers and `claim`'s own non-nullable update-patch shape.
+    `claim_sources.source` stays plain text — matching Projects' established precedent that a
+    parent's own rich-text conversion doesn't extend to its sub-resource fields. **Independent
+    code review then ran** (this project's own `code-review` skill, high effort, 8 finder angles
+    via parallel subagents, 1-vote self-verification) — 8 candidates surfaced after dedup (7
+    CONFIRMED, 1 PLAUSIBLE). 6 fixed per explicit instruction: `VERIFICATION_STATUS_LABEL`
+    triplicated across the list page, detail page (with a weaker `Record<string, string>` type),
+    and the form — extracted into `lib/proof-and-claims-library-query.ts`; `tolerateDiscard()`
+    redeclared privately instead of importing the already-exported copy from
+    `lib/business-knowledge.ts` — now imports it; `claim_sources.source` had silently inherited
+    the parent's rich-text-sized `LONG_TEXT_MAX_LENGTH` (40,000) as a byproduct of constant
+    sharing, also making it genuinely ambiguous whether this brand-new long-text field should
+    have used `RichTextEditor` per the standing rule — given its own dedicated, decoupled
+    `CLAIM_SOURCE_MAX_LENGTH` (2,000 chars) on both backend and frontend, resolving both the
+    validation-bound bug and the rich-text-rule ambiguity in one fix; the `expiryReviewDate`
+    ternary in the form's submit handler hand-reimplemented the same `textField()` helper already
+    used for sibling fields — now calls it directly; `sanitizeRequiredRichTextIfChanged()`
+    hand-copied `sanitizeNullableRichTextIfChanged()`'s branching logic instead of delegating with
+    a type-narrowing cast — now a one-line delegation; and no test proved `restrictions` actually
+    gets sanitized on create with real dirty HTML (only the null-passthrough case was tested) — a
+    dedicated test was added. 2 findings left as accepted, tracked debt, recorded directly in
+    code: `update()`'s reintroduced pre-fetch races `findById()` against `assertServiceIdsExist()`
+    via `Promise.all`, so a request that's both for a missing id and an invalid
+    `relatedServiceIds` gets whichever exception settles first rather than deterministically the
+    404 — real, but inherited from `PersonasService.update()`'s/`ServicesService.update()`'s own
+    identical, already-shipped shape; and `ProofClaimStatusActions` is now the 5th independent
+    hand-copy of the approval-transitions table shape, already self-flagged in its own doc
+    comment. Re-validated: 49/49 `dashboard-api` unit tests in this module (1 new), 23/23
+    `dashboard-api` e2e tests (real disposable database), 423/423 `dashboard-web` unit tests,
+    typecheck/lint/`next build`/`nest build`/prettier all clean. **A separate `security-review`
+    skill run then found 0 findings above threshold** — focused on whether this diff's usage of
+    the already-vetted RichTextEditor + write-time + render-time sanitization pattern (built and
+    reviewed multiple times before for Business Knowledge Center/Service Library/Persona Library/
+    Projects) deviates from that pattern in any way, plus the new `claim_sources` sub-resource's
+    own validation/authorization/IDOR surface — confirmed `sourceUrl` still goes through
+    `safeHttpUrlSchema` server-side and `isSafeHttpUrl()` client-side, `claims.controller.ts`/
+    `claim-sources.controller.ts` (the actual RBAC decorators) are outside this diff and
+    unmodified, zero `dangerouslySetInnerHTML` occurrences (rich-text fields render exclusively
+    through the existing `SanitizedRichText` component), and `claim_sources` IDOR scoping
+    (`(id, claimId)`) is unchanged. A review packet (published as a Claude artifact — code review
+    - security review findings, fixes, and validation evidence, with a decision section) was
+      prepared for the required second-role human review, since the implementing agent cannot also
+      be its own reviewer (ADR-0010). See
+      `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`. **Awaiting
+      that review** — a gate decision, push/PR, and merge authorization each remain separate,
+      not-yet-requested next steps.
 
 ## Recent decisions
 
@@ -5934,6 +6011,72 @@ b7f6575a5e0d1860e32864528cc9f005b77d1477`, confirming the exact merged commit is
   `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
   unauthenticated visitor, confirming the session gate is intact. **The Proof and Claims Library
   module backend is now genuinely live in production.**
+- `[2026-08-23]` **Built the `dashboard-web` UI for Proof and Claims Library**, under the explicit
+  "Start the dashboard-web UI for it" instruction, following the backend's own build-to-production
+  arc (PR #53). See "Active tasks" item 39 above for the full account. Per the 2026-08-22 standing
+  rule, `claim`/`approvedWording`/`restrictions` were converted to `RichTextEditor` as part of this
+  same build (with real backend sanitization added alongside), while `claim_sources.source`
+  deliberately stayed plain text. Committed to branch
+  `dashboard-web-proof-and-claims-library` (not yet pushed).
+- `[2026-08-23]` **Independent code review then ran on `dashboard-web-proof-and-claims-library`**
+  (this project's own `code-review` skill, high effort, 8 finder angles via parallel subagents,
+  1-vote self-verification) — 8 candidates surfaced after dedup (7 CONFIRMED, 1 PLAUSIBLE). 6
+  fixed per explicit "fix the confirmed findings" instruction — most notable: `claim_sources.
+source` had silently inherited the parent module's rich-text-sized `LONG_TEXT_MAX_LENGTH`
+  (40,000) as a byproduct of constant sharing, which also made it genuinely ambiguous whether this
+  brand-new long-text field should have used `RichTextEditor` per the standing rule — resolved by
+  giving `source` its own dedicated, decoupled `CLAIM_SOURCE_MAX_LENGTH` (2,000 chars) on both
+  backend and frontend, closing both the validation-bound bug and the rich-text-rule ambiguity in
+  one fix. Also fixed: `VERIFICATION_STATUS_LABEL` triplicated across 3 new files (2 finder angles
+  independently converged on this); `tolerateDiscard()` redeclared privately instead of importing
+  the already-exported copy from `lib/business-knowledge.ts` (2 finder angles converged on this
+  too); the `expiryReviewDate` ternary reimplementing the form's own `textField()` helper;
+  `sanitizeRequiredRichTextIfChanged()` hand-copying `sanitizeNullableRichTextIfChanged()`'s logic
+  instead of delegating with a type-narrowing cast; and a missing test proving `restrictions`
+  actually gets sanitized on create with real dirty HTML. 2 findings left as accepted, tracked
+  debt, recorded directly in code: `update()`'s reintroduced pre-fetch racing `findById()` against
+  `assertServiceIdsExist()` via `Promise.all` (a real but inherited, already-shipped nondeterminism
+  shared with `PersonasService`/`ServicesService`), and `ProofClaimStatusActions` being the 5th
+  independent hand-copy of the approval-transitions table shape. Re-validated: 49/49
+  `dashboard-api` unit tests in this module (1 new), 23/23 `dashboard-api` e2e tests (real
+  disposable database), 423/423 `dashboard-web` unit tests, typecheck/lint/`next build`/
+  `nest build`/prettier all clean.
+- `[2026-08-23]` **Security review run on `dashboard-web-proof-and-claims-library`, separately
+  from the code review.** 0 findings above threshold — focused on whether this diff's usage of the
+  already-vetted RichTextEditor + write-time + render-time sanitization pattern deviates from that
+  pattern in any way, plus the new `claim_sources` sub-resource's own validation/authorization/
+  IDOR surface; confirmed `claims.controller.ts`/`claim-sources.controller.ts` (the actual RBAC
+  decorators) are outside this diff and unmodified, zero `dangerouslySetInnerHTML` occurrences,
+  and `claim_sources` IDOR scoping unchanged. A review packet (published as a Claude artifact —
+  code review + security review findings, fixes, and validation evidence, with a decision section)
+  was then prepared for the required second-role human review, since the implementing agent cannot
+  also be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`. **Awaiting
+  that review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
+- `[2026-08-23]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-proof-and-claims-library` — pushed to `origin`, opened as
+  [PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54).
+  Second-role human review is still outstanding; a gate decision and merge authorization each
+  remain separate, not-yet-requested next steps.
+- `[2026-08-23]` **All 14 CI checks confirmed green on PR #54**, then **required second-role
+  human review complete for `dashboard-web-proof-and-claims-library`.** The review packet (code
+  review + security review findings, fixes, and the 2 open accepted-debt items, with a decision
+  section) was reviewed. **Jitesh D reviewed it and returned "Approved,"** accepting the 2 open
+  findings (the `update()` exception-ordering race and the 5th independent status-transitions-
+  table copy) as tracked debt — no disputes raised. See
+  `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-23]` **The gate (`G4-dashboard-web-proof-and-claims-library`) was then separately
+  requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+  since the second-role review was already complete before the gate was requested), approved
+  commit `0361c1e` on branch `dashboard-web-proof-and-claims-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-proof-and-claims-library`) and
+  `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #54 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule.
 
 ## Open client blockers
 
