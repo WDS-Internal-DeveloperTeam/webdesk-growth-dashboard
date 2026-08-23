@@ -108,14 +108,6 @@ describe("KeywordEntityRelationshipsService", () => {
       expect(keywords.findById).toHaveBeenCalledWith("keyword-1", FAKE_PROJECT_ID);
     });
 
-    it("rejects a malformed entityId with a clean 400 before ever querying the database", async () => {
-      await expect(
-        svc.create("keyword-1", FAKE_PROJECT_ID, "not-a-uuid", "actor-1"),
-      ).rejects.toThrow(BadRequestException);
-      expect(entities.findByIds).not.toHaveBeenCalled();
-      expect(relationships.create).not.toHaveBeenCalled();
-    });
-
     it("rejects an entityId that doesn't resolve to a real entity in the same project", async () => {
       entities.findByIds.mockResolvedValue([]);
 

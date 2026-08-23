@@ -14,11 +14,6 @@ import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { KeywordsService } from "./keywords.service.js";
 
-/** Same malformed-id guard `PersonasService.assertServiceIdsExist()` uses before ever reaching
- *  Postgres (`dashboard-api` never imports `sequelize` directly per ADR-0006 — a raw non-UUID
- *  value would otherwise crash the `uuid`-typed `id` column with a 500 instead of a clean 400). */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * Keyword <-> entity relationship CRUD — a genuine many-to-many join, no content fields of its
  * own to edit in place, only create/list/remove (task package D1). Gated on `edit` at the module-
@@ -36,20 +31,25 @@ export class KeywordEntityRelationshipsService {
 
   /** Verifies the parent keyword exists AND belongs to the given `projectId` (IDOR prevention),
    *  and that `entityId` resolves to a real entity in the SAME project (cross-entity existence
-   *  validation, task package D1) — mirrors `PersonasService.assertServiceIdsExist()`'s own
-   *  shape, including the malformed-UUID guard. */
+   *  validation, task package D1). Both checks share the already-known `projectId` with no
+   *  dependency on each other's result, so they run via `Promise.all` — mirroring
+   *  `PersonasService.create()`'s own identical fix for this exact bug class (code-review finding,
+   *  `module-keyword-and-entity-library`: a first version of this method ran them sequentially, an
+   *  unnecessary extra round trip). No malformed-`entityId` guard is needed before
+   *  `findByIds()` — unlike Persona Library's `relatedServiceIds` (a plain, unvalidated array),
+   *  `entityId` is already `z.string().uuid()`-validated by `ZodValidationPipe` before this method
+   *  ever runs (code-review finding: an earlier version of this guard could never actually fire on
+   *  the real HTTP path). */
   async create(
     keywordId: string,
     projectId: string,
     entityId: string,
     actorUserId: string,
   ): Promise<KeywordEntityRelationshipEntity> {
-    const keyword = await this.keywords.findById(keywordId, projectId);
-
-    if (!UUID_PATTERN.test(entityId)) {
-      throw new BadRequestException(`entityId not found: ${entityId}`);
-    }
-    const found = await this.entities.findByIds([entityId], projectId);
+    const [keyword, found] = await Promise.all([
+      this.keywords.findById(keywordId, projectId),
+      this.entities.findByIds([entityId], projectId),
+    ]);
     if (found.length === 0) {
       throw new BadRequestException(`entityId not found: ${entityId}`);
     }

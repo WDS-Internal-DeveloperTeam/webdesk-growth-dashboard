@@ -5,16 +5,13 @@ import type {
 } from "@webdesk/database";
 import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
 import { PAGE_KEYWORD_ASSIGNMENT_REPOSITORY } from "./keyword-and-entity-library.constants.js";
+import type { CreatePageKeywordAssignmentDto } from "./keyword-and-entity-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { KeywordsService } from "./keywords.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { PagesService } from "../page-inventory/pages.service.js";
-
-/** Same malformed-id guard `KeywordEntityRelationshipsService.create()` uses before ever reaching
- *  Postgres. */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Keyword <-> page assignment CRUD — a genuine join into Page Inventory's own `pages` table, no
@@ -36,19 +33,25 @@ export class PageKeywordAssignmentsService {
 
   /** Verifies the parent keyword exists AND belongs to the given `projectId` (IDOR prevention),
    *  and that `pageId` resolves to a real Page Inventory page in the SAME project (cross-module
-   *  existence validation, task package D1/D10). */
+   *  existence validation, task package D1/D10). Both checks share the already-known `projectId`
+   *  with no dependency on each other's result, so they run via `Promise.all` — mirroring
+   *  `PersonasService.create()`'s own identical fix for this exact bug class (code-review finding,
+   *  `module-keyword-and-entity-library`: a first version of this method ran them sequentially, an
+   *  unnecessary extra round trip). No malformed-`pageId` guard is needed before
+   *  `existsInProject()` — unlike Persona Library's `relatedServiceIds` (a plain, unvalidated
+   *  array), `pageId` is already `z.string().uuid()`-validated by `ZodValidationPipe` before this
+   *  method ever runs (code-review finding: an earlier version of this guard could never actually
+   *  fire on the real HTTP path). */
   async create(
     keywordId: string,
     projectId: string,
-    input: { pageId: string; assignmentNote?: string | null },
+    input: CreatePageKeywordAssignmentDto,
     actorUserId: string,
   ): Promise<PageKeywordAssignmentEntity> {
-    const keyword = await this.keywords.findById(keywordId, projectId);
-
-    if (!UUID_PATTERN.test(input.pageId)) {
-      throw new BadRequestException(`pageId not found: ${input.pageId}`);
-    }
-    const pageExists = await this.pages.existsInProject(input.pageId, projectId);
+    const [keyword, pageExists] = await Promise.all([
+      this.keywords.findById(keywordId, projectId),
+      this.pages.existsInProject(input.pageId, projectId),
+    ]);
     if (!pageExists) {
       throw new BadRequestException(`pageId not found: ${input.pageId}`);
     }

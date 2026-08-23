@@ -18,7 +18,13 @@ export const keywordApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 const CONFIDENCE_VALUES = ["low", "medium", "high"] as const;
 export const keywordConfidenceSchema = z.enum(CONFIDENCE_VALUES);
 
-const shortTextField = z.string().max(255).nullish();
+// 100, not 255 -- matches the real VARCHAR(100) columns (migration 00060) this backs
+// (keywordType/intent/funnelStage/country on keywords, entityType on entities). A prior version of
+// this field allowed 255, which passed Zod but then failed the actual INSERT/UPDATE with a raw,
+// unhandled Postgres "value too long" 500 -- caught by independent code review
+// (module-keyword-and-entity-library). Matches listKeywordsQuerySchema's own already-correct
+// `.max(100)` limit on the same fields' filter counterparts.
+const shortTextField = z.string().max(100).nullish();
 const longTextField = z.string().max(20_000).nullish();
 const dateOnlyField = z.string().date().nullish();
 

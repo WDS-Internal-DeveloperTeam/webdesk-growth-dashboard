@@ -92,14 +92,6 @@ describe("PageKeywordAssignmentsService", () => {
       expect(keywords.findById).toHaveBeenCalledWith("keyword-1", FAKE_PROJECT_ID);
     });
 
-    it("rejects a malformed pageId with a clean 400 before ever calling PagesService", async () => {
-      await expect(
-        svc.create("keyword-1", FAKE_PROJECT_ID, { pageId: "not-a-uuid" }, "actor-1"),
-      ).rejects.toThrow(BadRequestException);
-      expect(pages.existsInProject).not.toHaveBeenCalled();
-      expect(assignments.create).not.toHaveBeenCalled();
-    });
-
     it("validates pageId against Page Inventory's own PagesService.existsInProject(), scoped to the project", async () => {
       assignments.create.mockResolvedValue(assignment());
 
