@@ -2497,13 +2497,10 @@ b7f6575a5e0d1860e32864528cc9f005b77d1477`, confirming the exact merged commit is
     enforcing — not a `404`); and `dashboard-web`'s `/` resolves (via the intermediate `/home`
     hop) to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is
     intact. **The Proof and Claims Library module backend is now genuinely live in production.**
-39. **`dashboard-web` Proof and Claims Library UI — built, independently code-reviewed (6 of 8
-    findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings above threshold),
-    pushed and opened as
-    [PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54), all
-    14 CI checks green, required second-role human reviewed — Jitesh D, "Approved", accepting the
-    2 open findings as tracked debt — and gated
-    (`G4-dashboard-web-proof-and-claims-library`, WebDesk Solution, CONFIRM) (2026-08-23).**
+39. **`dashboard-web` Proof and Claims Library UI — built, reviewed, gated, and merged
+    ([PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54),
+    merge commit `54f5ee0107b95c6bd370a1f23df3771c8a131121`) — now genuinely live in production
+    (2026-08-23).**
     Closes this module's last named gap, following the backend's own build-to-production arc
     (PR #53). Not started automatically — built directly on the explicit "Start the dashboard-web
     UI for it" instruction. No approved wireframe exists for this module —
@@ -2571,9 +2568,22 @@ query,}.ts` mirror `lib/persona-library{-query,}.ts`'s own zero-non-type-import-
     - security review findings, fixes, and validation evidence, with a decision section) was
       prepared for the required second-role human review, since the implementing agent cannot also
       be its own reviewer (ADR-0010). See
-      `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`. **Awaiting
-      that review** — a gate decision, push/PR, and merge authorization each remain separate,
-      not-yet-requested next steps.
+      `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`. **Jitesh D
+      reviewed it and returned "Approved,"** accepting the 2 open findings as tracked debt. **The
+      gate (`G4-dashboard-web-proof-and-claims-library`) was then separately requested and
+      approved** — WebDesk Solution, decision CONFIRM, approved commit `0361c1e` on branch
+      `dashboard-web-proof-and-claims-library` — see
+      `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+      `G4-dashboard-web-proof-and-claims-library`). **"Merge PR #54" was then separately requested
+      and executed** — merge commit `54f5ee0107b95c6bd370a1f23df3771c8a131121`, all 14 CI checks
+      green beforehand. Both Vercel projects auto-deployed on push to `main` and were verified live
+      directly — `dashboard-api`'s `/health` returned `build.commitSha ==
+54f5ee0107b95c6bd370a1f23df3771c8a131121`, `GET /proof-and-claims-library/claims` returned a
+      clean `401` (route live, `SessionGuard` enforcing — not a `404`), and `dashboard-web`'s
+      `/proof-and-claims-library` resolves (307) to `/auth/sign-in` for an unauthenticated visitor.
+      **The `dashboard-web` Proof and Claims Library UI is now genuinely live in production**,
+      closing out this slice's full build-to-production arc — backend and now the full UI (list,
+      detail, create/edit form, status actions, `claim_sources` sub-resource editing) are both live.
 
 ## Recent decisions
 
@@ -6077,6 +6087,21 @@ source` had silently inherited the parent module's rich-text-sized `LONG_TEXT_MA
   section. **This gate approval does not itself authorize merging PR #54 or a production
   deployment** — merge remains its own separate, not-yet-requested authorization, per this
   project's standing "no auto-merge" rule.
+- `[2026-08-23]` **"Merge PR #54" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first (2 were still running after the latest doc-commit push — Database
+  migration test, Integration tests — both confirmed green before merging). Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `54f5ee0107b95c6bd370a1f23df3771c8a131121`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+54f5ee0107b95c6bd370a1f23df3771c8a131121`, confirming the exact merged commit is what's serving;
+  `GET /proof-and-claims-library/claims` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed); and
+  `dashboard-web`'s `/proof-and-claims-library` resolves (307) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The `dashboard-web` Proof and
+  Claims Library UI is now genuinely live in production**, closing out this slice's full
+  build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
+  actions, `claim_sources` sub-resource editing) are both live.
 
 ## Open client blockers
 

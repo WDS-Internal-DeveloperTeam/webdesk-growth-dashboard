@@ -8,9 +8,18 @@ findings above threshold). Required second-role human review complete — **Jite
 all 14 CI checks green. **The gate (`G4-dashboard-web-proof-and-claims-library`) was then
 separately requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an
 override, since the second-role review was already complete before the gate was requested),
-approved commit `0361c1e` on branch `dashboard-web-proof-and-claims-library`. **This gate approval
-does not itself authorize merging PR #54 or a production deployment** — merge remains its own
-separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+approved commit `0361c1e` on branch `dashboard-web-proof-and-claims-library`. **"Merge PR #54" was
+then separately requested and executed** — merged with a real merge commit (not squash/rebase),
+matching every prior merge in this project's history — merge commit
+`54f5ee0107b95c6bd370a1f23df3771c8a131121`, all 14 CI checks green beforehand. Both Vercel
+projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+54f5ee0107b95c6bd370a1f23df3771c8a131121`, confirming the exact merged commit is what's serving;
+`GET /proof-and-claims-library/claims` returned a clean `401` (route live, `SessionGuard`
+enforcing — not a `404`, which would mean the module never actually deployed); and
+`dashboard-web`'s `/proof-and-claims-library` resolves (307) to `/auth/sign-in` for an
+unauthenticated visitor. **The `dashboard-web` Proof and Claims Library UI is now genuinely live
+in production**, closing out this slice's full build-to-production arc.
 
 ## Completion condition
 
@@ -142,3 +151,19 @@ second-role review was already complete before the gate was requested), approved
 **This gate approval does not itself authorize merging PR #54 or a production deployment** —
 merge remains its own separate, not-yet-requested authorization, per this project's standing
 "no auto-merge" rule.
+
+## Merge — COMPLETE
+
+**"Merge PR #54" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `54f5ee0107b95c6bd370a1f23df3771c8a131121`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha == 54f5ee0107b95c6bd370a1f23df3771c8a131121`, confirming the exact merged commit is what's serving.
+- `GET /proof-and-claims-library/claims` returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/proof-and-claims-library` resolves (307) to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact.
+
+**The `dashboard-web` Proof and Claims Library UI is now genuinely live in production**, closing
+out this slice's full build-to-production arc — backend and now the full UI (list, detail,
+create/edit form, status actions, `claim_sources` sub-resource editing) are both live.
