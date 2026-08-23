@@ -14,10 +14,12 @@ import { PersonasController } from "./personas.controller.js";
  * `PermissionGuard`/`AuthorizationService` (the dynamic per-transition permission check in
  * `PersonasService.changeApprovalStatus()`), `AuditModule` for `AuditService` (create/update/
  * status transitions are all audited), and `ServiceLibraryModule` for its exported
- * `SERVICE_REPOSITORY` (`relatedServiceIds` existence validation, code-review finding — closes the
- * gap that made this field weaker than the precedent it claimed to follow, since `services`
- * already exists unlike Service Library's own genuinely-nonexistent `icpIds` targets). No
- * `UsersModule` import — unlike Service Library/Projects, this module has no
+ * `ServicesService` (`relatedServiceIds` existence validation via
+ * `ServicesService.existingServiceIds()`, a narrow read-only delegating method, not the
+ * write-capable `SERVICE_REPOSITORY` token directly — code-review finding,
+ * `module-proof-and-claims-library` branch: closes the gap that made this field weaker than the
+ * precedent it claimed to follow, since `services` already exists unlike Service Library's own
+ * genuinely-nonexistent `icpIds` targets). No `UsersModule` import — unlike Service Library/Projects, this module has no
  * `ownerUserId`/`parentServiceId`-style field needing existence validation (D7), and no
  * `AuthorizationService.canViewConfidential()` usage — no confidential-field mechanism exists here
  * (D6, the module registry's own seeded `confidentialityLevel: null`).

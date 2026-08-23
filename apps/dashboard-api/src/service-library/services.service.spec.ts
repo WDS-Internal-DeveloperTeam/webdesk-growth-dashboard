@@ -87,6 +87,7 @@ describe("ServicesService", () => {
   let services: {
     create: ReturnType<typeof vi.fn>;
     findById: ReturnType<typeof vi.fn>;
+    findByIds: ReturnType<typeof vi.fn>;
     findByPublicId: ReturnType<typeof vi.fn>;
     list: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
@@ -113,6 +114,7 @@ describe("ServicesService", () => {
     services = {
       create: vi.fn(),
       findById: vi.fn(),
+      findByIds: vi.fn(),
       findByPublicId: vi.fn(),
       list: vi.fn(),
       update: vi.fn(),
@@ -144,6 +146,38 @@ describe("ServicesService", () => {
       authorizationService as unknown as AuthorizationService,
       auditService as unknown as AuditService,
     );
+  });
+
+  describe("existingServiceIds", () => {
+    it("returns only the subset of ids that resolve to a real service", async () => {
+      services.findByIds.mockResolvedValue([service({ id: "svc-1" })]);
+
+      const result = await svc.existingServiceIds(["svc-1", "svc-missing"]);
+
+      expect(result).toEqual(new Set(["svc-1"]));
+      expect(services.findByIds).toHaveBeenCalledWith(["svc-1", "svc-missing"]);
+    });
+
+    it("returns an empty set when none of the ids resolve", async () => {
+      services.findByIds.mockResolvedValue([]);
+
+      const result = await svc.existingServiceIds(["svc-missing"]);
+
+      expect(result).toEqual(new Set());
+    });
+
+    it("never exposes anything beyond id — the point of this delegating method", async () => {
+      services.findByIds.mockResolvedValue([
+        service({ id: "svc-1", internalDescription: "secret" }),
+      ]);
+
+      const result = await svc.existingServiceIds(["svc-1"]);
+
+      // A Set<string> of ids has no way to carry internalDescription or any other field through —
+      // this is what makes existingServiceIds() a safe narrowing over the raw repository, not just
+      // a rename of it.
+      expect(result).toEqual(new Set(["svc-1"]));
+    });
   });
 
   describe("create", () => {

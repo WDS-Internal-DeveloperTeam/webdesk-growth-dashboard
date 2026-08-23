@@ -16,6 +16,7 @@ import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { PersonaLibraryModule } from "./persona-library/persona-library.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
+import { ProofAndClaimsLibraryModule } from "./proof-and-claims-library/proof-and-claims-library.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
@@ -61,6 +62,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     OperationalContactsModule,
     PersonaLibraryModule,
     ProjectsModule,
+    ProofAndClaimsLibraryModule,
     RetentionModule,
     ServiceLibraryModule,
     SystemOperationsModule,
