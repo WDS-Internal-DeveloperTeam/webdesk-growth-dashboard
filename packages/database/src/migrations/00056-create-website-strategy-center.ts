@@ -44,11 +44,11 @@ import { DataTypes, type QueryInterface } from "sequelize";
  * `TRANSITIONS` table at all. The superseded row is never deleted — permanently readable via the
  * version-history route, satisfying "preserve versions."
  *
- * `content`/`notes` stay plain text for this backend-only pass (task package D7) — no
- * `dashboard-web` UI exists yet, matching every sibling module's own original backend-first
- * precedent (Persona Library/Service Library/Proof and Claims Library all shipped plain
- * unsanitized text first, converting to `RichTextEditor` + real sanitization only once a
- * `dashboard-web` UI was later authorized and built).
+ * `content`/`notes` started plain text for the original backend-only pass (task package D7),
+ * matching every sibling module's own original backend-first precedent — converted to real HTML
+ * (sanitized server-side before storage and again at render time) once the `dashboard-web` UI was
+ * later authorized and built, the same later-conversion arc Persona Library/Service Library/Proof
+ * and Claims Library each went through.
  *
  * No `project_id` scoping — organization-wide, matching every other business-content module
  * (task package D9). No confidential-field mechanism — the module registry's own seeded

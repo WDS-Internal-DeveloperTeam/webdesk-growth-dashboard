@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { withTransaction } from "@webdesk/database";
+import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import type {
   WebsiteStrategyApprovalStatus,
   WebsiteStrategyRecordEntity,
@@ -23,6 +24,23 @@ import { AuditService } from "../audit/audit.service.js";
 import { AuthorizationService } from "../authz/authorization.service.js";
 
 const MODULE_KEY = "website_strategy";
+
+/**
+ * Sanitizes a genuinely NEW patch value, or inherits the current version's own (already-sanitized)
+ * value unchanged when the patch omits the field — the fork branch's own version of the
+ * skip-if-unchanged reasoning `sanitizeNullableRichTextIfChanged()` already encodes, but with a
+ * non-optional `string | null` return (never `undefined`), since `createNewVersion()` inserts a
+ * whole new row and has no partial-update contract to leave a field untouched via. Code-review
+ * fix: this collapses what was two near-identical 4-line ternaries (one per field) into one call
+ * each, mirroring the file-local helper precedent `claims.service.ts`'s own
+ * `sanitizeRequiredRichTextIfChanged()` already set for the identical class of duplication.
+ */
+function sanitizeOrInherit(
+  patchValue: string | null | undefined,
+  currentValue: string | null,
+): string | null {
+  return patchValue !== undefined ? (sanitizeNullableRichText(patchValue) ?? null) : currentValue;
+}
 
 /** The real, seeded RBAC action (`06_Roles_and_Permissions.md`, `website_strategy` group)
  *  required for a given `approvalStatus` transition — identical vocabulary to Service Library's/
@@ -95,8 +113,8 @@ export class WebsiteStrategyRecordsService {
         publicId: input.publicId,
         recordType: input.recordType,
         title: input.title,
-        content: input.content,
-        notes: input.notes,
+        content: sanitizeNullableRichText(input.content),
+        notes: sanitizeNullableRichText(input.notes),
         createdBy: actorUserId,
       });
     } catch (error) {
@@ -191,7 +209,12 @@ export class WebsiteStrategyRecordsService {
       // below exists to enforce.
       const updated = await this.records.updateInPlace(
         current.id,
-        { ...patch, updatedBy: actorUserId },
+        {
+          ...patch,
+          content: sanitizeNullableRichTextIfChanged(patch.content, current.content),
+          notes: sanitizeNullableRichTextIfChanged(patch.notes, current.notes),
+          updatedBy: actorUserId,
+        },
         undefined,
         current.approvalStatus,
       );
@@ -265,8 +288,8 @@ export class WebsiteStrategyRecordsService {
             recordType: current.recordType,
             versionNumber: nextVersionNumber,
             title: patch.title ?? current.title,
-            content: patch.content !== undefined ? patch.content : current.content,
-            notes: patch.notes !== undefined ? patch.notes : current.notes,
+            content: sanitizeOrInherit(patch.content, current.content),
+            notes: sanitizeOrInherit(patch.notes, current.notes),
             createdBy: actorUserId,
           },
           transaction,

@@ -109,6 +109,8 @@ describe("Website Strategy Center module endpoints (e2e, real disposable databas
       versionNumber: number;
       isCurrent: boolean;
       approvalStatus: string;
+      content: string | null;
+      notes: string | null;
     };
   }
 
@@ -218,6 +220,25 @@ describe("Website Strategy Center module endpoints (e2e, real disposable databas
     // mutation, not a new version.
     expect(updateResponse.body.data.id).toBe(created.id);
     expect(updateResponse.body.data.versionNumber).toBe(1);
+  });
+
+  it("sanitizes content/notes over real HTTP, stripping a disallowed tag while preserving safe formatting (rich-text editor rollout)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createDraftRecord(cookie, {
+      title: "Sanitization Fixture",
+      content: "<script>alert(1)</script><p><strong>Safe</strong> content</p>",
+      notes: "<img src=x onerror=alert(1)><p>Safe notes</p>",
+    });
+    expect(created.content).toBe("<p><strong>Safe</strong> content</p>");
+    expect(created.notes).toBe("<p>Safe notes</p>");
+
+    const updateResponse = await request(app.getHttpServer())
+      .post(`/website-strategy-center/records/${created.recordId}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ content: "<script>alert(2)</script><p>Updated safely</p>" })
+      .expect(200);
+    expect(updateResponse.body.data.content).toBe("<p>Updated safely</p>");
   });
 
   it("denies record creation with 403 for a read_only session (only V grant, not C)", async () => {
