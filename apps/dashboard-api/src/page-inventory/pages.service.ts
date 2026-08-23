@@ -148,6 +148,20 @@ export class PagesService {
     return this.pages.list(filter);
   }
 
+  /** A narrow, read-only delegating method for another module's own cross-module existence check
+   *  — mirrors `RoadmapItemsService.existsInProject()`'s own already-established shape
+   *  (`apps/dashboard-api/src/projects/roadmap-items.service.ts`), not the write-capable
+   *  `PAGE_REPOSITORY` token directly (this project's own standing precedent: only ever export a
+   *  narrow, read-only delegating method across a module boundary, never a raw repository token —
+   *  see `docs/implementation/module-persona-library.md`'s security-review section for the
+   *  `SERVICE_REPOSITORY` exposure this avoids repeating). Consumed by the Keyword & Entity
+   *  Library module's `PageKeywordAssignmentsService.create()` to validate a caller-supplied
+   *  `pageId` (task package `module-keyword-and-entity-library.md` D1/D10). */
+  async existsInProject(id: string, projectId: string): Promise<boolean> {
+    const page = await this.pages.findById(id);
+    return page !== null && page.projectId === projectId;
+  }
+
   async update(
     id: string,
     projectId: string,
