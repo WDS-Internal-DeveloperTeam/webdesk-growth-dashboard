@@ -3,9 +3,11 @@
 **Status:** Built, code review complete (6 candidates surfaced after dedup — 4 CONFIRMED, 1
 PLAUSIBLE, 1 REFUTED — all 4 CONFIRMED fixed). Security review complete (0 findings above
 threshold). Required second-role human review complete — Jitesh D, "Approved," no disputes
-raised. **The gate (G4-dashboard-web-website-strategy-center) was then separately requested and
-approved** — WebDesk Solution, decision CONFIRM, approved commit `e349feb` on branch
-`dashboard-web-website-strategy-center`. Not yet pushed, opened as a PR, or merged.
+raised. Gate (G4-dashboard-web-website-strategy-center) approved — WebDesk Solution, decision
+CONFIRM, approved commit `e349feb` on branch `dashboard-web-website-strategy-center`. Pushed to
+`origin` and opened as
+[PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56). Not yet
+merged.
 
 ## Completion condition
 

@@ -2679,9 +2679,9 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     yet for this module — a separate, not-yet-requested next step, matching every prior
     module's own precedent. **Update (2026-08-23): the `dashboard-web` UI has since been
     built — see item 41 below.**
-41. **`dashboard-web` Website Strategy Center UI — built, code-reviewed, security-reviewed,
-    required second-role human reviewed (Jitesh D, "Approved"), and gated
-    (G4-dashboard-web-website-strategy-center, WebDesk Solution, CONFIRM) (2026-08-23).**
+41. **`dashboard-web` Website Strategy Center UI — built, reviewed, gated, and opened as
+    [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56)
+    (2026-08-23).**
     Closes this module's last named gap, following the backend's own build-to-production arc
     (PR #55). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
@@ -2763,7 +2763,10 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     `docs/project-state/dashboard-web-website-strategy-center-approval-checklist.md`'s
     "Sign-off" section. **This gate approval does not itself authorize pushing the branch,
     opening a PR, or merging** — each remains its own separate, not-yet-requested
-    authorization, per this project's standing "no auto-merge" rule.
+    authorization, per this project's standing "no auto-merge" rule. **"Push the branch and
+    open a PR" was then separately requested and executed** — pushed to `origin`, opened as
+    [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -6437,6 +6440,10 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   "Sign-off" section. **This gate approval does not itself authorize pushing the branch,
   opening a PR, or merging** — each remains its own separate, not-yet-requested authorization,
   per this project's standing "no auto-merge" rule.
+- `[2026-08-23]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-website-strategy-center` — pushed to `origin`, opened as
+  [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56).
+  Merge authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 
