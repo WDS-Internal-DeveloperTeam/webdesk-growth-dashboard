@@ -86,14 +86,17 @@ export class PagesService {
     }
   }
 
-  async create(input: CreatePageDto, actorUserId: string): Promise<PageEntity> {
+  /** `projectId` is a route-derived parameter, not part of `CreatePageDto` (code-review finding,
+   *  `module-page-inventory`) — mirrors `RoadmapItemsService.create()`'s own
+   *  `(projectId, input, actorUserId)` shape. */
+  async create(projectId: string, input: CreatePageDto, actorUserId: string): Promise<PageEntity> {
     // `this.projects.findById()` throws NotFoundException itself if the project doesn't exist —
     // mirrors ClaimSourcesService.create()'s own "parent not found -> 404" pattern for a
     // sub-resource whose own parent id is caller-supplied, not route-derived.
     const [existing] = await Promise.all([
       this.pages.findByPublicId(input.publicId),
-      this.projects.findById(input.projectId),
-      this.assertRoadmapPhaseExists(input.roadmapPhaseId, input.projectId),
+      this.projects.findById(projectId),
+      this.assertRoadmapPhaseExists(input.roadmapPhaseId, projectId),
     ]);
     if (existing) {
       throw new BadRequestException(`publicId already in use: ${input.publicId}`);
@@ -101,7 +104,7 @@ export class PagesService {
 
     let created: PageEntity;
     try {
-      created = await this.pages.create({ ...input, createdBy: actorUserId });
+      created = await this.pages.create({ ...input, projectId, createdBy: actorUserId });
     } catch (error) {
       // The publicId uniqueness check above is TOCTOU (two concurrent creates with the same
       // publicId can both pass it before either INSERT commits) — the real unique index catches
@@ -132,9 +135,13 @@ export class PagesService {
     return created;
   }
 
-  async findById(id: string): Promise<PageEntity> {
+  /** `projectId`-scoped (IDOR prevention, code-review finding `module-page-inventory`) — a page
+   *  from a different project, accessed via this project's own route, is treated as not found
+   *  rather than silently returned/mutated. Mirrors `PageUrlsService.findParentPageOrThrow()`'s/
+   *  `ClaimSourcesService`'s own identical pattern for a sub-resource scoped to its parent. */
+  async findById(id: string, projectId: string): Promise<PageEntity> {
     const page = await this.pages.findById(id);
-    if (!page) {
+    if (!page || page.projectId !== projectId) {
       throw new NotFoundException(`Page not found: ${id}`);
     }
     return page;
@@ -144,12 +151,17 @@ export class PagesService {
     return this.pages.list(filter);
   }
 
-  async update(id: string, patch: UpdatePageDto, actorUserId: string): Promise<PageEntity> {
+  async update(
+    id: string,
+    projectId: string,
+    patch: UpdatePageDto,
+    actorUserId: string,
+  ): Promise<PageEntity> {
     // Sequential, not parallel (unlike sibling modules' own relatedServiceIds-style checks) —
     // assertRoadmapPhaseExists() needs the page's own current projectId to scope the check
     // against, a real data dependency, not an avoidable extra round trip. findById() also 404s
-    // cleanly before anything else runs.
-    const current = await this.findById(id);
+    // cleanly (including on a project mismatch) before anything else runs.
+    const current = await this.findById(id, projectId);
     await this.assertRoadmapPhaseExists(patch.roadmapPhaseId, current.projectId);
 
     const updated = await this.pages.update(id, { ...patch, updatedBy: actorUserId });
@@ -177,10 +189,11 @@ export class PagesService {
 
   async changeWorkflowStage(
     id: string,
+    projectId: string,
     nextStage: PageWorkflowStage,
     actorUserId: string,
   ): Promise<PageEntity> {
-    const page = await this.findById(id);
+    const page = await this.findById(id, projectId);
     if (page.workflowStage === nextStage) {
       return page; // no-op, not an error — re-requesting the current stage is harmless
     }
@@ -191,7 +204,16 @@ export class PagesService {
         `Invalid page workflow stage transition: ${page.workflowStage} -> ${nextStage}`,
       );
     }
-    await this.authorizationService.assertAllowed(actorUserId, MODULE_KEY, requiredAction);
+    // `page.projectId` (== the already-verified `projectId` param) is threaded into the dynamic
+    // per-transition check (code-review finding, `module-page-inventory`) — without it, a caller
+    // holding only a project-scoped `page_inventory` grant (not a global one) was denied on every
+    // workflow-stage transition, the exact gap this fix closes.
+    await this.authorizationService.assertAllowed(
+      actorUserId,
+      MODULE_KEY,
+      requiredAction,
+      page.projectId,
+    );
 
     const result = await this.pages.updateStatus(id, page.workflowStage, nextStage, actorUserId);
     if (result.outcome === "not_found") {

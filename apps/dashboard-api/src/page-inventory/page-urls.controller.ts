@@ -36,9 +36,12 @@ const MODULE_KEY = "page_inventory";
  *  on the same `MODULE_KEY` with `view`/`edit` actions, mirroring `ClaimSourcesController`'s own
  *  sub-resource gating pattern (`apps/dashboard-api/src/proof-and-claims-library/claim-sources.controller.ts`).
  *  `@RequirePermission` is placed on every individual method, never at class level, same
- *  discipline as `PagesController`. */
+ *  discipline as `PagesController`.
+ *
+ *  `:projectId` is a real route path parameter (code-review finding, `module-page-inventory`) —
+ *  same reason/shape as `PagesController`'s own restructuring. */
 @ApiTags("page-inventory")
-@Controller("page-inventory/pages/:pageId/urls")
+@Controller("page-inventory/projects/:projectId/pages/:pageId/urls")
 @UseGuards(SessionGuard)
 export class PageUrlsController {
   constructor(private readonly pageUrls: PageUrlsService) {}
@@ -48,10 +51,11 @@ export class PageUrlsController {
   @RequirePermission(MODULE_KEY, "view")
   @ApiOperation({ summary: "List a page's URLs" })
   async list(
+    @Param("projectId", new ParseUUIDPipe()) projectId: string,
     @Param("pageId", new ParseUUIDPipe()) pageId: string,
     @Req() req: PageInventoryRequest,
   ): Promise<ApiSuccessResponse<readonly PageUrlEntity[]>> {
-    const data = await this.pageUrls.listByPage(pageId);
+    const data = await this.pageUrls.listByPage(pageId, projectId);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -61,11 +65,12 @@ export class PageUrlsController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Add a URL to a page" })
   async create(
+    @Param("projectId", new ParseUUIDPipe()) projectId: string,
     @Param("pageId", new ParseUUIDPipe()) pageId: string,
     @Body(new ZodValidationPipe(createPageUrlSchema)) body: CreatePageUrlDto,
     @Req() req: PageInventoryRequest,
   ): Promise<ApiSuccessResponse<PageUrlEntity>> {
-    const data = await this.pageUrls.create(pageId, body, req.authUser!.id);
+    const data = await this.pageUrls.create(pageId, projectId, body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -75,12 +80,13 @@ export class PageUrlsController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Update a page URL" })
   async update(
+    @Param("projectId", new ParseUUIDPipe()) projectId: string,
     @Param("pageId", new ParseUUIDPipe()) pageId: string,
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(updatePageUrlSchema)) body: UpdatePageUrlDto,
     @Req() req: PageInventoryRequest,
   ): Promise<ApiSuccessResponse<PageUrlEntity>> {
-    const data = await this.pageUrls.update(id, pageId, body, req.authUser!.id);
+    const data = await this.pageUrls.update(id, pageId, projectId, body, req.authUser!.id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 
@@ -90,10 +96,11 @@ export class PageUrlsController {
   @RequirePermission(MODULE_KEY, "edit")
   @ApiOperation({ summary: "Remove a page URL" })
   async remove(
+    @Param("projectId", new ParseUUIDPipe()) projectId: string,
     @Param("pageId", new ParseUUIDPipe()) pageId: string,
     @Param("id", new ParseUUIDPipe()) id: string,
     @Req() req: PageInventoryRequest,
   ): Promise<void> {
-    await this.pageUrls.remove(id, pageId, req.authUser!.id);
+    await this.pageUrls.remove(id, pageId, projectId, req.authUser!.id);
   }
 }

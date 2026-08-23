@@ -94,7 +94,12 @@ describe("PageUrlsService", () => {
     it("creates a URL under the given page, denormalizing projectId from the parent page, and records an audit event", async () => {
       pageUrls.create.mockResolvedValue(pageUrl());
 
-      const result = await svc.create("page-1", { url: "https://example.com/home" }, "actor-1");
+      const result = await svc.create(
+        "page-1",
+        FAKE_PROJECT_ID,
+        { url: "https://example.com/home" },
+        "actor-1",
+      );
 
       expect(result).toEqual(pageUrl());
       expect(pageUrls.create).toHaveBeenCalledWith(
@@ -113,7 +118,21 @@ describe("PageUrlsService", () => {
       pages.findById.mockResolvedValue(null);
 
       await expect(
-        svc.create("missing-page", { url: "https://example.com/x" }, "actor-1"),
+        svc.create("missing-page", FAKE_PROJECT_ID, { url: "https://example.com/x" }, "actor-1"),
+      ).rejects.toThrow(NotFoundException);
+      expect(pageUrls.create).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException (IDOR prevention) when the parent page belongs to a different project", async () => {
+      pages.findById.mockResolvedValue(page({ projectId: FAKE_PROJECT_ID }));
+
+      await expect(
+        svc.create(
+          "page-1",
+          "22222222-2222-4222-8222-222222222299",
+          { url: "https://example.com/x" },
+          "actor-1",
+        ),
       ).rejects.toThrow(NotFoundException);
       expect(pageUrls.create).not.toHaveBeenCalled();
     });
@@ -122,7 +141,7 @@ describe("PageUrlsService", () => {
       pageUrls.create.mockRejectedValue(uniqueConstraintError());
 
       await expect(
-        svc.create("page-1", { url: "https://example.com/dup" }, "actor-1"),
+        svc.create("page-1", FAKE_PROJECT_ID, { url: "https://example.com/dup" }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -130,9 +149,9 @@ describe("PageUrlsService", () => {
       const dbError = new Error("connection reset");
       pageUrls.create.mockRejectedValue(dbError);
 
-      await expect(svc.create("page-1", { url: "https://example.com/x" }, "actor-1")).rejects.toBe(
-        dbError,
-      );
+      await expect(
+        svc.create("page-1", FAKE_PROJECT_ID, { url: "https://example.com/x" }, "actor-1"),
+      ).rejects.toBe(dbError);
     });
   });
 
@@ -149,11 +168,20 @@ describe("PageUrlsService", () => {
   });
 
   describe("listByPage", () => {
-    it("delegates straight through to the repository", async () => {
+    it("delegates straight through to the repository once the parent page is confirmed to exist in the given project", async () => {
       pageUrls.listByPage.mockResolvedValue([pageUrl()]);
-      const result = await svc.listByPage("page-1");
+      const result = await svc.listByPage("page-1", FAKE_PROJECT_ID);
       expect(pageUrls.listByPage).toHaveBeenCalledWith("page-1");
       expect(result).toEqual([pageUrl()]);
+    });
+
+    it("throws NotFoundException (IDOR prevention) when the page belongs to a different project", async () => {
+      pages.findById.mockResolvedValue(page({ projectId: FAKE_PROJECT_ID }));
+
+      await expect(
+        svc.listByPage("page-1", "22222222-2222-4222-8222-222222222299"),
+      ).rejects.toThrow(NotFoundException);
+      expect(pageUrls.listByPage).not.toHaveBeenCalled();
     });
   });
 
@@ -164,6 +192,7 @@ describe("PageUrlsService", () => {
       const result = await svc.update(
         "url-1",
         "page-1",
+        FAKE_PROJECT_ID,
         { url: "https://example.com/revised" },
         "actor-1",
       );
@@ -181,15 +210,42 @@ describe("PageUrlsService", () => {
       pageUrls.update.mockResolvedValue(null);
 
       await expect(
-        svc.update("url-1", "different-page", { url: "https://example.com/x" }, "actor-1"),
+        svc.update(
+          "url-1",
+          "different-page",
+          FAKE_PROJECT_ID,
+          { url: "https://example.com/x" },
+          "actor-1",
+        ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws NotFoundException (IDOR prevention) when the parent page belongs to a different project", async () => {
+      pages.findById.mockResolvedValue(page({ projectId: FAKE_PROJECT_ID }));
+
+      await expect(
+        svc.update(
+          "url-1",
+          "page-1",
+          "22222222-2222-4222-8222-222222222299",
+          { url: "https://example.com/x" },
+          "actor-1",
+        ),
+      ).rejects.toThrow(NotFoundException);
+      expect(pageUrls.update).not.toHaveBeenCalled();
     });
 
     it("translates a partial-unique-index violation on update into a clean 400", async () => {
       pageUrls.update.mockRejectedValue(uniqueConstraintError());
 
       await expect(
-        svc.update("url-1", "page-1", { url: "https://example.com/dup" }, "actor-1"),
+        svc.update(
+          "url-1",
+          "page-1",
+          FAKE_PROJECT_ID,
+          { url: "https://example.com/dup" },
+          "actor-1",
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -199,7 +255,7 @@ describe("PageUrlsService", () => {
       pageUrls.findById.mockResolvedValue(pageUrl({ pageId: "page-1" }));
       pageUrls.remove.mockResolvedValue(true);
 
-      await svc.remove("url-1", "page-1", "actor-1");
+      await svc.remove("url-1", "page-1", FAKE_PROJECT_ID, "actor-1");
 
       expect(pageUrls.remove).toHaveBeenCalledWith("url-1", "page-1");
       expect(auditService.record).toHaveBeenCalledWith(
@@ -210,16 +266,27 @@ describe("PageUrlsService", () => {
     it("throws NotFoundException (IDOR prevention) when the URL belongs to a different page", async () => {
       pageUrls.findById.mockResolvedValue(pageUrl({ pageId: "page-1" }));
 
-      await expect(svc.remove("url-1", "different-page", "actor-1")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        svc.remove("url-1", "different-page", FAKE_PROJECT_ID, "actor-1"),
+      ).rejects.toThrow(NotFoundException);
+      expect(pageUrls.remove).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException (IDOR prevention) when the parent page belongs to a different project", async () => {
+      pages.findById.mockResolvedValue(page({ projectId: FAKE_PROJECT_ID }));
+
+      await expect(
+        svc.remove("url-1", "page-1", "22222222-2222-4222-8222-222222222299", "actor-1"),
+      ).rejects.toThrow(NotFoundException);
       expect(pageUrls.remove).not.toHaveBeenCalled();
     });
 
     it("throws NotFoundException when the URL does not exist at all", async () => {
       pageUrls.findById.mockResolvedValue(null);
 
-      await expect(svc.remove("missing", "page-1", "actor-1")).rejects.toThrow(NotFoundException);
+      await expect(svc.remove("missing", "page-1", FAKE_PROJECT_ID, "actor-1")).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

@@ -100,12 +100,16 @@ describe("PagesService", () => {
       pages.create.mockResolvedValue(page());
 
       const result = await svc.create(
-        { projectId: FAKE_PROJECT_ID, publicId: "PAGE-HOME", pageName: "Home" },
+        FAKE_PROJECT_ID,
+        { publicId: "PAGE-HOME", pageName: "Home" },
         "actor-1",
       );
 
       expect(result).toEqual(page());
       expect(projects.findById).toHaveBeenCalledWith(FAKE_PROJECT_ID);
+      expect(pages.create).toHaveBeenCalledWith(
+        expect.objectContaining({ projectId: FAKE_PROJECT_ID, publicId: "PAGE-HOME" }),
+      );
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "create",
@@ -119,7 +123,7 @@ describe("PagesService", () => {
       pages.findByPublicId.mockResolvedValue(page());
 
       await expect(
-        svc.create({ projectId: FAKE_PROJECT_ID, publicId: "PAGE-HOME", pageName: "X" }, "actor-1"),
+        svc.create(FAKE_PROJECT_ID, { publicId: "PAGE-HOME", pageName: "X" }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
       expect(pages.create).not.toHaveBeenCalled();
     });
@@ -129,7 +133,7 @@ describe("PagesService", () => {
       projects.findById.mockRejectedValue(new NotFoundException("Project not found"));
 
       await expect(
-        svc.create({ projectId: FAKE_PROJECT_ID, publicId: "PAGE-X", pageName: "X" }, "actor-1"),
+        svc.create(FAKE_PROJECT_ID, { publicId: "PAGE-X", pageName: "X" }, "actor-1"),
       ).rejects.toThrow(NotFoundException);
       expect(pages.create).not.toHaveBeenCalled();
     });
@@ -140,8 +144,8 @@ describe("PagesService", () => {
       roadmapItems.existsInProject.mockResolvedValue(true);
 
       await svc.create(
+        FAKE_PROJECT_ID,
         {
-          projectId: FAKE_PROJECT_ID,
           publicId: "PAGE-X",
           pageName: "X",
           roadmapPhaseId: FAKE_ROADMAP_PHASE_ID,
@@ -162,8 +166,8 @@ describe("PagesService", () => {
 
       await expect(
         svc.create(
+          FAKE_PROJECT_ID,
           {
-            projectId: FAKE_PROJECT_ID,
             publicId: "PAGE-X",
             pageName: "X",
             roadmapPhaseId: FAKE_ROADMAP_PHASE_ID,
@@ -178,10 +182,7 @@ describe("PagesService", () => {
       pages.findByPublicId.mockResolvedValue(null);
       pages.create.mockResolvedValue(page());
 
-      await svc.create(
-        { projectId: FAKE_PROJECT_ID, publicId: "PAGE-X", pageName: "X" },
-        "actor-1",
-      );
+      await svc.create(FAKE_PROJECT_ID, { publicId: "PAGE-X", pageName: "X" }, "actor-1");
 
       expect(roadmapItems.existsInProject).not.toHaveBeenCalled();
     });
@@ -191,7 +192,7 @@ describe("PagesService", () => {
       pages.create.mockRejectedValue(uniqueConstraintError());
 
       await expect(
-        svc.create({ projectId: FAKE_PROJECT_ID, publicId: "PAGE-RACE", pageName: "X" }, "actor-1"),
+        svc.create(FAKE_PROJECT_ID, { publicId: "PAGE-RACE", pageName: "X" }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -201,7 +202,7 @@ describe("PagesService", () => {
       pages.create.mockRejectedValue(dbError);
 
       await expect(
-        svc.create({ projectId: FAKE_PROJECT_ID, publicId: "PAGE-X", pageName: "X" }, "actor-1"),
+        svc.create(FAKE_PROJECT_ID, { publicId: "PAGE-X", pageName: "X" }, "actor-1"),
       ).rejects.toBe(dbError);
     });
   });
@@ -209,12 +210,19 @@ describe("PagesService", () => {
   describe("findById", () => {
     it("throws NotFoundException when the page does not exist", async () => {
       pages.findById.mockResolvedValue(null);
-      await expect(svc.findById("missing")).rejects.toThrow(NotFoundException);
+      await expect(svc.findById("missing", FAKE_PROJECT_ID)).rejects.toThrow(NotFoundException);
     });
 
-    it("returns the page when it exists", async () => {
+    it("returns the page when it exists and belongs to the given projectId", async () => {
       pages.findById.mockResolvedValue(page());
-      await expect(svc.findById("page-1")).resolves.toEqual(page());
+      await expect(svc.findById("page-1", FAKE_PROJECT_ID)).resolves.toEqual(page());
+    });
+
+    it("throws NotFoundException (IDOR prevention) when the page belongs to a different project", async () => {
+      pages.findById.mockResolvedValue(page({ projectId: FAKE_PROJECT_ID }));
+      await expect(svc.findById("page-1", "22222222-2222-4222-8222-222222222299")).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -238,25 +246,44 @@ describe("PagesService", () => {
     it("pre-fetches the page before updating, 404ing cleanly before any write is attempted", async () => {
       pages.findById.mockResolvedValue(null);
 
-      await expect(svc.update("missing", { pageName: "New" }, "actor-1")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        svc.update("missing", FAKE_PROJECT_ID, { pageName: "New" }, "actor-1"),
+      ).rejects.toThrow(NotFoundException);
+      expect(pages.update).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException (IDOR prevention) when the page belongs to a different project", async () => {
+      pages.findById.mockResolvedValue(page({ projectId: FAKE_PROJECT_ID }));
+
+      await expect(
+        svc.update(
+          "page-1",
+          "22222222-2222-4222-8222-222222222299",
+          { pageName: "New" },
+          "actor-1",
+        ),
+      ).rejects.toThrow(NotFoundException);
       expect(pages.update).not.toHaveBeenCalled();
     });
 
     it("throws NotFoundException when the repository update finds nothing to update (a TOCTOU race after a successful pre-fetch)", async () => {
       pages.update.mockResolvedValue(null);
 
-      await expect(svc.update("page-1", { pageName: "New" }, "actor-1")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        svc.update("page-1", FAKE_PROJECT_ID, { pageName: "New" }, "actor-1"),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it("validates roadmapPhaseId scoped to the page's own current project, not any caller-supplied project", async () => {
       pages.findById.mockResolvedValue(page({ projectId: FAKE_PROJECT_ID }));
       pages.update.mockResolvedValue(page());
 
-      await svc.update("page-1", { roadmapPhaseId: FAKE_ROADMAP_PHASE_ID }, "actor-1");
+      await svc.update(
+        "page-1",
+        FAKE_PROJECT_ID,
+        { roadmapPhaseId: FAKE_ROADMAP_PHASE_ID },
+        "actor-1",
+      );
 
       expect(roadmapItems.existsInProject).toHaveBeenCalledWith(
         FAKE_ROADMAP_PHASE_ID,
@@ -268,7 +295,7 @@ describe("PagesService", () => {
       roadmapItems.existsInProject.mockResolvedValue(false);
 
       await expect(
-        svc.update("page-1", { roadmapPhaseId: FAKE_ROADMAP_PHASE_ID }, "actor-1"),
+        svc.update("page-1", FAKE_PROJECT_ID, { roadmapPhaseId: FAKE_ROADMAP_PHASE_ID }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
       expect(pages.update).not.toHaveBeenCalled();
     });
@@ -278,7 +305,7 @@ describe("PagesService", () => {
 
       // TypeScript's own UpdatePageDto type already excludes workflowStage; this proves the
       // service layer doesn't forward whatever extra keys a patch object might carry.
-      await svc.update("page-1", { pageName: "Renamed" }, "actor-1");
+      await svc.update("page-1", FAKE_PROJECT_ID, { pageName: "Renamed" }, "actor-1");
 
       const [, patchArg] = pages.update.mock.calls[0] as [string, Record<string, unknown>];
       expect(patchArg).not.toHaveProperty("workflowStage");
@@ -287,7 +314,12 @@ describe("PagesService", () => {
     it("returns the repository's updated entity and records an audit event", async () => {
       pages.update.mockResolvedValue(page({ pageName: "Renamed" }));
 
-      const result = await svc.update("page-1", { pageName: "Renamed" }, "actor-1");
+      const result = await svc.update(
+        "page-1",
+        FAKE_PROJECT_ID,
+        { pageName: "Renamed" },
+        "actor-1",
+      );
 
       expect(result.pageName).toBe("Renamed");
       expect(auditService.record).toHaveBeenCalledWith(
@@ -299,16 +331,32 @@ describe("PagesService", () => {
   describe("changeWorkflowStage", () => {
     it("is a no-op returning the current entity when the requested stage matches the current one", async () => {
       pages.findById.mockResolvedValue(page({ workflowStage: "draft" }));
-      const result = await svc.changeWorkflowStage("page-1", "draft", "actor-1");
+      const result = await svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, "draft", "actor-1");
       expect(result.workflowStage).toBe("draft");
+      expect(authorizationService.assertAllowed).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException (IDOR prevention) when the page belongs to a different project", async () => {
+      pages.findById.mockResolvedValue(
+        page({ workflowStage: "draft", projectId: FAKE_PROJECT_ID }),
+      );
+
+      await expect(
+        svc.changeWorkflowStage(
+          "page-1",
+          "22222222-2222-4222-8222-222222222299",
+          "submitted",
+          "actor-1",
+        ),
+      ).rejects.toThrow(NotFoundException);
       expect(authorizationService.assertAllowed).not.toHaveBeenCalled();
     });
 
     it("rejects a transition not in the allowlist", async () => {
       pages.findById.mockResolvedValue(page({ workflowStage: "draft" }));
-      await expect(svc.changeWorkflowStage("page-1", "approved", "actor-1")).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, "approved", "actor-1"),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it.each([
@@ -320,19 +368,23 @@ describe("PagesService", () => {
       ["approved", "superseded", "approve"],
       ["draft", "archived", "approve"],
     ] as const)("requires the '%s -> %s' transition's '%s' action", async (from, to, action) => {
-      pages.findById.mockResolvedValue(page({ workflowStage: from }));
+      pages.findById.mockResolvedValue(page({ workflowStage: from, projectId: FAKE_PROJECT_ID }));
       authorizationService.assertAllowed.mockResolvedValue(undefined);
       pages.updateStatus.mockResolvedValue({
         outcome: "updated",
         entity: page({ workflowStage: to }),
       });
 
-      await svc.changeWorkflowStage("page-1", to, "actor-1");
+      await svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, to, "actor-1");
 
+      // Asserts the page's own projectId (the 4th positional arg) is threaded through — the exact
+      // gap this fix closes: without it, a caller holding only a project-scoped grant was denied
+      // on every transition (code-review finding, `module-page-inventory`).
       expect(authorizationService.assertAllowed).toHaveBeenCalledWith(
         "actor-1",
         "page_inventory",
         action,
+        FAKE_PROJECT_ID,
       );
     });
 
@@ -343,33 +395,34 @@ describe("PagesService", () => {
     ] as const)(
       "requires the 'submit' action for %s -> draft (the submitter/editor drives the revise loop, not the approver)",
       async (from, to) => {
-        pages.findById.mockResolvedValue(page({ workflowStage: from }));
+        pages.findById.mockResolvedValue(page({ workflowStage: from, projectId: FAKE_PROJECT_ID }));
         authorizationService.assertAllowed.mockResolvedValue(undefined);
         pages.updateStatus.mockResolvedValue({
           outcome: "updated",
           entity: page({ workflowStage: to }),
         });
 
-        await svc.changeWorkflowStage("page-1", to, "actor-1");
+        await svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, to, "actor-1");
 
         expect(authorizationService.assertAllowed).toHaveBeenCalledWith(
           "actor-1",
           "page_inventory",
           "submit",
+          FAKE_PROJECT_ID,
         );
       },
     );
 
     it("rejects every transition out of the terminal 'archived'/'superseded' states", async () => {
       pages.findById.mockResolvedValueOnce(page({ workflowStage: "archived" }));
-      await expect(svc.changeWorkflowStage("page-1", "draft", "actor-1")).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, "draft", "actor-1"),
+      ).rejects.toThrow(BadRequestException);
 
       pages.findById.mockResolvedValueOnce(page({ workflowStage: "superseded" }));
-      await expect(svc.changeWorkflowStage("page-1", "draft", "actor-1")).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, "draft", "actor-1"),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("propagates a denial from assertAllowed and never attempts the status write", async () => {
@@ -378,9 +431,9 @@ describe("PagesService", () => {
         new ForbiddenException("Missing permission: page_inventory:approve"),
       );
 
-      await expect(svc.changeWorkflowStage("page-1", "approved", "actor-1")).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, "approved", "actor-1"),
+      ).rejects.toThrow(ForbiddenException);
       expect(pages.updateStatus).not.toHaveBeenCalled();
     });
 
@@ -389,9 +442,9 @@ describe("PagesService", () => {
       authorizationService.assertAllowed.mockResolvedValue(undefined);
       pages.updateStatus.mockResolvedValue({ outcome: "not_found" });
 
-      await expect(svc.changeWorkflowStage("page-1", "submitted", "actor-1")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, "submitted", "actor-1"),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it("throws ConflictException when the atomic status write loses a race", async () => {
@@ -402,9 +455,9 @@ describe("PagesService", () => {
         entity: page({ workflowStage: "archived" }),
       });
 
-      await expect(svc.changeWorkflowStage("page-1", "submitted", "actor-1")).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        svc.changeWorkflowStage("page-1", FAKE_PROJECT_ID, "submitted", "actor-1"),
+      ).rejects.toThrow(ConflictException);
     });
 
     it("logs (not throws) when the audit call fails after a successful status write", async () => {
@@ -417,7 +470,12 @@ describe("PagesService", () => {
       });
       auditService.record.mockRejectedValue(new Error("audit down"));
 
-      const result = await svc.changeWorkflowStage("page-1", "submitted", "actor-1");
+      const result = await svc.changeWorkflowStage(
+        "page-1",
+        FAKE_PROJECT_ID,
+        "submitted",
+        "actor-1",
+      );
 
       expect(result.workflowStage).toBe("submitted");
       expect(consoleErrorSpy).toHaveBeenCalled();

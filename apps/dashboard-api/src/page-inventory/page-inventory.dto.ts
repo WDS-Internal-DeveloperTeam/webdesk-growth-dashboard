@@ -42,13 +42,17 @@ const shortTextField = z.string().max(255).nullish();
 const longTextField = z.string().max(20_000).nullish();
 const dateOnlyField = z.string().date().nullish();
 
+// `projectId` is deliberately NOT a field here — pages are project-scoped (task package D2), but
+// the project id now comes exclusively from the `:projectId` route path segment
+// (`page-inventory/projects/:projectId/pages`), never from a client-supplied query param
+// (code-review finding, `module-page-inventory`: `PermissionGuard` only ever reads
+// `request.params?.projectId`, so a query-param `projectId` was silently never checked by
+// authorization at all — closing that gap here removes the ambiguity entirely, rather than
+// leaving two different "which project" values a caller could disagree on). Every other filter
+// below mirrors the spec's own §5 "Filters" list, except "owner": the spec's own required-fields
+// list for this module names no owner field at all, so it has no backing column to filter by —
+// omitted rather than fabricated.
 export const listPagesQuerySchema = z.object({
-  // Required — pages are project-scoped (task package D2); there is no cross-project "list every
-  // page" concept in this module (design decision, not spec-sourced — flagged in the task
-  // report). Every other filter below mirrors the spec's own §5 "Filters" list, except "owner":
-  // the spec's own required-fields list for this module names no owner field at all, so it has no
-  // backing column to filter by — omitted rather than fabricated.
-  projectId: z.string().uuid(),
   pageType: z.string().max(255).optional(),
   workflowStage: pageWorkflowStageSchema.optional(),
   roadmapPhaseId: z.string().uuid().optional(),
@@ -65,8 +69,9 @@ export const listPagesQuerySchema = z.object({
 });
 export type ListPagesQueryDto = z.infer<typeof listPagesQuerySchema>;
 
+// `projectId` is likewise not a field here — it comes exclusively from the `:projectId` route path
+// segment (see `listPagesQuerySchema`'s own doc comment above for why).
 export const createPageSchema = z.object({
-  projectId: z.string().uuid(),
   publicId: z.string().min(1).max(64),
   pageName: z.string().min(1).max(20_000),
   pageType: shortTextField,

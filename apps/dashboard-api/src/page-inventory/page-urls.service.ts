@@ -28,9 +28,13 @@ export class PageUrlsService {
     private readonly auditService: AuditService,
   ) {}
 
-  private async findParentPageOrThrow(pageId: string): Promise<PageEntity> {
+  /** Verifies the parent page exists AND belongs to the given `projectId` (IDOR prevention,
+   *  code-review finding `module-page-inventory`) — a page from a different project, accessed via
+   *  this project's own route, is treated as not found, same discipline as
+   *  `PagesService.findById()`'s own identical check. */
+  private async findParentPageOrThrow(pageId: string, projectId: string): Promise<PageEntity> {
     const page = await this.pages.findById(pageId);
-    if (!page) {
+    if (!page || page.projectId !== projectId) {
       throw new NotFoundException(`Page not found: ${pageId}`);
     }
     return page;
@@ -42,10 +46,11 @@ export class PageUrlsService {
    *  the identical reason). */
   async create(
     pageId: string,
+    projectId: string,
     input: { url: string; isCanonical?: boolean },
     actorUserId: string,
   ): Promise<PageUrlEntity> {
-    const page = await this.findParentPageOrThrow(pageId);
+    const page = await this.findParentPageOrThrow(pageId, projectId);
 
     let created: PageUrlEntity;
     try {
@@ -91,19 +96,24 @@ export class PageUrlsService {
     return url;
   }
 
-  async listByPage(pageId: string): Promise<readonly PageUrlEntity[]> {
+  /** `projectId`-scoped (IDOR prevention, code-review finding `module-page-inventory`) — a page
+   *  accessed via the wrong project's route 404s here too, not just on create/update/remove. */
+  async listByPage(pageId: string, projectId: string): Promise<readonly PageUrlEntity[]> {
+    await this.findParentPageOrThrow(pageId, projectId);
     return this.pageUrls.listByPage(pageId);
   }
 
   /** `pageId`-scoped (IDOR prevention) — a URL from a different page, accessed via this page's own
-   *  route, is treated as not found rather than silently updated. */
+   *  route, is treated as not found rather than silently updated. `projectId`-scoped too, via
+   *  `findParentPageOrThrow()`. */
   async update(
     id: string,
     pageId: string,
+    projectId: string,
     patch: { url?: string; isCanonical?: boolean },
     actorUserId: string,
   ): Promise<PageUrlEntity> {
-    const page = await this.findParentPageOrThrow(pageId);
+    const page = await this.findParentPageOrThrow(pageId, projectId);
 
     let updated: PageUrlEntity | null;
     try {
@@ -135,9 +145,10 @@ export class PageUrlsService {
     return updated;
   }
 
-  /** `pageId`-scoped (IDOR prevention), same as `update()`. */
-  async remove(id: string, pageId: string, actorUserId: string): Promise<void> {
-    const page = await this.findParentPageOrThrow(pageId);
+  /** `pageId`-scoped (IDOR prevention), same as `update()`. `projectId`-scoped too, via
+   *  `findParentPageOrThrow()`. */
+  async remove(id: string, pageId: string, projectId: string, actorUserId: string): Promise<void> {
+    const page = await this.findParentPageOrThrow(pageId, projectId);
     const url = await this.findById(id);
     if (url.pageId !== pageId) {
       throw new NotFoundException(`Page URL not found: ${id}`);

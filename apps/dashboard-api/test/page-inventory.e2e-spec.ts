@@ -38,9 +38,14 @@ import { PageInventoryModule } from "../src/page-inventory/page-inventory.module
  *   read_only                V        (view only)
  *
  * Unlike every prior content-library module's own e2e suite, this one also exercises Page
- * Inventory's first-of-its-kind project-scoping (task package D2): every page is created under a
- * real `projects` fixture row, and `GET /page-inventory/pages` requires a real `projectId` query
- * param.
+ * Inventory's first-of-its-kind project-scoping (task package D2): every page lives under a real
+ * `:projectId` route path segment (`page-inventory/projects/:projectId/pages`, ...), not a
+ * client-supplied query/body field — closing a real code-review finding where
+ * `PermissionGuard`/`AuthorizationService.assertAllowed()` only ever read `request.params?.projectId`,
+ * so a `projectId` sent any other way was silently never checked by authorization at all. Several
+ * tests below (marked "regression") specifically prove a session holding ONLY a project-scoped
+ * `page_inventory` grant (not a global one) — previously denied on every route — is now allowed
+ * within its own project, and still denied outside it.
  */
 
 process.env.GOOGLE_OAUTH_CLIENT_ID ??= "test-client-id";
@@ -87,7 +92,11 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     return `${authEnv.SESSION_COOKIE_NAME}=${rawToken}`;
   }
 
-  async function createUserWithRole(emailPrefix: string, roleKey: string): Promise<string> {
+  async function createUserWithRole(
+    emailPrefix: string,
+    roleKey: string,
+    roleProjectId: string | null = null,
+  ): Promise<string> {
     const user = await users.create({
       email: `${emailPrefix}.e2e@webdesksolution.com`,
       displayName: `${emailPrefix} E2E`,
@@ -97,20 +106,20 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     if (!role) {
       throw new Error(`Expected ${roleKey} role was not seeded — check migration 00013`);
     }
-    await userRoles.assign(user.id, role.id);
+    await userRoles.assign(user.id, role.id, roleProjectId);
     return user.id;
   }
 
   async function createDraftPage(
     cookie: string,
     overrides: Record<string, unknown> = {},
+    targetProjectId: string = projectId,
   ): Promise<{ id: string; workflowStage: string; projectId: string }> {
     const response = await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${targetProjectId}/pages`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({
-        projectId,
         publicId: uniqueId("PAGE"),
         pageName: "E2E Fixture Page",
         ...overrides,
@@ -188,10 +197,9 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     await closeConnection();
   }, 30_000);
 
-  it("rejects GET /page-inventory/pages with 401 when there is no session cookie", async () => {
+  it("rejects GET .../pages with 401 when there is no session cookie", async () => {
     await request(app.getHttpServer())
-      .get("/page-inventory/pages")
-      .query({ projectId })
+      .get(`/page-inventory/projects/${projectId}/pages`)
       .expect(401);
   });
 
@@ -202,14 +210,13 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     expect(created.projectId).toBe(projectId);
 
     const getResponse = await request(app.getHttpServer())
-      .get(`/page-inventory/pages/${created.id}`)
+      .get(`/page-inventory/projects/${projectId}/pages/${created.id}`)
       .set("Cookie", cookie)
       .expect(200);
     expect(getResponse.body.data.pageName).toBe("Home");
 
     const listResponse = await request(app.getHttpServer())
-      .get("/page-inventory/pages")
-      .query({ projectId })
+      .get(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .expect(200);
     expect((listResponse.body.data as Array<{ id: string }>).some((p) => p.id === created.id)).toBe(
@@ -217,7 +224,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     );
 
     const updateResponse = await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/update`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/update`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ pageName: "Home (revised)" })
@@ -226,29 +233,43 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     expect(updateResponse.body.data.workflowStage).toBe("draft"); // update never touches status
   });
 
-  it("rejects GET /page-inventory/pages with 400 when projectId is missing (required — pages are project-scoped)", async () => {
+  // NOT a 400: NestJS runs guards (PermissionGuard) BEFORE pipes (ParseUUIDPipe) in its request
+  // lifecycle, so `PermissionGuard`'s own raw `request.params?.projectId` read reaches
+  // `AuthorizationService.evaluate()` — and a real Postgres query on a UUID-typed column —
+  // *before* `ParseUUIDPipe` ever gets a chance to reject the malformed value with a clean 400.
+  // This is a real, pre-existing gap shared by every `:projectId`-scoped route in this codebase
+  // (`RoadmapItemsController`'s own routes have the identical exposure — no test in
+  // `projects.e2e-spec.ts` has ever exercised this input, so it was never caught there either),
+  // not something this fix introduces or could close without touching `PermissionGuard` itself —
+  // explicitly out of scope per this task's own instruction. It's caught cleanly, not an
+  // unhandled crash (`AllExceptionsFilter` still returns a structured JSON error body), but the
+  // status/message aren't the clean, safe 400 a malformed-UUID input should get — asserted here
+  // only to record the real current behavior as known, flagged, out-of-scope debt, not to imply
+  // it's the intended shape.
+  it("returns a structured (not unhandled-crash) 500 for a malformed :projectId route segment — known pre-existing gap, PermissionGuard reads request.params before ParseUUIDPipe validates it", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
-    await request(app.getHttpServer())
-      .get("/page-inventory/pages")
+    const response = await request(app.getHttpServer())
+      .get("/page-inventory/projects/not-a-uuid/pages")
       .set("Cookie", cookie)
-      .expect(400);
+      .expect(500);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error?.code).toBeTruthy();
   });
 
   it("denies page creation with 403 for a read_only session (only V grant, not C)", async () => {
     const cookie = await cookieForNewSession(readOnlyUserId);
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({ projectId, publicId: uniqueId("PAGE"), pageName: "Denied" })
+      .send({ publicId: uniqueId("PAGE"), pageName: "Denied" })
       .expect(403);
   });
 
   it("allows a read_only session to list pages (V grant)", async () => {
     const cookie = await cookieForNewSession(readOnlyUserId);
     await request(app.getHttpServer())
-      .get("/page-inventory/pages")
-      .query({ projectId })
+      .get(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .expect(200);
   });
@@ -259,26 +280,18 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
       publicId: uniqueId("PROJ"),
       name: "Other Project",
     });
-    const pageInOther = await request(app.getHttpServer())
-      .post("/page-inventory/pages")
-      .set("Cookie", cookie)
-      .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({
-        projectId: otherProject.id,
-        publicId: uniqueId("PAGE"),
-        pageName: "In Other Project",
-      })
-      .expect(201);
+    const pageInOther = await createDraftPage(
+      cookie,
+      { pageName: "In Other Project" },
+      otherProject.id,
+    );
 
     const listResponse = await request(app.getHttpServer())
-      .get("/page-inventory/pages")
-      .query({ projectId })
+      .get(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .expect(200);
     expect(
-      (listResponse.body.data as Array<{ id: string }>).some(
-        (p) => p.id === pageInOther.body.data.id,
-      ),
+      (listResponse.body.data as Array<{ id: string }>).some((p) => p.id === pageInOther.id),
     ).toBe(false);
   });
 
@@ -286,30 +299,26 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const cookie = await cookieForNewSession(superAdminUserId);
     const publicId = uniqueId("PAGE");
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({ projectId, publicId, pageName: "First" })
+      .send({ publicId, pageName: "First" })
       .expect(201);
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({ projectId, publicId, pageName: "Second" })
+      .send({ publicId, pageName: "Second" })
       .expect(400);
   });
 
   it("returns 404 (not a raw 500) when creating a page under a well-formed but nonexistent projectId", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post("/page-inventory/projects/00000000-0000-4000-8000-000000000000/pages")
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({
-        projectId: "00000000-0000-4000-8000-000000000000",
-        publicId: uniqueId("PAGE"),
-        pageName: "Orphaned",
-      })
+      .send({ publicId: uniqueId("PAGE"), pageName: "Orphaned" })
       .expect(404);
   });
 
@@ -320,7 +329,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const created = await createDraftPage(cookie, { roadmapPhaseId: phase.id });
 
     const getResponse = await request(app.getHttpServer())
-      .get(`/page-inventory/pages/${created.id}`)
+      .get(`/page-inventory/projects/${projectId}/pages/${created.id}`)
       .set("Cookie", cookie)
       .expect(200);
     expect(getResponse.body.data.roadmapPhaseId).toBe(phase.id);
@@ -338,11 +347,10 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     });
 
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({
-        projectId,
         publicId: uniqueId("PAGE"),
         pageName: "X",
         roadmapPhaseId: phaseInOtherProject.id,
@@ -353,11 +361,10 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
   it("rejects page creation with 400 when roadmapPhaseId doesn't resolve to a real roadmap item", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({
-        projectId,
         publicId: uniqueId("PAGE"),
         pageName: "X",
         roadmapPhaseId: randomUUID(),
@@ -369,7 +376,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const cookie = await cookieForNewSession(superAdminUserId);
     const created = await createDraftPage(cookie);
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/update`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/update`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({})
@@ -381,14 +388,14 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const created = await createDraftPage(cookie, { pageName: "Marketing Editor Fixture" });
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "submitted" })
       .expect(200);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "under_review" })
@@ -401,14 +408,14 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
 
     const devCookie = await cookieForNewSession(developerUserId);
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/update`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/update`)
       .set("Cookie", devCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ pageName: "Edited by developer" })
       .expect(200);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", devCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "submitted" })
@@ -421,7 +428,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
 
     const approverCookie = await cookieForNewSession(ownerGrowthApproverUserId);
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", approverCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "submitted" })
@@ -429,21 +436,21 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
 
     const editorCookie = await cookieForNewSession(marketingEditorUserId);
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", editorCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "submitted" })
       .expect(200);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", approverCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "under_review" })
       .expect(200);
 
     const approveResponse = await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", approverCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "approved" })
@@ -456,7 +463,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const created = await createDraftPage(adminCookie, { pageName: "QA Reviewer Fixture" });
     const editorCookie = await cookieForNewSession(marketingEditorUserId);
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", editorCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "submitted" })
@@ -464,21 +471,21 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
 
     const qaCookie = await cookieForNewSession(qaSecurityReviewerUserId);
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", qaCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({ projectId, publicId: uniqueId("PAGE"), pageName: "Denied create" })
+      .send({ publicId: uniqueId("PAGE"), pageName: "Denied create" })
       .expect(403);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", qaCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "under_review" })
       .expect(200);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", qaCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "approved" })
@@ -490,14 +497,14 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const created = await createDraftPage(cookie, { pageName: "Terminal State Fixture" });
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "archived" })
       .expect(200);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/workflow-stage`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ workflowStage: "submitted" })
@@ -507,7 +514,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
   it("returns 404 for a GET on a nonexistent page id", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())
-      .get(`/page-inventory/pages/${randomUUID()}`)
+      .get(`/page-inventory/projects/${projectId}/pages/${randomUUID()}`)
       .set("Cookie", cookie)
       .expect(404);
   });
@@ -515,7 +522,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
   it("returns 400 (not a raw 500) for a malformed page id", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())
-      .get("/page-inventory/pages/not-a-uuid")
+      .get(`/page-inventory/projects/${projectId}/pages/not-a-uuid`)
       .set("Cookie", cookie)
       .expect(400);
   });
@@ -523,11 +530,123 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
   it("rejects a mutating request with no Origin header (OriginCheckGuard)", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())
-      .post("/page-inventory/pages")
+      .post(`/page-inventory/projects/${projectId}/pages`)
       .set("Cookie", cookie)
-      .send({ projectId, publicId: uniqueId("PAGE"), pageName: "No origin" })
+      .send({ publicId: uniqueId("PAGE"), pageName: "No origin" })
       .expect(403);
   });
+
+  // --- IDOR / project-scoping regression coverage (code-review finding, module-page-inventory) ---
+
+  it("returns 404 (IDOR prevention) when accessing a page through the wrong project's route", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const otherProject = await projects.create({
+      publicId: uniqueId("PROJ"),
+      name: "Other Project For Page IDOR",
+    });
+    const created = await createDraftPage(cookie, { pageName: "Belongs To Fixture Project" });
+
+    await request(app.getHttpServer())
+      .get(`/page-inventory/projects/${otherProject.id}/pages/${created.id}`)
+      .set("Cookie", cookie)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .post(`/page-inventory/projects/${otherProject.id}/pages/${created.id}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ pageName: "Attempted cross-project edit" })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .post(`/page-inventory/projects/${otherProject.id}/pages/${created.id}/workflow-stage`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ workflowStage: "submitted" })
+      .expect(404);
+
+    // Still reachable, and unmodified, via its real project.
+    const getResponse = await request(app.getHttpServer())
+      .get(`/page-inventory/projects/${projectId}/pages/${created.id}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(getResponse.body.data.pageName).toBe("Belongs To Fixture Project");
+  });
+
+  it(
+    "allows a session holding ONLY a project-scoped page_inventory grant (not a global one) to " +
+      "list, create, and edit pages within that project — and still denies it in a different " +
+      "project (regression: PermissionGuard previously ignored :projectId from the route path " +
+      "entirely, since every route sent projectId via query/body instead of the path)",
+    async () => {
+      const developerRole = await roles.findByKey("developer");
+      if (!developerRole) {
+        throw new Error("Expected developer role was not seeded — check migration 00013");
+      }
+      const scopedUserId = await createUserWithRole(
+        "pageinv.project-scoped",
+        "developer",
+        // Assigned scoped to `projectId` only — no global-scope row for this user at all, so
+        // pre-fix this session would be denied everywhere (PermissionGuard resolved
+        // `request.params?.projectId` as `undefined`, so `findRoleIdsForUser` only ever checked
+        // global-scope roles, of which this user holds none).
+        projectId,
+      );
+      const scopedCookie = await cookieForNewSession(scopedUserId);
+
+      await request(app.getHttpServer())
+        .get(`/page-inventory/projects/${projectId}/pages`)
+        .set("Cookie", scopedCookie)
+        .expect(200);
+
+      const created = await createDraftPage(scopedCookie, {
+        pageName: "Project-Scoped Grant Fixture",
+      });
+
+      await request(app.getHttpServer())
+        .post(`/page-inventory/projects/${projectId}/pages/${created.id}/update`)
+        .set("Cookie", scopedCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pageName: "Edited by project-scoped session" })
+        .expect(200);
+
+      // The same session, same role, but a DIFFERENT project — the grant does not carry over.
+      const otherProject = await projects.create({
+        publicId: uniqueId("PROJ"),
+        name: "Other Project (project-scoped grant should not reach here)",
+      });
+      await request(app.getHttpServer())
+        .get(`/page-inventory/projects/${otherProject.id}/pages`)
+        .set("Cookie", scopedCookie)
+        .expect(403);
+    },
+  );
+
+  it(
+    "allows a session holding ONLY a project-scoped page_inventory grant to submit a page for " +
+      "review (regression: PagesService.changeWorkflowStage()'s dynamic per-transition " +
+      "AuthorizationService.assertAllowed() call previously never received a projectId at all)",
+    async () => {
+      const scopedEditorUserId = await createUserWithRole(
+        "pageinv.project-scoped-editor",
+        "marketing_editor",
+        projectId,
+      );
+      const adminCookie = await cookieForNewSession(superAdminUserId);
+      const created = await createDraftPage(adminCookie, {
+        pageName: "Project-Scoped Workflow Fixture",
+      });
+
+      const scopedCookie = await cookieForNewSession(scopedEditorUserId);
+      const response = await request(app.getHttpServer())
+        .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
+        .set("Cookie", scopedCookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ workflowStage: "submitted" })
+        .expect(200);
+      expect(response.body.data.workflowStage).toBe("submitted");
+    },
+  );
 
   // --- page_urls (child sub-resource) ---
 
@@ -536,7 +655,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const created = await createDraftPage(cookie, { pageName: "URL Parent Fixture" });
 
     const createResponse = await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/urls`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/urls`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url: `https://example.com/${uniqueId("home")}` })
@@ -545,7 +664,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     expect(createResponse.body.data.isCanonical).toBe(true);
 
     const listResponse = await request(app.getHttpServer())
-      .get(`/page-inventory/pages/${created.id}/urls`)
+      .get(`/page-inventory/projects/${projectId}/pages/${created.id}/urls`)
       .set("Cookie", cookie)
       .expect(200);
     expect((listResponse.body.data as Array<{ id: string }>).some((u) => u.id === urlId)).toBe(
@@ -553,7 +672,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     );
 
     const updateResponse = await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/urls/${urlId}/update`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/urls/${urlId}/update`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url: `https://example.com/${uniqueId("revised")}` })
@@ -561,13 +680,13 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     expect(updateResponse.body.data.url).toContain("revised");
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/urls/${urlId}/delete`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/urls/${urlId}/delete`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .expect(204);
 
     const listAfterDelete = await request(app.getHttpServer())
-      .get(`/page-inventory/pages/${created.id}/urls`)
+      .get(`/page-inventory/projects/${projectId}/pages/${created.id}/urls`)
       .set("Cookie", cookie)
       .expect(200);
     expect((listAfterDelete.body.data as Array<{ id: string }>).some((u) => u.id === urlId)).toBe(
@@ -581,7 +700,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const pageB = await createDraftPage(cookie, { pageName: "Page B" });
 
     const createResponse = await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${pageA.id}/urls`)
+      .post(`/page-inventory/projects/${projectId}/pages/${pageA.id}/urls`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url: `https://example.com/${uniqueId("belongs-to-a")}` })
@@ -590,20 +709,20 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
 
     // Accessed via page B's route — must 404, not silently succeed or leak page A's data.
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${pageB.id}/urls/${urlId}/update`)
+      .post(`/page-inventory/projects/${projectId}/pages/${pageB.id}/urls/${urlId}/update`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url: "https://example.com/attempted-cross-page-edit" })
       .expect(404);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${pageB.id}/urls/${urlId}/delete`)
+      .post(`/page-inventory/projects/${projectId}/pages/${pageB.id}/urls/${urlId}/delete`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .expect(404);
 
     const listResponse = await request(app.getHttpServer())
-      .get(`/page-inventory/pages/${pageA.id}/urls`)
+      .get(`/page-inventory/projects/${projectId}/pages/${pageA.id}/urls`)
       .set("Cookie", cookie)
       .expect(200);
     expect((listResponse.body.data as Array<{ id: string }>).some((u) => u.id === urlId)).toBe(
@@ -611,12 +730,33 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     );
   });
 
+  it("returns 404 (IDOR prevention) when accessing page_urls through the wrong project's route", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const otherProject = await projects.create({
+      publicId: uniqueId("PROJ"),
+      name: "Other Project For URL IDOR",
+    });
+    const created = await createDraftPage(cookie, { pageName: "URL Cross-Project Fixture" });
+
+    await request(app.getHttpServer())
+      .get(`/page-inventory/projects/${otherProject.id}/pages/${created.id}/urls`)
+      .set("Cookie", cookie)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .post(`/page-inventory/projects/${otherProject.id}/pages/${created.id}/urls`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ url: "https://example.com/cross-project-attempt" })
+      .expect(404);
+  });
+
   it("returns 404 (not a raw 500) when creating a URL under a well-formed but nonexistent page id", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     const nonexistentPageId = "00000000-0000-4000-8000-000000000000";
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${nonexistentPageId}/urls`)
+      .post(`/page-inventory/projects/${projectId}/pages/${nonexistentPageId}/urls`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url: "https://example.com/orphaned" })
@@ -628,7 +768,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const created = await createDraftPage(cookie, { pageName: "Unsafe URL Fixture" });
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/urls`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/urls`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url: "javascript:alert(document.cookie)" })
@@ -642,14 +782,14 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
     const url = `https://example.com/${uniqueId("shared")}`;
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${pageA.id}/urls`)
+      .post(`/page-inventory/projects/${projectId}/pages/${pageA.id}/urls`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url, isCanonical: true })
       .expect(201);
 
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${pageB.id}/urls`)
+      .post(`/page-inventory/projects/${projectId}/pages/${pageB.id}/urls`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url, isCanonical: true })
@@ -662,7 +802,7 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
 
     const readOnlyCookie = await cookieForNewSession(readOnlyUserId);
     await request(app.getHttpServer())
-      .post(`/page-inventory/pages/${created.id}/urls`)
+      .post(`/page-inventory/projects/${projectId}/pages/${created.id}/urls`)
       .set("Cookie", readOnlyCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({ url: "https://example.com/denied" })
