@@ -47,6 +47,15 @@ interface WebsiteStrategyCenterDetailPageProps {
  * every sibling detail page renders its own primary content — the version-history list additionally
  * repeats it (as the "(current)"-labeled entry) so every version, including the current one, is
  * browsable through the identical mechanism.
+ *
+ * Code-review accepted debt: this means the current version's own content/notes are fetched and
+ * server-rendered twice per page view (once above, once inside its own version-history entry).
+ * Deliberate, not an oversight — filtering the current row out of the version-history list would
+ * defeat the "every version, including the current one, browsable through the identical mechanism"
+ * goal above, and rendering the repeated entry from `record` instead of `version` wouldn't reduce
+ * the emitted bytes either (same string value, either source). A real fix needs either accepting
+ * the duplication (as done here) or a genuinely different UI shape for the current-version entry —
+ * out of scope for this pass.
  */
 export default async function WebsiteStrategyCenterDetailPage({
   params,
@@ -85,12 +94,18 @@ export default async function WebsiteStrategyCenterDetailPage({
               recordId={record.recordId}
               approvalStatus={record.approvalStatus}
             />
-            <Link
-              href={`/website-strategy-center/${record.recordId}/edit`}
-              style={primaryActionLinkStyle}
-            >
-              Edit
-            </Link>
+            {/* archived/superseded are terminal — the backend rejects any edit of one outright
+                (code-review finding), so the link is hidden rather than left clickable only to
+                400 on submit, matching WebsiteStrategyStatusActions's own self-hiding behavior
+                for these same two statuses. */}
+            {record.approvalStatus !== "archived" && record.approvalStatus !== "superseded" ? (
+              <Link
+                href={`/website-strategy-center/${record.recordId}/edit`}
+                style={primaryActionLinkStyle}
+              >
+                Edit
+              </Link>
+            ) : null}
           </>
         }
       />
@@ -128,7 +143,7 @@ export default async function WebsiteStrategyCenterDetailPage({
         ) : (
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {versionsNewestFirst.map((version) => (
-              <VersionEntry key={version.id} version={version} currentId={record.id} />
+              <VersionEntry key={version.id} version={version} />
             ))}
           </ul>
         )}
@@ -150,15 +165,15 @@ function TextBlock({ label, value }: { readonly label: string; readonly value: s
   );
 }
 
-function VersionEntry({
-  version,
-  currentId,
-}: {
-  readonly version: WebsiteStrategyRecord;
-  readonly currentId: string;
-}) {
+function VersionEntry({ version }: { readonly version: WebsiteStrategyRecord }) {
   const badge = websiteStrategyApprovalStatusBadge(version.approvalStatus);
-  const isCurrent = version.id === currentId;
+  // Code-review fix: uses the version row's own isCurrent field (populated by the same
+  // GET .../:recordId/versions response every entry here already comes from) rather than
+  // comparing this row's id against a SEPARATE, independently-timed getWebsiteStrategyRecord()
+  // fetch — the two requests aren't transactionally consistent, so a concurrent edit/status
+  // transition forking a new version between them could otherwise mislabel which entry is
+  // current.
+  const isCurrent = version.isCurrent;
 
   return (
     <li
@@ -185,12 +200,8 @@ function VersionEntry({
             {isCurrent ? " (current)" : ""}
           </span>
           <StatusBadge status={badge.token} label={badge.label} />
-          <span style={{ color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
-            {version.title}
-          </span>
-          <span style={{ color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
-            Updated {formatTimestamp(version.updatedAt)}
-          </span>
+          <span style={mutedStyle}>{version.title}</span>
+          <span style={mutedStyle}>Updated {formatTimestamp(version.updatedAt)}</span>
         </summary>
         <div style={{ marginTop: "0.75rem" }}>
           <TextBlock label="Content" value={version.content} />

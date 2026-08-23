@@ -25,6 +25,23 @@ import { AuthorizationService } from "../authz/authorization.service.js";
 
 const MODULE_KEY = "website_strategy";
 
+/**
+ * Sanitizes a genuinely NEW patch value, or inherits the current version's own (already-sanitized)
+ * value unchanged when the patch omits the field — the fork branch's own version of the
+ * skip-if-unchanged reasoning `sanitizeNullableRichTextIfChanged()` already encodes, but with a
+ * non-optional `string | null` return (never `undefined`), since `createNewVersion()` inserts a
+ * whole new row and has no partial-update contract to leave a field untouched via. Code-review
+ * fix: this collapses what was two near-identical 4-line ternaries (one per field) into one call
+ * each, mirroring the file-local helper precedent `claims.service.ts`'s own
+ * `sanitizeRequiredRichTextIfChanged()` already set for the identical class of duplication.
+ */
+function sanitizeOrInherit(
+  patchValue: string | null | undefined,
+  currentValue: string | null,
+): string | null {
+  return patchValue !== undefined ? (sanitizeNullableRichText(patchValue) ?? null) : currentValue;
+}
+
 /** The real, seeded RBAC action (`06_Roles_and_Permissions.md`, `website_strategy` group)
  *  required for a given `approvalStatus` transition — identical vocabulary to Service Library's/
  *  Persona Library's/Proof and Claims Library's own. */
@@ -271,22 +288,8 @@ export class WebsiteStrategyRecordsService {
             recordType: current.recordType,
             versionNumber: nextVersionNumber,
             title: patch.title ?? current.title,
-            // An omitted field inherits the current version's own value, which was already
-            // sanitized when it was first written — re-sanitizing it here would be redundant
-            // (the same skip-if-unchanged reasoning `sanitizeNullableRichTextIfChanged()`
-            // applies elsewhere), so only a genuinely NEW value from the patch is sanitized
-            // fresh. `createNewVersion()`'s `content`/`notes` are non-optional (`string | null`,
-            // never `undefined`) since it inserts a whole new row, so this can't reuse
-            // `sanitizeNullableRichTextIfChanged()` directly the way the in-place branch above
-            // does.
-            content:
-              patch.content !== undefined
-                ? (sanitizeNullableRichText(patch.content) ?? null)
-                : current.content,
-            notes:
-              patch.notes !== undefined
-                ? (sanitizeNullableRichText(patch.notes) ?? null)
-                : current.notes,
+            content: sanitizeOrInherit(patch.content, current.content),
+            notes: sanitizeOrInherit(patch.notes, current.notes),
             createdBy: actorUserId,
           },
           transaction,
