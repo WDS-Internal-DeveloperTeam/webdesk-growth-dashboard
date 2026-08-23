@@ -10,6 +10,7 @@ export {
   sanitizeNullableRichText,
   sanitizeNullableRichTextIfChanged,
 } from "./sanitize-html.js";
+export { isSequelizeUniqueConstraintError } from "./sequelize-errors.js";
 
 export const paginationParamsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

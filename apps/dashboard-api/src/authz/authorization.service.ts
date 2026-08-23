@@ -196,9 +196,25 @@ export class AuthorizationService {
    * sequence directly (pre-existing, unchanged); new dynamic-check call
    * sites should prefer this helper instead of hand-rolling a fourth copy
    * (code-review finding, `module-service-library`).
+   *
+   * `projectId` is a new, trailing, optional parameter (code-review finding,
+   * `module-page-inventory`): a purely additive, backward-compatible widening
+   * — every existing 3-arg caller (Service/Persona/Proof-and-Claims/Website-
+   * Strategy-Center's own `changeApprovalStatus()`-style dynamic checks) is
+   * unaffected, since `evaluate()` itself already treats a missing `projectId`
+   * as "check global scope only". Threading it through is what actually lets a
+   * project-scoped-only grant satisfy a project-scoped module's dynamic
+   * per-transition check — the same class of gap `PermissionGuard` already
+   * reads `request.params?.projectId` for, but this call site sits outside
+   * that guard entirely.
    */
-  async assertAllowed(userId: string, moduleKey: string, action: string): Promise<void> {
-    const decision = await this.evaluate(userId, moduleKey, action);
+  async assertAllowed(
+    userId: string,
+    moduleKey: string,
+    action: string,
+    projectId?: string,
+  ): Promise<void> {
+    const decision = await this.evaluate(userId, moduleKey, action, projectId);
     if (!decision.allowed) {
       await this.recordAccessDenied(userId, moduleKey, action, decision.reasonCode!);
       throw new ForbiddenException(`Missing permission: ${moduleKey}:${action}`);
