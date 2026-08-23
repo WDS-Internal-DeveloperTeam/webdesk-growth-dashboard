@@ -6594,8 +6594,22 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   "no auto-merge" rule.
 - `[2026-08-23]` **"Push the branch and open a PR" was separately requested and executed** on
   `dashboard-web-page-inventory` — pushed to `origin`, opened as
-  [PR #58](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/58). Merge
-  authorization remains a separate, not-yet-requested next step.
+  [PR #58](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/58). All
+  14 CI checks confirmed green.
+- `[2026-08-23]` **"Merge PR #58" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`, all 14 CI checks green beforehand. Both
+  Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+  CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`, confirming the exact merged commit is what's serving;
+  `GET /page-inventory/projects/:projectId/pages` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+  and `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, with `/page-inventory` itself redirecting (307) there too, confirming
+  the session gate is intact. **The `dashboard-web` Page Inventory UI is now genuinely live in
+  production**, closing out this slice's full build-to-production arc — backend and now the full
+  UI (list, detail, create/edit form, status actions, `page_urls` sub-resource editing) are both
+  live for the Page Inventory module.
 
 ## Open client blockers
 

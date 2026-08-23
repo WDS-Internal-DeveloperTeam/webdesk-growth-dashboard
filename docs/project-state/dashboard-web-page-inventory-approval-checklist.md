@@ -5,8 +5,9 @@ PLAUSIBLE — all 8 CONFIRMED fixed). Security review complete (0 findings above
 threshold; one sub-threshold, self-introduced finding fixed proactively). Required second-role
 human review complete — Jitesh D, "Approved," no disputes raised. Gate
 (G4-dashboard-web-page-inventory) approved — WebDesk Solution, decision CONFIRM, approved commit
-`c01851d` on branch `dashboard-web-page-inventory`. Push/PR and merge authorization remain
-separate, not-yet-requested next steps.
+`c01851d` on branch `dashboard-web-page-inventory`. Merged
+([PR #58](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/58), merge
+commit `c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -152,5 +153,26 @@ project's standing "no auto-merge" rule.
 
 **"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
 opened as
-[PR #58](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/58). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #58](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/58). All 14
+CI checks confirmed green.
+
+## Merge — COMPLETE
+
+**"Merge PR #58" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`, confirming the exact merged commit is what's serving.
+- `GET /page-inventory/projects/:projectId/pages` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, and `/page-inventory` itself redirects (307) there too, confirming the
+  session gate is intact.
+
+**The `dashboard-web` Page Inventory UI is now genuinely live in production** — closing out this
+slice's full build-to-production arc, and the Page Inventory module's own overall arc: backend
+and now the full UI (list, detail, create/edit form, status actions, `page_urls` sub-resource
+editing) are both live.
