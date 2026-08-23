@@ -3,9 +3,11 @@
 **Status:** Built, code review complete (5 candidates surfaced after dedup — 3 CONFIRMED, 2
 REFUTED — all 3 fixed). Security review complete (1 CONFIRMED finding at 9/10 confidence, fixed;
 0 findings above threshold on re-scan). Required second-role human review complete — Jitesh D,
-"Approved," no disputes raised. **The gate (G4-website-strategy-center) was then separately
-requested and approved** — WebDesk Solution, decision CONFIRM, approved commit `225facf` on
-branch `module-website-strategy-center`. Not yet pushed, opened as a PR, or merged.
+"Approved," no disputes raised. Gate (G4-website-strategy-center) approved — WebDesk Solution,
+decision CONFIRM, approved commit `225facf` on branch `module-website-strategy-center`. Pushed to
+`origin` and opened as
+[PR #55](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/55). Not yet
+merged.
 
 ## Completion condition
 

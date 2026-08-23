@@ -2585,8 +2585,10 @@ query,}.ts` mirror `lib/persona-library{-query,}.ts`'s own zero-non-type-import-
       closing out this slice's full build-to-production arc — backend and now the full UI (list,
       detail, create/edit form, status actions, `claim_sources` sub-resource editing) are both live.
 40. **Website Strategy Center module backend — built, code-reviewed, security-reviewed,
-    required second-role human reviewed (Jitesh D, "Approved"), and gated
-    (G4-website-strategy-center, WebDesk Solution, CONFIRM) (2026-08-23).** The 6th real
+    required second-role human reviewed (Jitesh D, "Approved"), gated
+    (G4-website-strategy-center, WebDesk Solution, CONFIRM), and opened as
+    [PR #55](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/55)
+    (2026-08-23).** The 6th real
     business-module backend on the Phase 1F application shell / canonical module registry, and
     the first with genuine real multi-row version history — module #6 in the
     project-owner-supplied `Recommended_Module_Roadmap.md`. Not started automatically — built
@@ -2661,7 +2663,10 @@ audit` 0 vulnerabilities. A review packet (published as a Claude artifact, "Webs
     `docs/project-state/module-website-strategy-center-approval-checklist.md`'s "Sign-off"
     section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
     merging** — each remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule.
+    project's standing "no auto-merge" rule. **"Push the branch and open a PR" was then
+    separately requested and executed** — pushed to `origin`, opened as
+    [PR #55](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/55).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -6249,6 +6254,10 @@ source` had silently inherited the parent module's rich-text-sized `LONG_TEXT_MA
   **This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
   each remains its own separate, not-yet-requested authorization, per this project's standing
   "no auto-merge" rule.
+- `[2026-08-23]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-website-strategy-center` — pushed to `origin`, opened as
+  [PR #55](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/55). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 
