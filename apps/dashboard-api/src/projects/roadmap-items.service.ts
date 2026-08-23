@@ -49,6 +49,21 @@ export class RoadmapItemsService {
   }
 
   /**
+   * A narrow, read-only existence check for another module's `roadmapPhaseId`-style field —
+   * `RoadmapItemRepository.findById()` itself isn't projectId-scoped (reads aren't IDOR-sensitive
+   * the same way writes are), so the project match is checked here instead, ensuring a caller can
+   * only reference a roadmap item that actually belongs to the same project as whatever record is
+   * pointing at it (Page Inventory's `pages.roadmap_phase_id`, task package D6). Mirrors
+   * `ServicesService.existingServiceIds()`'s own "narrow, read-only delegating method, not the
+   * write-capable repository token directly" precedent — `RoadmapItemsService` itself, not
+   * `RoadmapItemRepository`/`ROADMAP_ITEM_REPOSITORY`, is what `ProjectsModule` exports for this.
+   */
+  async existsInProject(id: string, projectId: string): Promise<boolean> {
+    const item = await this.roadmapItems.findById(id);
+    return item !== null && item.projectId === projectId;
+  }
+
+  /**
    * Only `name`/`sequence` are ever forwarded to the repository, explicitly, never a spread of the
    * caller's raw input — `status` (part of the wider `UpdateRoadmapItemDto`) must never reach this
    * method's write path. Setting an item `active` is only ever valid through

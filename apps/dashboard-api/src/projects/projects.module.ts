@@ -26,7 +26,10 @@ import { RoadmapItemsController } from "./roadmap-items.controller.js";
  * (the second, explicit `users_roles:edit` check `ProjectApproversService` performs before
  * delegating to `RoleAssignmentService` — security-review finding, this branch), `AuditModule`
  * for `AuditService`, and `UsersModule` for `UsersService` (resolving approver/owner user ids to
- * display summaries).
+ * display summaries). Also exports `RoadmapItemsService` — the Page Inventory module
+ * (`module-page-inventory`) is its first external consumer, via a narrow
+ * `existsInProject()` read (mirrors `ServiceLibraryModule`'s own `ServicesService` export for the
+ * identical "narrow read-only delegating method, not the raw repository token" reason).
  */
 @Module({
   imports: [AuthModule, AuthzModule, AuditModule, UsersModule],
@@ -48,6 +51,6 @@ import { RoadmapItemsController } from "./roadmap-items.controller.js";
     RoadmapItemsService,
     ProjectApproversService,
   ],
-  exports: [ProjectService],
+  exports: [ProjectService, RoadmapItemsService],
 })
 export class ProjectsModule {}

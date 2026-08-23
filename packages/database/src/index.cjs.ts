@@ -27,3 +27,4 @@ export * from "./service-library/index.js";
 export * from "./persona-library/index.js";
 export * from "./proof-and-claims-library/index.js";
 export * from "./website-strategy-center/index.js";
+export * from "./page-inventory/index.js";
