@@ -3,8 +3,9 @@
 **Status:** Built, code review complete (2 CONFIRMED findings fixed, 4 PLAUSIBLE findings left as
 accepted debt matching established codebase-wide precedents). Security review complete (0 findings
 above threshold). Required second-role human review complete — Jitesh D, "Approves," no disputes
-raised. A gate decision, push/PR, and merge authorization remain separate, not-yet-requested next
-steps.
+raised. Gate (G4-page-inventory) approved — WebDesk Solution, decision CONFIRM, approved commit
+`3d0b4b2` on branch `module-page-inventory`. Push/PR and merge authorization remain separate,
+not-yet-requested next steps.
 
 ## Completion condition
 
@@ -123,5 +124,21 @@ accepted as tracked debt, per their stated reasoning above.
 | Scope reviewed                | Full code-review disposition (2 findings fixed, 4 accepted as tracked debt, 2 refuted) and full security-review disposition (0 findings above threshold), per the published review packet |
 | Disputes raised               | None recorded                                                                                                                                                                             |
 
-A gate decision, push/PR, and merge authorization each remain their own separate,
-not-yet-requested next steps, per this project's standing "no auto-merge" rule.
+**The gate (G4-page-inventory) was then separately requested and approved** — WebDesk Solution,
+decision CONFIRM (a clean pass, not an override, since the second-role review was already complete
+before the gate was requested), approved commit `3d0b4b2` on branch `module-page-inventory` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now `G4-page-inventory`)
+and its "Sign-off" section below.
+
+| Field                    | Value                                                                                                                   |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-page-inventory                                                                                                       |
+| Approver (gate decision) | WebDesk Solution                                                                                                        |
+| Gate date                | 2026-08-23                                                                                                              |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)       |
+| Approved commit          | `3d0b4b2` on branch `module-page-inventory` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `module-page-inventory` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
+production deployment — each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule.

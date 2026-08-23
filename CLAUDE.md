@@ -6516,10 +6516,16 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   validation evidence, with a decision section) was prepared for the required second-role human
   review, since the implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D
   reviewed it and returned "Approves,"** no disputes raised — see
-  `docs/project-state/module-page-inventory-approval-checklist.md`'s "Sign-off" section. A gate
-  decision, push/PR, and merge authorization each remain separate, not-yet-requested next steps.
-  No `dashboard-web` UI exists yet for this module, matching every prior module's own
-  backend-first precedent.
+  `docs/project-state/module-page-inventory-approval-checklist.md`'s "Sign-off" section. **The
+  gate (G4-page-inventory) was then separately requested and approved** — WebDesk Solution,
+  decision CONFIRM (a clean pass, not an override, since the second-role review was already
+  complete before the gate was requested), approved commit `3d0b4b2` on branch
+  `module-page-inventory` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-page-inventory`). **This gate approval does not itself authorize
+  pushing the branch, opening a PR, or merging** — each remains its own separate,
+  not-yet-requested authorization, per this project's standing "no auto-merge" rule. No
+  `dashboard-web` UI exists yet for this module, matching every prior module's own backend-first
+  precedent.
 
 ## Open client blockers
 
