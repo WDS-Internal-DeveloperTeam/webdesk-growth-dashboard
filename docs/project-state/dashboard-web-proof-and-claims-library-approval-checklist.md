@@ -2,10 +2,10 @@
 
 **Status:** Built. Independent code review complete (8 candidates verified after dedup, 7
 CONFIRMED + 1 PLAUSIBLE, 6 fixed and 2 accepted as tracked debt). Security review complete (0
-findings above threshold). Review packet published for the required second-role human review —
-**awaiting that review.** Branch pushed and
-[PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54) opened.
-No gate decision or merge has been requested yet.
+findings above threshold). Required second-role human review complete — **Jitesh D**, decision
+**"Approved"**, 2026-08-23, accepting the 2 open findings as tracked debt. Branch pushed and
+[PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54) opened,
+all 14 CI checks green. No gate decision or merge has been requested yet.
 
 ## Completion condition
 
@@ -110,15 +110,21 @@ pattern, plus the new `claim_sources` sub-resource's own validation/authorizatio
   1:1 mirror with no redaction-signal fields to get wrong.
 - `claim_sources` IDOR scoping (`(id, claimId)`) is unchanged and unmodified by this diff.
 
-## Required second-role human review — AWAITING
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (8 kept — 7 CONFIRMED (6 fixed, 1 accepted as debt) + 1 PLAUSIBLE
-      (accepted as debt)) — reviewed by: **pending**.
-- [ ] Security-review findings (0 above threshold) — reviewed by: **pending**.
+- [x] Code-review findings (8 kept — 7 CONFIRMED (6 fixed, 1 accepted as debt) + 1 PLAUSIBLE
+      (accepted as debt)) — reviewed by: **Jitesh D**, 2026-08-23, **Approved**, accepting the 2
+      open findings (07–08) as tracked debt.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-23,
+      **Approved**.
 
 Review packet: published as a Claude Artifact —
 [Proof and Claims Library UI Review Packet](https://claude.ai/code/artifact/5eb99c71-3bd4-41fa-9140-e443cd1320d1).
 
 ## Sign-off
 
-_Not yet complete — awaiting the required second-role human review above._
+Required second-role human review complete — **Jitesh D**, decision **"Approved"**, 2026-08-23,
+accepting the 2 open findings (the `update()` exception-ordering race and the 5th independent
+status-transitions-table copy) as tracked debt. No disputes raised. This satisfies the last
+precondition before a gate decision can be requested — a gate decision and merge authorization
+each remain separate, not-yet-requested next steps.
