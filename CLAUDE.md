@@ -2388,9 +2388,10 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
 38. **Proof and Claims Library module backend — built, fully validated, code-reviewed (5 of 7
     findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings above threshold),
     required second-role human reviewed (Jitesh D, "Approved"), gated
-    (G4-proof-and-claims-library, WebDesk Solution, CONFIRM), pushed and opened as
-    [PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53); not
-    yet merged (2026-08-22/23).** The
+    (G4-proof-and-claims-library, WebDesk Solution, CONFIRM), merged
+    ([PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53),
+    merge commit `b7f6575a5e0d1860e32864528cc9f005b77d1477`) — now genuinely live in production
+    (2026-08-22/23).** The
     5th real business-module backend on the Phase 1F application shell / canonical module
     registry, after Projects, Business Knowledge Center, Service Library, and Persona Library —
     module #5 in the project-owner-supplied `Recommended_Module_Roadmap.md`. Built directly on
@@ -2486,8 +2487,16 @@ RETURNING`); and two byte-identical id-list Zod schemas declared twice under dif
     `module-proof-and-claims-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
     `gates[]` (`current_gate` now `G4-proof-and-claims-library`). **"Push the branch and open a
     PR" was then separately requested and executed** — pushed to `origin`, opened as
-    [PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53).
-    Merge authorization remains a separate, not-yet-requested next step.
+    [PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53), all
+    14 CI checks green. **"Merge PR #53" was then separately requested and executed** — merge
+    commit `b7f6575a5e0d1860e32864528cc9f005b77d1477`, all 14 CI checks green beforehand. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+b7f6575a5e0d1860e32864528cc9f005b77d1477`, confirming the exact merged commit is what's serving;
+    `GET /proof-and-claims-library/claims` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`); and `dashboard-web`'s `/` resolves (via the intermediate `/home`
+    hop) to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is
+    intact. **The Proof and Claims Library module backend is now genuinely live in production.**
 
 ## Recent decisions
 
@@ -5913,6 +5922,18 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
   `module-proof-and-claims-library` — pushed to `origin`, opened as
   [PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53). Merge
   authorization remains a separate, not-yet-requested next step.
+- `[2026-08-23]` **"Merge PR #53" was separately requested and executed.** Waited for all 14 CI
+  checks to go green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `b7f6575a5e0d1860e32864528cc9f005b77d1477`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+b7f6575a5e0d1860e32864528cc9f005b77d1477`, confirming the exact merged commit is what's serving;
+  `GET /proof-and-claims-library/claims` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed); and
+  `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact. **The Proof and Claims Library
+  module backend is now genuinely live in production.**
 
 ## Open client blockers
 

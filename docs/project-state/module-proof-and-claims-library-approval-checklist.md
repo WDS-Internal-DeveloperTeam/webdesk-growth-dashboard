@@ -4,10 +4,9 @@
 5 fixed, 2 left as accepted, tracked debt). Security review complete (0 findings above
 threshold). Required second-role human review complete — Jitesh D, "Approved," accepting the 2
 open findings as tracked debt. Gate (G4-proof-and-claims-library) approved — WebDesk Solution,
-decision CONFIRM, approved commit `d8cccc1` on branch `module-proof-and-claims-library`. Pushed
-to `origin`, opened as
-[PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53).
-**Merge authorization remains a separate, not-yet-requested next step.**
+decision CONFIRM, approved commit `d8cccc1` on branch `module-proof-and-claims-library`. Merged
+([PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53), merge
+commit `b7f6575a5e0d1860e32864528cc9f005b77d1477`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -162,5 +161,25 @@ project's standing "no auto-merge" rule.
 
 **"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
 opened as
-[PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53). All 14
+CI checks green.
+
+## Merge — COMPLETE
+
+**"Merge PR #53" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `b7f6575a5e0d1860e32864528cc9f005b77d1477`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+b7f6575a5e0d1860e32864528cc9f005b77d1477`, confirming the exact merged commit is what's serving.
+- `GET /proof-and-claims-library/claims` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact.
+
+**The Proof and Claims Library module backend is now genuinely live in production** — closing
+out this slice's full build-to-production arc. No `dashboard-web` UI exists yet for this
+module — a separate, not-yet-requested next step, matching the Projects/BKC/Service Library/
+Persona Library precedent.
