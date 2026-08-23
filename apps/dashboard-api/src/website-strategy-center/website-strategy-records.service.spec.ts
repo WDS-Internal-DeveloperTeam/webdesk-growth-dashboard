@@ -313,11 +313,13 @@ describe("WebsiteStrategyRecordsService", () => {
       const result = await svc.update("record-1", { title: "New title" }, "actor-1");
 
       expect(result).toEqual(newVersionRow);
-      // The old row is flipped to isCurrent: false first.
+      // The old row is flipped to isCurrent: false first — CAS-guarded on "approved" (security-
+      // review fix), so a concurrent archive/supersede can't have this fork silently proceed.
       expect(records.updateInPlace).toHaveBeenCalledWith(
         "row-1",
         expect.objectContaining({ isCurrent: false, updatedBy: "actor-1" }),
         expect.anything(),
+        "approved",
       );
       // The new row copies recordId/publicId/recordType forward and increments versionNumber.
       expect(records.createNewVersion).toHaveBeenCalledWith(
@@ -380,6 +382,24 @@ describe("WebsiteStrategyRecordsService", () => {
         expect.objectContaining({ recordType: "pillar_strategy" }),
         expect.anything(),
       );
+    });
+
+    it("throws ConflictException (not NotFoundException) when the isCurrent-flip's CAS guard finds nothing to update because the row was archived/superseded concurrently (security-review fix — a same-id-only WHERE clause here would let an edit-only caller resurrect a just-archived record)", async () => {
+      const approved = record({ approvalStatus: "approved" });
+      records.findCurrentByRecordId.mockResolvedValue(approved);
+      records.updateInPlace.mockResolvedValue(null);
+
+      await expect(svc.update("record-1", { title: "X" }, "actor-1")).rejects.toThrow(
+        ConflictException,
+      );
+      // The CAS guard is real — the isCurrent-flip call must carry the observed approvalStatus.
+      expect(records.updateInPlace).toHaveBeenCalledWith(
+        "row-1",
+        expect.objectContaining({ isCurrent: false }),
+        expect.anything(),
+        "approved",
+      );
+      expect(records.createNewVersion).not.toHaveBeenCalled();
     });
 
     it("translates a concurrent version-creation collision on (recordId, versionNumber) into a clean 409, not a raw error (code-review fix — mirrors create()'s own publicId-race handling)", async () => {

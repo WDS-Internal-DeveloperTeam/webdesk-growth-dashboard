@@ -233,13 +233,30 @@ export class WebsiteStrategyRecordsService {
     let created: WebsiteStrategyRecordEntity;
     try {
       created = await withTransaction(async (transaction) => {
+        // Security-review fix: this CAS guard (also passing current.approvalStatus, matching the
+        // non-approved branch above) closes a real race an edit-only caller could otherwise win —
+        // without it, a concurrent approve->archived transition landing between the findCurrent()
+        // read above and this write let the fork proceed anyway, resurrecting a just-archived
+        // record into a fresh editable draft using only the "edit" grant, never "approve", for
+        // the resurrection half of the race. archived/superseded are documented as permanently
+        // terminal ("no code path resurrects a record from either") — this guard is what actually
+        // makes that true under concurrency, not just at the single findCurrent() read.
         const flipped = await this.records.updateInPlace(
           current.id,
           { isCurrent: false, updatedBy: actorUserId },
           transaction,
+          current.approvalStatus,
         );
         if (!flipped) {
-          throw new NotFoundException(`Website strategy record not found: ${recordId}`);
+          // No hard-delete exists for this module (belt-and-suspenders only, matching the
+          // non-approved branch's own reasoning) — in practice this means the row's
+          // approvalStatus changed concurrently (e.g. it was just archived), which is exactly
+          // the race this guard exists to catch. A real re-check isn't possible from inside an
+          // already-failing transaction, so this is reported as a conflict, the semantically
+          // correct outcome for the only realistic cause.
+          throw new ConflictException(
+            `Website strategy record ${recordId} approval status changed concurrently while editing — reload and retry`,
+          );
         }
         return this.records.createNewVersion(
           {
