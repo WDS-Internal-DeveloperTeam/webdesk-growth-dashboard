@@ -3,9 +3,9 @@
 **Status:** Built, code review complete (2 CONFIRMED findings fixed, 4 PLAUSIBLE findings left as
 accepted debt matching established codebase-wide precedents). Security review complete (0 findings
 above threshold). Required second-role human review complete — Jitesh D, "Approves," no disputes
-raised. Gate (G4-page-inventory) approved — WebDesk Solution, decision CONFIRM, approved commit
-`3d0b4b2` on branch `module-page-inventory`. Push/PR and merge authorization remain separate,
-not-yet-requested next steps.
+raised. Gate (G4-page-inventory) approved — WebDesk Solution, decision CONFIRM. Merged
+([PR #57](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/57), merge
+commit `51be3cc76a3facf779b7e2be638301f5db0cc695`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -147,5 +147,25 @@ project's standing "no auto-merge" rule.
 
 **"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
 opened as
-[PR #57](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/57). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #57](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/57). One CI
+failure (Formatting validation, on stale emphasis-marker style in the task package file, never run
+through prettier before its initial commit) was found and fixed before merging.
+
+## Merge — COMPLETE
+
+**"Merge PR #57" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `51be3cc76a3facf779b7e2be638301f5db0cc695`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+51be3cc76a3facf779b7e2be638301f5db0cc695`, confirming the exact merged commit is what's serving.
+- `GET /page-inventory/projects/:projectId/pages` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/` resolves (307) to `/auth/sign-in` for an unauthenticated visitor,
+  confirming the session gate is intact.
+
+**The Page Inventory module backend is now genuinely live in production.** No `dashboard-web` UI
+exists yet for this module — a separate, not-yet-requested next step, matching every prior
+module's own precedent.

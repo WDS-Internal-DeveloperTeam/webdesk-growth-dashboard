@@ -6523,9 +6523,20 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   `module-page-inventory` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
   (`current_gate` now `G4-page-inventory`). **"Push the branch and open a PR" was then separately
   requested and executed** — pushed to `origin`, opened as
-  [PR #57](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/57). Merge
-  authorization remains a separate, not-yet-requested next step. No `dashboard-web` UI exists yet
-  for this module, matching every prior module's own backend-first precedent.
+  [PR #57](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/57). One CI
+  failure (Formatting validation, on stale emphasis-marker style in the task package file, never
+  run through prettier before its initial commit) was found and fixed before merging.
+  **"Merge PR #57" was then separately requested and executed** — all 14 CI checks green first,
+  merge commit `51be3cc76a3facf779b7e2be638301f5db0cc695`. Both Vercel projects auto-deployed on
+  push to `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+51be3cc76a3facf779b7e2be638301f5db0cc695`, confirming the exact merged commit is what's serving;
+  `GET /page-inventory/projects/:projectId/pages` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+  and `dashboard-web`'s `/` resolves (307) to `/auth/sign-in` for an unauthenticated visitor,
+  confirming the session gate is intact. **The Page Inventory module backend is now genuinely
+  live in production.** No `dashboard-web` UI exists yet for this module — a separate,
+  not-yet-requested next step, matching every prior module's own backend-first precedent.
 
 ## Open client blockers
 
