@@ -5,6 +5,7 @@ import type {
   PageUrlEntity,
   PageUrlRepository,
 } from "@webdesk/database";
+import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
 import { PAGE_REPOSITORY, PAGE_URL_REPOSITORY } from "./page-inventory.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuditService } from "../audit/audit.service.js";
@@ -63,9 +64,8 @@ export class PageUrlsService {
     } catch (error) {
       // page_urls_one_canonical_per_project_url is a real partial unique index (task package
       // D10) — a concurrent or duplicate canonical-URL submission is caught here, not left as a
-      // raw 500. Checked by `.name`, not `instanceof` (ADR-0006 — dashboard-api never imports
-      // sequelize directly).
-      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+      // raw 500.
+      if (isSequelizeUniqueConstraintError(error)) {
         throw new BadRequestException(
           `A canonical URL already exists for this project: ${input.url}`,
         );
@@ -119,7 +119,7 @@ export class PageUrlsService {
     try {
       updated = await this.pageUrls.update(id, pageId, patch);
     } catch (error) {
-      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+      if (isSequelizeUniqueConstraintError(error)) {
         throw new BadRequestException(
           `A canonical URL already exists for this project: ${patch.url ?? ""}`,
         );

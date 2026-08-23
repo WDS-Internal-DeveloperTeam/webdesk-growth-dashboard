@@ -11,6 +11,7 @@ import type {
   PageRepository,
   PageWorkflowStage,
 } from "@webdesk/database";
+import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
 import { PAGE_REPOSITORY } from "./page-inventory.constants.js";
 import type { CreatePageDto, UpdatePageDto } from "./page-inventory.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -109,12 +110,8 @@ export class PagesService {
       // The publicId uniqueness check above is TOCTOU (two concurrent creates with the same
       // publicId can both pass it before either INSERT commits) — the real unique index catches
       // the race loser, but without this catch it would otherwise surface as a raw 500 instead of
-      // the same clean 400 the check above already gives the non-racing caller. Checked by
-      // `.name`, not `instanceof`, since `dashboard-api` never imports `sequelize` directly
-      // (ADR-0006/`only-database-package-touches-sequelize` — only `packages/database` may) —
-      // `SequelizeUniqueConstraintError` is the fixed, documented name Sequelize's own
-      // `UniqueConstraintError` class always carries.
-      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+      // the same clean 400 the check above already gives the non-racing caller.
+      if (isSequelizeUniqueConstraintError(error)) {
         throw new BadRequestException(`publicId already in use: ${input.publicId}`);
       }
       throw error;
