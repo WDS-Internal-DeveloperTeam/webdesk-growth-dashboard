@@ -2677,7 +2677,82 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     unauthenticated visitor, confirming the session gate is intact. **The Website Strategy
     Center module backend is now genuinely live in production.** No `dashboard-web` UI exists
     yet for this module — a separate, not-yet-requested next step, matching every prior
-    module's own precedent.
+    module's own precedent. **Update (2026-08-23): the `dashboard-web` UI has since been
+    built — see item 41 below.**
+41. **`dashboard-web` Website Strategy Center UI — built, code-reviewed, security-reviewed;
+    awaiting the required second-role human review (2026-08-23).** Closes this module's last
+    named gap, following the backend's own build-to-production arc (PR #55). Not started
+    automatically — built directly on the explicit "Start the dashboard-web UI for it"
+    instruction. No approved wireframe exists for this module —
+    `03_Detailed_Module_Specifications.md`'s own thin field list (the 9 record types plus
+    "create recommendation, compare versions, submit, approve, supersede" as actions) is the
+    only source; sections mirror the backend's own field grouping (Identity, Content, Status,
+    Version history), the smallest honest reading of an unsourced screen. New
+    `packages/shared-types` (`WebsiteStrategyRecordType`/`WebsiteStrategyApprovalStatus`/
+    `WebsiteStrategyRecord` — no `Detail` split, since every version's own list-versions row
+    already carries full content). `lib/website-strategy-center{-query,}.ts` mirror
+    `persona-library{-query,}.ts`'s own zero-non-type-import-file split.
+    `WebsiteStrategyCenterForm` is deliberately simpler than Service/Persona Library's own
+    forms — this module has no tag lists, relationship pickers, or sub-resources, just
+    `publicId`/`recordType` (both create-only) plus `title`/`content`/`notes`. Per the
+    2026-08-22 standing rule, `content`/`notes` both use the existing `RichTextEditor` — the
+    backend half of that conversion (real HTML sanitization, `LONG_TEXT_MAX_LENGTH` raised
+    20,000 → 40,000) landed in this same branch's first commit, mirroring every prior module's
+    own rich-text conversion pattern exactly. Two genuinely novel UI requirements this module
+    needed that no sibling module has: (1) a server-rendered "Version history" section listing
+    every version from `GET .../:recordId/versions`, each viewable via a native
+    `<details>`/`<summary>` disclosure (zero client JS) so a reader can open two side by side to
+    informally "compare versions" — the canonical spec's own named action for this module —
+    without inventing a real diffing UI; (2) editing an APPROVED record forks a new draft
+    version instead of mutating it in place, a real, surprising divergence from every other
+    module's own edit behavior, surfaced plainly in the form before submit, with the
+    post-submit redirect always using the URL's own stable `recordId` (never `body.data.id`,
+    which changes on a fork). `WebsiteStrategyStatusActions` mirrors
+    `PersonaStatusActions`/`ServiceStatusActions`/`ProofClaimStatusActions` (a 4th independent
+    hand-copy of the shared pattern) with one deliberate divergence, documented in its own doc
+    comment: the backend's `TRANSITIONS` table has no `approved -> superseded` edge for this
+    module, so `approved`'s own allowed-transitions list is `["archived"]` only. Built by a
+    background agent with a fully-specified prompt (the exact backend contract, both novel UI
+    requirements spelled out in detail, Persona Library named as the file-for-file template),
+    then independently re-verified in full by the orchestrating session — every high-risk file
+    read directly, every validation command re-run fresh rather than trusted from the agent's
+    own report, and all 4 routes live-rendered in the Browser pane confirming a clean
+    unauthenticated redirect with zero server errors. **Independent code review then ran**
+    (this project's own `code-review` skill, high effort, 8-angle finder pass) — 6 candidates
+    survived dedup, 4 CONFIRMED and fixed, 1 PLAUSIBLE (accepted as tracked debt), 1 REFUTED.
+    Most severe: the detail page's "Edit" link was always shown regardless of
+    `approvalStatus`, even though the backend hard-rejects any edit of an archived/superseded
+    record — fixed by hiding the link for those same terminal states, matching
+    `WebsiteStrategyStatusActions`'s own self-hiding precedent. Also fixed: the version-history
+    list computed "is this the current version" via a cross-request id comparison between two
+    independently-timed fetches instead of using each version row's own `isCurrent` field
+    (found independently by 2 finder angles) — fixed by reading `version.isCurrent` directly,
+    simpler and race-free; a duplicated sanitize-or-inherit ternary in the backend's fork
+    branch, extracted into a small `sanitizeOrInherit()` helper (a pure refactor — 46/46
+    existing unit tests passed unchanged); and an inline style duplicating the already-imported
+    `mutedStyle` constant. Left as accepted, tracked debt, recorded directly in the detail
+    page's own doc comment: the current version's content/notes render twice per page view (a
+    deliberate tradeoff — neither obvious fix reduces the emitted bytes without also reducing
+    the version-history section's own "every version browsable through the identical
+    mechanism" goal). One candidate (reusing `@webdesk/ui`'s `Accordion` component) was
+    REFUTED — it requires a client-component boundary and has zero existing `dashboard-web`
+    consumers, so adopting it would mean abandoning the zero-client-JS Server Component
+    pattern every sibling detail page deliberately follows. **A separate `security-review`
+    skill run then found 0 findings above threshold** — confirmed write-path sanitization on
+    all three paths, render-path sanitization on every content/notes site including inside the
+    version-history disclosures, the Edit-link fix as UI-only convenience backed by the
+    backend's own real 400 rejection, no new injection surface, and no IDOR-shaped issue in
+    the `recordId`/`id` distinction. Final numbers: 469/469 `dashboard-web` unit tests (46
+    new), 602/602 `dashboard-api` unit tests, 46/46 backend unit tests, 22/22 module e2e
+    tests, typecheck/lint/CSS-token-check/`next build`/prettier all clean, all 4 routes present
+    in the build output. A review packet (published as a Claude artifact, "Website Strategy
+    Center UI Review Packet" — code review + security review findings, fixes, and validation
+    evidence, with a decision section) was prepared for the required second-role human review,
+    since the implementing agent cannot also be its own reviewer (ADR-0010). See
+    `docs/project-state/dashboard-web-website-strategy-center-approval-checklist.md`.
+    **Awaiting that review** — a gate decision, push/PR, and merge authorization each remain
+    separate, not-yet-requested next steps, matching every prior module's own standing
+    discipline.
 
 ## Recent decisions
 
@@ -6282,6 +6357,57 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   module backend is now genuinely live in production.** No `dashboard-web` UI exists yet for
   this module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
   Library/Persona Library/Proof and Claims Library precedent.
+- `[2026-08-23]` **Built the `dashboard-web` UI for Website Strategy Center** — closes this
+  module's last named gap. Branch `dashboard-web-website-strategy-center`, off `main` at the
+  PR #55 merge commit. First commit wires real backend HTML sanitization into content/notes
+  (per the 2026-08-22 standing rule), raising `LONG_TEXT_MAX_LENGTH` 20,000 → 40,000 and adding
+  a `sanitizeOrInherit()`-shaped helper to the fork branch — 9 new backend unit tests, 1 new
+  e2e test proving sanitization over real HTTP. Second commit built by a background agent with
+  a fully-specified prompt (the exact backend contract, two genuinely novel UI requirements —
+  a server-rendered version-history disclosure list, and an "editing an approved record forks
+  a new version" notice — spelled out in detail, Persona Library named as the file-for-file
+  template), then independently re-verified in full: every high-risk file read directly, every
+  validation command re-run fresh, all 4 new routes live-rendered in the Browser pane. See item
+  41 under "Active tasks" for the full account.
+- `[2026-08-23]` **Independent code review run on `dashboard-web-website-strategy-center`, then
+  all 4 CONFIRMED findings fixed.** High effort, 8-angle finder pass, 1-vote verification — 6
+  candidates survived dedup (4 CONFIRMED, 1 PLAUSIBLE, 1 REFUTED). Most severe: the detail
+  page's "Edit" link was always shown regardless of `approvalStatus`, even though the backend
+  hard-rejects any edit of an archived/superseded record — fixed by hiding the link for those
+  same terminal states, matching `WebsiteStrategyStatusActions`'s own self-hiding precedent for
+  the identical two statuses. Also fixed: the version-history list computed "is this the
+  current version" via a cross-request id comparison between two independently-timed fetches
+  (found independently by 2 finder angles) instead of using each version row's own `isCurrent`
+  field — fixed by reading `version.isCurrent` directly, simpler and race-free; a duplicated
+  sanitize-or-inherit ternary in the backend's fork branch, extracted into a small
+  `sanitizeOrInherit()` helper (a pure refactor — 46/46 existing unit tests passed unchanged);
+  and an inline style duplicating the already-imported `mutedStyle` constant. 1 PLAUSIBLE
+  finding (the current version's content/notes rendering twice per page view) left as
+  accepted, tracked debt, recorded directly in the detail page's own doc comment — a dedicated
+  verifier confirmed this is a deliberate tradeoff, not an oversight. 1 candidate (reusing
+  `@webdesk/ui`'s `Accordion` component) REFUTED — it requires a client-component boundary
+  with zero existing `dashboard-web` consumers, so adopting it would mean abandoning the
+  zero-client-JS Server Component pattern every sibling detail page follows. Re-validated:
+  469/469 `dashboard-web` unit tests, 46/46 backend unit tests, typecheck/lint/CSS-token-check/
+  `next build`/prettier all clean. Committed as `03aa8ac`.
+- `[2026-08-23]` **Security review run on `dashboard-web-website-strategy-center`.** Focused on
+  the rich-text sanitization write/render paths, RBAC/session guards on all 4 new routes,
+  whether the Edit-link visibility fix is real enforcement or just UI polish, and injection
+  surface in the new form/status-actions components. **0 findings above threshold.** Confirmed
+  write-path sanitization on all three paths (`create()`, `update()`'s in-place branch, the
+  fork branch's `sanitizeOrInherit()`); render-path sanitization on every content/notes site,
+  including every version inside the version-history disclosures, exclusively through the
+  shared `SanitizedRichText` component; the Edit-link fix is UI-only convenience, with the
+  backend's own unconditional 400 rejection as the real, already-existing enforcement point; no
+  new injection surface; and no IDOR-shaped issue in the `recordId`/`id` distinction, since
+  this app's RBAC is role-based, not per-record-ownership, by existing design. A review packet
+  (published as a Claude artifact, "Website Strategy Center UI Review Packet" — code review +
+  security review findings, fixes, and validation evidence, with a decision section) was then
+  prepared for the required second-role human review, since the implementing agent cannot also
+  be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-website-strategy-center-approval-checklist.md`. **Awaiting
+  that review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
