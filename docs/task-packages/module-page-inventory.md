@@ -30,7 +30,7 @@ Inventory module" instruction.
 cluster.** The data-model doc's cluster (`pages`, `page_urls`, `page_artifacts`,
 `page_artifact_versions`, `page_relationships`, `page_component_usage`, `page_deployments`) is
 broader than this module's own spec section. The module registry shows `page_workspace` (module
-#6) as its own separate module that itself *depends on* `page_inventory` — the artifact/version/
+#6) as its own separate module that itself _depends on_ `page_inventory` — the artifact/version/
 component/deployment tracking is Page Workspace's own, later, not-yet-authorized scope, not
 duplicated here.
 
