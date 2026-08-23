@@ -2680,9 +2680,10 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     module's own precedent. **Update (2026-08-23): the `dashboard-web` UI has since been
     built — see item 41 below.**
 41. **`dashboard-web` Website Strategy Center UI — built, code-reviewed, security-reviewed,
-    required second-role human reviewed (Jitesh D, "Approved") (2026-08-23).** Closes this
-    module's last named gap, following the backend's own build-to-production arc (PR #55). Not
-    started
+    required second-role human reviewed (Jitesh D, "Approved"), and gated
+    (G4-dashboard-web-website-strategy-center, WebDesk Solution, CONFIRM) (2026-08-23).**
+    Closes this module's last named gap, following the backend's own build-to-production arc
+    (PR #55). Not started
     automatically — built directly on the explicit "Start the dashboard-web UI for it"
     instruction. No approved wireframe exists for this module —
     `03_Detailed_Module_Specifications.md`'s own thin field list (the 9 record types plus
@@ -2753,9 +2754,16 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     reviewed it and returned "Approved,"** no disputes raised — the 1 accepted-debt finding
     was accepted as-is rather than sent back for a fix. See
     `docs/project-state/dashboard-web-website-strategy-center-approval-checklist.md`'s
-    "Sign-off" section. A gate decision, push/PR, and merge authorization each remain
-    separate, not-yet-requested next steps, matching every prior module's own standing
-    discipline.
+    "Sign-off" section. **The gate (G4-dashboard-web-website-strategy-center) was then
+    separately requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not
+    an override, since the second-role review was already complete before the gate was
+    requested), approved commit `e349feb` on branch `dashboard-web-website-strategy-center` —
+    see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-website-strategy-center`) and
+    `docs/project-state/dashboard-web-website-strategy-center-approval-checklist.md`'s
+    "Sign-off" section. **This gate approval does not itself authorize pushing the branch,
+    opening a PR, or merging** — each remains its own separate, not-yet-requested
+    authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -6419,6 +6427,16 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   `docs/project-state/dashboard-web-website-strategy-center-approval-checklist.md`'s
   "Sign-off" section. A gate decision, push/PR, and merge authorization each remain separate,
   not-yet-requested next steps.
+- `[2026-08-23]` **The gate (G4-dashboard-web-website-strategy-center) was then separately
+  requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+  since the second-role review was already complete before the gate was requested), approved
+  commit `e349feb` on branch `dashboard-web-website-strategy-center` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-website-strategy-center`) and
+  `docs/project-state/dashboard-web-website-strategy-center-approval-checklist.md`'s
+  "Sign-off" section. **This gate approval does not itself authorize pushing the branch,
+  opening a PR, or merging** — each remains its own separate, not-yet-requested authorization,
+  per this project's standing "no auto-merge" rule.
 
 ## Open client blockers
 

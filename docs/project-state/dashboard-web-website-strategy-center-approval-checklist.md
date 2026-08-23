@@ -2,8 +2,10 @@
 
 **Status:** Built, code review complete (6 candidates surfaced after dedup — 4 CONFIRMED, 1
 PLAUSIBLE, 1 REFUTED — all 4 CONFIRMED fixed). Security review complete (0 findings above
-threshold). **Required second-role human review complete — Jitesh D, "Approved," no disputes
-raised.** Not yet gated, pushed, or merged.
+threshold). Required second-role human review complete — Jitesh D, "Approved," no disputes
+raised. **The gate (G4-dashboard-web-website-strategy-center) was then separately requested and
+approved** — WebDesk Solution, decision CONFIRM, approved commit `e349feb` on branch
+`dashboard-web-website-strategy-center`. Not yet pushed, opened as a PR, or merged.
 
 ## Completion condition
 
@@ -104,5 +106,22 @@ deliberate tradeoff directly in code) was accepted as-is rather than sent back f
 | Scope reviewed                | Full code-review disposition (4 findings fixed, 1 accepted as tracked debt, 1 refuted) and full security-review disposition (0 findings above threshold), per the published review packet |
 | Disputes raised               | None recorded                                                                                                                                                                             |
 
-A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-steps, per this project's standing "no auto-merge" discipline.
+**The gate (G4-dashboard-web-website-strategy-center) was then separately requested and
+approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+second-role review was already complete before the gate was requested), approved commit
+`e349feb` on branch `dashboard-web-website-strategy-center` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-website-strategy-center`).
+
+| Field                    | Value                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-dashboard-web-website-strategy-center                                                                                                |
+| Approver (gate decision) | WebDesk Solution                                                                                                                        |
+| Gate date                | 2026-08-23                                                                                                                              |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                       |
+| Approved commit          | `e349feb` on branch `dashboard-web-website-strategy-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `dashboard-web-website-strategy-center` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
+production deployment — each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule.
