@@ -2585,7 +2585,8 @@ query,}.ts` mirror `lib/persona-library{-query,}.ts`'s own zero-non-type-import-
       closing out this slice's full build-to-production arc — backend and now the full UI (list,
       detail, create/edit form, status actions, `claim_sources` sub-resource editing) are both live.
 40. **Website Strategy Center module backend — built, code-reviewed, security-reviewed,
-    required second-role human reviewed (Jitesh D, "Approved") (2026-08-23).** The 6th real
+    required second-role human reviewed (Jitesh D, "Approved"), and gated
+    (G4-website-strategy-center, WebDesk Solution, CONFIRM) (2026-08-23).** The 6th real
     business-module backend on the Phase 1F application shell / canonical module registry, and
     the first with genuine real multi-row version history — module #6 in the
     project-owner-supplied `Recommended_Module_Roadmap.md`. Not started automatically — built
@@ -2651,8 +2652,16 @@ audit` 0 vulnerabilities. A review packet (published as a Claude artifact, "Webs
     reviews had already been fixed and re-validated before this review, so there was no open
     item to accept as tracked debt. See
     `docs/project-state/module-website-strategy-center-approval-checklist.md`'s "Sign-off"
-    section. A gate decision, push/PR, and merge authorization each remain separate,
-    not-yet-requested next steps, matching every prior module's own standing discipline.
+    section. **The gate (G4-website-strategy-center) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `225facf` on branch `module-website-strategy-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-website-strategy-center`) and
+    `docs/project-state/module-website-strategy-center-approval-checklist.md`'s "Sign-off"
+    section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
+    merging** — each remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -6230,6 +6239,16 @@ source` had silently inherited the parent module's rich-text-sized `LONG_TEXT_MA
   `docs/project-state/module-website-strategy-center-approval-checklist.md`'s "Sign-off" section.
   A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
   steps.
+- `[2026-08-23]` **The gate (G4-website-strategy-center) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `225facf` on branch `module-website-strategy-center` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-website-strategy-center`) and
+  `docs/project-state/module-website-strategy-center-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
+  each remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule.
 
 ## Open client blockers
 

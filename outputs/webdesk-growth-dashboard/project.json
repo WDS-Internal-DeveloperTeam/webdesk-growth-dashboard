@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-proof-and-claims-library",
+    "current_gate": "G4-website-strategy-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-23T00:00:00Z",
-    "version": 58
+    "version": 59
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -574,6 +574,20 @@
       "approved_commit": "0361c1e",
       "record": "docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch (already done), merging, or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-website-strategy-center",
+      "type": "qa-security-gate",
+      "scope": "module-website-strategy-center",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-23T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Website Strategy Center module backend (branch module-website-strategy-center, not yet pushed/opened as a PR) -- the 6th real business-module backend on the Phase 1F application shell / canonical module registry, module #6 in the project-owner-supplied Recommended_Module_Roadmap.md, and the first with genuine real multi-row version history among the 6 modules built so far. Two design forks confirmed directly with the user (AskUserQuestion) before building: a single generic website_strategy_records table with a recordType enum over the spec's own 9 named record kinds, mirroring Business Knowledge Center's precedent, rather than 9 separate tables; and real multi-row version history rather than the single-mutable-row pattern every prior module uses, since the roadmap explicitly requires 'Preserve versions when WebDesk changes business direction' and the spec names 'compare versions' as its own action. Every version is its own physical row -- recordId is the stable logical-record identity copied forward unchanged across versions, distinct from the per-row id; publicId is likewise copied forward, its uniqueness enforced via a partial unique index WHERE is_current = true rather than a bare column constraint; recordType is immutable across a record's own version chain. Supersede is not a separate user action -- it is an automatic consequence of a new version's own '-> approved' transition succeeding, flipping whichever other version of the same recordId currently holds approved to superseded in the same database transaction. content/notes stay plain text for this backend-only pass, matching every sibling module's own original backend-first precedent -- no dashboard-web UI exists yet. Reuses the already-seeded website_strategy RBAC permission group verbatim -- no new RBAC migration. Built by a background agent with a fully-specified prompt, then independently re-verified in full by the orchestrating session -- every high-risk file read directly, every test suite independently re-run against a fresh local disposable PostgreSQL 17 database, not trusted from the agent's own report. Independent code review (this project's own code-review skill, high effort, 8-angle finder pass, 1-vote verification per surviving candidate) surfaced 5 candidates after dedup, 3 CONFIRMED and fixed, 2 REFUTED. Most severe: update()'s in-place-edit branch had no compare-and-swap guard on approvalStatus, independently found by 2 separate finder angles -- a concurrent approval, or an already-terminal archived/superseded row, could be silently mutated in place instead of forking a new version; fixed by giving updateInPlace() an optional expectedApprovalStatus CAS parameter and rejecting terminal-state edits outright. Also fixed: a concurrent new-version-creation race on the (record_id, version_number) unique index surfaced as a raw 500 instead of a clean 409, a 3-way convergence across finder angles, fixed with a try/catch mirroring create()'s own publicId-race pattern; and approved -> superseded was directly reachable via the generic status route, contradicting the module's own explicit 'supersede is automatic-only' design, fixed by removing the edge from the TRANSITIONS table. 2 candidates REFUTED by dedicated verifiers: an audit-gap claim matched an already-accepted precedent (ProjectService.setActivePhase()'s identical shape); a missing-index performance claim was empirically disproven with EXPLAIN ANALYZE against a real 53,770-row synthetic dataset in a disposable Postgres 17 database, confirming Postgres already serves the query via the public_id partial unique index's implied predicate. Security review (run separately) found 1 CONFIRMED finding at 9/10 confidence: the code-review fix above had only added the CAS guard to update()'s non-approved branch -- the approved/fork branch's own updateInPlace() call, the one flipping the old row's isCurrent to false, still carried no guard, letting an edit-only caller (holds edit, never approve) resurrect a just-concurrently-archived record into a fresh editable draft using only the edit grant for the resurrection half of the race, directly contradicting the module's own documented 'archived/superseded are permanently terminal' invariant. Fixed by passing current.approvalStatus as the CAS guard on this call too, matching the non-approved branch exactly; a null result now throws ConflictException. A re-scan security-review pass then confirmed the fix was complete, leaked no sensitive detail in the new exception message, preserved correct transaction-rollback semantics, and left no remaining gap of the same class -- 0 findings above threshold. Final numbers: 596/596 dashboard-api unit tests (44 new across this module), 228/228 packages/database integration tests (21 new), 21/21 module e2e tests, a real migration up/down round-trip, typecheck/lint (--max-warnings=0)/prettier all clean, pnpm audit 0 vulnerabilities. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approved', no disputes raised -- every confirmed finding across both reviews had already been fixed and re-validated before this review, so there was no open item to accept as tracked debt) was already complete before this gate was requested -- see docs/project-state/module-website-strategy-center-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "225facf",
+      "record": "docs/project-state/module-website-strategy-center-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2054,6 +2068,22 @@
       },
       "project_version_before": 62,
       "project_version_after": 63
+    },
+    {
+      "timestamp": "2026-08-23T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-website-strategy-center for module-website-strategy-center -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-website-strategy-center",
+        "scope": "module-website-strategy-center",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approved', no disputes raised -- every confirmed finding across both the code review and the security review had already been fixed and re-validated before this review, so there was no open item to accept as tracked debt) was already complete before the gate was requested. See docs/project-state/module-website-strategy-center-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "225facf",
+        "branch": "module-website-strategy-center"
+      },
+      "project_version_before": 63,
+      "project_version_after": 64
     }
   ]
 }
