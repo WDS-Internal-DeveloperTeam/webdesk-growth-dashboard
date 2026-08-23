@@ -4,10 +4,9 @@
 REFUTED — all 3 fixed). Security review complete (1 CONFIRMED finding at 9/10 confidence, fixed;
 0 findings above threshold on re-scan). Required second-role human review complete — Jitesh D,
 "Approved," no disputes raised. Gate (G4-website-strategy-center) approved — WebDesk Solution,
-decision CONFIRM, approved commit `225facf` on branch `module-website-strategy-center`. Pushed to
-`origin` and opened as
-[PR #55](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/55). Not yet
-merged.
+decision CONFIRM, approved commit `225facf` on branch `module-website-strategy-center`. Merged
+([PR #55](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/55), merge
+commit `b205a32d03da906f6f2f68f9a8308f7772a8eb03`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -152,3 +151,30 @@ already complete before the gate was requested), approved commit `225facf` on br
 This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
 production deployment — each remains its own separate, not-yet-requested authorization, per this
 project's standing "no auto-merge" rule.
+
+## Push/PR — COMPLETE
+
+**"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
+opened as
+[PR #55](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/55). All 14
+CI checks green.
+
+## Merge — COMPLETE
+
+**"Merge PR #55" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `b205a32d03da906f6f2f68f9a8308f7772a8eb03`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is what's serving.
+- `GET /website-strategy-center/records` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+  unauthenticated visitor, confirming the session gate is intact.
+
+**The Website Strategy Center module backend is now genuinely live in production** — closing
+out this slice's full build-to-production arc. No `dashboard-web` UI exists yet for this
+module — a separate, not-yet-requested next step, matching the Projects/BKC/Service
+Library/Persona Library/Proof and Claims Library precedent.
