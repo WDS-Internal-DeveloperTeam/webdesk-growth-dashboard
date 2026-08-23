@@ -19,11 +19,18 @@ export const proofClaimApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 const VERIFICATION_STATUS_VALUES = ["unverified", "pending", "verified"] as const;
 export const proofClaimVerificationStatusSchema = z.enum(VERIFICATION_STATUS_VALUES);
 
-// These fields are plain text, not HTML — this is a backend-only pass with no dashboard-web UI
-// yet, so no rich-text editor/sanitization applies here, mirroring Persona Library's own original
-// backend build (before its later, separate rich-text-editor conversion pass) rather than
-// conflating the two passes.
-const LONG_TEXT_MAX_LENGTH = 20_000;
+// claim/approvedWording/restrictions are now real HTML from `dashboard-web`'s `RichTextEditor`
+// (Tiptap) — raised from this module's original 20_000 plain-text cap alongside the
+// dashboard-web-proof-and-claims-library UI build, per the 2026-08-22 standing rule requiring
+// every long-text field to use the rich-text editor going forward. Sanitized server-side before
+// storage (`ClaimsService`'s `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`),
+// mirroring Persona Library's own identical rich-text-editor conversion pass exactly. `source`
+// (`createClaimSourceSchema`/`updateClaimSourceSchema` below) shares this same constant but stays
+// plain text, not rich text — the sub-resource fields on this module's own parent's sibling
+// modules (Projects' Objectives/Repositories/Environments) stayed plain when their parent's own
+// field converted, and `source` is a short citation/reference description, not authored narrative
+// content, matching that precedent.
+const LONG_TEXT_MAX_LENGTH = 40_000;
 const longTextField = z.string().max(LONG_TEXT_MAX_LENGTH).nullish();
 
 const shortTextField = z.string().max(255).nullish();

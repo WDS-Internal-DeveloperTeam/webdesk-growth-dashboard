@@ -573,3 +573,64 @@ export interface Persona {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+export type ProofClaimVerificationStatus = "unverified" | "pending" | "verified";
+
+// Structurally identical to PersonaApprovalStatus/ServiceApprovalStatus (the shared 8-value
+// artifact-approval workflow, D3) — reused as its own named type rather than an alias so this
+// module's own `-query.ts` file can still narrow to it directly without a cast, matching
+// PersonaApprovalStatus's own precedent.
+export type ProofClaimApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * The Proof and Claims Library module's parent entity — every route (`list`/`findOne`/`create`/
+ * `update`/`changeStatus`) returns this exact shape (no `ProofClaimDetail` split — like Persona,
+ * unlike Service, this module has no sub-resource dimension tables to omit from the list view;
+ * `claim_sources` is a genuine one-to-many child fetched separately via `ClaimSource` below, not
+ * inlined here). `relatedServiceIds` is a real, existence-validated identifier array (against the
+ * `services` table); `relatedCaseStudyIds`/`relatedPageIds` stay genuinely unvalidated — their
+ * target modules (`case_study_studio`/`page_inventory`) don't exist yet, mirroring Service
+ * Library's own precedent. No `version` field, unlike `Persona` — the canonical spec names none
+ * for this module.
+ */
+export interface ProofClaim {
+  readonly id: string;
+  readonly publicId: string;
+  readonly claim: string;
+  readonly claimType: string | null;
+  readonly beforeValue: string | null;
+  readonly afterValue: string | null;
+  readonly verificationStatus: ProofClaimVerificationStatus;
+  readonly approvedWording: string | null;
+  readonly restrictions: string | null;
+  readonly expiryReviewDate: string | null;
+  readonly relatedServiceIds: readonly string[];
+  readonly relatedCaseStudyIds: readonly string[];
+  readonly relatedPageIds: readonly string[];
+  readonly approvalStatus: ProofClaimApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** A real one-to-many child of `ProofClaim` (`04_Data_Model_and_Ownership.md:119-120` names
+ *  `claim_sources` as its own table, not a JSONB array on the parent) — fetched and managed via
+ *  its own `/proof-and-claims-library/claims/:claimId/sources` sub-resource routes, the same
+ *  shape as Projects' own roadmap-items/objectives/environments/repositories sub-resources. */
+export interface ClaimSource {
+  readonly id: string;
+  readonly claimId: string;
+  readonly source: string;
+  readonly sourceUrl: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
