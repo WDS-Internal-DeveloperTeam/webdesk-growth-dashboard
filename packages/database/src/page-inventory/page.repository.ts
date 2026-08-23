@@ -2,13 +2,7 @@ import { Op } from "sequelize";
 import { escapeLikePattern } from "../auth/user.repository.js";
 import { getPageInventoryModels } from "./models.js";
 import { toEntityWithIsoDates } from "./entity-mapping.js";
-import type {
-  PageClassification,
-  PageEntity,
-  PageExistingOrProposed,
-  PageIndexStatus,
-  PageWorkflowStage,
-} from "./entities.js";
+import type { PageEntity, PageIndexStatus, PageWorkflowStage } from "./entities.js";
 
 /** Every field a caller may set/change on create, i.e. `PageEntity` minus its server-only-managed
  *  columns (`id`, `workflowStage`, `createdAt`, `updatedAt`) — derived, not hand-retyped, so a
