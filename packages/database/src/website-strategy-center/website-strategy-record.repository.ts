@@ -179,9 +179,19 @@ export class WebsiteStrategyRecordRepository {
       updatedBy: string | null;
     }>,
     transaction?: Transaction,
+    expectedApprovalStatus?: WebsiteStrategyApprovalStatus,
   ): Promise<WebsiteStrategyRecordEntity | null> {
+    const where: Record<string, unknown> = { id };
+    if (expectedApprovalStatus) {
+      // A CAS guard, mirroring updateApprovalStatus()'s own conditional-UPDATE pattern — the
+      // caller (WebsiteStrategyRecordsService.update()'s non-approved edit branch) passes the
+      // approvalStatus it observed at read time, so a concurrent approval landing between that
+      // read and this write makes this a no-op (0 affected rows) instead of silently mutating a
+      // row that just became approved.
+      where.approvalStatus = expectedApprovalStatus;
+    }
     const [affectedCount, affectedRows] = await this.model.update(patch, {
-      where: { id },
+      where,
       returning: true,
       transaction,
     });

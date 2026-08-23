@@ -449,6 +449,73 @@ describe("Website Strategy Center module endpoints (e2e, real disposable databas
       .expect(400);
   });
 
+  it("rejects a direct 'approved -> superseded' status request with 400, over real HTTP (code-review fix — supersede is only ever an automatic side effect of a different version's own approval)", async () => {
+    const editorCookie = await cookieForNewSession(marketingEditorUserId);
+    const adminCookie = await cookieForNewSession(superAdminUserId);
+    // super_admin's own grants for this module are VCERAMX (no S) — submit/review go through
+    // marketing_editor (VCESR), same as the sibling "marketing_editor can submit and review" test.
+    const created = await createDraftRecord(editorCookie, { title: "Direct Supersede Fixture" });
+
+    await request(app.getHttpServer())
+      .post(`/website-strategy-center/records/${created.recordId}/status`)
+      .set("Cookie", editorCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "submitted" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/website-strategy-center/records/${created.recordId}/status`)
+      .set("Cookie", editorCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "under_review" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/website-strategy-center/records/${created.recordId}/status`)
+      .set("Cookie", adminCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "approved" })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/website-strategy-center/records/${created.recordId}/status`)
+      .set("Cookie", adminCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "superseded" })
+      .expect(400);
+
+    // The record's own status is unaffected by the rejected request — still approved.
+    const stillApproved = await request(app.getHttpServer())
+      .get(`/website-strategy-center/records/${created.recordId}`)
+      .set("Cookie", adminCookie)
+      .expect(200);
+    expect(stillApproved.body.data.approvalStatus).toBe("approved");
+  });
+
+  it("rejects editing an archived record with 400, over real HTTP, without mutating it (code-review fix — archived/superseded are terminal)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createDraftRecord(cookie, { title: "Terminal Edit Fixture" });
+
+    await request(app.getHttpServer())
+      .post(`/website-strategy-center/records/${created.recordId}/status`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ approvalStatus: "archived" })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/website-strategy-center/records/${created.recordId}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ title: "Should never be applied" })
+      .expect(400);
+
+    const stillOriginal = await request(app.getHttpServer())
+      .get(`/website-strategy-center/records/${created.recordId}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(stillOriginal.body.data.title).toBe("Terminal Edit Fixture");
+    expect(stillOriginal.body.data.approvalStatus).toBe("archived");
+  });
+
   it("returns 404 for a GET on a nonexistent record id", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())

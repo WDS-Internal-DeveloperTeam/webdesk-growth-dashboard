@@ -37,6 +37,18 @@ type WebsiteStrategyApprovalAction = "submit" | "review" | "approve";
  * `submitted`/`revision_requested`/`rejected -> draft` all require `submit` (the submitter/editor
  * drives the revise-and-resubmit loop, not the approver). `archived`/`superseded` are both
  * terminal — no code path resurrects a record from either.
+ *
+ * Deliberately DIFFERENT from the sibling copy of this table on one entry: `approved` has no
+ * `superseded` edge here. Unlike Service/Persona/Proof-and-Claims Library, where a caller with
+ * the `approve` grant may legitimately request `approved -> superseded` directly, this module's
+ * own design (this file's `changeApprovalStatus()`, and `supersedeOtherApprovedVersion()`'s own
+ * doc comment in the repository) states "supersede" is never a distinct user action — it only
+ * ever happens as an automatic side effect of a DIFFERENT version's own `-> approved` transition
+ * succeeding (see the `isApproval` branch below, which calls `supersedeOtherApprovedVersion()`
+ * directly, bypassing this table entirely). Leaving the `superseded` edge in this table let a
+ * caller mark a record's sole approved version "superseded" with no successor ever having
+ * existed — a code-review-confirmed bug, fixed by removing the edge so a direct request is
+ * rejected the same way any other invalid transition is.
  */
 const TRANSITIONS: Readonly<
   Record<
@@ -53,7 +65,7 @@ const TRANSITIONS: Readonly<
     archived: "approve",
   },
   revision_requested: { draft: "submit", submitted: "submit", archived: "approve" },
-  approved: { superseded: "approve", archived: "approve" },
+  approved: { archived: "approve" },
   rejected: { draft: "submit", archived: "approve" },
   superseded: {},
   archived: {},
@@ -160,16 +172,42 @@ export class WebsiteStrategyRecordsService {
   ): Promise<WebsiteStrategyRecordEntity> {
     const current = await this.findCurrent(recordId);
 
+    // archived/superseded are both terminal (see TRANSITIONS's own doc comment — "no code path
+    // resurrects a record from either") — content on a terminal row must never change, in place
+    // or otherwise. Checked before the branch below rather than folded into it, since a CAS guard
+    // alone wouldn't catch this case: a terminal row's own approvalStatus never changes again, so
+    // a CAS scoped to "still archived"/"still superseded" would trivially always succeed.
+    if (current.approvalStatus === "archived" || current.approvalStatus === "superseded") {
+      throw new BadRequestException(
+        `Website strategy record ${recordId} is ${current.approvalStatus} and can no longer be edited`,
+      );
+    }
+
     if (current.approvalStatus !== "approved") {
-      const updated = await this.records.updateInPlace(current.id, {
-        ...patch,
-        updatedBy: actorUserId,
-      });
-      // A real TOCTOU-safety net — no hard-delete exists for this module today, but this still
-      // guards a hypothetical future one, matching ProofClaimRepository's/PersonaRepository's own
-      // identical belt-and-suspenders check after their own pre-fetch.
+      // A CAS guard on approvalStatus (code-review finding) — without it, a concurrent approval
+      // landing between the findCurrent() read above and this write would let this in-place edit
+      // silently land on what is now an approved row, bypassing the "approved content is only
+      // ever forked into a new version, never mutated in place" invariant the approved-branch
+      // below exists to enforce.
+      const updated = await this.records.updateInPlace(
+        current.id,
+        { ...patch, updatedBy: actorUserId },
+        undefined,
+        current.approvalStatus,
+      );
       if (!updated) {
-        throw new NotFoundException(`Website strategy record not found: ${recordId}`);
+        // 0 affected rows means either the row is genuinely gone (no hard-delete exists for this
+        // module today, but this still guards a hypothetical future one, matching
+        // ProofClaimRepository's/PersonaRepository's own identical belt-and-suspenders check) or
+        // — the real case this guard exists for — its approvalStatus changed concurrently since
+        // the read above. Distinguish the two with a fresh read rather than assuming either.
+        const stillExists = await this.records.findCurrentByRecordId(recordId);
+        if (!stillExists) {
+          throw new NotFoundException(`Website strategy record not found: ${recordId}`);
+        }
+        throw new ConflictException(
+          `Website strategy record ${recordId} approval status changed concurrently while editing — reload and retry`,
+        );
       }
 
       await this.auditService.record({
@@ -192,29 +230,47 @@ export class WebsiteStrategyRecordsService {
     // ProjectService.setActivePhase()'s own placement: the SERVICE layer opens withTransaction()
     // and threads the Transaction handle through multiple separate repository calls.
     const nextVersionNumber = current.versionNumber + 1;
-    const created = await withTransaction(async (transaction) => {
-      const flipped = await this.records.updateInPlace(
-        current.id,
-        { isCurrent: false, updatedBy: actorUserId },
-        transaction,
-      );
-      if (!flipped) {
-        throw new NotFoundException(`Website strategy record not found: ${recordId}`);
+    let created: WebsiteStrategyRecordEntity;
+    try {
+      created = await withTransaction(async (transaction) => {
+        const flipped = await this.records.updateInPlace(
+          current.id,
+          { isCurrent: false, updatedBy: actorUserId },
+          transaction,
+        );
+        if (!flipped) {
+          throw new NotFoundException(`Website strategy record not found: ${recordId}`);
+        }
+        return this.records.createNewVersion(
+          {
+            recordId: current.recordId,
+            publicId: current.publicId,
+            recordType: current.recordType,
+            versionNumber: nextVersionNumber,
+            title: patch.title ?? current.title,
+            content: patch.content !== undefined ? patch.content : current.content,
+            notes: patch.notes !== undefined ? patch.notes : current.notes,
+            createdBy: actorUserId,
+          },
+          transaction,
+        );
+      });
+    } catch (error) {
+      // Two concurrent edits of the same approved record can both read the identical
+      // current.versionNumber before either transaction commits, so both compute the same
+      // nextVersionNumber — the second createNewVersion() INSERT then collides on the
+      // (record_id, version_number) unique index (migration 00056). Mirrors create()'s own
+      // handling of the analogous publicId race a few methods above, but surfaces as a 409 (a
+      // real concurrent-edit conflict), not a 400 (an input-validation error) — checked by
+      // `.name`, not `instanceof`, since dashboard-api never imports sequelize directly
+      // (ADR-0006).
+      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+        throw new ConflictException(
+          `Website strategy record ${recordId} was edited concurrently — reload and retry`,
+        );
       }
-      return this.records.createNewVersion(
-        {
-          recordId: current.recordId,
-          publicId: current.publicId,
-          recordType: current.recordType,
-          versionNumber: nextVersionNumber,
-          title: patch.title ?? current.title,
-          content: patch.content !== undefined ? patch.content : current.content,
-          notes: patch.notes !== undefined ? patch.notes : current.notes,
-          createdBy: actorUserId,
-        },
-        transaction,
-      );
-    });
+      throw error;
+    }
 
     await this.auditService.record({
       eventType: "data_change",

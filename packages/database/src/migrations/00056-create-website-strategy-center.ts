@@ -33,12 +33,16 @@ import { DataTypes, type QueryInterface } from "sequelize";
  * Service Library's/Persona Library's/Proof and Claims Library's own identical `TRANSITIONS`
  * table (task package D6) — a 4th occurrence of this identical shape, deliberately not extracted
  * into a shared helper (already-accepted, out-of-scope debt in this codebase, matching every
- * prior module's own identical disposition). "Supersede" (task package D4) is not a separate user
- * action — it's an automatic consequence of a NEW version's own `-> approved` transition
- * succeeding: the same transaction also flips whichever OTHER version of the same `record_id`
- * currently holds `approval_status = 'approved'` (if any) to `'superseded'`, reusing the already-
- * legal `approved -> superseded` edge. The superseded row is never deleted — permanently readable
- * via the version-history route, satisfying "preserve versions."
+ * prior module's own identical disposition), with ONE deliberate deviation from the sibling
+ * copies (a code-review fix): this module's own `TRANSITIONS` table has no `approved ->
+ * superseded` edge, since a direct manual request to that state would mean marking a record
+ * "superseded" with no successor ever having existed. "Supersede" (task package D4) is not a
+ * separate user action — it's an automatic consequence of a NEW version's own `-> approved`
+ * transition succeeding: the same transaction also flips whichever OTHER version of the same
+ * `record_id` currently holds `approval_status = 'approved'` (if any) to `'superseded'`, calling
+ * the repository's `supersedeOtherApprovedVersion()` directly rather than going through the
+ * `TRANSITIONS` table at all. The superseded row is never deleted — permanently readable via the
+ * version-history route, satisfying "preserve versions."
  *
  * `content`/`notes` stay plain text for this backend-only pass (task package D7) — no
  * `dashboard-web` UI exists yet, matching every sibling module's own original backend-first

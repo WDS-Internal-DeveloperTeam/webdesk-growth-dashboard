@@ -190,9 +190,14 @@ describe("WebsiteStrategyRecordsService", () => {
       const result = await svc.update("record-1", { title: "Renamed" }, "actor-1");
 
       expect(result.title).toBe("Renamed");
+      // The trailing "draft" is the CAS guard (code-review fix) — updateInPlace() only writes if
+      // the row's approvalStatus still matches what was read, so a concurrent status change can't
+      // silently land on top of it.
       expect(records.updateInPlace).toHaveBeenCalledWith(
         "row-1",
         expect.objectContaining({ title: "Renamed", updatedBy: "actor-1" }),
+        undefined,
+        "draft",
       );
       expect(records.createNewVersion).not.toHaveBeenCalled();
       expect(auditService.record).toHaveBeenCalledWith(
@@ -224,13 +229,44 @@ describe("WebsiteStrategyRecordsService", () => {
       expect(records.updateInPlace).not.toHaveBeenCalled();
     });
 
-    it("throws NotFoundException when the in-place update finds nothing to update (a TOCTOU race after a successful pre-fetch)", async () => {
-      records.findCurrentByRecordId.mockResolvedValue(record({ approvalStatus: "draft" }));
+    it("throws NotFoundException when the in-place update finds nothing to update AND a re-check confirms the record is genuinely gone", async () => {
+      records.findCurrentByRecordId
+        .mockResolvedValueOnce(record({ approvalStatus: "draft" })) // the initial findCurrent() read
+        .mockResolvedValueOnce(null); // the re-check after updateInPlace() returns null
       records.updateInPlace.mockResolvedValue(null);
 
       await expect(svc.update("record-1", { title: "X" }, "actor-1")).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it("throws ConflictException (not NotFoundException) when updateInPlace's CAS guard finds nothing to update because approvalStatus changed concurrently (code-review fix — the record itself still exists)", async () => {
+      records.findCurrentByRecordId
+        .mockResolvedValueOnce(record({ approvalStatus: "draft" })) // the initial findCurrent() read
+        .mockResolvedValueOnce(record({ approvalStatus: "approved" })); // the re-check — still exists, just a different status now
+      records.updateInPlace.mockResolvedValue(null);
+
+      await expect(svc.update("record-1", { title: "X" }, "actor-1")).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it("throws BadRequestException without ever calling updateInPlace when the current version is archived", async () => {
+      records.findCurrentByRecordId.mockResolvedValue(record({ approvalStatus: "archived" }));
+
+      await expect(svc.update("record-1", { title: "X" }, "actor-1")).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(records.updateInPlace).not.toHaveBeenCalled();
+    });
+
+    it("throws BadRequestException without ever calling updateInPlace when the current version is superseded", async () => {
+      records.findCurrentByRecordId.mockResolvedValue(record({ approvalStatus: "superseded" }));
+
+      await expect(svc.update("record-1", { title: "X" }, "actor-1")).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(records.updateInPlace).not.toHaveBeenCalled();
     });
 
     it("never accepts approvalStatus/recordType/publicId through the general update patch — the patch object forwarded to the repository only ever carries the DTO's own fields", async () => {
@@ -345,6 +381,27 @@ describe("WebsiteStrategyRecordsService", () => {
         expect.anything(),
       );
     });
+
+    it("translates a concurrent version-creation collision on (recordId, versionNumber) into a clean 409, not a raw error (code-review fix — mirrors create()'s own publicId-race handling)", async () => {
+      const approved = record({ approvalStatus: "approved", versionNumber: 1 });
+      records.findCurrentByRecordId.mockResolvedValue(approved);
+      records.updateInPlace.mockResolvedValue(record({ ...approved, isCurrent: false }));
+      records.createNewVersion.mockRejectedValue(uniqueConstraintError());
+
+      await expect(svc.update("record-1", { title: "X" }, "actor-1")).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it("re-throws a non-uniqueness error from createNewVersion unchanged", async () => {
+      const approved = record({ approvalStatus: "approved" });
+      records.findCurrentByRecordId.mockResolvedValue(approved);
+      records.updateInPlace.mockResolvedValue(record({ ...approved, isCurrent: false }));
+      const dbError = new Error("connection reset");
+      records.createNewVersion.mockRejectedValue(dbError);
+
+      await expect(svc.update("record-1", { title: "X" }, "actor-1")).rejects.toBe(dbError);
+    });
   });
 
   describe("changeApprovalStatus", () => {
@@ -360,6 +417,17 @@ describe("WebsiteStrategyRecordsService", () => {
       await expect(svc.changeApprovalStatus("record-1", "approved", "actor-1")).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it("rejects a direct 'approved -> superseded' request (code-review fix) — supersede is only ever an automatic side effect of a DIFFERENT version's own approval, never a directly requestable transition", async () => {
+      records.findCurrentByRecordId.mockResolvedValue(record({ approvalStatus: "approved" }));
+
+      await expect(svc.changeApprovalStatus("record-1", "superseded", "actor-1")).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(authorizationService.assertAllowed).not.toHaveBeenCalled();
+      expect(records.updateApprovalStatus).not.toHaveBeenCalled();
+      expect(records.supersedeOtherApprovedVersion).not.toHaveBeenCalled();
     });
 
     it.each([

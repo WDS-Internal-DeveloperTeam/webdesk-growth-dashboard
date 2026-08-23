@@ -347,6 +347,49 @@ describe("Website Strategy Center module (real disposable database)", () => {
     });
   });
 
+  describe("updateInPlace — CAS guard on approvalStatus (code-review fix)", () => {
+    it("writes normally when expectedApprovalStatus matches the row's real current status", async () => {
+      const created = await records.create({
+        publicId: uniqueId("WSC-CAS-OK"),
+        recordType: "search_plan",
+        title: "CAS guard fixture",
+      });
+
+      const updated = await records.updateInPlace(
+        created.id,
+        { title: "Renamed via matching CAS" },
+        undefined,
+        "draft",
+      );
+
+      expect(updated?.title).toBe("Renamed via matching CAS");
+    });
+
+    it("is a real, DB-enforced no-op (returns null, writes nothing) when expectedApprovalStatus no longer matches the row's real current status", async () => {
+      const created = await records.create({
+        publicId: uniqueId("WSC-CAS-RACE"),
+        recordType: "search_plan",
+        title: "Original title",
+      });
+      // Simulate a concurrent approval landing between a caller's read and its write.
+      const approved = await records.updateApprovalStatus(created.id, "draft", "approved", null);
+      expect(approved.outcome).toBe("updated");
+
+      // The caller still believes the row is "draft" (a stale read) and tries to edit it in place.
+      const result = await records.updateInPlace(
+        created.id,
+        { title: "Should never land" },
+        undefined,
+        "draft",
+      );
+
+      expect(result).toBeNull();
+      const stillApproved = await records.findCurrentByRecordId(created.recordId);
+      expect(stillApproved?.title).toBe("Original title");
+      expect(stillApproved?.approvalStatus).toBe("approved");
+    });
+  });
+
   it("cascades no rows on delete (no hard-delete exists — a real DELETE at the SQL layer removes only the targeted row, proving no unintended FK/cascade side effect exists on this single-table schema)", async () => {
     const created = await records.create({
       publicId: uniqueId("WSC-DEL"),
