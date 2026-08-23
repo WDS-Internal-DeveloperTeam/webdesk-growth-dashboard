@@ -48,8 +48,9 @@ export type WebsiteStrategyApprovalStatus =
  * logical record together (the history/comparison key). `isCurrent` is true for exactly one row
  * per `recordId` at any time (flipped atomically in the same transaction that creates a new
  * version — see `WebsiteStrategyRecordRepository.createNewVersion()`/`updateInPlace()`).
- * `content`/`notes` stay plain text for this backend-only pass (task package D7) — no
- * `dashboard-web` UI exists yet.
+ * `content`/`notes` are real HTML from the `dashboard-web` `RichTextEditor`, sanitized server-side
+ * before storage and again at render time (task package D7's original "plain text for this
+ * backend-only pass" scoping was closed once the UI was built).
  */
 export interface WebsiteStrategyRecordEntity {
   readonly id: string;

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { withTransaction } from "@webdesk/database";
+import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import type {
   WebsiteStrategyApprovalStatus,
   WebsiteStrategyRecordEntity,
@@ -95,8 +96,8 @@ export class WebsiteStrategyRecordsService {
         publicId: input.publicId,
         recordType: input.recordType,
         title: input.title,
-        content: input.content,
-        notes: input.notes,
+        content: sanitizeNullableRichText(input.content),
+        notes: sanitizeNullableRichText(input.notes),
         createdBy: actorUserId,
       });
     } catch (error) {
@@ -191,7 +192,12 @@ export class WebsiteStrategyRecordsService {
       // below exists to enforce.
       const updated = await this.records.updateInPlace(
         current.id,
-        { ...patch, updatedBy: actorUserId },
+        {
+          ...patch,
+          content: sanitizeNullableRichTextIfChanged(patch.content, current.content),
+          notes: sanitizeNullableRichTextIfChanged(patch.notes, current.notes),
+          updatedBy: actorUserId,
+        },
         undefined,
         current.approvalStatus,
       );
@@ -265,8 +271,22 @@ export class WebsiteStrategyRecordsService {
             recordType: current.recordType,
             versionNumber: nextVersionNumber,
             title: patch.title ?? current.title,
-            content: patch.content !== undefined ? patch.content : current.content,
-            notes: patch.notes !== undefined ? patch.notes : current.notes,
+            // An omitted field inherits the current version's own value, which was already
+            // sanitized when it was first written — re-sanitizing it here would be redundant
+            // (the same skip-if-unchanged reasoning `sanitizeNullableRichTextIfChanged()`
+            // applies elsewhere), so only a genuinely NEW value from the patch is sanitized
+            // fresh. `createNewVersion()`'s `content`/`notes` are non-optional (`string | null`,
+            // never `undefined`) since it inserts a whole new row, so this can't reuse
+            // `sanitizeNullableRichTextIfChanged()` directly the way the in-place branch above
+            // does.
+            content:
+              patch.content !== undefined
+                ? (sanitizeNullableRichText(patch.content) ?? null)
+                : current.content,
+            notes:
+              patch.notes !== undefined
+                ? (sanitizeNullableRichText(patch.notes) ?? null)
+                : current.notes,
             createdBy: actorUserId,
           },
           transaction,

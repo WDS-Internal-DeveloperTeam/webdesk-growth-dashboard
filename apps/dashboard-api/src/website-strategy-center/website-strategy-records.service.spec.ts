@@ -113,6 +113,39 @@ describe("WebsiteStrategyRecordsService", () => {
       );
     });
 
+    it("sanitizes content/notes before writing, stripping a disallowed tag (rich-text editor rollout)", async () => {
+      records.findCurrentByPublicId.mockResolvedValue(null);
+      records.create.mockResolvedValue(record());
+
+      await svc.create(
+        {
+          publicId: "WSC-NAV-PLAN-1",
+          recordType: "navigation_plan",
+          title: "Q1 Navigation Plan",
+          content: "<script>alert(1)</script><p>Real content</p>",
+          notes: "<script>alert(1)</script><p>Real notes</p>",
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = records.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.content).toBe("<p>Real content</p>");
+      expect(writtenInput.notes).toBe("<p>Real notes</p>");
+    });
+
+    it("passes a null content/notes through unchanged rather than coercing it into an empty string", async () => {
+      records.findCurrentByPublicId.mockResolvedValue(null);
+      records.create.mockResolvedValue(record());
+
+      await svc.create(
+        { publicId: "WSC-NAV-PLAN-1", recordType: "navigation_plan", title: "X", content: null },
+        "actor-1",
+      );
+
+      const [writtenInput] = records.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.content).toBeNull();
+    });
+
     it("rejects a duplicate publicId", async () => {
       records.findCurrentByPublicId.mockResolvedValue(record());
 
@@ -203,6 +236,34 @@ describe("WebsiteStrategyRecordsService", () => {
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ action: "update", entityType: "website_strategy_record" }),
       );
+    });
+
+    it("sanitizes content/notes before an in-place write, stripping a disallowed tag (rich-text editor rollout)", async () => {
+      records.findCurrentByRecordId.mockResolvedValue(
+        record({ approvalStatus: "draft", content: "Old content" }),
+      );
+      records.updateInPlace.mockResolvedValue(record({ title: "Renamed" }));
+
+      await svc.update(
+        "record-1",
+        { content: "<script>alert(1)</script><p>New content</p>" },
+        "actor-1",
+      );
+
+      const [, patchArg] = records.updateInPlace.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.content).toBe("<p>New content</p>");
+    });
+
+    it("skips re-sanitizing content that's unchanged from the current row's own value (sanitizeNullableRichTextIfChanged)", async () => {
+      records.findCurrentByRecordId.mockResolvedValue(
+        record({ approvalStatus: "draft", content: "<p>Unchanged</p>" }),
+      );
+      records.updateInPlace.mockResolvedValue(record({ title: "Renamed" }));
+
+      await svc.update("record-1", { content: "<p>Unchanged</p>", title: "Renamed" }, "actor-1");
+
+      const [, patchArg] = records.updateInPlace.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.content).toBe("<p>Unchanged</p>");
     });
 
     it("also mutates in place for a revision_requested/rejected/submitted/under_review current version (only 'approved' triggers a new version)", async () => {
@@ -366,6 +427,38 @@ describe("WebsiteStrategyRecordsService", () => {
 
       expect(records.createNewVersion).toHaveBeenCalledWith(
         expect.objectContaining({ content: null }),
+        expect.anything(),
+      );
+    });
+
+    it("sanitizes a genuinely new content/notes value before forking a new version, stripping a disallowed tag (rich-text editor rollout)", async () => {
+      const approved = record({ approvalStatus: "approved", content: "Old content" });
+      records.findCurrentByRecordId.mockResolvedValue(approved);
+      records.updateInPlace.mockResolvedValue(record({ ...approved, isCurrent: false }));
+      records.createNewVersion.mockResolvedValue(record());
+
+      await svc.update(
+        "record-1",
+        { content: "<script>alert(1)</script><p>New content</p>" },
+        "actor-1",
+      );
+
+      expect(records.createNewVersion).toHaveBeenCalledWith(
+        expect.objectContaining({ content: "<p>New content</p>" }),
+        expect.anything(),
+      );
+    });
+
+    it("never re-sanitizes an inherited (omitted-from-patch) content/notes value on fork — it's forwarded exactly as already stored", async () => {
+      const approved = record({ approvalStatus: "approved", content: "<p>Already sanitized</p>" });
+      records.findCurrentByRecordId.mockResolvedValue(approved);
+      records.updateInPlace.mockResolvedValue(record({ ...approved, isCurrent: false }));
+      records.createNewVersion.mockResolvedValue(record());
+
+      await svc.update("record-1", { title: "New title only" }, "actor-1");
+
+      expect(records.createNewVersion).toHaveBeenCalledWith(
+        expect.objectContaining({ content: "<p>Already sanitized</p>" }),
         expect.anything(),
       );
     });

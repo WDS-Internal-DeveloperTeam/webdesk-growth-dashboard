@@ -32,11 +32,10 @@ const APPROVAL_STATUS_VALUES = [
 
 export const websiteStrategyApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
-// content/notes stay plain text for this backend-only pass (task package D7) — matching every
-// sibling module's own ORIGINAL pre-rich-text-editor cap (20,000), not the doubled 40,000 cap
-// those modules later grew once their own dashboard-web UI was built and started sending real
-// HTML. No dashboard-web UI exists yet for this module.
-const LONG_TEXT_MAX_LENGTH = 20_000;
+// Raised from 20,000 alongside the dashboard-web UI build (rich-text editor rollout) — content/
+// notes are now real HTML from RichTextEditor, carrying real markup overhead over the equivalent
+// plain text, the same doubled-cap ratio every sibling module's own rich-text conversion used.
+const LONG_TEXT_MAX_LENGTH = 40_000;
 const longTextField = z.string().max(LONG_TEXT_MAX_LENGTH).nullish();
 
 export const listWebsiteStrategyRecordsQuerySchema = z.object({
