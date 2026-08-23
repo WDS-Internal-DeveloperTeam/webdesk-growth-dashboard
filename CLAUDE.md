@@ -2388,8 +2388,9 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
 38. **Proof and Claims Library module backend — built, fully validated, code-reviewed (5 of 7
     findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings above threshold),
     required second-role human reviewed (Jitesh D, "Approved"), gated
-    (G4-proof-and-claims-library, WebDesk Solution, CONFIRM); not yet pushed or merged
-    (2026-08-22).** The
+    (G4-proof-and-claims-library, WebDesk Solution, CONFIRM), pushed and opened as
+    [PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53); not
+    yet merged (2026-08-22/23).** The
     5th real business-module backend on the Phase 1F application shell / canonical module
     registry, after Projects, Business Knowledge Center, Service Library, and Persona Library —
     module #5 in the project-owner-supplied `Recommended_Module_Roadmap.md`. Built directly on
@@ -2483,9 +2484,10 @@ RETURNING`); and two byte-identical id-list Zod schemas declared twice under dif
     Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
     already complete before the gate was requested), approved commit `d8cccc1` on branch
     `module-proof-and-claims-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
-    `gates[]` (`current_gate` now `G4-proof-and-claims-library`). **This gate approval does not
-    itself authorize pushing the branch, opening a PR, or merging** — each remains its own
-    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    `gates[]` (`current_gate` now `G4-proof-and-claims-library`). **"Push the branch and open a
+    PR" was then separately requested and executed** — pushed to `origin`, opened as
+    [PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -5907,6 +5909,10 @@ f258b3627305914e9d1d59eecac696c313400719`, confirming the exact merged commit is
   section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
   merging** — each remains its own separate, not-yet-requested authorization, per this project's
   standing "no auto-merge" rule.
+- `[2026-08-23]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-proof-and-claims-library` — pushed to `origin`, opened as
+  [PR #53](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/53). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 
