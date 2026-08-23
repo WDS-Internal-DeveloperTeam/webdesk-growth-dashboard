@@ -1,12 +1,14 @@
 import { cookies } from "next/headers";
 import type { ApiSuccessResponse, ClaimSource, ProofClaim, Service } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
+import { tolerateDiscard } from "./business-knowledge";
 import { formatTimestamp } from "./format-timestamp";
 import {
   APPROVAL_STATUS_LABEL,
   buildProofAndClaimsLibraryHref,
   parseProofAndClaimsLibrarySearchParams,
   proofClaimApprovalStatusBadge,
+  VERIFICATION_STATUS_LABEL,
   type ProofAndClaimsLibraryQuery,
 } from "./proof-and-claims-library-query";
 import { getServices } from "./service-library";
@@ -18,6 +20,7 @@ export {
   formatTimestamp,
   parseProofAndClaimsLibrarySearchParams,
   proofClaimApprovalStatusBadge,
+  VERIFICATION_STATUS_LABEL,
 };
 export type { ProofAndClaimsLibraryQuery };
 
@@ -90,18 +93,6 @@ export async function getProofClaim(claimId: string): Promise<ProofClaim | null>
     throw new Error(`Failed to load proof claim (status ${response.status})`);
   }
   return ((await response.json()) as ApiSuccessResponse<ProofClaim>).data;
-}
-
-/**
- * A promise started for its side effect (an in-flight fetch) that may end up discarded without
- * ever being awaited — e.g. when `getProofClaimDetail()` below returns early on a 404 while the
- * sources fetch it fired concurrently is still in flight. Attaches a no-op catch so a discarded
- * rejection stays silent, while the original `promise` (returned unchanged) still rejects
- * normally for any caller that does await it — mirrors `lib/projects.ts`'s own `tolerateDiscard()`.
- */
-function tolerateDiscard<T>(promise: Promise<T>): Promise<T> {
-  promise.catch(() => {});
-  return promise;
 }
 
 /** `GET /proof-and-claims-library/claims/:claimId/sources` — like Projects' own sub-resource

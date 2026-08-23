@@ -31,19 +31,19 @@ const MODULE_KEY = "service_persona_proof";
  * `sanitizeNullableRichTextIfChanged()` (`@webdesk/validation`) is typed for a field that may be
  * `null`/`undefined` — `claim` is neither (required, `.min(1)`, never `.nullish()`), so its return
  * type (`string | null | undefined`) doesn't structurally fit `claim`'s own `string | undefined`
- * update-patch shape. This is the identical "skip re-sanitizing an unchanged value" logic narrowed
- * to a required field, kept local to this file rather than promoted to `@webdesk/validation` — this
- * is the only required rich-text field anywhere in this app so far, so a shared generic helper for
- * one call site is out of proportion.
+ * update-patch shape. This is a type-only narrowing wrapper, not a re-implementation (code-review
+ * finding: an earlier version hand-copied the "skip re-sanitizing an unchanged value" branching
+ * instead of delegating) — for `claim`'s actual input domain (`string | undefined`, never `null`),
+ * `sanitizeNullableRichTextIfChanged()` already produces the identical output for every reachable
+ * case, so this only narrows the result type, it doesn't duplicate the logic. Kept local to this
+ * file rather than promoted to `@webdesk/validation` — this is the only required rich-text field
+ * anywhere in this app so far, so a shared generic helper for one call site is out of proportion.
  */
 function sanitizeRequiredRichTextIfChanged(
   value: string | undefined,
   current: string,
 ): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  return value === current ? value : sanitizeRichTextHtml(value);
+  return sanitizeNullableRichTextIfChanged(value, current) as string | undefined;
 }
 
 /** A malformed (non-UUID) id can never resolve to a real service — filtered out before querying
@@ -200,6 +200,15 @@ export class ClaimsService {
     // reasoning `PersonasService.update()`'s own identical reversal already established. `findById()`
     // also 404s cleanly before anything else runs; `assertServiceIdsExist()` has no dependency on
     // `current` at all, so it runs in parallel, matching `PersonasService.update()`'s own ordering.
+    //
+    // Accepted, tracked debt (code-review finding): running both concurrently means a request that
+    // is BOTH for a missing `id` AND carries an invalid `relatedServiceIds` entry gets whichever
+    // exception (404 vs 400) its underlying query happens to settle first, rather than
+    // deterministically the 404 — a real behavior gap, but one this diff only re-exposes, not
+    // introduces: `PersonasService.update()`/`ServicesService.update()` already have the identical
+    // shape, already shipped. A real fix (e.g. awaiting `findById()` first, then racing
+    // `assertServiceIdsExist()` only once existence is confirmed) means resequencing all three
+    // services together, out of scope for a single module's review-fix pass.
     const [current] = await Promise.all([
       this.findById(id),
       this.assertServiceIdsExist(patch.relatedServiceIds),

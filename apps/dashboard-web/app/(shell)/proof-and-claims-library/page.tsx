@@ -20,6 +20,7 @@ import {
 import {
   APPROVAL_STATUS_LABEL,
   APPROVAL_STATUS_VALUES,
+  VERIFICATION_STATUS_LABEL,
 } from "@/lib/proof-and-claims-library-query";
 
 export const dynamic = "force-dynamic";
@@ -232,12 +233,6 @@ export default async function ProofAndClaimsLibraryListPage({
 const thStyle = listTableHeaderCellStyle;
 
 const tdStyle = listTableCellStyle;
-
-const VERIFICATION_STATUS_LABEL: Readonly<Record<ProofClaim["verificationStatus"], string>> = {
-  unverified: "Unverified",
-  pending: "Pending",
-  verified: "Verified",
-};
 
 /**
  * Links on `publicId`, not `claim.claim` — unlike every sibling module, this module has no

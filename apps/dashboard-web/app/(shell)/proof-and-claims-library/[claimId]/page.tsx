@@ -20,6 +20,7 @@ import {
   getProofClaimDetail,
   getServicesForClaimPicker,
   proofClaimApprovalStatusBadge,
+  VERIFICATION_STATUS_LABEL,
 } from "@/lib/proof-and-claims-library";
 
 export const dynamic = "force-dynamic";
@@ -27,12 +28,6 @@ export const dynamic = "force-dynamic";
 interface ProofAndClaimsLibraryDetailPageProps {
   readonly params: Promise<{ claimId: string }>;
 }
-
-const VERIFICATION_STATUS_LABEL: Readonly<Record<string, string>> = {
-  unverified: "Unverified",
-  pending: "Pending",
-  verified: "Verified",
-};
 
 /**
  * No approved wireframe exists for this module — sections mirror

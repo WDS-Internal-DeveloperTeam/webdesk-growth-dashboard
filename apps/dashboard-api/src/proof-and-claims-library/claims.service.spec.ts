@@ -132,6 +132,23 @@ describe("ClaimsService", () => {
       expect(writtenInput.restrictions).toBeNull();
     });
 
+    it("sanitizes a real (non-null) restrictions value on create, not just the null-passthrough case above (code-review coverage gap)", async () => {
+      claims.findByPublicId.mockResolvedValue(null);
+      claims.create.mockResolvedValue(claim());
+
+      await svc.create(
+        {
+          publicId: "PROOF-X",
+          claim: "X",
+          restrictions: "<script>alert(1)</script><p>Internal use only</p>",
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = claims.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.restrictions).toBe("<p>Internal use only</p>");
+    });
+
     it("validates relatedServiceIds against the real services table before creating", async () => {
       claims.findByPublicId.mockResolvedValue(null);
       claims.create.mockResolvedValue(claim());

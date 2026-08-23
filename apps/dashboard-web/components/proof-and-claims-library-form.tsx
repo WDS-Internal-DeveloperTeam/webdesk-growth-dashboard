@@ -7,6 +7,10 @@ import { RelationshipPicker, TagListField, type RelationshipOption } from "@webd
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import {
+  VERIFICATION_STATUS_LABEL,
+  VERIFICATION_STATUS_VALUES,
+} from "@/lib/proof-and-claims-library-query";
+import {
   findOverLongRichTextField,
   isEmptyRichTextHtml,
   richTextFieldValue,
@@ -25,17 +29,6 @@ const SHORT_TEXT_MAX_LENGTH = 255;
 const LONG_TEXT_MAX_LENGTH = 40_000;
 const ID_LIST_MAX_LENGTH = 128;
 const ID_LIST_MAX_COUNT = 200;
-
-const VERIFICATION_STATUS_VALUES: readonly ProofClaimVerificationStatus[] = [
-  "unverified",
-  "pending",
-  "verified",
-];
-const VERIFICATION_STATUS_LABEL: Readonly<Record<ProofClaimVerificationStatus, string>> = {
-  unverified: "Unverified",
-  pending: "Pending",
-  verified: "Verified",
-};
 
 // Narrowed to only the fields this form actually reads — matches ServiceLibraryForm's/
 // PersonaLibraryForm's own established convention for this exact relationship-picker use case.
@@ -183,8 +176,11 @@ export function ProofAndClaimsLibraryForm(props: ProofAndClaimsLibraryFormProps)
         verificationStatus,
         approvedWording: richTextField(approvedWording),
         restrictions: richTextField(restrictions),
-        expiryReviewDate:
-          expiryReviewDate === "" ? (props.mode === "create" ? undefined : null) : expiryReviewDate,
+        // A <input type="date"> value is always "" or a clean YYYY-MM-DD string, so textField()'s
+        // own .trim() is a harmless no-op here — reuses the same omit-vs-null nullish-contract
+        // logic instead of hand-reimplementing it a second time in this same file (code-review
+        // finding).
+        expiryReviewDate: textField(expiryReviewDate),
         relatedServiceIds,
         relatedCaseStudyIds,
         relatedPageIds,

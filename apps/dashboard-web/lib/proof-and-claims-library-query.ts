@@ -1,4 +1,4 @@
-import type { ProofClaimApprovalStatus } from "@webdesk/shared-types";
+import type { ProofClaimApprovalStatus, ProofClaimVerificationStatus } from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
 import {
   ARTIFACT_APPROVAL_STATUS_LABEL,
@@ -33,6 +33,25 @@ export function proofClaimApprovalStatusBadge(status: ProofClaimApprovalStatus):
 } {
   return artifactApprovalStatusBadge(status);
 }
+
+// Previously hand-typed independently in the list page, detail page, and create/edit form (code
+// review finding — 2 finder angles independently converged on this) — the detail page's own copy
+// was even more weakly typed (`Record<string, string>`, losing the compiler's exhaustiveness
+// check), matching the exact "duplication/reuse miss" pattern this project's own standing
+// 2026-08-22 feedback names. `verificationStatus` has no cross-module precedent to reuse (unlike
+// `approvalStatus`, shared verbatim with Service Library/Persona Library via
+// `artifact-approval-status.ts`), so this lives directly in this module's own query file.
+export const VERIFICATION_STATUS_VALUES: readonly ProofClaimVerificationStatus[] = [
+  "unverified",
+  "pending",
+  "verified",
+];
+
+export const VERIFICATION_STATUS_LABEL: Readonly<Record<ProofClaimVerificationStatus, string>> = {
+  unverified: "Unverified",
+  pending: "Pending",
+  verified: "Verified",
+};
 
 export interface ProofAndClaimsLibraryQuery {
   readonly approvalStatus: ProofClaimApprovalStatus | null;

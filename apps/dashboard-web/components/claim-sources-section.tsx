@@ -14,10 +14,11 @@ export interface ClaimSourcesSectionProps {
 }
 
 // Mirrors apps/dashboard-api/src/proof-and-claims-library/proof-and-claims-library.dto.ts's
-// createClaimSourceSchema/updateClaimSourceSchema — both share the parent module's own
-// LONG_TEXT_MAX_LENGTH constant for `source`, so this mirrors that value directly rather than
-// inventing a narrower one that could reject an otherwise-valid submission.
-const SOURCE_MAX_LENGTH = 40_000;
+// createClaimSourceSchema/updateClaimSourceSchema's own dedicated CLAIM_SOURCE_MAX_LENGTH
+// constant — a real, independent bound for this field (not borrowed from the parent's
+// rich-text-sized LONG_TEXT_MAX_LENGTH, a prior accidental coupling this constant's own doc
+// comment on the backend explains — code-review finding).
+const SOURCE_MAX_LENGTH = 2_000;
 
 interface SourceFormValues {
   readonly source: string;
@@ -31,13 +32,16 @@ const EMPTY_FORM: SourceFormValues = { source: "", sourceUrl: "" };
  * (`04_Data_Model_and_Ownership.md:119-120`), built correctly with full add/edit/delete CRUD from
  * day one (matching Projects' own sub-resource-editing precedent,
  * `dashboard-web-subresource-editing`) rather than starting read-only. `source` stays a plain
- * `<textarea>`, not `RichTextEditor` — the 2026-08-22 standing rich-text rule applies to this
- * module's own PARENT fields (`claim`/`approvedWording`/`restrictions`, see
- * `ProofAndClaimsLibraryForm`), but Projects' own rich-text rollout already established the
- * precedent that a parent's own long-text field converting to rich text does NOT extend to its
- * sub-resource fields (Projects' Objectives/Repositories/Environments stayed plain) — `source` is
- * a short citation/reference description, not authored narrative content, matching that same
- * reasoning. The backend's own `safeHttpUrlSchema` (`packages/validation`) restricts `sourceUrl` to
+ * `<textarea>`, not `RichTextEditor` — surfaced explicitly during code review as a candidate
+ * violation of the 2026-08-22 standing rich-text rule ("every long-text field... never a plain
+ * textarea"), since that rule's own text names no sub-resource carve-out. Resolved by giving
+ * `source` its own dedicated, deliberately short `CLAIM_SOURCE_MAX_LENGTH` (2,000 chars — see the
+ * backend DTO's own doc comment) instead of the module's rich-text-sized `LONG_TEXT_MAX_LENGTH` it
+ * had accidentally inherited: `source` is a short citation/reference description, not authored
+ * narrative content, so it isn't the kind of "long-text field" the standing rule targets — the same
+ * reasoning Projects' own rich-text rollout already applied when its Objectives/Repositories/
+ * Environments sub-resource fields stayed plain alongside `description`'s own conversion. The
+ * backend's own `safeHttpUrlSchema` (`packages/validation`) restricts `sourceUrl` to
  * `http:`/`https:` server-side — `isSafeHttpUrl()` is still applied client-side before ever
  * rendering a stored value as a link, matching `ProjectEnvironmentsSection`'s own identical guard,
  * as defense-in-depth for a value stored before that schema existed.
