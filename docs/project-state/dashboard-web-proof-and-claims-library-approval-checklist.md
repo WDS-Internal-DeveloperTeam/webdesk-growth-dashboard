@@ -3,7 +3,9 @@
 **Status:** Built. Independent code review complete (8 candidates verified after dedup, 7
 CONFIRMED + 1 PLAUSIBLE, 6 fixed and 2 accepted as tracked debt). Security review complete (0
 findings above threshold). Review packet published for the required second-role human review —
-**awaiting that review.** No gate decision, push, PR, or merge has been requested yet.
+**awaiting that review.** Branch pushed and
+[PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54) opened.
+No gate decision or merge has been requested yet.
 
 ## Completion condition
 
@@ -21,7 +23,7 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ The `update()` exception-ordering race (finding 07) and the 5th independent status-transitions-table copy (finding 08) are both real but left as accepted debt, recorded directly in code for the second-role reviewer                                                                         |
 | 8   | Standing rich-text rule applied correctly  | ✅ `claim`/`approvedWording`/`restrictions` converted to `RichTextEditor` with real backend sanitization (write-time + render-time); `claim_sources.source` deliberately stays plain text, now with its own dedicated, decoupled max-length constant making that reading unambiguous (finding 03) |
 | 9   | Documentation updated                      | ✅ This checklist and `CLAUDE.md`'s Active tasks/Recent decisions entries                                                                                                                                                                                                                         |
-| 10  | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-proof-and-claims-library`, latest commit `510dba2` — not yet pushed to `origin`, no PR opened                                                                                                                                                                            |
+| 10  | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-proof-and-claims-library`, latest commit `551e0af` — pushed to `origin`, [PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54) opened                                                                                                 |
 
 ## Forbidden-actions check
 
