@@ -267,6 +267,11 @@ describe("PagesService", () => {
     });
 
     it("throws NotFoundException when the repository update finds nothing to update (a TOCTOU race after a successful pre-fetch)", async () => {
+      // The initial findById() (in beforeEach) resolves the page; the fresh re-read after a
+      // failed write resolves null — the "row is genuinely gone" branch of the disambiguation
+      // logic below, not the "workflowStage changed concurrently" branch (see the dedicated
+      // ConflictException test for that one).
+      pages.findById.mockResolvedValueOnce(page()).mockResolvedValueOnce(null);
       pages.update.mockResolvedValue(null);
 
       await expect(
@@ -298,6 +303,61 @@ describe("PagesService", () => {
         svc.update("page-1", FAKE_PROJECT_ID, { roadmapPhaseId: FAKE_ROADMAP_PHASE_ID }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
       expect(pages.update).not.toHaveBeenCalled();
+    });
+
+    it.each(["archived", "superseded"] as const)(
+      "rejects an edit to a %s page without writing (code-review finding — the guard was missing entirely)",
+      async (terminalStage) => {
+        pages.findById.mockResolvedValue(
+          page({ workflowStage: terminalStage, projectId: FAKE_PROJECT_ID }),
+        );
+
+        await expect(
+          svc.update("page-1", FAKE_PROJECT_ID, { pageName: "New" }, "actor-1"),
+        ).rejects.toThrow(BadRequestException);
+        expect(pages.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it("passes the page's own current workflowStage as a CAS guard to the repository write", async () => {
+      pages.findById.mockResolvedValue(
+        page({ workflowStage: "draft", projectId: FAKE_PROJECT_ID }),
+      );
+      pages.update.mockResolvedValue(page({ workflowStage: "draft" }));
+
+      await svc.update("page-1", FAKE_PROJECT_ID, { pageName: "New" }, "actor-1");
+
+      expect(pages.update).toHaveBeenCalledWith(
+        "page-1",
+        expect.objectContaining({ pageName: "New" }),
+        "draft",
+      );
+    });
+
+    it(
+      "throws ConflictException (not a silent success) when the CAS write loses a race against " +
+        "a concurrent changeWorkflowStage() transition (security-review finding)",
+      async () => {
+        pages.findById
+          .mockResolvedValueOnce(page({ workflowStage: "draft", projectId: FAKE_PROJECT_ID }))
+          .mockResolvedValueOnce(page({ workflowStage: "archived", projectId: FAKE_PROJECT_ID }));
+        pages.update.mockResolvedValue(null);
+
+        await expect(
+          svc.update("page-1", FAKE_PROJECT_ID, { pageName: "New" }, "actor-1"),
+        ).rejects.toThrow(ConflictException);
+      },
+    );
+
+    it("throws NotFoundException, not ConflictException, when the row is genuinely gone rather than concurrently transitioned", async () => {
+      pages.findById
+        .mockResolvedValueOnce(page({ workflowStage: "draft", projectId: FAKE_PROJECT_ID }))
+        .mockResolvedValueOnce(null);
+      pages.update.mockResolvedValue(null);
+
+      await expect(
+        svc.update("page-1", FAKE_PROJECT_ID, { pageName: "New" }, "actor-1"),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it("never accepts workflowStage through the general update patch", async () => {

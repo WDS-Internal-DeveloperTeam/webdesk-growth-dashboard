@@ -693,3 +693,79 @@ export interface WebsiteStrategyRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+export type PageExistingOrProposed = "existing" | "proposed";
+export type PageIndexStatus = "index" | "noindex" | "unknown";
+
+// Structurally identical to PersonaApprovalStatus/ServiceApprovalStatus/ProofClaimApprovalStatus/
+// WebsiteStrategyApprovalStatus (the shared 8-value artifact-approval workflow, task package D8) —
+// reused as its own named type rather than an alias so this module's own `-query.ts` file can
+// still narrow to it directly without a cast, matching every sibling module's own precedent.
+export type PageWorkflowStage =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/** Named only in `canonical-inputs/Recommended_Module_Roadmap.md` row 7, absent from the spec/
+ *  data-model/wireframe/registry description — a nullable, purely descriptive field with no
+ *  governance/workflow attached (task package D9). */
+export type PageClassification =
+  "keep" | "optimize" | "restructure" | "redesign" | "rebuild" | "consolidate";
+
+/**
+ * The Page Inventory module's parent entity — unlike every prior content-library module (Business
+ * Knowledge Center, Service/Persona/Proof-and-Claims Library, Website Strategy Center — all
+ * organization-wide), `pages` IS project-scoped (`projectId`, task package D2). `roadmapPhaseId` is
+ * existence-validated against the same project's own `roadmap_items`; `template`/`targetKeyword`/
+ * `wordpressPageId`/`wordpressPostId` are all plain unvalidated fields — Page Template Library and
+ * Keyword & Entity Library don't exist yet, and no WordPress integration adapter exists yet either.
+ * `repositoryFiles` is plain, unsanitized long text (never rendered as HTML) — deliberately NOT a
+ * rich-text field despite the 2026-08-22 standing rich-text rule, since it's almost certainly a list
+ * of file paths/references, not narrative prose (see `PageForm`'s own doc comment for the full
+ * reasoning).
+ */
+export interface Page {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly pageName: string;
+  readonly pageType: string | null;
+  readonly existingOrProposed: PageExistingOrProposed;
+  readonly indexStatus: PageIndexStatus;
+  readonly template: string | null;
+  readonly roadmapPhaseId: string | null;
+  readonly workflowStage: PageWorkflowStage;
+  readonly targetKeyword: string | null;
+  readonly designVersion: string | null;
+  readonly repositoryFiles: string | null;
+  readonly wordpressPageId: string | null;
+  readonly wordpressPostId: string | null;
+  readonly lastScanAt: string | null;
+  readonly lastDeploymentAt: string | null;
+  readonly classification: PageClassification | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** A real one-to-many child of `Page` — one page can have multiple URLs (locale variants, legacy
+ *  redirects), each carrying `isCanonical`. Fetched and managed via its own
+ *  `/page-inventory/projects/:projectId/pages/:pageId/urls` sub-resource routes, the same shape as
+ *  Projects'/Proof and Claims Library's own sub-resource pattern. `PageEntity` itself carries no
+ *  `url` field at all — there is no join, so the Page Inventory list page never renders a URL
+ *  column (the smallest honest reading of what `GET .../pages` actually returns). */
+export interface PageUrl {
+  readonly id: string;
+  readonly pageId: string;
+  readonly projectId: string;
+  readonly url: string;
+  readonly isCanonical: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

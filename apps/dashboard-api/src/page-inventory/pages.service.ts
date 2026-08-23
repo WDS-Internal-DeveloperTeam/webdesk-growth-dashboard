@@ -159,14 +159,45 @@ export class PagesService {
     // against, a real data dependency, not an avoidable extra round trip. findById() also 404s
     // cleanly (including on a project mismatch) before anything else runs.
     const current = await this.findById(id, projectId);
+
+    // archived/superseded are both terminal (TRANSITIONS's own entries for both are `{}` — no
+    // code path resurrects a page from either) — content on a terminal row must never change
+    // (code-review finding, `dashboard-web-page-inventory`: this guard was missing entirely,
+    // unlike Website Strategy Center's own identical `update()` guard, which this mirrors).
+    if (current.workflowStage === "archived" || current.workflowStage === "superseded") {
+      throw new BadRequestException(
+        `Page ${id} is ${current.workflowStage} and can no longer be edited`,
+      );
+    }
+
     await this.assertRoadmapPhaseExists(patch.roadmapPhaseId, current.projectId);
 
-    const updated = await this.pages.update(id, { ...patch, updatedBy: actorUserId });
-    // A real TOCTOU-safety net, not dead code — this module has no hard-delete today, but this
-    // still guards a hypothetical future one, matching every sibling module's own identical
-    // belt-and-suspenders check after its own pre-fetch.
+    // current.workflowStage is passed as a CAS guard (security-review finding,
+    // `dashboard-web-page-inventory`: the terminal-state check above reads workflowStage into
+    // application memory, but without this the actual write was still unconditional — a
+    // concurrent changeWorkflowStage() transition landing between the read and this write could
+    // let this edit silently succeed against what is now an archived/superseded row, the exact
+    // race Website Strategy Center's own updateInPlace()/expectedApprovalStatus already closed
+    // once for the identical bug class).
+    const updated = await this.pages.update(
+      id,
+      { ...patch, updatedBy: actorUserId },
+      current.workflowStage,
+    );
     if (!updated) {
-      throw new NotFoundException(`Page not found: ${id}`);
+      // 0 affected rows means either the row is genuinely gone (no hard-delete exists for this
+      // module today, but this still guards a hypothetical future one, matching every sibling
+      // module's own identical belt-and-suspenders check) or — the real case the CAS guard above
+      // exists for — its workflowStage changed concurrently since the read. Distinguish the two
+      // with a fresh read rather than assuming either, mirroring
+      // WebsiteStrategyRecordsService.update()'s own identical disambiguation.
+      const stillExists = await this.pages.findById(id);
+      if (!stillExists) {
+        throw new NotFoundException(`Page not found: ${id}`);
+      }
+      throw new ConflictException(
+        `Page ${id} workflow stage changed concurrently while editing — reload and retry`,
+      );
     }
 
     await this.auditService.record({
