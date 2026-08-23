@@ -5,7 +5,12 @@ CONFIRMED + 1 PLAUSIBLE, 6 fixed and 2 accepted as tracked debt). Security revie
 findings above threshold). Required second-role human review complete — **Jitesh D**, decision
 **"Approved"**, 2026-08-23, accepting the 2 open findings as tracked debt. Branch pushed and
 [PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54) opened,
-all 14 CI checks green. No gate decision or merge has been requested yet.
+all 14 CI checks green. **The gate (`G4-dashboard-web-proof-and-claims-library`) was then
+separately requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an
+override, since the second-role review was already complete before the gate was requested),
+approved commit `0361c1e` on branch `dashboard-web-proof-and-claims-library`. **This gate approval
+does not itself authorize merging PR #54 or a production deployment** — merge remains its own
+separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Completion condition
 
@@ -125,6 +130,15 @@ Review packet: published as a Claude Artifact —
 
 Required second-role human review complete — **Jitesh D**, decision **"Approved"**, 2026-08-23,
 accepting the 2 open findings (the `update()` exception-ordering race and the 5th independent
-status-transitions-table copy) as tracked debt. No disputes raised. This satisfies the last
-precondition before a gate decision can be requested — a gate decision and merge authorization
-each remain separate, not-yet-requested next steps.
+status-transitions-table copy) as tracked debt. No disputes raised.
+
+**The gate (`G4-dashboard-web-proof-and-claims-library`) was then separately requested and
+approved** — WebDesk Solution, decision **CONFIRM** (a clean pass, not an override, since the
+second-role review was already complete before the gate was requested), approved commit
+`0361c1e` on branch `dashboard-web-proof-and-claims-library` — recorded in
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-proof-and-claims-library`).
+
+**This gate approval does not itself authorize merging PR #54 or a production deployment** —
+merge remains its own separate, not-yet-requested authorization, per this project's standing
+"no auto-merge" rule.

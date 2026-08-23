@@ -2501,8 +2501,9 @@ b7f6575a5e0d1860e32864528cc9f005b77d1477`, confirming the exact merged commit is
     findings fixed, 2 accepted as tracked debt), security-reviewed (0 findings above threshold),
     pushed and opened as
     [PR #54](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/54), all
-    14 CI checks green, and required second-role human reviewed — Jitesh D, "Approved", accepting
-    the 2 open findings as tracked debt (2026-08-23).**
+    14 CI checks green, required second-role human reviewed — Jitesh D, "Approved", accepting the
+    2 open findings as tracked debt — and gated
+    (`G4-dashboard-web-proof-and-claims-library`, WebDesk Solution, CONFIRM) (2026-08-23).**
     Closes this module's last named gap, following the backend's own build-to-production arc
     (PR #53). Not started automatically — built directly on the explicit "Start the dashboard-web
     UI for it" instruction. No approved wireframe exists for this module —
@@ -6066,6 +6067,16 @@ source` had silently inherited the parent module's rich-text-sized `LONG_TEXT_MA
   table copy) as tracked debt — no disputes raised. See
   `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-23]` **The gate (`G4-dashboard-web-proof-and-claims-library`) was then separately
+  requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+  since the second-role review was already complete before the gate was requested), approved
+  commit `0361c1e` on branch `dashboard-web-proof-and-claims-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-proof-and-claims-library`) and
+  `docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #54 or a production
+  deployment** — merge remains its own separate, not-yet-requested authorization, per this
+  project's standing "no auto-merge" rule.
 
 ## Open client blockers
 

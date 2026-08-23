@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-proof-and-claims-library",
+    "current_gate": "G4-dashboard-web-proof-and-claims-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-22T00:00:00Z",
-    "version": 57
+    "updated_at": "2026-08-23T00:00:00Z",
+    "version": 58
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -560,6 +560,20 @@
       "approved_commit": "d8cccc1",
       "record": "docs/project-state/module-proof-and-claims-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-proof-and-claims-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-proof-and-claims-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-23T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web Proof and Claims Library UI (branch dashboard-web-proof-and-claims-library, PR #54) -- closes this module's last named gap, following the backend's own build-to-production arc (PR #53). No approved wireframe exists for this module; 04_Data_Model_and_Ownership.md:119-120's own field grouping is the only source. List, detail, create/edit form, status-transition actions, and a real one-to-many claim_sources sub-resource with full add/edit/delete CRUD from day one (matching Projects' own sub-resource-editing precedent). Per the 2026-08-22 standing rule requiring every dashboard-web long-text field to use RichTextEditor going forward, claim/approvedWording/restrictions were converted to it as part of this build, with real backend sanitization added alongside (LONG_TEXT_MAX_LENGTH raised 20,000 -> 40,000, ClaimsService.create()/update() now sanitize via sanitizeRichTextHtml()/sanitizeNullableRichText()/sanitizeNullableRichTextIfChanged()). claim is this app's first REQUIRED rich-text field -- update()'s pre-fetch was reintroduced and a new sanitizeRequiredRichTextIfChanged() local helper handles the type mismatch. claim_sources.source deliberately stays plain text, matching Projects' established precedent. Independent code review (this project's own code-review skill, high effort, 8 finder angles via parallel subagents, 1-vote self-verification) surfaced 8 candidates after dedup (7 CONFIRMED, 1 PLAUSIBLE), 6 fixed -- most notable: VERIFICATION_STATUS_LABEL triplicated across 3 new files (2 finder angles converged); tolerateDiscard() redeclared privately instead of importing the already-exported copy from lib/business-knowledge.ts (2 finder angles converged); claim_sources.source had silently inherited the parent's rich-text-sized LONG_TEXT_MAX_LENGTH (40,000) as a byproduct of constant sharing, also making it genuinely ambiguous whether this brand-new long-text field should have used RichTextEditor per the standing rule -- given its own dedicated, decoupled CLAIM_SOURCE_MAX_LENGTH (2,000 chars), resolving both the validation-bound bug and the rich-text-rule ambiguity in one fix; the expiryReviewDate ternary hand-reimplementing the form's own textField() helper; sanitizeRequiredRichTextIfChanged() hand-copying sanitizeNullableRichTextIfChanged()'s logic instead of delegating with a type-narrowing cast; and a missing test proving restrictions actually gets sanitized on create with real dirty HTML. 2 findings left as accepted, tracked debt, recorded directly in code: update()'s reintroduced pre-fetch races findById() against assertServiceIdsExist() via Promise.all, so a request that's both for a missing id and an invalid relatedServiceIds gets whichever exception settles first rather than deterministically the 404 -- real, but inherited from PersonasService.update()'s/ServicesService.update()'s own identical, already-shipped shape; and ProofClaimStatusActions is now the 5th independent hand-copy of the approval-transitions table shape, already self-flagged in its own doc comment. Re-validated: 423/423 dashboard-web unit tests (53 new), 49/49 dashboard-api unit tests in this module (1 new), 23/23 dashboard-api e2e tests (real disposable database), typecheck/lint/next build/nest build/prettier all clean. Security review (run separately) found 0 findings above threshold -- confirmed sourceUrl still goes through safeHttpUrlSchema server-side and isSafeHttpUrl() client-side, claims.controller.ts/claim-sources.controller.ts (the actual RBAC decorators) are outside this diff and unmodified, zero dangerouslySetInnerHTML occurrences (rich-text fields render exclusively through the existing SanitizedRichText component), and claim_sources IDOR scoping is unchanged. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approved', accepting the 2 open findings as tracked debt, no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "0361c1e",
+      "record": "docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch (already done), merging, or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2024,6 +2038,22 @@
       },
       "project_version_before": 61,
       "project_version_after": 62
+    },
+    {
+      "timestamp": "2026-08-23T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-dashboard-web-proof-and-claims-library for dashboard-web-proof-and-claims-library -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-dashboard-web-proof-and-claims-library",
+        "scope": "dashboard-web-proof-and-claims-library",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approved', accepting the 2 open findings as tracked debt, no disputes raised) was already complete before the gate was requested. See docs/project-state/dashboard-web-proof-and-claims-library-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "0361c1e",
+        "branch": "dashboard-web-proof-and-claims-library"
+      },
+      "project_version_before": 62,
+      "project_version_after": 63
     }
   ]
 }
