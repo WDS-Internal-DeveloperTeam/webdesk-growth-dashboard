@@ -3,7 +3,10 @@
 **Status:** Built, code review complete (9 candidates surfaced after dedup — 8 CONFIRMED, 1
 PLAUSIBLE — all 8 CONFIRMED fixed). Security review complete (0 findings above the formal ≥8/10
 threshold; one sub-threshold, self-introduced finding fixed proactively). Required second-role
-human review complete — Jitesh D, "Approved," no disputes raised. Awaiting a gate decision.
+human review complete — Jitesh D, "Approved," no disputes raised. Gate
+(G4-dashboard-web-page-inventory) approved — WebDesk Solution, decision CONFIRM, approved commit
+`c01851d` on branch `dashboard-web-page-inventory`. Push/PR and merge authorization remain
+separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -125,3 +128,22 @@ there was no open item to accept as debt.
 
 A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
 steps, per this project's standing "no auto-merge" rule.
+
+**The gate (G4-dashboard-web-page-inventory) was then separately requested and approved** —
+WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the second-role review
+was already complete before the gate was requested), approved commit `c01851d` on branch
+`dashboard-web-page-inventory` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+(`current_gate` now `G4-dashboard-web-page-inventory`).
+
+| Field                    | Value                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-dashboard-web-page-inventory                                                                                                |
+| Approver (gate decision) | WebDesk Solution                                                                                                               |
+| Gate date                | 2026-08-23                                                                                                                     |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)              |
+| Approved commit          | `c01851d` on branch `dashboard-web-page-inventory` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `dashboard-web-page-inventory` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
+production deployment — each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule.

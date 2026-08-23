@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-page-inventory",
+    "current_gate": "G4-dashboard-web-page-inventory",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-23T00:00:00Z",
-    "version": 61
+    "version": 62
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -615,6 +615,20 @@
       "notes": "Page Inventory module backend (branch module-page-inventory, not yet pushed/opened as a PR) -- module #7 on the Recommended Module Roadmap, built on the explicit 'Start the Page Inventory module' instruction. Three genuine architectural forks confirmed directly with the user first (AskUserQuestion): table scope (pages+page_urls only, not the fuller 7-table 'Pages and artifacts' cluster -- that belongs to the separate, not-yet-built Page Workspace module), project scoping (pages carries a real project_id -- the first content-library module in this codebase to deviate from every prior module's organization-wide shape), and Scan Website/Import deferral (no WordPress adapter exists yet, only a staging-only credential is configured). Built by a background agent with a fully-specified prompt mirroring Proof and Claims Library's structural template, then independently re-verified in full by the orchestrating session -- every high-risk file read directly, every test suite re-run against a fresh local disposable database; a real lint failure (2 unused type imports) the build's own validation had missed was caught and fixed during re-verification. Independent code review (this project's own code-review skill, high effort, 8-angle finder pass) surfaced 6 candidates after dedup, 2 CONFIRMED, 4 PLAUSIBLE, 2 REFUTED. Most severe, and the review's own most important catch: project-scoped RBAC grants were silently ignored on every route -- PermissionGuard derives project scope exclusively from request.params.projectId, but no Page Inventory route exposed it (query/body only), so a caller holding only a project-scoped page_inventory grant was denied everywhere, directly undermining the module's own D2 design goal this session had just confirmed with the user. Fixed by restructuring every route to carry :projectId in the path, mirroring the existing RoadmapItemsController precedent -- the resolved resource's own projectId is now verified against the path value at every read/write (closing an IDOR gap as a side effect), and AuthorizationService.assertAllowed() was widened with an optional trailing projectId parameter (confirmed purely additive) and threaded through the dynamic workflow-stage check. Real e2e regression tests prove a project-scoped-only session is now allowed within its project and still denied in a different one -- empirically verified the same scenario 403'd against the pre-fix commit. Also fixed: a SequelizeUniqueConstraintError check hand-copied a 3rd time within this PR (on top of 4 pre-existing copies across 3 modules), closed by extracting isSequelizeUniqueConstraintError() into @webdesk/validation. 4 PLAUSIBLE findings left as accepted, tracked debt, each matching an already-established precedent elsewhere in this codebase (a nondeterministic error-code race in create(), a sequential-await efficiency tradeoff, create/update schema field-list duplication matching every sibling module's own style, and a broad service export matching an already-twice-accepted pattern). 2 candidates REFUTED. A separate security-review skill run then found 0 findings above threshold -- the one candidate (PageRepository.update() lacking projectId in its WHERE clause, unlike PageUrlRepository's own scoped writes in the same PR) was independently re-verified and filtered at 2/10 confidence: id is a globally-unique primary key, the service layer's prior findById(id, projectId) call already throws before update() is reached on any project mismatch, projectId is unsmuggleable into a patch, and no endpoint reassigns a page's project after creation -- not independently exploitable today. Final numbers: 12/12 packages/validation unit (3 new), 28/28 packages/database unit, 253/253 integration, 656/656 dashboard-api unit, 246/246 e2e/integration, migration up/down/up round-trip clean (59 migrations), typecheck/lint/prettier all clean, pnpm audit 0 vulnerabilities. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approves', no disputes raised) was already complete before this gate was requested -- see docs/project-state/module-page-inventory-approval-checklist.md's 'Sign-off' section.",
       "approved_commit": "3d0b4b2",
       "record": "docs/project-state/module-page-inventory-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-page-inventory",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-page-inventory",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-23T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Page Inventory module (branch dashboard-web-page-inventory, not yet pushed/opened as a PR), following the backend's own build-to-production arc (PR #57). Page Inventory is the first content-library module whose backend is project-scoped; before building, a genuine new architectural question (how the UI determines its active project) was put to the user directly (AskUserQuestion) -- the user chose a URL-driven ?projectId= query param with an in-module project picker over promoting the header switcher's advisory cookie to authoritative. Four routes under /page-inventory (list, create, detail, edit) built mirroring Website Strategy Center's file-for-file pattern plus Projects'/Proof-and-Claims Library's sub-resource CRUD pattern for page_urls. Independent code review (this project's own code-review skill, high effort, 8-angle finder pass) surfaced 9 candidates after dedup, 8 CONFIRMED and fixed (most severe: PagesService.update() had no terminal-state guard at all, unlike every sibling module, so an edit to an archived/superseded page silently succeeded -- also fixed: getPageUrls() crashing the whole detail page on a transient sub-resource error, a real backend-supported roadmapPhaseId filter never exposed to the UI, withProjectId() defined but never called, duplicated project-resolution boilerplate, the in-module project picker never syncing the header switcher's cookie, sequential fetches with no real dependency, and a 4th independent copy of the plain-text-field nullish-contract helper), 1 PLAUSIBLE finding accepted as tracked debt (an unguarded response assertion on the create form, matching every sibling create form's identical pattern). A separate security-review skill run then found 0 findings above the formal >=8/10 threshold -- but surfaced one additional, sub-threshold (6/10) finding introduced by the code-review fix round itself: the new terminal-state check read workflowStage into memory but the actual write stayed unconditional, so a concurrent changeWorkflowStage() transition landing between the read and the write could let an edit silently succeed against a now-terminal row. Fixed anyway with a CAS guard (expectedWorkflowStage) on PageRepository.update(), mirroring Website Strategy Center's own updateInPlace()/expectedApprovalStatus parameter exactly; a null result disambiguates via a fresh findById() re-read into NotFoundException or ConflictException. Final numbers: 524/524 dashboard-web unit tests, 661/661 dashboard-api unit tests (3 new), 28/28 packages/database unit tests, 253/253 packages/database integration tests, 247/247 dashboard-api integration/e2e tests -- all re-verified against a real disposable database after every fix round; typecheck/lint/CSS-token-check/next build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approved', no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-page-inventory-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "c01851d",
+      "record": "docs/project-state/dashboard-web-page-inventory-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
@@ -2144,6 +2158,22 @@
       },
       "project_version_before": 65,
       "project_version_after": 66
+    },
+    {
+      "timestamp": "2026-08-23T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-dashboard-web-page-inventory for dashboard-web-page-inventory -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-dashboard-web-page-inventory",
+        "scope": "dashboard-web-page-inventory",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approved', no disputes raised) was already complete before the gate was requested. See docs/project-state/dashboard-web-page-inventory-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "c01851d",
+        "branch": "dashboard-web-page-inventory"
+      },
+      "project_version_before": 61,
+      "project_version_after": 62
     }
   ]
 }

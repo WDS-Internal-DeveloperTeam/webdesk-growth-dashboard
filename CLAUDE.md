@@ -6581,9 +6581,17 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   already fixed, and the security review's one sub-threshold finding was fixed proactively rather
   than left open, so there was no open item to accept as tracked debt beyond the 1 already-accepted
   PLAUSIBLE code-review finding. See
-  `docs/project-state/dashboard-web-page-inventory-approval-checklist.md`'s "Sign-off" section. A
-  gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-  steps.
+  `docs/project-state/dashboard-web-page-inventory-approval-checklist.md`'s "Sign-off" section.
+- `[2026-08-23]` **The gate (G4-dashboard-web-page-inventory) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `c01851d` on branch `dashboard-web-page-inventory` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-page-inventory`) and
+  `docs/project-state/dashboard-web-page-inventory-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
+  each remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule.
 
 ## Open client blockers
 
