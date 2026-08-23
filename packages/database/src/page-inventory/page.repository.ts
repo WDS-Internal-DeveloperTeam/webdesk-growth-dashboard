@@ -152,9 +152,25 @@ export class PageRepository {
    * may change it, same discipline as `PersonaRepository.update()`/`ProofClaimRepository.update()`.
    * A single atomic `UPDATE ... RETURNING`, not a separate `findOne()` + `instance.update()`.
    */
-  async update(id: string, patch: Partial<PageUpdateFields>): Promise<PageEntity | null> {
+  async update(
+    id: string,
+    patch: Partial<PageUpdateFields>,
+    expectedWorkflowStage?: PageWorkflowStage,
+  ): Promise<PageEntity | null> {
+    const where: Record<string, unknown> = { id };
+    if (expectedWorkflowStage) {
+      // A CAS guard, mirroring WebsiteStrategyRecordRepository.updateInPlace()'s own
+      // expectedApprovalStatus parameter (security-review finding, `dashboard-web-page-inventory`
+      // — this project's own already-fixed precedent for the identical bug class): without it, a
+      // concurrent changeWorkflowStage() transition (its own atomic CAS via updateStatus())
+      // landing between PagesService.update()'s findById() read and this write would let this
+      // in-place edit silently succeed against what is now an archived/superseded row, bypassing
+      // the "terminal states are permanently unresurrectable" invariant PagesService.update()'s
+      // own upfront guard exists to enforce.
+      where.workflowStage = expectedWorkflowStage;
+    }
     const [affectedCount, affectedRows] = await this.model.update(patch, {
-      where: { id },
+      where,
       returning: true,
     });
     if (affectedCount === 0 || !affectedRows[0]) {
