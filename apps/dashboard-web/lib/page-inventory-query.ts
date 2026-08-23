@@ -12,6 +12,7 @@ import {
 } from "./artifact-approval-status";
 import { DEFAULT_PAGE_SIZE, parsePageSize, type PageSize } from "./pagination";
 import { firstValue } from "./search-params";
+import { isUuid } from "./uuid";
 
 /**
  * `PageInventoryQuery`/`parsePageInventorySearchParams`/`buildPageInventoryHref` live in their own
@@ -84,12 +85,14 @@ export const CLASSIFICATION_LABEL: Readonly<Record<PageClassification, string>> 
 /**
  * `projectId` is always required and always carried through every built href — pages are
  * project-scoped (`page-inventory/projects/:projectId/pages`), unlike every other module built so
- * far. Filters mirror the backend's own `listPagesQuerySchema` exactly (`pageType`/`workflowStage`/
- * `indexStatus`/`template`/`search`/`targetKeyword`/the two last-scan/last-deployment date-range
- * pairs) — no `existingOrProposed`/`roadmapPhaseId`/"owner" filter, since the backend's own query
- * schema doesn't accept the first two as filters and the spec's own required-fields list names no
- * owner column to filter by (the identical "smallest honest reading" omission every sibling list
- * page's own filter form already follows).
+ * far. Filters mirror the backend's own `listPagesQuerySchema` (`pageType`/`workflowStage`/
+ * `indexStatus`/`template`/`search`/`targetKeyword`/`roadmapPhaseId`/the two last-scan/
+ * last-deployment date-range pairs) — no `existingOrProposed`/"owner" filter: the backend's own
+ * query schema doesn't accept the former as a filter (code-review finding,
+ * `dashboard-web-page-inventory`: this doc comment previously also claimed `roadmapPhaseId` wasn't
+ * backend-supported, which was factually wrong — it is; the filter is now wired below), and the
+ * spec's own required-fields list names no owner column to filter by (the identical "smallest
+ * honest reading" omission every sibling list page's own filter form already follows).
  */
 export interface PageInventoryQuery {
   readonly projectId: string;
@@ -99,6 +102,7 @@ export interface PageInventoryQuery {
   readonly template: string | null;
   readonly search: string | null;
   readonly targetKeyword: string | null;
+  readonly roadmapPhaseId: string | null;
   readonly lastScanBefore: string | null;
   readonly lastScanAfter: string | null;
   readonly lastDeploymentBefore: string | null;
@@ -131,6 +135,7 @@ export function parsePageInventorySearchParams(
   const template = firstValue(raw.template);
   const search = firstValue(raw.search);
   const targetKeyword = firstValue(raw.targetKeyword);
+  const roadmapPhaseId = firstValue(raw.roadmapPhaseId);
   const offsetRaw = firstValue(raw.offset);
   const offset = offsetRaw ? Number.parseInt(offsetRaw, 10) : 0;
 
@@ -148,6 +153,7 @@ export function parsePageInventorySearchParams(
     template: template ? template.slice(0, 255) : null,
     search: search ? search.slice(0, 255) : null,
     targetKeyword: targetKeyword ? targetKeyword.slice(0, 255) : null,
+    roadmapPhaseId: roadmapPhaseId && isUuid(roadmapPhaseId) ? roadmapPhaseId : null,
     lastScanBefore: parseDateOnly(firstValue(raw.lastScanBefore)),
     lastScanAfter: parseDateOnly(firstValue(raw.lastScanAfter)),
     lastDeploymentBefore: parseDateOnly(firstValue(raw.lastDeploymentBefore)),
@@ -181,6 +187,7 @@ export function buildPageInventoryHref(
   if (next.template) params.set("template", next.template);
   if (next.search) params.set("search", next.search);
   if (next.targetKeyword) params.set("targetKeyword", next.targetKeyword);
+  if (next.roadmapPhaseId) params.set("roadmapPhaseId", next.roadmapPhaseId);
   if (next.lastScanBefore) params.set("lastScanBefore", next.lastScanBefore);
   if (next.lastScanAfter) params.set("lastScanAfter", next.lastScanAfter);
   if (next.lastDeploymentBefore) params.set("lastDeploymentBefore", next.lastDeploymentBefore);

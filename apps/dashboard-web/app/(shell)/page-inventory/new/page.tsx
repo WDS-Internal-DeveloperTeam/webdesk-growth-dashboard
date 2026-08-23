@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ContentContainer, PageHeader } from "@webdesk/ui";
 import { PageForm } from "@/components/page-form";
 import { getProject } from "@/lib/projects";
+import { firstValue } from "@/lib/search-params";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +25,7 @@ export default async function NewPagePage({ searchParams }: NewPagePageProps) {
   }
 
   const rawParams = await searchParams;
-  const projectIdParam = Array.isArray(rawParams.projectId)
-    ? rawParams.projectId[0]
-    : rawParams.projectId;
+  const projectIdParam = firstValue(rawParams.projectId);
   const project = projectIdParam ? await getProject(projectIdParam) : null;
   if (!project) {
     redirect("/page-inventory");

@@ -300,6 +300,20 @@ describe("PagesService", () => {
       expect(pages.update).not.toHaveBeenCalled();
     });
 
+    it.each(["archived", "superseded"] as const)(
+      "rejects an edit to a %s page without writing (code-review finding — the guard was missing entirely)",
+      async (terminalStage) => {
+        pages.findById.mockResolvedValue(
+          page({ workflowStage: terminalStage, projectId: FAKE_PROJECT_ID }),
+        );
+
+        await expect(
+          svc.update("page-1", FAKE_PROJECT_ID, { pageName: "New" }, "actor-1"),
+        ).rejects.toThrow(BadRequestException);
+        expect(pages.update).not.toHaveBeenCalled();
+      },
+    );
+
     it("never accepts workflowStage through the general update patch", async () => {
       pages.update.mockResolvedValue(page({ pageName: "Renamed" }));
 

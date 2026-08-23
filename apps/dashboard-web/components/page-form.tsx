@@ -10,6 +10,7 @@ import type {
 } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { plainTextFieldValue } from "@/lib/form-field-value";
 import {
   CLASSIFICATION_LABEL,
   CLASSIFICATION_VALUES,
@@ -17,6 +18,11 @@ import {
   EXISTING_OR_PROPOSED_VALUES,
   INDEX_STATUS_LABEL,
   INDEX_STATUS_VALUES,
+  // `withProjectId` deliberately imported from THIS zero-non-type-import file, not
+  // `@/lib/page-inventory` (which re-exports it but pulls in `next/headers` via its own
+  // `getPages`/`getPage`/`getPageUrls` — the exact client-bundle trap this codebase's own
+  // Cautions section already documents once, for `formatTimestamp`).
+  withProjectId,
 } from "@/lib/page-inventory-query";
 import styles from "./page-form.module.css";
 
@@ -109,12 +115,12 @@ export function PageForm(props: PageFormProps): ReactNode {
       const trimmedPageName = pageName.trim();
 
       // Plain-text fields: omitted entirely (create) or sent as an explicit null (edit) when
-      // empty — same nullish contract ServiceLibraryForm's own plainTextField() establishes.
-      function plainTextField(value: string): string | null | undefined {
-        const trimmed = value.trim();
-        if (trimmed !== "") return trimmed;
-        return props.mode === "create" ? undefined : null;
-      }
+      // empty — same nullish contract every sibling form's own plainTextField()/textField()
+      // establishes, now shared via lib/form-field-value.ts (code-review finding: this was a
+      // 4th independent hand-copy of the identical helper, past the 2-copy extraction threshold
+      // already applied to the rich-text variant).
+      const plainTextField = (value: string): string | null | undefined =>
+        plainTextFieldValue(value, props.mode);
 
       const sharedFields = {
         pageName: trimmedPageName,
@@ -128,12 +134,11 @@ export function PageForm(props: PageFormProps): ReactNode {
         repositoryFiles: plainTextField(repositoryFiles),
         wordpressPageId: plainTextField(wordpressPageId),
         wordpressPostId: plainTextField(wordpressPostId),
-        // date-only <input type="date"> already yields "" or "YYYY-MM-DD" — no trim needed.
-        lastScanAt: lastScanAt !== "" ? lastScanAt : props.mode === "create" ? undefined : null,
-        lastDeploymentAt:
-          lastDeploymentAt !== "" ? lastDeploymentAt : props.mode === "create" ? undefined : null,
-        classification:
-          classification !== "" ? classification : props.mode === "create" ? undefined : null,
+        // date-only <input type="date"> already yields "" or "YYYY-MM-DD" — the same nullish
+        // contract applies, so this reuses the shared helper too rather than re-deriving it.
+        lastScanAt: plainTextField(lastScanAt),
+        lastDeploymentAt: plainTextField(lastDeploymentAt),
+        classification: plainTextField(classification),
       };
 
       const payload =
@@ -160,7 +165,7 @@ export function PageForm(props: PageFormProps): ReactNode {
         props.mode === "create"
           ? ((await response.json()) as { data: { id: string } }).data.id
           : props.pageId;
-      router.push(`/page-inventory/${pageId}?projectId=${props.projectId}`);
+      router.push(withProjectId(`/page-inventory/${pageId}`, props.projectId));
     } catch (err) {
       console.error("Failed to save page", err);
       setError("Something went wrong. Please try again.");
@@ -449,8 +454,8 @@ export function PageForm(props: PageFormProps): ReactNode {
         <a
           href={
             props.mode === "create"
-              ? `/page-inventory?projectId=${props.projectId}`
-              : `/page-inventory/${props.pageId}?projectId=${props.projectId}`
+              ? withProjectId("/page-inventory", props.projectId)
+              : withProjectId(`/page-inventory/${props.pageId}`, props.projectId)
           }
           className={styles.cancelLink}
         >

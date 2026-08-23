@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
-import type { Page as InventoryPage, Project } from "@webdesk/shared-types";
+import type { Page as InventoryPage } from "@webdesk/shared-types";
 import {
   ContentContainer,
   EmptyState,
@@ -9,8 +9,10 @@ import {
   typographyTokens,
 } from "@webdesk/ui";
 import { PageSizeSelect } from "@/components/page-size-select";
+import { ProjectPickerForm } from "@/components/project-picker-form";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { ARTIFACT_APPROVAL_STATUS_VALUES } from "@/lib/artifact-approval-status";
+import { tolerateDiscard } from "@/lib/business-knowledge";
 import { CURRENT_PROJECT_COOKIE } from "@/lib/current-project";
 import {
   filterSelectStyle as selectStyle,
@@ -23,6 +25,7 @@ import {
   getPages,
   pageWorkflowStageBadge,
   parsePageInventorySearchParams,
+  withProjectId,
 } from "@/lib/page-inventory";
 import {
   INDEX_STATUS_LABEL,
@@ -30,6 +33,7 @@ import {
   WORKFLOW_STAGE_LABEL,
 } from "@/lib/page-inventory-query";
 import { getProject, getProjects } from "@/lib/projects";
+import { firstValue } from "@/lib/search-params";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -67,9 +71,20 @@ export default async function PageInventoryListPage({ searchParams }: PageInvent
   }
 
   const rawParams = await searchParams;
-  const projectIdParam = Array.isArray(rawParams.projectId)
-    ? rawParams.projectId[0]
-    : rawParams.projectId;
+  const projectIdParam = firstValue(rawParams.projectId);
+
+  // Fired concurrently with the project-existence check below, not sequentially after it
+  // (code-review finding, `dashboard-web-page-inventory`) — `getPages()` only needs the raw
+  // `projectId` string, not any field resolved from the `Project` entity itself.
+  // `parsePageInventorySearchParams()` is pure/synchronous, so calling it again below (once
+  // `project.id` is confirmed) is free — this keeps `query`'s type non-nullable there rather than
+  // threading a nullable value through every later reference. `tolerateDiscard()` avoids an
+  // unhandled-rejection warning on the branch where `project` turns out null and this promise is
+  // never awaited (the project-picker prompt renders instead, needing its own `getProjects()` call).
+  const pagesPromise = projectIdParam
+    ? tolerateDiscard(getPages(parsePageInventorySearchParams(projectIdParam, rawParams)))
+    : null;
+
   const project = projectIdParam ? await getProject(projectIdParam) : null;
 
   if (!project) {
@@ -86,23 +101,41 @@ export default async function PageInventoryListPage({ searchParams }: PageInvent
       offset: 0,
       pageSize: 100,
     });
-    return <ProjectPickerPrompt projects={projects} defaultProjectId={defaultProjectId} />;
+    return (
+      <ContentContainer>
+        <PageHeader title="Page Inventory" />
+        {projects.length === 0 ? (
+          <EmptyState
+            title="No projects yet"
+            description="Page Inventory is scoped to a project — create a project first."
+            action={
+              <Link href="/projects/new" style={{ fontSize: "0.875rem" }}>
+                New project
+              </Link>
+            }
+          />
+        ) : (
+          <ProjectPickerForm projects={projects} defaultProjectId={defaultProjectId} />
+        )}
+      </ContentContainer>
+    );
   }
 
   const query = parsePageInventorySearchParams(project.id, rawParams);
-  const { items: pages, hasNextPage } = await getPages(query);
+  const { items: pages, hasNextPage } = await pagesPromise!;
   const hasFilters =
     query.pageType !== null ||
     query.workflowStage !== null ||
     query.indexStatus !== null ||
     query.template !== null ||
     query.targetKeyword !== null ||
+    query.roadmapPhaseId !== null ||
     query.lastScanBefore !== null ||
     query.lastScanAfter !== null ||
     query.lastDeploymentBefore !== null ||
     query.lastDeploymentAfter !== null;
   const isPastLastPage = pages.length === 0 && query.offset > 0;
-  const clearFiltersHref = `/page-inventory?projectId=${project.id}`;
+  const clearFiltersHref = withProjectId("/page-inventory", project.id);
 
   return (
     <ContentContainer>
@@ -114,7 +147,7 @@ export default async function PageInventoryListPage({ searchParams }: PageInvent
               Switch project
             </Link>
             <Link
-              href={`/page-inventory/new?projectId=${project.id}`}
+              href={withProjectId("/page-inventory/new", project.id)}
               style={primaryActionLinkStyle}
             >
               New page
@@ -169,6 +202,11 @@ export default async function PageInventoryListPage({ searchParams }: PageInvent
         <TextFilter label="Template" name="template" value={query.template} />
         <TextFilter label="Search" name="search" value={query.search} />
         <TextFilter label="Target keyword" name="targetKeyword" value={query.targetKeyword} />
+        {/* No name-resolution endpoint exists for roadmap_items — a raw-id text input, same
+            "no picker" convention the create/edit form's own roadmapPhaseId field already uses
+            (code-review finding: this filter was previously omitted entirely, despite the backend
+            genuinely supporting it). */}
+        <TextFilter label="Roadmap phase ID" name="roadmapPhaseId" value={query.roadmapPhaseId} />
         <DateFilter label="Scanned after" name="lastScanAfter" value={query.lastScanAfter} />
         <DateFilter label="Scanned before" name="lastScanBefore" value={query.lastScanBefore} />
         <DateFilter
@@ -370,7 +408,7 @@ function PageRow({
         {page.publicId}
       </td>
       <td style={tdStyle}>
-        <Link href={`/page-inventory/${page.id}?projectId=${projectId}`}>{page.pageName}</Link>
+        <Link href={withProjectId(`/page-inventory/${page.id}`, projectId)}>{page.pageName}</Link>
       </td>
       <td style={{ ...tdStyle, color: "var(--webdesk-dashboard-color-foreground-muted)" }}>
         {page.pageType ?? "—"}
@@ -391,60 +429,5 @@ function PageRow({
         {page.lastDeploymentAt ?? "—"}
       </td>
     </tr>
-  );
-}
-
-function ProjectPickerPrompt({
-  projects,
-  defaultProjectId,
-}: {
-  readonly projects: readonly Project[];
-  readonly defaultProjectId: string | null;
-}) {
-  const hasDefault =
-    defaultProjectId !== null && projects.some((project) => project.id === defaultProjectId);
-
-  return (
-    <ContentContainer>
-      <PageHeader title="Page Inventory" />
-      {projects.length === 0 ? (
-        <EmptyState
-          title="No projects yet"
-          description="Page Inventory is scoped to a project — create a project first."
-          action={
-            <Link href="/projects/new" style={{ fontSize: "0.875rem" }}>
-              New project
-            </Link>
-          }
-        />
-      ) : (
-        <form
-          method="get"
-          style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "0.75rem" }}
-        >
-          <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-            <span style={labelStyle}>Project</span>
-            <select
-              name="projectId"
-              defaultValue={hasDefault ? (defaultProjectId as string) : ""}
-              required
-              style={selectStyle}
-            >
-              <option value="" disabled>
-                Select a project…
-              </option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" style={submitButtonStyle}>
-            View pages
-          </button>
-        </form>
-      )}
-    </ContentContainer>
   );
 }

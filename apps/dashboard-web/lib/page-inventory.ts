@@ -51,6 +51,7 @@ export async function getPages(query: PageInventoryQuery): Promise<PageListResul
   if (query.template) params.set("template", query.template);
   if (query.search) params.set("search", query.search);
   if (query.targetKeyword) params.set("targetKeyword", query.targetKeyword);
+  if (query.roadmapPhaseId) params.set("roadmapPhaseId", query.roadmapPhaseId);
   if (query.lastScanBefore) params.set("lastScanBefore", query.lastScanBefore);
   if (query.lastScanAfter) params.set("lastScanAfter", query.lastScanAfter);
   if (query.lastDeploymentBefore) params.set("lastDeploymentBefore", query.lastDeploymentBefore);
@@ -107,12 +108,14 @@ export async function getPage(projectId: string, pageId: string): Promise<Page |
 
 /**
  * Fetches a page's own URLs sub-resource, for the detail page's "Page URLs" section. Returns an
- * empty array rather than throwing on a malformed id (the same short-circuit `getPage()` uses) or
- * on a 404 — the detail page already gates its own rendering on `getPage()`'s own `null`/
- * `notFound()` result, so a genuinely-missing page never reaches a point where this function's
- * result matters; degrading here instead of throwing just avoids a second, redundant not-found code
- * path (matches `getWebsiteStrategyRecordVersions()`'s own precedent). Any other non-OK status
- * still throws, matching every other fetch function in this module.
+ * empty array on a malformed id (the same short-circuit `getPage()` uses), a 404, OR any other
+ * non-OK status (a transient backend error) — a genuine sub-resource failure must not crash the
+ * whole detail page, which already renders correctly around an empty URLs section (code-review
+ * finding, `dashboard-web-page-inventory`: this previously threw on any non-404 non-OK status,
+ * so a transient `page_urls` backend error would reject the `Promise.all` it's called from and
+ * take down the entire page — title, status actions, every other section — not just this one).
+ * The non-404 case is still logged, matching `fetchProjectApprovers()`'s own identical
+ * degrade-but-log precedent for an optional/secondary fetch.
  */
 export async function getPageUrls(projectId: string, pageId: string): Promise<readonly PageUrl[]> {
   if (!isUuid(projectId) || !isUuid(pageId)) {
@@ -133,7 +136,8 @@ export async function getPageUrls(projectId: string, pageId: string): Promise<re
     return [];
   }
   if (!response.ok) {
-    throw new Error(`Failed to load page URLs (status ${response.status})`);
+    console.error(`Failed to load page URLs for page ${pageId} (status ${response.status})`);
+    return [];
   }
   return ((await response.json()) as ApiSuccessResponse<readonly PageUrl[]>).data;
 }

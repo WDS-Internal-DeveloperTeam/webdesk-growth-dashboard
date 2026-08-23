@@ -68,6 +68,7 @@ describe("parsePageInventorySearchParams", () => {
       template: null,
       search: null,
       targetKeyword: null,
+      roadmapPhaseId: null,
       lastScanBefore: null,
       lastScanAfter: null,
       lastDeploymentBefore: null,
@@ -77,7 +78,8 @@ describe("parsePageInventorySearchParams", () => {
     });
   });
 
-  it("parses valid filter/offset/pageSize values", () => {
+  it("parses valid filter/offset/pageSize values, including roadmapPhaseId", () => {
+    const roadmapPhaseId = "22222222-2222-2222-2222-222222222222";
     expect(
       parsePageInventorySearchParams(PROJECT_ID, {
         pageType: "landing",
@@ -86,6 +88,7 @@ describe("parsePageInventorySearchParams", () => {
         template: "hero-v2",
         search: "pricing",
         targetKeyword: "buy widgets",
+        roadmapPhaseId,
         lastScanBefore: "2026-08-01",
         lastScanAfter: "2026-07-01",
         lastDeploymentBefore: "2026-08-15",
@@ -101,6 +104,7 @@ describe("parsePageInventorySearchParams", () => {
       template: "hero-v2",
       search: "pricing",
       targetKeyword: "buy widgets",
+      roadmapPhaseId,
       lastScanBefore: "2026-08-01",
       lastScanAfter: "2026-07-01",
       lastDeploymentBefore: "2026-08-15",
@@ -110,17 +114,19 @@ describe("parsePageInventorySearchParams", () => {
     });
   });
 
-  it("falls back to defaults for invalid/garbled enum and date values instead of passing them through", () => {
+  it("falls back to defaults for invalid/garbled enum, date, and roadmapPhaseId values instead of passing them through", () => {
     const result = parsePageInventorySearchParams(PROJECT_ID, {
       workflowStage: "not_a_real_stage",
       indexStatus: "not_a_real_status",
       lastScanBefore: "not-a-date",
+      roadmapPhaseId: "not-a-uuid",
       offset: "not-a-number",
       pageSize: "37",
     });
     expect(result.workflowStage).toBeNull();
     expect(result.indexStatus).toBeNull();
     expect(result.lastScanBefore).toBeNull();
+    expect(result.roadmapPhaseId).toBeNull();
     expect(result.offset).toBe(0);
     expect(result.pageSize).toBe(20);
   });
@@ -153,6 +159,7 @@ describe("buildPageInventoryHref", () => {
     template: null,
     search: null,
     targetKeyword: null,
+    roadmapPhaseId: null,
     lastScanBefore: null,
     lastScanAfter: null,
     lastDeploymentBefore: null,
@@ -188,6 +195,13 @@ describe("buildPageInventoryHref", () => {
     const withOffset = { ...baseQuery, offset: 50 };
     expect(buildPageInventoryHref(withOffset, { pageSize: 50 })).toBe(
       `/page-inventory?projectId=${PROJECT_ID}&pageSize=50`,
+    );
+  });
+
+  it("includes roadmapPhaseId when set", () => {
+    const roadmapPhaseId = "22222222-2222-2222-2222-222222222222";
+    expect(buildPageInventoryHref(baseQuery, { roadmapPhaseId })).toBe(
+      `/page-inventory?projectId=${PROJECT_ID}&roadmapPhaseId=${roadmapPhaseId}`,
     );
   });
 });
@@ -234,6 +248,7 @@ describe("getPages", () => {
         template: null,
         search: null,
         targetKeyword: null,
+        roadmapPhaseId: null,
         lastScanBefore: null,
         lastScanAfter: null,
         lastDeploymentBefore: null,
@@ -254,6 +269,7 @@ describe("getPages", () => {
       } as Response);
     }) as typeof fetch;
 
+    const roadmapPhaseId = "22222222-2222-2222-2222-222222222222";
     await getPages({
       projectId: PROJECT_ID,
       pageType: "landing",
@@ -262,6 +278,7 @@ describe("getPages", () => {
       template: null,
       search: null,
       targetKeyword: null,
+      roadmapPhaseId,
       lastScanBefore: null,
       lastScanAfter: null,
       lastDeploymentBefore: null,
@@ -271,7 +288,7 @@ describe("getPages", () => {
     });
 
     expect(requestedUrls[0]).toBe(
-      `https://api.example.com/page-inventory/projects/${PROJECT_ID}/pages?pageType=landing&workflowStage=draft&limit=21&offset=25`,
+      `https://api.example.com/page-inventory/projects/${PROJECT_ID}/pages?pageType=landing&workflowStage=draft&roadmapPhaseId=${roadmapPhaseId}&limit=21&offset=25`,
     );
   });
 
@@ -290,6 +307,7 @@ describe("getPages", () => {
       template: null,
       search: null,
       targetKeyword: null,
+      roadmapPhaseId: null,
       lastScanBefore: null,
       lastScanAfter: null,
       lastDeploymentBefore: null,
@@ -384,12 +402,19 @@ describe("getPageUrls", () => {
     expect(await getPageUrls(PROJECT_ID, VALID_PAGE_ID)).toEqual([]);
   });
 
-  it("throws on a non-404 non-OK response", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
-    await expect(getPageUrls(PROJECT_ID, VALID_PAGE_ID)).rejects.toThrow(
-      /Failed to load page URLs/,
-    );
-  });
+  it(
+    "degrades to an empty array on a non-404 non-OK response too, logging it, rather than " +
+      "throwing (code-review finding — bundling this with getPage() in a Promise.all previously " +
+      "meant a transient page_urls backend error crashed the entire detail page)",
+    async () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+      expect(await getPageUrls(PROJECT_ID, VALID_PAGE_ID)).toEqual([]);
+      expect(consoleError).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to load page URLs"),
+      );
+    },
+  );
 
   it("requests the /urls sub-resource route and returns every URL", async () => {
     const requestedUrls: string[] = [];

@@ -159,6 +159,17 @@ export class PagesService {
     // against, a real data dependency, not an avoidable extra round trip. findById() also 404s
     // cleanly (including on a project mismatch) before anything else runs.
     const current = await this.findById(id, projectId);
+
+    // archived/superseded are both terminal (TRANSITIONS's own entries for both are `{}` — no
+    // code path resurrects a page from either) — content on a terminal row must never change
+    // (code-review finding, `dashboard-web-page-inventory`: this guard was missing entirely,
+    // unlike Website Strategy Center's own identical `update()` guard, which this mirrors).
+    if (current.workflowStage === "archived" || current.workflowStage === "superseded") {
+      throw new BadRequestException(
+        `Page ${id} is ${current.workflowStage} and can no longer be edited`,
+      );
+    }
+
     await this.assertRoadmapPhaseExists(patch.roadmapPhaseId, current.projectId);
 
     const updated = await this.pages.update(id, { ...patch, updatedBy: actorUserId });

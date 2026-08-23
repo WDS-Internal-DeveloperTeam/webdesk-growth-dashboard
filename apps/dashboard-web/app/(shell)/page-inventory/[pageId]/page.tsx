@@ -5,12 +5,14 @@ import { ContentContainer, Fact, PageHeader, StatusBadge, typographyTokens } fro
 import { PageStatusActions } from "@/components/page-status-actions";
 import { PageUrlsSection } from "@/components/page-urls-section";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import { tolerateDiscard } from "@/lib/business-knowledge";
 import { dlStyle, h2Style, mutedStyle, sectionStyle } from "@/lib/detail-section-styles";
 import {
   formatTimestamp,
   getPage,
   getPageUrls,
   pageWorkflowStageBadge,
+  withProjectId,
 } from "@/lib/page-inventory";
 import {
   CLASSIFICATION_LABEL,
@@ -18,6 +20,7 @@ import {
   INDEX_STATUS_LABEL,
 } from "@/lib/page-inventory-query";
 import { getProject } from "@/lib/projects";
+import { firstValue } from "@/lib/search-params";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -52,19 +55,23 @@ export default async function PageInventoryDetailPage({
   }
 
   const rawParams = await searchParams;
-  const projectIdParam = Array.isArray(rawParams.projectId)
-    ? rawParams.projectId[0]
-    : rawParams.projectId;
+  const projectIdParam = firstValue(rawParams.projectId);
+  const { pageId } = await params;
+
+  // Fired concurrently with the project-existence check below, not sequentially after it
+  // (code-review finding, `dashboard-web-page-inventory`) — both only need the raw `projectId`
+  // string, not any field resolved from the `Project` entity itself. `tolerateDiscard()` avoids an
+  // unhandled-rejection warning on the branch where `project` turns out null and neither promise
+  // is ever awaited.
+  const pagePromise = projectIdParam ? tolerateDiscard(getPage(projectIdParam, pageId)) : null;
+  const urlsPromise = projectIdParam ? tolerateDiscard(getPageUrls(projectIdParam, pageId)) : null;
+
   const project = projectIdParam ? await getProject(projectIdParam) : null;
   if (!project) {
     redirect("/page-inventory");
   }
 
-  const { pageId } = await params;
-  const [page, urls] = await Promise.all([
-    getPage(project.id, pageId),
-    getPageUrls(project.id, pageId),
-  ]);
+  const [page, urls] = await Promise.all([pagePromise!, urlsPromise!]);
   if (!page) {
     notFound();
   }
@@ -95,7 +102,7 @@ export default async function PageInventoryDetailPage({
             />
             {!isTerminal ? (
               <Link
-                href={`/page-inventory/${page.id}/edit?projectId=${project.id}`}
+                href={withProjectId(`/page-inventory/${page.id}/edit`, project.id)}
                 style={primaryActionLinkStyle}
               >
                 Edit

@@ -422,6 +422,35 @@ describe("Page Inventory module endpoints (e2e, real disposable database)", () =
       .expect(403);
   });
 
+  it(
+    "rejects an edit to an archived page with a clean 400 (code-review finding — " +
+      "PagesService.update() previously had no terminal-state guard at all)",
+    async () => {
+      const cookie = await cookieForNewSession(superAdminUserId);
+      const created = await createDraftPage(cookie, { pageName: "Terminal Fixture" });
+
+      await request(app.getHttpServer())
+        .post(`/page-inventory/projects/${projectId}/pages/${created.id}/workflow-stage`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ workflowStage: "archived" })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post(`/page-inventory/projects/${projectId}/pages/${created.id}/update`)
+        .set("Cookie", cookie)
+        .set("Origin", process.env.WEB_APP_ORIGIN!)
+        .send({ pageName: "Should be rejected" })
+        .expect(400);
+
+      const getResponse = await request(app.getHttpServer())
+        .get(`/page-inventory/projects/${projectId}/pages/${created.id}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(getResponse.body.data.pageName).toBe("Terminal Fixture");
+    },
+  );
+
   it("owner_growth_approver (VCERAX, no S) is denied draft->submitted, but can review and approve once submitted", async () => {
     const adminCookie = await cookieForNewSession(superAdminUserId);
     const created = await createDraftPage(adminCookie, { pageName: "Owner Approver Fixture" });
