@@ -6521,11 +6521,11 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   decision CONFIRM (a clean pass, not an override, since the second-role review was already
   complete before the gate was requested), approved commit `3d0b4b2` on branch
   `module-page-inventory` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
-  (`current_gate` now `G4-page-inventory`). **This gate approval does not itself authorize
-  pushing the branch, opening a PR, or merging** — each remains its own separate,
-  not-yet-requested authorization, per this project's standing "no auto-merge" rule. No
-  `dashboard-web` UI exists yet for this module, matching every prior module's own backend-first
-  precedent.
+  (`current_gate` now `G4-page-inventory`). **"Push the branch and open a PR" was then separately
+  requested and executed** — pushed to `origin`, opened as
+  [PR #57](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/57). Merge
+  authorization remains a separate, not-yet-requested next step. No `dashboard-web` UI exists yet
+  for this module, matching every prior module's own backend-first precedent.
 
 ## Open client blockers
 
