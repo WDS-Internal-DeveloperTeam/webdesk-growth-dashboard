@@ -6610,6 +6610,59 @@ c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`, confirming the exact merged commit is
   production**, closing out this slice's full build-to-production arc — backend and now the full
   UI (list, detail, create/edit form, status actions, `page_urls` sub-resource editing) are both
   live for the Page Inventory module.
+- `[2026-08-23]` **Built the Keyword & Entity Library module backend** (module #8 on the
+  Recommended Module Roadmap) on the explicit "Start Keyword & Entity Library" instruction — the
+  mechanically-correct next candidate per `docs/phase-plans/module-implementation-roadmap.md`
+  (Wave 3, depending on `website_strategy_center`/`page_inventory`, both already live). Two genuine
+  architectural forks confirmed directly with the user first (`AskUserQuestion`): table scope (the
+  full 4-table relational model the canonical data-model doc names — `keywords`, `entities`,
+  `keyword_entity_relationships`, `page_keyword_assignments` — chosen over a simplified
+  single-table fallback, since both dependencies already exist so a real FK-validated join is
+  buildable now) and project scoping (`keywords`/`entities` are project-scoped, chosen over
+  organization-wide, since keyword research is inherently tied to a specific client website). 8
+  further field-level design decisions made directly, matching this project's own precedent for
+  judgment calls on an unsourced module — see `docs/task-packages/module-keyword-and-entity-library.md`
+  for the full account, including why no confidentiality/redaction mechanism was built (the
+  registry's own seeded `confidentialityLevel` value describes the approval workflow, not an
+  access-control tier, matching Persona Library's/Proof and Claims Library's own identical
+  precedent) and why `page_inventory.pages.targetKeyword` is deliberately not reconciled with the
+  new join table in this pass. Built by a background agent with a fully-specified prompt (the
+  exact schema, file layout, and known bug classes from prior modules to avoid repeating — terminal-
+  state CAS races, class-level RBAC decorators, raw repository exports across module boundaries),
+  then independently re-verified in full by the orchestrating session — every high-risk file read
+  directly (migration up/down, RBAC decorator placement, the CAS guard built into
+  `KeywordRepository.update()`/`updateStatus()` from day one rather than needing a security-review
+  fix-round the way Page Inventory did, the narrow read-only `PagesService.existsInProject()`
+  cross-module delegating method), every test suite independently re-run against a fresh local
+  disposable PostgreSQL 17 database, not trusted from the agent's own report. **Independent code
+  review then ran** (this project's own `code-review` skill, high effort, 8-angle finder pass) — 5
+  candidates surfaced after dedup, 4 CONFIRMED and fixed (most severe: a DTO length limit of 255
+  characters on 5 fields whose actual columns are `VARCHAR(100)`, so a 101–255-character value
+  passed Zod but crashed the real INSERT/UPDATE with an unhandled 500 — also fixed: two join-table
+  `create()` methods running independent existence checks sequentially instead of via `Promise.all`,
+  the exact bug class a prior Persona Library code review already caught once; a malformed-UUID
+  guard duplicated across both join-table services that was actually unreachable dead code, since
+  the DTO already enforces `.uuid()` before either service method runs; an inline type duplicating
+  an existing DTO), 1 REFUTED (`EntityRepository.update()`'s `{id}`-only scoping, verified
+  consistent with `KeywordRepository.update()`'s own identical scoping and Page Inventory's own
+  established `PageRepository.update()` precedent — not a new gap). **A separate `security-review`
+  skill run then found 0 findings above threshold** — confirmed correct RBAC decorator placement,
+  correct `projectId` threading into the dynamic per-transition authorization check (the exact gap
+  Page Inventory's own code review caught was not repeated here), correct IDOR scoping on all 4
+  tables including both join tables, no SQL injection surface, and independently re-verified the
+  code-review fix removing the malformed-UUID guard as genuinely sound (Zod validation runs before
+  either controller method body ever executes). Final numbers: 734/734 `dashboard-api` unit tests,
+  28/28 `packages/database` unit tests, 292/292 `packages/database` integration tests, 283/283
+  `dashboard-api` integration/e2e tests — all re-verified against a real disposable database after
+  every fix round; typecheck/lint/prettier all clean; migration up/down/up round-trip clean (61
+  migrations); `validate:module-registry` still 43 modules/21 permission groups; `pnpm audit` 0
+  vulnerabilities. A review packet (published as a Claude artifact, "Keyword & Entity Library
+  Review Packet" — code review + security review findings, fixes, and validation evidence, with a
+  decision section) was then prepared for the required second-role human review, since the
+  implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/module-keyword-and-entity-library-approval-checklist.md`. **Awaiting that
+  review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
