@@ -101,5 +101,10 @@ creation (no TOCTOU window). **0 findings above threshold.**
 - [ ] Code-review findings (2 CONFIRMED and fixed, 4 accepted as tracked debt, 2 refuted)
 - [ ] Security-review findings (0 above threshold)
 
+Review packet:
+[Page Inventory Review Packet](https://claude.ai/code/artifact/100265fb-6792-43b4-8832-afc9d68d8137)
+(published as a Claude artifact — code review + security review findings, fixes, and validation
+evidence, with a decision section).
+
 A gate decision, push/PR, and merge authorization each remain their own separate,
 not-yet-requested next steps, per this project's standing "no auto-merge" rule.
