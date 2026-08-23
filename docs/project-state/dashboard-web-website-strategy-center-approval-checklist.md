@@ -4,10 +4,9 @@
 PLAUSIBLE, 1 REFUTED — all 4 CONFIRMED fixed). Security review complete (0 findings above
 threshold). Required second-role human review complete — Jitesh D, "Approved," no disputes
 raised. Gate (G4-dashboard-web-website-strategy-center) approved — WebDesk Solution, decision
-CONFIRM, approved commit `e349feb` on branch `dashboard-web-website-strategy-center`. Pushed to
-`origin` and opened as
-[PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56). Not yet
-merged.
+CONFIRM, approved commit `e349feb` on branch `dashboard-web-website-strategy-center`. Merged
+([PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56), merge
+commit `55704e01163d33f5edaa188be757dfe2b2e980a2`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -127,3 +126,29 @@ second-role review was already complete before the gate was requested), approved
 This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
 production deployment — each remains its own separate, not-yet-requested authorization, per this
 project's standing "no auto-merge" rule.
+
+## Push/PR — COMPLETE
+
+**"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
+opened as
+[PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56). All 14
+CI checks green.
+
+## Merge — COMPLETE
+
+**"Merge PR #56" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `55704e01163d33f5edaa188be757dfe2b2e980a2`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+55704e01163d33f5edaa188be757dfe2b2e980a2`, confirming the exact merged commit is what's serving.
+- `dashboard-web`'s `/website-strategy-center` resolves (307) to `/auth/sign-in` for an
+  unauthenticated visitor — a transient stale-edge-cache `404` on the very first check was ruled
+  out via repeated, cache-busted checks, not a real defect.
+
+**The `dashboard-web` Website Strategy Center UI is now genuinely live in production** — closing
+out this slice's full build-to-production arc, and the Website Strategy Center module's own
+overall arc: backend and now the full UI (list, detail, create/edit form, status actions,
+version-history) are both live.

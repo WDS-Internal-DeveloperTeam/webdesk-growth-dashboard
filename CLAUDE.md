@@ -2679,8 +2679,9 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     yet for this module — a separate, not-yet-requested next step, matching every prior
     module's own precedent. **Update (2026-08-23): the `dashboard-web` UI has since been
     built — see item 41 below.**
-41. **`dashboard-web` Website Strategy Center UI — built, reviewed, gated, and opened as
-    [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56)
+41. **`dashboard-web` Website Strategy Center UI — built, reviewed, gated, merged
+    ([PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56),
+    merge commit `55704e01163d33f5edaa188be757dfe2b2e980a2`); now genuinely live in production
     (2026-08-23).**
     Closes this module's last named gap, following the backend's own build-to-production arc
     (PR #55). Not started
@@ -2765,8 +2766,19 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     opening a PR, or merging** — each remains its own separate, not-yet-requested
     authorization, per this project's standing "no auto-merge" rule. **"Push the branch and
     open a PR" was then separately requested and executed** — pushed to `origin`, opened as
-    [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56).
-    Merge authorization remains a separate, not-yet-requested next step.
+    [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56),
+    all 14 CI checks confirmed green. **"Merge PR #56" was then separately requested and
+    executed** — merge commit `55704e01163d33f5edaa188be757dfe2b2e980a2`, all 14 CI checks
+    green beforehand. Both Vercel projects auto-deployed on push to `main` and were verified
+    live directly, not just via CI's own Vercel status check — `dashboard-api`'s `/health`
+    returned `build.commitSha ==
+55704e01163d33f5edaa188be757dfe2b2e980a2`, confirming the exact merged commit is what's serving;
+    `dashboard-web`'s `/website-strategy-center` resolves (307) to `/auth/sign-in` for an
+    unauthenticated visitor (a transient stale-edge-cache `404` on the very first check was
+    ruled out via repeated, cache-busted checks, not a real defect). **The `dashboard-web`
+    Website Strategy Center UI is now genuinely live in production**, closing out this slice's
+    full build-to-production arc — backend and now the full UI (list, detail, create/edit
+    form, status actions, version-history) are both live.
 
 ## Recent decisions
 
@@ -6442,8 +6454,21 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
   per this project's standing "no auto-merge" rule.
 - `[2026-08-23]` **"Push the branch and open a PR" was separately requested and executed** on
   `dashboard-web-website-strategy-center` — pushed to `origin`, opened as
-  [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56).
-  Merge authorization remains a separate, not-yet-requested next step.
+  [PR #56](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/56). All
+  14 CI checks confirmed green.
+- `[2026-08-23]` **"Merge PR #56" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history —
+  merge commit `55704e01163d33f5edaa188be757dfe2b2e980a2`, all 14 CI checks green beforehand.
+  Both Vercel projects auto-deployed on push to `main` and were verified live directly, not
+  just via CI's own Vercel status check — `dashboard-api`'s `/health` returned
+  `build.commitSha ==
+55704e01163d33f5edaa188be757dfe2b2e980a2`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/website-strategy-center` resolves (307) to `/auth/sign-in` for an
+  unauthenticated visitor (a transient stale-edge-cache `404` on the very first check was ruled
+  out via repeated, cache-busted checks, not a real defect). **The `dashboard-web` Website
+  Strategy Center UI is now genuinely live in production**, closing out this slice's full
+  build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
+  actions, version-history) are both live.
 
 ## Open client blockers
 
