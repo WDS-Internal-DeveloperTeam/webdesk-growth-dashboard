@@ -1,0 +1,47 @@
+.form {
+  composes: form from "./keyword-form.module.css";
+}
+
+.fieldset {
+  composes: fieldset from "./keyword-form.module.css";
+}
+
+.fieldsetLegend {
+  composes: fieldsetLegend from "./keyword-form.module.css";
+}
+
+.field {
+  composes: field from "./keyword-form.module.css";
+}
+
+.label {
+  composes: label from "./keyword-form.module.css";
+}
+
+.helperText {
+  composes: helperText from "./keyword-form.module.css";
+}
+
+.readonlyValue {
+  composes: readonlyValue from "./keyword-form.module.css";
+}
+
+.input {
+  composes: input from "./keyword-form.module.css";
+}
+
+.error {
+  composes: error from "./keyword-form.module.css";
+}
+
+.actions {
+  composes: actions from "./keyword-form.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./keyword-form.module.css";
+}
+
+.cancelLink {
+  composes: cancelLink from "./keyword-form.module.css";
+}
