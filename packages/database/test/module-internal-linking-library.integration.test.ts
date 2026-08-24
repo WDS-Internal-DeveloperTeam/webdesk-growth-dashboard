@@ -385,12 +385,7 @@ describe("Internal Linking Library module (real disposable database)", () => {
 
         await links.updateStatus(created.id, "verified", "implemented", null);
         await new Promise((resolve) => setTimeout(resolve, 20));
-        const secondVerify = await links.updateStatus(
-          created.id,
-          "implemented",
-          "verified",
-          null,
-        );
+        const secondVerify = await links.updateStatus(created.id, "implemented", "verified", null);
         expect(secondVerify.outcome).toBe("updated");
         const secondVerifiedAt =
           secondVerify.outcome === "updated" ? secondVerify.entity.verifiedAt : null;

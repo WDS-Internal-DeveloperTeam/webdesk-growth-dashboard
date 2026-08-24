@@ -125,11 +125,7 @@ describe("InternalLinksService", () => {
 
     it("rejects sourcePageId === targetPageId before any database call", async () => {
       await expect(
-        svc.create(
-          FAKE_PROJECT_ID,
-          { ...validInput, targetPageId: SOURCE_PAGE_ID },
-          "actor-1",
-        ),
+        svc.create(FAKE_PROJECT_ID, { ...validInput, targetPageId: SOURCE_PAGE_ID }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
       expect(links.findByPublicId).not.toHaveBeenCalled();
       expect(pages.existsInProject).not.toHaveBeenCalled();
@@ -232,9 +228,9 @@ describe("InternalLinksService", () => {
 
     it("throws NotFoundException (IDOR prevention) when the link belongs to a different project", async () => {
       links.findById.mockResolvedValue(link({ projectId: FAKE_PROJECT_ID }));
-      await expect(
-        svc.findById("link-1", "99999999-9999-4999-8999-999999999999"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(svc.findById("link-1", "99999999-9999-4999-8999-999999999999")).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -265,12 +261,7 @@ describe("InternalLinksService", () => {
       links.findById.mockResolvedValue(link({ projectId: FAKE_PROJECT_ID }));
 
       await expect(
-        svc.update(
-          "link-1",
-          "99999999-9999-4999-8999-999999999999",
-          { anchor: "new" },
-          "actor-1",
-        ),
+        svc.update("link-1", "99999999-9999-4999-8999-999999999999", { anchor: "new" }, "actor-1"),
       ).rejects.toThrow(NotFoundException);
       expect(links.update).not.toHaveBeenCalled();
     });
@@ -296,7 +287,9 @@ describe("InternalLinksService", () => {
     });
 
     it("rejects an update that would make sourcePageId === targetPageId", async () => {
-      links.findById.mockResolvedValue(link({ sourcePageId: SOURCE_PAGE_ID, targetPageId: TARGET_PAGE_ID }));
+      links.findById.mockResolvedValue(
+        link({ sourcePageId: SOURCE_PAGE_ID, targetPageId: TARGET_PAGE_ID }),
+      );
 
       await expect(
         svc.update("link-1", FAKE_PROJECT_ID, { targetPageId: SOURCE_PAGE_ID }, "actor-1"),
@@ -370,12 +363,7 @@ describe("InternalLinksService", () => {
     it("returns the repository's updated entity and records an audit event", async () => {
       links.update.mockResolvedValue(link({ anchor: "renamed" }));
 
-      const result = await svc.update(
-        "link-1",
-        FAKE_PROJECT_ID,
-        { anchor: "renamed" },
-        "actor-1",
-      );
+      const result = await svc.update("link-1", FAKE_PROJECT_ID, { anchor: "renamed" }, "actor-1");
 
       expect(result.anchor).toBe("renamed");
       expect(auditService.record).toHaveBeenCalledWith(
@@ -396,12 +384,7 @@ describe("InternalLinksService", () => {
       links.findById.mockResolvedValue(link({ status: "proposed", projectId: FAKE_PROJECT_ID }));
 
       await expect(
-        svc.changeStatus(
-          "link-1",
-          "99999999-9999-4999-8999-999999999999",
-          "approved",
-          "actor-1",
-        ),
+        svc.changeStatus("link-1", "99999999-9999-4999-8999-999999999999", "approved", "actor-1"),
       ).rejects.toThrow(NotFoundException);
       expect(authorizationService.assertAllowed).not.toHaveBeenCalled();
     });

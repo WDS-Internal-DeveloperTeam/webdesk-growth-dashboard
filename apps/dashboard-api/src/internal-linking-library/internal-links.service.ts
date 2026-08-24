@@ -52,7 +52,10 @@ type InternalLinkWorkflowAction = "submit" | "review" | "approve";
  * outbound transition.
  */
 const TRANSITIONS: Readonly<
-  Record<InternalLinkStatus, Readonly<Partial<Record<InternalLinkStatus, InternalLinkWorkflowAction>>>>
+  Record<
+    InternalLinkStatus,
+    Readonly<Partial<Record<InternalLinkStatus, InternalLinkWorkflowAction>>>
+  >
 > = {
   proposed: { approved: "approve" },
   approved: { implemented: "submit", proposed: "approve" },
