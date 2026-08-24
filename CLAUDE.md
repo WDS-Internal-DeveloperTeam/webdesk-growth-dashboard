@@ -6682,8 +6682,21 @@ c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`, confirming the exact merged commit is
   standing "no auto-merge" rule.
 - `[2026-08-23]` **"Push the branch and open a PR" was separately requested and executed** on
   `module-keyword-and-entity-library` — pushed to `origin`, opened as
-  [PR #59](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/59). Merge
-  authorization remains a separate, not-yet-requested next step.
+  [PR #59](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/59). All
+  14 CI checks confirmed green.
+- `[2026-08-24]` **"Merge PR #59" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `ea53364653e8ee1f14cbdf74cf701865fd9d96be`, all 14 CI checks green beforehand. Both
+  Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+  CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+ea53364653e8ee1f14cbdf74cf701865fd9d96be`, confirming the exact merged commit is what's serving;
+  `GET /keyword-and-entity-library/projects/:projectId/keywords` returned a clean `401` (route
+  live, `SessionGuard` enforcing — not a `404`, which would mean the module never actually
+  deployed); and `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor,
+  confirming the session gate is intact. **The Keyword & Entity Library module backend is now
+  genuinely live in production**, closing out this slice's full build-to-production arc. No
+  `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+  matching every prior module's own backend-first precedent.
 
 ## Open client blockers
 

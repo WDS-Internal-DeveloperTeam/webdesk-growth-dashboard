@@ -4,8 +4,9 @@
 REFUTED — all 4 CONFIRMED fixed). Security review complete (0 findings above threshold). Required
 second-role human review complete — Jitesh D, "Approves," no disputes raised. Gate
 (G4-keyword-and-entity-library) approved — WebDesk Solution, decision CONFIRM, approved commit
-`4307d7f` on branch `module-keyword-and-entity-library`. Push/PR and merge authorization remain
-separate, not-yet-requested next steps.
+`4307d7f` on branch `module-keyword-and-entity-library`. Merged
+([PR #59](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/59), merge
+commit `ea53364653e8ee1f14cbdf74cf701865fd9d96be`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -145,5 +146,25 @@ project's standing "no auto-merge" rule.
 
 **"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
 opened as
-[PR #59](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/59). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #59](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/59). All 14
+CI checks confirmed green.
+
+## Merge — COMPLETE
+
+**"Merge PR #59" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `ea53364653e8ee1f14cbdf74cf701865fd9d96be`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+ea53364653e8ee1f14cbdf74cf701865fd9d96be`, confirming the exact merged commit is what's serving.
+- `GET /keyword-and-entity-library/projects/:projectId/keywords` returned a clean `401` (route
+  live, `SessionGuard` enforcing — not a `404`, which would mean the module never actually
+  deployed).
+- `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming the
+  session gate is intact.
+
+**The Keyword & Entity Library module backend is now genuinely live in production.** No
+`dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step, matching
+every prior module's own backend-first precedent.
