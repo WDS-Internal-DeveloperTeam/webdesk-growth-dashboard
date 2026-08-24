@@ -6968,6 +6968,79 @@ e439ca5be99d62a01944d9062926c470139e672b`, confirming the exact merged commit is
   Linking Library UI is now genuinely live in production**, closing out this slice's full
   build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
   actions) are both live for the Internal Linking Library module.
+- `[2026-08-24]` **Built the Content Template Library module backend** (module #10 on the
+  Recommended Module Roadmap, Wave 1 in the dependency-computed roadmap — no dependencies), under
+  the explicit "Yes, start it" instruction following "what's next on the module roadmap." One
+  genuine design fork confirmed directly with the user first (`AskUserQuestion`): the module's own
+  RBAC group (`page_content`) seeds a real, previously-unused `publish`/`unpublish` action pair
+  with no direct spec support for it (the canonical field list names only "approval, version") —
+  the user chose to build a real publish/unpublish mechanism, orthogonal to the standard 8-value
+  approval workflow, rather than leave it zero-wired (the precedent every earlier module with an
+  unused action followed). Task package: `docs/task-packages/module-content-template-library.md`.
+  Single organization-wide table (`content_templates`), standard `ArtifactApprovalStatus`
+  workflow reused verbatim, server-managed `version`. Built by a background agent with a
+  fully-specified prompt, then independently re-verified in full by the orchestrating session —
+  every high-risk file read directly (the repository's CAS logic, the service's RBAC placement,
+  the controller's decorator placement, both migrations, both `packages/database` barrel
+  exports), every test suite independently re-run against a fresh local disposable PostgreSQL 17
+  database. 828/828 `dashboard-api` unit tests, 339/339 `packages/database` integration tests,
+  336/336 `dashboard-api` e2e tests at initial build, migration up/down round-trip clean,
+  `validate:module-registry` unaffected (43 modules, 21 permission groups), `pnpm audit` 0
+  vulnerabilities. `apps/dashboard-web` untouched — backend only, matching every prior module's
+  own precedent.
+- `[2026-08-24]` **Independent code review run on `module-content-template-library`, then 6 of 9
+  confirmed/plausible findings fixed.** This project's own `code-review` skill (high effort,
+  8-angle finder pass, 1-vote verification) surfaced 9 candidates after dedup (4 CONFIRMED, 5
+  PLAUSIBLE). Most severe: `publish()` had a real TOCTOU race — it read `approvalStatus` via a
+  plain read, checked it was `"approved"`, then wrote via a compare-and-swap that only guarded
+  `isPublished`; a concurrent `changeApprovalStatus()` transition landing between the read and the
+  write could still let the publish succeed, leaving the row `archived`/`superseded` **and**
+  `isPublished: true` — the same bug class already fixed 4 times elsewhere in this codebase (Page
+  Inventory, Website Strategy Center, Keyword & Entity Library, Internal Linking Library). Fixed
+  by widening `updatePublishState()` with an optional `expectedApprovalStatus` CAS guard,
+  verified by a new deterministic integration test (not an unordered race — D3 explicitly allows
+  `archived`+published as a valid non-racy outcome, so the real invariant being tested is narrower
+  than "never both true"). Also fixed: `update()` had no terminal-state guard at all, letting an
+  `archived`/`superseded` record be silently edited by anyone holding only `edit` — a regression
+  from this codebase's most recently established convention (Website Strategy Center's own guard,
+  explicitly copied by Page Inventory), fixed by mirroring `PagesService.update()`'s exact
+  pattern; `?isPublished=false` silently coerced to `true` via `z.coerce.boolean()` (empirically
+  verified), fixed with the same explicit `"true"`/`"false"` enum+transform pattern already
+  established in `operational-contacts.dto.ts`; the RBAC `MODULE_KEY` was duplicated across the
+  service and controller — the identical bug class Internal Linking Library's own code review
+  already found and fixed one module earlier — fixed by promoting it to a shared
+  `CONTENT_TEMPLATE_LIBRARY_MODULE_KEY` export; transposable positional booleans in
+  `updatePublishState()` calls, fixed with named local constants; and `updateContentTemplateSchema`
+  hand-duplicating all 8 fields from `createContentTemplateSchema`, fixed by deriving it via
+  `.omit({publicId:true}).partial()`. 3 PLAUSIBLE findings left as accepted, tracked debt, each
+  matching an already-accepted pattern elsewhere in this codebase (three near-identical audit
+  try/catch blocks, already accepted in Persona/Service Library; the CAS+COALESCE-stamp pattern
+  hand-copied from Internal Linking Library rather than extracted at its 2nd occurrence; and
+  `publish()`'s avoidable double round-trip, verified as a real but marginal win not worth the
+  added complexity). Re-validated: 833/833 `dashboard-api` unit tests (5 new), 342/342
+  `packages/database` integration tests (4 new, including a new deterministic TOCTOU-guard test
+  and 2 `update()` CAS-guard tests, all against a real disposable database), 336/336
+  `dashboard-api` e2e tests (unchanged, confirms no regression), typecheck/lint/prettier all
+  clean, `pnpm audit` 0 vulnerabilities. See
+  `docs/project-state/module-content-template-library-approval-checklist.md`.
+- `[2026-08-24]` **Security review run on `module-content-template-library`, separately from the
+  code review, against the fixed branch.** 0 findings above threshold. Confirmed: the search
+  filter is fully parameterized through Sequelize's `where` object with wildcards escaped by the
+  existing, already-audited `escapeLikePattern()`; every `@RequirePermission` decorator is
+  method-level, never class-level; the two new CAS guards are sound with no bypass path (every
+  real `ContentTemplateApprovalStatus` value is a non-empty string, so the guard clause always
+  applies on a real call); no mass-assignment path exists for the governed
+  `approvalStatus`/`version`/`isPublished`/`publishedAt` fields, since neither DTO declares them
+  and Zod's default `strip` mode drops any unrecognized keys before the service ever sees them;
+  and the publish/unpublish mechanism as a whole has no way to forge a historical `publishedAt`,
+  with `unpublish()`'s lack of a status restriction being documented product design (D2/D3), not
+  an authorization gap. A review packet (published as a Claude artifact, "Content Template
+  Library Review Packet" — code review + security review findings, fixes, and validation
+  evidence, with a decision section) was then prepared for the required second-role human review,
+  since the implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/module-content-template-library-approval-checklist.md`. **Awaiting that
+  review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
