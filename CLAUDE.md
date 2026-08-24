@@ -7173,6 +7173,88 @@ befd1de3f583c4bcf271a1bd70a44fd392df7a29`, confirming the exact merged commit is
   live in production**, closing out this slice's full build-to-production arc — backend and now
   the full UI (list, detail, create/edit form, status actions, publish/unpublish actions) are both
   live for the Content Template Library module.
+- `[2026-08-24]` **Built the Review and Approval Center module backend** (module #11 on the
+  Recommended Module Roadmap — the first module in this codebase that is a cross-cutting
+  **engine** attaching to records in OTHER modules via a polymorphic `(targetModuleKey, targetId)`
+  reference with no foreign key, rather than a single content-record library of its own), under
+  the explicit "Build a minimal, real approval system now" instruction. A genuine conflict was
+  surfaced and resolved directly with the user first (`AskUserQuestion`): the recommended roadmap
+  places this module at Wave 3 ("build before Page Workspace"), but the module registry's own
+  seeded `dependencies` for `review_and_approval_center` name four modules that don't exist yet
+  (`page_workspace`, `case_study_studio`, `ready_for_claude_queue`, `design_review_center`) —
+  resolved by building the generic mechanism the roadmap's own instruction actually calls for
+  ("generic approval system for all future modules"), against what exists today, rather than
+  waiting on those four modules. A full task package was authored directly (not delegated),
+  `docs/task-packages/module-review-and-approval-center.md`, 10 design decisions (D1–D10): a
+  three-table schema (`reviews`/`review_comments`/`review_decisions`), two orthogonal axes
+  (`status`/`isPaused`, mirroring Content Template Library's own already-reviewed split), opaque
+  version-compare labels (no real diff mechanism exists), separation of duties via the existing
+  `SeparationOfDutiesService` (the first real consumer of `assertDistinctActors()` outside
+  `RoleAssignmentService`/`RecoveryService`, which its own doc comment already named this module
+  as an intended future consumer of), immutable approval events via the existing `audit_events`
+  "approval" event type (no new mechanism), a new narrow
+  `AuthorizationService.isValidModuleKey()` delegating method (deliberately not exporting the
+  `ModuleRegistryRepository` itself across the module boundary), organization-wide scope, no
+  confidentiality mechanism (matching the real seeded `confidentialityLevel: null`), no hard
+  delete, and an RBAC action mapping reusing the already-seeded `review_center` permission group
+  verbatim — no new RBAC migration. Also flags a real, unresolved RBAC-matrix oddity: only
+  `super_admin`/`owner_growth_approver` hold the "create" action, even though the four mid-tier
+  roles hold review+approve — recorded as-seeded, not worked around. Built by a background agent
+  with a fully-specified prompt, then independently re-verified in full by the orchestrating
+  session — every high-risk file read directly (the migration, all three atomic CAS repository
+  methods, RBAC decorator placement via direct reading, the dynamic per-action RBAC check inside
+  `decide()`, both `packages/database` barrel exports), every test suite independently re-run
+  against a fresh local disposable PostgreSQL 17 database, not trusted from the agent's own
+  report — catching and correcting one real process mistake along the way (the agent's first
+  commit had briefly landed on `main` instead of the feature branch; self-caught and fixed before
+  reporting back, verified clean via `git fetch`/`git rev-parse`). 866/866 `dashboard-api` unit
+  tests, 369/369 `packages/database` integration tests, 358/358 `dashboard-api` e2e tests at
+  initial build; migration up/down/down/up round-trip clean; `validate:module-registry` (43
+  modules, 21 permission groups); `pnpm audit` 0 vulnerabilities. **Independent code review then
+  ran** (this project's own `code-review` skill, high effort, 8-angle finder pass, 1-vote
+  verification) — 8 candidates surfaced after dedup, **all 8 CONFIRMED**, and **all 8 fixed**:
+  most severe, `updateStatus()` had no terminal-status CAS guard (unlike its siblings
+  `updatePaused()`/`updateAssignee()`), letting a caller who observed a review as
+  `approved`/`rejected` replay that as `expectedStatus` and reverse a supposedly-permanent
+  decision — fixed by rejecting a terminal `expectedStatus` up front. Also fixed: non-atomic,
+  unguarded `review_decisions` writes across `decide()`/`setPaused()`/`delegate()` (a transient
+  failure after the CAS write committed left zero record of who changed the review — total and
+  unrecoverable for `setPaused()`/`delegate()`, whose only history mechanism is
+  `review_decisions`), fixed by wrapping the CAS write and the decision write in one
+  `withTransaction()` block, mirroring `ProjectService.setActivePhase()`'s own established
+  pattern; `updateAssignee()` had no CAS on the prior assignee, letting two concurrent
+  `delegate()` calls both "succeed" and write contradictory decision rows, fixed by adding
+  `expectedAssignedToUserId` as a real CAS parameter; `review_decisions` was write-only with no
+  `GET` route ever exposing it despite the task package's own D1 describing it as "queryable
+  local history," fixed by adding `GET /reviews/:id/decisions`; `assertAssigneeExists()` was a
+  4th independent hand-copy of an existence-check pattern already present in
+  `ProjectService`/`ServicesService`/`InternalLinksService`, fixed by extracting
+  `UsersService.assertUserExists(userId, fieldName)`; a CAS-outcome exception-mapping pattern was
+  triple-duplicated at both the service and repository layers, fixed with shared
+  `unwrapCasResult()`/`casUpdate()` helpers; `create()` ran two independent checks sequentially
+  instead of via `Promise.all` — the same avoidable bug class this project's prior reviews have
+  caught repeatedly — fixed; and `review-comments.service.ts` duplicated its "review exists"
+  guard between two methods, fixed by extracting `assertReviewExists()`. No findings left as
+  accepted, tracked debt — every CONFIRMED finding was fixed. Re-validated: 875/875 `dashboard-api`
+  unit tests (9 new), 371/371 `packages/database` integration tests (2 new, real disposable
+  database, migration round-trip re-confirmed), 362/362 `dashboard-api` e2e tests (4 new, real
+  disposable database + real seeded RBAC), `validate:module-registry` unaffected, `pnpm audit` 0
+  vulnerabilities. **A separate `security-review` skill run then found 0 findings above
+  threshold** — confirmed the dynamic per-action RBAC check in `decide()` is a TypeScript-exhaustive
+  mapping over a Zod-validated enum with no bypass path; `SeparationOfDutiesService.assertDistinctActors()`
+  runs and can throw before the new `withTransaction()` wrapping is ever entered, no race window;
+  the new `GET /reviews/:id/decisions` route is gated identically to reading the review itself;
+  `AuthorizationService.isValidModuleKey()`'s query is fully parameterized via Sequelize, no
+  injection surface, and the repository stays un-exported across the module boundary; the new
+  `expectedAssignedToUserId` CAS field introduces no cross-review enumeration oracle (the conflict
+  message deliberately omits the row's actual current assignee); and every free-text Zod field has
+  a length cap, with the search filter routed through the already-audited `escapeLikePattern()`.
+  A review packet (published as a Claude artifact — code review + security review findings, fixes,
+  and validation evidence, with a decision section) was prepared for the required second-role
+  human review, since the implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/module-review-and-approval-center-approval-checklist.md`. **Awaiting that
+  review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
