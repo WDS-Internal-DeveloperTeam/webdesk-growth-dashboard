@@ -2,7 +2,10 @@
 
 **Status:** Built, code review complete (5 candidates surfaced after dedup — 5 CONFIRMED, all
 fixed). Security review complete (0 findings above threshold). Required second-role human review
-complete — Jitesh D, "Approves," no disputes raised. Awaiting a gate decision.
+complete — Jitesh D, "Approves," no disputes raised. Gate
+(G4-dashboard-web-keyword-and-entity-library) approved — WebDesk Solution, decision CONFIRM,
+approved commit `4126d29` on branch `dashboard-web-keyword-and-entity-library`. Push/PR and merge
+authorization remain separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -118,3 +121,23 @@ above threshold.
 
 A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
 steps, per this project's standing "no auto-merge" rule.
+
+**The gate (G4-dashboard-web-keyword-and-entity-library) was then separately requested and
+approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+second-role review was already complete before the gate was requested), approved commit
+`4126d29` on branch `dashboard-web-keyword-and-entity-library` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-keyword-and-entity-library`).
+
+| Field                    | Value                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-dashboard-web-keyword-and-entity-library                                                                                                |
+| Approver (gate decision) | WebDesk Solution                                                                                                                           |
+| Gate date                | 2026-08-24                                                                                                                                 |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                          |
+| Approved commit          | `4126d29` on branch `dashboard-web-keyword-and-entity-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `dashboard-web-keyword-and-entity-library` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
+production deployment — each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule.
