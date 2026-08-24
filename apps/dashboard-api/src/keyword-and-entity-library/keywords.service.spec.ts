@@ -144,6 +144,38 @@ describe("KeywordsService", () => {
         svc.create(FAKE_PROJECT_ID, { publicId: "KW-X", queryText: "x" }, "actor-1"),
       ).rejects.toBe(dbError);
     });
+
+    it("sanitizes cannibalizationNotes before writing, stripping a disallowed tag (dashboard-web UI build, 2026-08-24)", async () => {
+      keywords.findByPublicId.mockResolvedValue(null);
+      keywords.create.mockResolvedValue(keyword());
+
+      await svc.create(
+        FAKE_PROJECT_ID,
+        {
+          publicId: "KW-X",
+          queryText: "best seo tools",
+          cannibalizationNotes: "<script>alert(1)</script><p>Competes with /blog/seo-tools</p>",
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = keywords.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.cannibalizationNotes).toBe("<p>Competes with /blog/seo-tools</p>");
+    });
+
+    it("passes a null cannibalizationNotes through unchanged rather than coercing it into an empty string", async () => {
+      keywords.findByPublicId.mockResolvedValue(null);
+      keywords.create.mockResolvedValue(keyword());
+
+      await svc.create(
+        FAKE_PROJECT_ID,
+        { publicId: "KW-X", queryText: "x", cannibalizationNotes: null },
+        "actor-1",
+      );
+
+      const [writtenInput] = keywords.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.cannibalizationNotes).toBeNull();
+    });
   });
 
   describe("findById", () => {
@@ -277,6 +309,44 @@ describe("KeywordsService", () => {
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ action: "update", entityType: "keyword" }),
       );
+    });
+
+    it("sanitizes a real (non-null) cannibalizationNotes value on update, stripping a disallowed tag (dashboard-web UI build, 2026-08-24)", async () => {
+      keywords.findById.mockResolvedValue(
+        keyword({ approvalStatus: "draft", projectId: FAKE_PROJECT_ID, cannibalizationNotes: "old" }),
+      );
+      keywords.update.mockResolvedValue(keyword());
+
+      await svc.update(
+        "keyword-1",
+        FAKE_PROJECT_ID,
+        { cannibalizationNotes: "<script>alert(1)</script><p>Updated note</p>" },
+        "actor-1",
+      );
+
+      const [, patchArg] = keywords.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.cannibalizationNotes).toBe("<p>Updated note</p>");
+    });
+
+    it("skips re-sanitizing cannibalizationNotes when it's identical to the stored value", async () => {
+      keywords.findById.mockResolvedValue(
+        keyword({
+          approvalStatus: "draft",
+          projectId: FAKE_PROJECT_ID,
+          cannibalizationNotes: "<p>Bold</p>",
+        }),
+      );
+      keywords.update.mockResolvedValue(keyword());
+
+      await svc.update(
+        "keyword-1",
+        FAKE_PROJECT_ID,
+        { queryText: "renamed", cannibalizationNotes: "<p>Bold</p>" },
+        "actor-1",
+      );
+
+      const [, patchArg] = keywords.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.cannibalizationNotes).toBe("<p>Bold</p>");
     });
   });
 

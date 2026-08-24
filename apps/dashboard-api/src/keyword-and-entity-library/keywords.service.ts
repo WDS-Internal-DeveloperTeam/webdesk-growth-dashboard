@@ -11,7 +11,11 @@ import type {
   KeywordListFilter,
   KeywordRepository,
 } from "@webdesk/database";
-import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
+import {
+  isSequelizeUniqueConstraintError,
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+} from "@webdesk/validation";
 import { KEYWORD_REPOSITORY } from "./keyword-and-entity-library.constants.js";
 import type { CreateKeywordDto, UpdateKeywordDto } from "./keyword-and-entity-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -89,7 +93,15 @@ export class KeywordsService {
 
     let created: KeywordEntity;
     try {
-      created = await this.keywords.create({ ...input, projectId, createdBy: actorUserId });
+      created = await this.keywords.create({
+        ...input,
+        // Sanitized before storage (dashboard-web UI build, 2026-08-24) — cannibalizationNotes
+        // switches to the rich-text editor per the 2026-08-22 standing rule; mirrors
+        // PersonasService.create()'s own identical wiring.
+        cannibalizationNotes: sanitizeNullableRichText(input.cannibalizationNotes),
+        projectId,
+        createdBy: actorUserId,
+      });
     } catch (error) {
       // The publicId uniqueness check above is TOCTOU (two concurrent creates with the same
       // publicId can both pass it before either INSERT commits) — the real unique index catches
@@ -156,7 +168,16 @@ export class KeywordsService {
     // the identical bug class.
     const updated = await this.keywords.update(
       id,
-      { ...patch, updatedBy: actorUserId },
+      {
+        ...patch,
+        // Skips re-sanitizing an unchanged value, mirroring PersonasService.update()'s own
+        // identical `sanitizeNullableRichTextIfChanged()` wiring.
+        cannibalizationNotes: sanitizeNullableRichTextIfChanged(
+          patch.cannibalizationNotes,
+          current.cannibalizationNotes,
+        ),
+        updatedBy: actorUserId,
+      },
       current.approvalStatus,
     );
     if (!updated) {

@@ -108,6 +108,38 @@ describe("EntitiesService", () => {
         svc.create(FAKE_PROJECT_ID, { publicId: "ENT-X", name: "X" }, "actor-1"),
       ).rejects.toBe(dbError);
     });
+
+    it("sanitizes description before writing, stripping a disallowed tag (dashboard-web UI build, 2026-08-24)", async () => {
+      entities.findByPublicId.mockResolvedValue(null);
+      entities.create.mockResolvedValue(entityRecord());
+
+      await svc.create(
+        FAKE_PROJECT_ID,
+        {
+          publicId: "ENT-X",
+          name: "Acme Corp",
+          description: "<script>alert(1)</script><p>A real organization entity</p>",
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = entities.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.description).toBe("<p>A real organization entity</p>");
+    });
+
+    it("passes a null description through unchanged rather than coercing it into an empty string", async () => {
+      entities.findByPublicId.mockResolvedValue(null);
+      entities.create.mockResolvedValue(entityRecord());
+
+      await svc.create(
+        FAKE_PROJECT_ID,
+        { publicId: "ENT-X", name: "X", description: null },
+        "actor-1",
+      );
+
+      const [writtenInput] = entities.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.description).toBeNull();
+    });
   });
 
   describe("findById", () => {
@@ -165,6 +197,36 @@ describe("EntitiesService", () => {
       await expect(
         svc.update("entity-1", FAKE_PROJECT_ID, { name: "New" }, "actor-1"),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("sanitizes a real (non-null) description value on update, stripping a disallowed tag (dashboard-web UI build, 2026-08-24)", async () => {
+      entities.findById.mockResolvedValue(entityRecord({ description: "old" }));
+      entities.update.mockResolvedValue(entityRecord());
+
+      await svc.update(
+        "entity-1",
+        FAKE_PROJECT_ID,
+        { description: "<script>alert(1)</script><p>Updated description</p>" },
+        "actor-1",
+      );
+
+      const [, patchArg] = entities.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.description).toBe("<p>Updated description</p>");
+    });
+
+    it("skips re-sanitizing description when it's identical to the stored value", async () => {
+      entities.findById.mockResolvedValue(entityRecord({ description: "<p>Bold</p>" }));
+      entities.update.mockResolvedValue(entityRecord());
+
+      await svc.update(
+        "entity-1",
+        FAKE_PROJECT_ID,
+        { name: "Renamed", description: "<p>Bold</p>" },
+        "actor-1",
+      );
+
+      const [, patchArg] = entities.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.description).toBe("<p>Bold</p>");
     });
   });
 
