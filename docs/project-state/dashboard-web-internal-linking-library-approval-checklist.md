@@ -2,8 +2,10 @@
 
 **Status:** Built, code review complete (8 candidates surfaced after dedup — 8 CONFIRMED, all
 fixed). Security review complete (0 findings above threshold). Required second-role human review
-complete — Jitesh D, "Approves," no disputes raised. A gate decision, push/PR, and merge
-authorization each remain separate, not-yet-requested next steps.
+complete — Jitesh D, "Approves," no disputes raised. Gate `G4-dashboard-web-internal-linking-library`
+approved (WebDesk Solution, CONFIRM). Pushed to `origin` and opened as
+[PR #62](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/62). Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -21,7 +23,7 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ None — every confirmed finding was fixed in this pass                                                                                                                                                                                                                                                                                                                                                    |
 | 8   | Live end-to-end verified                   | ✅ Independently re-verified: every high-risk file read directly (the two `SinglePagePicker` instances, the `UserPicker`/`approverTouched` wiring, the RBAC-crash fix, the backend sanitization wiring), every test suite re-run against a fresh local disposable PostgreSQL 17 database, `next build` confirmed clean, all 4 routes live-rendered in the Browser pane with clean unauthenticated redirects |
 | 9   | Documentation updated                      | ✅ `CLAUDE.md`'s "Recent decisions" entries updated                                                                                                                                                                                                                                                                                                                                                         |
-| 10  | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-internal-linking-library`, commits `9bf4179` (shared types + backend rich-text conversion) → `1263a8b` (frontend UI) → `1beb91d` (code-review fixes) — not yet pushed to `origin`                                                                                                                                                                                                  |
+| 10  | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-internal-linking-library`, commits `9bf4179` (shared types + backend rich-text conversion) → `1263a8b` (frontend UI) → `1beb91d` (code-review fixes) → `bf82284` (gate approval docs) — pushed to `origin`, opened as [PR #62](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/62)                                                                     |
 
 ## Forbidden-actions check
 
@@ -142,3 +144,8 @@ second-role review was already complete before the gate was requested), approved
 This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
 production deployment — each remains its own separate, not-yet-requested authorization, per this
 project's standing "no auto-merge" rule.
+
+**"Push the branch and open a PR" was then separately requested and executed** — pushed to
+`origin`, opened as
+[PR #62](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/62). Merge
+authorization remains a separate, not-yet-requested next step.
