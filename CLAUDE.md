@@ -7050,6 +7050,16 @@ e439ca5be99d62a01944d9062926c470139e672b`, confirming the exact merged commit is
   `docs/project-state/module-content-template-library-approval-checklist.md`'s "Sign-off" section.
   A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
   steps.
+- `[2026-08-24]` **The gate (G4-content-template-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `b4e2662` on branch `module-content-template-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-content-template-library`) and
+  `docs/project-state/module-content-template-library-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
+  each remains its own separate, not-yet-requested authorization, per this project's standing
+  "no auto-merge" rule.
 
 ## Open client blockers
 

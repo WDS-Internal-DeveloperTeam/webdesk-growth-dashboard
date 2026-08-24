@@ -3,8 +3,8 @@
 **Status:** Built, code review complete (9 candidates surfaced after dedup — 4 CONFIRMED, 5
 PLAUSIBLE; 6 fixed, 3 accepted as tracked debt). Security review complete (0 findings above
 threshold). Required second-role human review complete — Jitesh D, "Approves," no disputes raised.
-A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-steps.
+Gate `G4-content-template-library` approved (WebDesk Solution, CONFIRM). Push/PR and merge
+authorization each remain separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -131,5 +131,21 @@ a fix.
 | Scope reviewed                | Full code-review disposition (6 fixed, 3 accepted debt) and full security-review disposition (0 above threshold), per the published review packet |
 | Disputes raised               | None recorded                                                                                                                                     |
 
-A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-steps.
+**The gate (G4-content-template-library) was then separately requested and approved** — WebDesk
+Solution, decision CONFIRM (a clean pass, not an override, since the second-role review was
+already complete before the gate was requested), approved commit `b4e2662` on branch
+`module-content-template-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
+`gates[]` (`current_gate` now `G4-content-template-library`).
+
+| Field                    | Value                                                                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-content-template-library                                                                                                       |
+| Approver (gate decision) | WebDesk Solution                                                                                                                  |
+| Gate date                | 2026-08-24                                                                                                                        |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                 |
+| Approved commit          | `b4e2662` on branch `module-content-template-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `module-content-template-library` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
+remains its own separate, not-yet-requested authorization, per this project's standing
+"no auto-merge" rule.

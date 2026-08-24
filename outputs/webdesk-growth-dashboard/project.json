@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-internal-linking-library",
+    "current_gate": "G4-content-template-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-24T00:00:00Z",
-    "version": 66
+    "version": 67
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -686,6 +686,20 @@
       "approved_commit": "a43d3f0",
       "record": "docs/project-state/dashboard-web-internal-linking-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-content-template-library",
+      "type": "qa-security-gate",
+      "scope": "module-content-template-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-24T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Content Template Library module #10 backend -- built (single organization-wide content_templates table, standard 8-value ArtifactApprovalStatus workflow, server-managed version, and a real new publish/unpublish mechanism -- the first module wiring the page_content RBAC group's previously-unused publish/unpublish actions into real code, per an explicit design fork confirmed directly with the user). Independent code review (8-angle finder pass, high effort) surfaced 9 candidates after dedup (4 CONFIRMED, 5 PLAUSIBLE); 6 fixed, most severe a TOCTOU race in publish() (widened updatePublishState() with an expectedApprovalStatus CAS guard, closing the same bug class already fixed 4 times elsewhere in this codebase) and a missing terminal-state guard on update() (mirrored PagesService.update()'s exact pattern); 3 PLAUSIBLE findings accepted as tracked debt. Separate security review found 0 findings above threshold. Required second-role human review complete -- Jitesh D, Approves, no disputes. 833/833 dashboard-api unit tests, 342/342 packages/database integration tests, 336/336 dashboard-api e2e tests, typecheck/lint/prettier clean, pnpm audit 0 vulnerabilities.",
+      "approved_commit": "b4e2662",
+      "record": "docs/project-state/module-content-template-library-approval-checklist.md",
+      "scope_excludes": "dashboard-web UI for this module (backend-only pass, matching every prior module's own backend-first precedent) -- separate, not-yet-requested next step."
     }
   ],
   "budget": {
@@ -2294,6 +2308,15 @@
       },
       "project_version_before": 65,
       "project_version_after": 66
+    },
+    {
+      "timestamp": "2026-08-24T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "G4-content-template-library approved (CONFIRM) -- clean pass, not an override, since the second-role review was already complete before the gate was requested.",
+      "project_version_before": 66,
+      "project_version_after": 67
     }
   ]
 }
