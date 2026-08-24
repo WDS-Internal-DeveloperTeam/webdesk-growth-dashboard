@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ContentTemplateApprovalStatus } from "@webdesk/shared-types";
-import { parseApiErrorMessage } from "@/lib/api-errors";
+import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import styles from "./content-template-library-status-actions.module.css";
 
@@ -91,6 +91,16 @@ export function ContentTemplateStatusActions({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<ContentTemplateApprovalStatus | null>(null);
 
+  // Re-sync from the server-passed prop whenever it changes (code-review finding) — without this,
+  // a transition made via a second tab/operator, or a status-independent change on the same page
+  // (e.g. the sibling ContentTemplatePublishActions component's own router.refresh()), would go
+  // unreflected here until this component's own next successful transition. Does not fire on this
+  // component's own optimistic setApprovalStatus() call below, since that already matches the
+  // prop's next value once router.refresh() resolves.
+  useEffect(() => {
+    setApprovalStatus(initialStatus);
+  }, [initialStatus]);
+
   const targets = ALLOWED_TRANSITIONS[approvalStatus] ?? [];
   if (targets.length === 0) {
     return null;
@@ -104,17 +114,12 @@ export function ContentTemplateStatusActions({
     setError(null);
     setPending(nextStatus);
     try {
-      const response = await fetch(
+      const result = await postMutation(
         `${getApiBaseUrl()}/content-template-library/templates/${templateId}/status`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ approvalStatus: nextStatus }),
-        },
+        { approvalStatus: nextStatus },
       );
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
       // Same batched-render pattern PersonaStatusActions/ServiceStatusActions use: update the

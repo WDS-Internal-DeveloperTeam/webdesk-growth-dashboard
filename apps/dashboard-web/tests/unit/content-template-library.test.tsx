@@ -153,10 +153,10 @@ describe("contentTemplateApprovalStatusBadge", () => {
 });
 
 describe("contentTemplatePublishBadge", () => {
-  it("maps published to healthy and unpublished to unknown, with distinct tokens", () => {
+  it("maps published to healthy and unpublished to notConfigured — notConfigured, not unknown, so 'Unpublished' doesn't collide with 'Draft' (code-review finding, draft's own token)", () => {
     expect(contentTemplatePublishBadge(true)).toEqual({ token: "healthy", label: "Published" });
     expect(contentTemplatePublishBadge(false)).toEqual({
-      token: "unknown",
+      token: "notConfigured",
       label: "Unpublished",
     });
   });

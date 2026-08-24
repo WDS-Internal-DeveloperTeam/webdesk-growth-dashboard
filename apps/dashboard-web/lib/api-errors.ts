@@ -44,3 +44,42 @@ export async function parseApiErrorMessage(response: Response): Promise<string> 
   }
   return GENERIC_MESSAGE;
 }
+
+export type PostMutationResult<T> =
+  { readonly ok: true; readonly data: T } | { readonly ok: false; readonly message: string };
+
+/**
+ * `fetch()` a mutating `dashboard-api` route with the standard shape every mutation in this app
+ * already uses (`credentials: "include"`, JSON body, `parseApiErrorMessage()` on failure) —
+ * extracted (code-review finding) after the identical fetch-then-check-`response.ok` block was
+ * hand-copied 3 times in the same PR that introduced `ContentTemplateStatusActions`/
+ * `ContentTemplatePublishActions`/`ContentTemplateLibraryForm`. Only covers the network call
+ * itself; each caller still owns its own local-state update and `router.refresh()` timing, since
+ * those differ per component (a status transition vs. a create/edit redirect).
+ */
+export async function postMutation<T = unknown>(
+  url: string,
+  body?: unknown,
+): Promise<PostMutationResult<T>> {
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    return { ok: false, message: await parseApiErrorMessage(response) };
+  }
+  // Tolerant on success: not every caller needs the parsed body (status/publish-actions only care
+  // that the request succeeded, and update their own local state from a value they already know,
+  // never from the response), so a missing/non-JSON success body degrades to `undefined` rather
+  // than throwing — a plain `.catch()` isn't enough here, since a genuinely missing `.json` method
+  // throws synchronously before returning a promise to catch.
+  let json: { data: T } | null;
+  try {
+    json = (await response.json()) as { data: T };
+  } catch {
+    json = null;
+  }
+  return { ok: true, data: (json?.data ?? undefined) as T };
+}

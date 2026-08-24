@@ -36,10 +36,17 @@ export function contentTemplateApprovalStatusBadge(status: ContentTemplateApprov
 
 /**
  * `isPublished` badge presentation — no sibling precedent, this is the first module with a real
- * publish/unpublish mechanism (task package D1). `healthy`/`unknown` chosen so "Published" never
- * shares a token with any of the approval-status badge's own live/in-progress tokens
- * (`unknown`/`notConfigured`/`degraded`), keeping the two badges visually distinguishable when
- * shown side by side.
+ * publish/unpublish mechanism (task package D1). Only 5 `StatusToken` values exist in total
+ * (`packages/ui/src/tokens.ts`'s `statusTokens`) and the approval-status badge above already
+ * claims all 5, so a collision with SOME approval-status token is unavoidable — a prior version
+ * of this comment claimed otherwise and picked `unknown` for "Unpublished", which actually
+ * collided with `draft` (the single most common real pairing, since every new template starts
+ * both draft and unpublished) — the exact confusion it claimed to avoid (code-review finding).
+ * `notConfigured` avoids that specific collision (its only other user, `submitted`, is a much
+ * less frequently co-displayed state). `healthy` is kept for "Published" despite colliding with
+ * `approved` — the least harmful collision available, since publishing requires `approved` (D2),
+ * so the two badges reading the same "good" color together at their most common pairing reinforce
+ * rather than contradict each other, unlike a collision with a negative/in-progress token would.
  */
 export function contentTemplatePublishBadge(isPublished: boolean): {
   readonly token: StatusToken;
@@ -47,7 +54,7 @@ export function contentTemplatePublishBadge(isPublished: boolean): {
 } {
   return isPublished
     ? { token: "healthy", label: "Published" }
-    : { token: "unknown", label: "Unpublished" };
+    : { token: "notConfigured", label: "Unpublished" };
 }
 
 export interface ContentTemplateLibraryQuery {

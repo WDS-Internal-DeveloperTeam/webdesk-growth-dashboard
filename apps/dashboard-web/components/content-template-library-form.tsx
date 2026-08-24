@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { ContentTemplate } from "@webdesk/shared-types";
 import { TagListField } from "@webdesk/ui";
-import { parseApiErrorMessage } from "@/lib/api-errors";
+import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { RichTextEditor } from "./rich-text-editor";
@@ -140,20 +140,13 @@ export function ContentTemplateLibraryForm(props: ContentTemplateLibraryFormProp
           ? `${getApiBaseUrl()}/content-template-library/templates`
           : `${getApiBaseUrl()}/content-template-library/templates/${props.templateId}/update`;
 
-      const response = await fetch(url, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
+      const result = await postMutation<{ id: string }>(url, payload);
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
 
-      const body = (await response.json()) as { data: { id: string } };
-      router.push(`/content-template-library/${body.data.id}`);
+      router.push(`/content-template-library/${result.data.id}`);
     } catch (err) {
       console.error("Failed to save content template", err);
       setError("Something went wrong. Please try again.");

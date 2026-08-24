@@ -135,4 +135,18 @@ describe("ContentTemplateStatusActions", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("re-syncs approvalStatus from a fresh prop (e.g. after a sibling ContentTemplatePublishActions transition triggers router.refresh()) without a remount", () => {
+    const { rerender } = render(
+      <ContentTemplateStatusActions templateId={TEMPLATE_ID} approvalStatus="draft" />,
+    );
+    expect(screen.getByRole("button", { name: "Submit for Review" })).toBeInTheDocument();
+
+    // Simulates the server-fetched prop changing on a re-render (a fresh `getServerSession()`
+    // read after router.refresh(), not a remount) — before the code-review fix, approvalStatus's
+    // own useState would have kept rendering draft's own transition buttons here.
+    rerender(<ContentTemplateStatusActions templateId={TEMPLATE_ID} approvalStatus="approved" />);
+    expect(screen.getByRole("button", { name: "Mark as Superseded" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit for Review" })).not.toBeInTheDocument();
+  });
 });

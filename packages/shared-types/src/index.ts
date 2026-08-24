@@ -950,10 +950,13 @@ export type ContentTemplateApprovalStatus =
  * rule — sanitized server-side before storage (`ContentTemplatesService.create()`/`update()`) and
  * again at render time via `SanitizedRichText`. `isPublished`/`publishedAt` are the first real
  * publish/unpublish mechanism in this codebase (task package D1) — orthogonal to `approvalStatus`
- * (task package D2): a template may be `draft` and unpublished, `approved` and published, or
- * `approved` and unpublished, but never published while in any non-`approved` status.
- * `publishedAt` is server-stamped once on the first successful publish and never cleared by
- * `unpublish()`.
+ * (task package D2): `publish()` requires `approvalStatus === "approved"`, but `isPublished` is
+ * NOT cleared by a later status transition (D3 — no automatic unpublish) — a template that was
+ * `approved` and published when it moved to `archived`/`superseded` stays `isPublished: true`
+ * indefinitely (code-review finding: a prior version of this comment incorrectly claimed a
+ * template is "never published while in any non-`approved` status," which this exact,
+ * intentional case violates). `publishedAt` is server-stamped once on the first successful
+ * publish and never cleared by `unpublish()`.
  */
 export interface ContentTemplate {
   readonly id: string;

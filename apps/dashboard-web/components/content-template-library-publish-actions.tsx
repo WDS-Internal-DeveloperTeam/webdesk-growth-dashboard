@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ContentTemplateApprovalStatus } from "@webdesk/shared-types";
-import { parseApiErrorMessage } from "@/lib/api-errors";
+import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import styles from "./content-template-library-publish-actions.module.css";
 
@@ -24,21 +24,27 @@ export interface ContentTemplatePublishActionsProps {
  * point, exactly like every sibling `*StatusActions` component's own relationship to its backend
  * `TRANSITIONS` table.
  *
- * Neither transition prompts a `window.confirm()`: publish is reversible via unpublish (provided
- * the template is still approved), and unpublish is itself reversible via re-publish, so neither
- * is the kind of one-way, no-going-back action this app's own `*StatusActions` components reserve
- * confirmation for (matches `archived`/`superseded`'s own precedent there).
+ * Publish prompts no `window.confirm()` — it's reversible via unpublish, provided the template is
+ * still approved. **Unpublish DOES prompt one** (code-review finding): `TRANSITIONS`'s own
+ * `archived`/`superseded` entries are both terminal (`{}`, no outgoing edge, including back to
+ * `approved`), and `unpublish()` has no `approvalStatus` gate (D2/D3) — so unpublishing a template
+ * that has since moved to `archived`/`superseded` while still published is genuinely irreversible:
+ * nothing can ever move it back to `approved`, so it can never be republished again through any
+ * UI. That's exactly the "transition into a terminal, no-way-back state" case the sibling
+ * `ContentTemplateStatusActions`'s own `CONFIRM_MESSAGE` map already reserves confirmation for —
+ * an earlier version of this component's own doc comment claimed unpublish was "itself reversible
+ * via re-publish," which is false for this specific combination.
  *
  * Renders alongside, not merged into, `ContentTemplateStatusActions` — a separate island because
  * `publish`/`unpublish` are independently-governed RBAC actions from `submit`/`review`/`approve`
- * (D1), not another `approvalStatus` transition. A known, accepted limitation shared with every
- * sibling `*StatusActions` component in this app: this component's `approvalStatus`/`isPublished`
- * props are only ever read once, at mount, into local state — a status change made via the
- * sibling `ContentTemplateStatusActions` component on the same page won't be reflected here until
- * a full navigation remounts this component, even though `router.refresh()` re-renders the Server
- * Component tree around it. Not a correctness gap: the backend's own `publish()` gate still
- * rejects a stale-state request with a clean 400, surfaced via the same error path below — only a
- * momentary UI staleness.
+ * (D1), not another `approvalStatus` transition. `isPublished` is re-synced from the server-passed
+ * prop via `useEffect` whenever it changes (code-review finding: without this, a transition made
+ * via the sibling `ContentTemplateStatusActions` component, or a second tab/operator's own
+ * publish/unpublish, would go unreflected here even after the surrounding Server Component tree
+ * re-fetches via `router.refresh()`, since React never resets `useState` from new props on its
+ * own — a stale click would still be safely rejected by the backend's own gate, but only after a
+ * needless failed round trip). `approvalStatus` needs no such effect — it's read directly from the
+ * live prop on every render, never copied into local state.
  *
  * Submits via a direct browser `fetch()` with `credentials: "include"` — required for
  * `dashboard-api`'s `OriginCheckGuard` to see a real browser `Origin` header, same pattern every
@@ -54,26 +60,41 @@ export function ContentTemplatePublishActions({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"publish" | "unpublish" | null>(null);
 
+  // Re-sync from the server-passed prop whenever it changes — see the doc comment above. Does not
+  // fire on this component's own optimistic setIsPublished() call below, since that already
+  // matches the prop's next value once router.refresh() resolves.
+  useEffect(() => {
+    setIsPublished(initialIsPublished);
+  }, [initialIsPublished]);
+
   const canPublish = approvalStatus === "approved" && !isPublished;
   const canUnpublish = isPublished;
   if (!canPublish && !canUnpublish) {
     return null;
   }
 
+  // Unpublishing a template that's no longer approved (archived/superseded) is genuinely
+  // irreversible — see the doc comment above — so it gets the same confirmation treatment
+  // ContentTemplateStatusActions reserves for its own terminal-state transitions.
+  const IRREVERSIBLE_UNPUBLISH_MESSAGE =
+    "Unpublish this content template? Its approval status is " +
+    `'${approvalStatus}', which can never become 'approved' again — once unpublished, it can ` +
+    "never be republished through this app.";
+
   async function handle(action: "publish" | "unpublish"): Promise<void> {
+    if (action === "unpublish" && approvalStatus !== "approved") {
+      if (!window.confirm(IRREVERSIBLE_UNPUBLISH_MESSAGE)) {
+        return;
+      }
+    }
     setError(null);
     setPending(action);
     try {
-      const response = await fetch(
+      const result = await postMutation(
         `${getApiBaseUrl()}/content-template-library/templates/${templateId}/${action}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        },
       );
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
       // Same batched-render pattern ContentTemplateStatusActions/PersonaStatusActions use: update

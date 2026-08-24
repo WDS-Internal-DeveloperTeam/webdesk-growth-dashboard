@@ -172,4 +172,66 @@ describe("ContentTemplatePublishActions", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/cannot be published/);
     expect(refreshMock).not.toHaveBeenCalled();
   });
+
+  it("re-syncs isPublished from a fresh prop (e.g. after a sibling ContentTemplateStatusActions transition triggers router.refresh()) without a remount", () => {
+    const { rerender } = render(
+      <ContentTemplatePublishActions
+        templateId={TEMPLATE_ID}
+        approvalStatus="approved"
+        isPublished={true}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Unpublish" })).toBeInTheDocument();
+
+    // Simulates the server-fetched prop changing on a re-render (a fresh `getServerSession()` read
+    // after router.refresh(), not a remount) — before the code-review fix, isPublished's own
+    // useState would have kept showing "Unpublish" here.
+    rerender(
+      <ContentTemplatePublishActions
+        templateId={TEMPLATE_ID}
+        approvalStatus="approved"
+        isPublished={false}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Publish" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Unpublish" })).not.toBeInTheDocument();
+  });
+
+  it("Unpublish on a non-approved (archived/superseded) template prompts a confirmation, since re-publishing is permanently impossible from there", async () => {
+    const confirmSpy = vi.fn().mockReturnValue(true);
+    window.confirm = confirmSpy;
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true } as Response);
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ContentTemplatePublishActions
+        templateId={TEMPLATE_ID}
+        approvalStatus="archived"
+        isPublished={true}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("never be republished"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("declining the irreversible-unpublish confirmation never fires the request", () => {
+    const confirmSpy = vi.fn().mockReturnValue(false);
+    window.confirm = confirmSpy;
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <ContentTemplatePublishActions
+        templateId={TEMPLATE_ID}
+        approvalStatus="superseded"
+        isPublished={true}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
