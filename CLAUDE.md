@@ -6870,6 +6870,69 @@ b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`, confirming the exact merged commit is
   confirming the session gate is intact. **The Internal Linking Library module backend is now
   genuinely live in production.** No `dashboard-web` UI exists yet for this module — a separate,
   not-yet-requested next step, matching every prior module's own backend-first precedent.
+- `[2026-08-24]` **Built the `dashboard-web` UI for Internal Linking Library** — closes this
+  module's last named gap, following the backend's own build-to-production arc (PR #61). Not
+  started automatically — the user was asked directly ("start building it now" vs. "just wanted
+  the status") via `AskUserQuestion` after a bare "what about dashboard-web UI" prompt, and chose
+  to start building. Four project-scoped routes mirroring Page Inventory's exact 4-file route
+  shape (list, new, `[linkId]` detail, `[linkId]/edit`) — the module has no sub-resources, so no
+  extra sub-resource sections are needed. `InternalLinkForm` introduces `SinglePagePicker`, a new
+  single-value wrapper around `@webdesk/ui`'s `RelationshipPicker` (the first single-value use of
+  that component in this codebase — every prior use is a many-to-many join list) for the two
+  independent `sourcePageId`/`targetPageId` fields, each excluding whichever page is selected in
+  the other; a `UserPicker` for `assignedApproverUserId` mirroring `ProjectForm`'s own
+  owner-field/`touched`-state wiring; `RichTextEditor` for `context` (a paired backend change —
+  DTO cap raised 2000→4000, `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`
+  wired into `create()`/`update()`, per the 2026-08-22 standing rule); and a plain, client-side
+  UUID-format-checked (but server-unvalidated) `relatedStrategyRecordId` field, matching task
+  package D8. `InternalLinkStatusActions` hand-mirrors the backend's bespoke 4-state `TRANSITIONS`
+  table — the first non-8-value status-actions component in this app — with no
+  `window.confirm()` guard anywhere, since this workflow has no terminal state. Built by a
+  background agent with a fully-specified prompt, then independently re-verified in full by the
+  orchestrating session (the agent's own process had been interrupted mid-task and left real,
+  substantial uncommitted work on disk — confirmed via `git status`/`git log` before trusting or
+  continuing it) — every high-risk file (both `SinglePagePicker` instances, the `UserPicker`/
+  `approverTouched` wiring, the status-actions transition table, the backend sanitization wiring,
+  all 4 routes) read directly, and every test suite re-run fresh: 791/791 `dashboard-api` unit
+  tests (4 new), 312/312 `dashboard-api` e2e/integration tests (unchanged, confirming no
+  regression), 664/664 `dashboard-web` unit tests (49 new), a clean `next build` with all 4 new
+  routes present, prettier clean, `pnpm audit` 0 vulnerabilities, all 4 routes live-rendered in
+  the Browser pane with clean unauthenticated redirects. **Independent code review then ran**
+  (this project's own `code-review` skill, high effort, 8-angle finder pass, 1-vote verification)
+  — 8 candidates survived dedup, all 8 CONFIRMED and fixed: most severe, unguarded `getUser()`/
+  `getPage()` calls inside an awaited `Promise.all` crashed the detail and edit pages for any
+  role lacking cross-module RBAC grants (`GET /users/:userId` is gated on `users_roles:view`, held
+  by only 2 of the 7 seeded roles) — the exact bug class already fixed once in this app's own
+  `projects/[projectId]/edit/page.tsx`. Fixed by extracting a new `resolveLinkRelationships()`
+  helper (`lib/internal-linking-library.ts`) that guards each lookup independently and degrades to
+  `null`, which also collapsed the detail and edit pages' previously byte-for-byte duplicated
+  3-promise resolution block into one shared function — closing a second finding in the same fix.
+  Also fixed: the edit-mode "preserve an untouched approver assignment on save" path and the
+  self-link case-insensitivity guard both had zero test coverage (the former is the exact
+  data-loss bug class `ProjectForm`'s owner field already shipped once and already has a dedicated
+  regression test for; the latter is the sole remaining backstop for a mixed-case duplicate page
+  id, since the picker's own exclusion filter is case-sensitive — both closed with new tests); a
+  local `UUID_PATTERN` regex duplicated `lib/uuid.ts`'s canonical `isUuid()` helper, which this
+  same branch's own form already imports for a different field; the migration's and task
+  package's own doc comments still described `context`'s old 2000-char cap after the raise to
+  4000; `getProject()`/the picker fetch ran sequentially on the create page instead of
+  concurrently; and the edit page re-fetched `sourcePage`/`targetPage` via two more real network
+  calls even though the already-fetched `pages` array almost always already contains them
+  (`resolveLinkRelationships()` now accepts an optional `pagePool` and checks it first via
+  `.find()`). Re-validated: typecheck/lint/CSS-token-check clean, 667/667 `dashboard-web` unit
+  tests (3 new), a clean `next build`, prettier clean. **A separate `security-review` skill run
+  then found 0 findings above threshold** — confirmed the rich-text sanitization loop has no
+  bypass path, `relatedStrategyRecordId` is rendered only as plain JSX text (never a link/URL/
+  query — purely inert stored data), the picker option pools rely on already-scoped, already-RBAC
+  -gated endpoints with server-side re-validation as the real enforcement point (no IDOR), and the
+  new error-catching logs only fixed descriptive strings with no sensitive data. A review packet
+  (published as a Claude artifact, "Internal Linking Library UI Review Packet" — code review +
+  security review findings, fixes, and validation evidence, with a decision section) was then
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-internal-linking-library-approval-checklist.md`. **Awaiting
+  that review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
