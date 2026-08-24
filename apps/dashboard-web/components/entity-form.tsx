@@ -103,7 +103,9 @@ export function EntityForm(props: EntityFormProps): ReactNode {
         props.mode === "create"
           ? ((await response.json()) as { data: { id: string } }).data.id
           : props.entityId;
-      router.push(withProjectId(`/keyword-and-entity-library/entities/${entityId}`, props.projectId));
+      router.push(
+        withProjectId(`/keyword-and-entity-library/entities/${entityId}`, props.projectId),
+      );
     } catch (err) {
       console.error("Failed to save entity", err);
       setError("Something went wrong. Please try again.");

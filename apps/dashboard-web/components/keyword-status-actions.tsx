@@ -27,17 +27,18 @@ export interface KeywordStatusActionsProps {
  * Matches Service/Persona/Proof-and-Claims Library's own shape (a direct `approved -> superseded`
  * transition is allowed), not Website Strategy Center's own deliberate divergence.
  */
-const ALLOWED_TRANSITIONS: Readonly<Record<KeywordApprovalStatus, readonly KeywordApprovalStatus[]>> =
-  {
-    draft: ["submitted", "archived"],
-    submitted: ["under_review", "draft", "archived"],
-    under_review: ["approved", "revision_requested", "rejected", "archived"],
-    revision_requested: ["draft", "submitted", "archived"],
-    approved: ["superseded", "archived"],
-    rejected: ["draft", "archived"],
-    superseded: [],
-    archived: [],
-  };
+const ALLOWED_TRANSITIONS: Readonly<
+  Record<KeywordApprovalStatus, readonly KeywordApprovalStatus[]>
+> = {
+  draft: ["submitted", "archived"],
+  submitted: ["under_review", "draft", "archived"],
+  under_review: ["approved", "revision_requested", "rejected", "archived"],
+  revision_requested: ["draft", "submitted", "archived"],
+  approved: ["superseded", "archived"],
+  rejected: ["draft", "archived"],
+  superseded: [],
+  archived: [],
+};
 
 /** Labels the action that REACHES the given status, not the status itself — same convention every
  *  sibling status-actions component's own `ACTION_LABEL` establishes. */

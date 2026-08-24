@@ -145,10 +145,7 @@ export async function getEntities(query: EntityLibraryQuery): Promise<EntityList
 }
 
 /** Same `null`-on-malformed-id/404, throw-otherwise contract as `getKeyword()`. */
-export async function getEntity(
-  projectId: string,
-  entityId: string,
-): Promise<EntityRecord | null> {
+export async function getEntity(projectId: string, entityId: string): Promise<EntityRecord | null> {
   if (!isUuid(projectId) || !isUuid(entityId)) {
     return null;
   }
@@ -199,8 +196,7 @@ export async function getKeywordEntityRelationships(
     );
     return [];
   }
-  return ((await response.json()) as ApiSuccessResponse<readonly KeywordEntityRelationship[]>)
-    .data;
+  return ((await response.json()) as ApiSuccessResponse<readonly KeywordEntityRelationship[]>).data;
 }
 
 /** Same degrade-but-log contract as `getKeywordEntityRelationships()`. */

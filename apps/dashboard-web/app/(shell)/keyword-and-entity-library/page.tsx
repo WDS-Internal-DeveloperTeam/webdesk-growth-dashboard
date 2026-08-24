@@ -1,7 +1,13 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import type { Keyword } from "@webdesk/shared-types";
-import { ContentContainer, EmptyState, PageHeader, StatusBadge, typographyTokens } from "@webdesk/ui";
+import {
+  ContentContainer,
+  EmptyState,
+  PageHeader,
+  StatusBadge,
+  typographyTokens,
+} from "@webdesk/ui";
 import { PageSizeSelect } from "@/components/page-size-select";
 import { ProjectPickerForm } from "@/components/project-picker-form";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
@@ -340,7 +346,13 @@ function TextFilter({
   );
 }
 
-function KeywordRow({ keyword, projectId }: { readonly keyword: Keyword; readonly projectId: string }) {
+function KeywordRow({
+  keyword,
+  projectId,
+}: {
+  readonly keyword: Keyword;
+  readonly projectId: string;
+}) {
   const badge = keywordApprovalStatusBadge(keyword.approvalStatus);
   return (
     <tr>

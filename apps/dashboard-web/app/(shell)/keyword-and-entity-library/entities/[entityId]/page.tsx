@@ -4,7 +4,13 @@ import { ContentContainer, Fact, PageHeader, typographyTokens } from "@webdesk/u
 import { EntityDeleteButton } from "@/components/entity-delete-button";
 import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
-import { dlStyle, h2Style, mutedStyle, richContentStyle, sectionStyle } from "@/lib/detail-section-styles";
+import {
+  dlStyle,
+  h2Style,
+  mutedStyle,
+  richContentStyle,
+  sectionStyle,
+} from "@/lib/detail-section-styles";
 import { formatTimestamp, getEntity, withProjectId } from "@/lib/keyword-and-entity-library";
 import { getProject } from "@/lib/projects";
 import { firstValue } from "@/lib/search-params";

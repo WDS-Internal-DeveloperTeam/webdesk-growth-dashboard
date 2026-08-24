@@ -36,9 +36,7 @@ interface EntityLibraryListPageProps {
  * convention as every other route in this module (see the keywords list page's own top doc
  * comment).
  */
-export default async function EntityLibraryListPage({
-  searchParams,
-}: EntityLibraryListPageProps) {
+export default async function EntityLibraryListPage({ searchParams }: EntityLibraryListPageProps) {
   const session = await getServerSession();
   if (!session) {
     return null;

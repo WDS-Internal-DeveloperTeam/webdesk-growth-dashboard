@@ -76,7 +76,10 @@ export function EntityDeleteButton({
         {pending ? "Deleting…" : "Delete"}
       </button>
       {error ? (
-        <span role="alert" style={{ fontSize: "0.75rem", color: "var(--webdesk-dashboard-color-danger)" }}>
+        <span
+          role="alert"
+          style={{ fontSize: "0.75rem", color: "var(--webdesk-dashboard-color-danger)" }}
+        >
           {error}
         </span>
       ) : null}

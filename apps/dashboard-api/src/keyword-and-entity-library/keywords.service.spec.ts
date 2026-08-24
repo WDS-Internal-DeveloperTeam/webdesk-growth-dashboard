@@ -313,7 +313,11 @@ describe("KeywordsService", () => {
 
     it("sanitizes a real (non-null) cannibalizationNotes value on update, stripping a disallowed tag (dashboard-web UI build, 2026-08-24)", async () => {
       keywords.findById.mockResolvedValue(
-        keyword({ approvalStatus: "draft", projectId: FAKE_PROJECT_ID, cannibalizationNotes: "old" }),
+        keyword({
+          approvalStatus: "draft",
+          projectId: FAKE_PROJECT_ID,
+          cannibalizationNotes: "old",
+        }),
       );
       keywords.update.mockResolvedValue(keyword());
 

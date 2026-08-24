@@ -6,7 +6,11 @@ import type { Keyword, KeywordConfidence } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { plainTextFieldValue } from "@/lib/form-field-value";
-import { CONFIDENCE_LABEL, CONFIDENCE_VALUES, withProjectId } from "@/lib/keyword-and-entity-library-query";
+import {
+  CONFIDENCE_LABEL,
+  CONFIDENCE_VALUES,
+  withProjectId,
+} from "@/lib/keyword-and-entity-library-query";
 import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./keyword-form.module.css";
@@ -79,9 +83,7 @@ export function KeywordForm(props: KeywordFormProps): ReactNode {
   const [cannibalizationNotes, setCannibalizationNotes] = useState(
     initial?.cannibalizationNotes ?? "",
   );
-  const [confidence, setConfidence] = useState<KeywordConfidence | "">(
-    initial?.confidence ?? "",
-  );
+  const [confidence, setConfidence] = useState<KeywordConfidence | "">(initial?.confidence ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -139,12 +141,7 @@ export function KeywordForm(props: KeywordFormProps): ReactNode {
         setError(searchVolumeResult.error);
         return;
       }
-      const difficultyScoreResult = parseIntegerField(
-        difficultyScore,
-        "Difficulty score",
-        0,
-        100,
-      );
+      const difficultyScoreResult = parseIntegerField(difficultyScore, "Difficulty score", 0, 100);
       if (difficultyScoreResult.error) {
         setError(difficultyScoreResult.error);
         return;

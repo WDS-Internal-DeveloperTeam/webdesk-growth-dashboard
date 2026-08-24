@@ -65,9 +65,10 @@ export function KeywordEntityRelationshipsSection({
     setRelationships(initialRelationships);
   }, [initialRelationships]);
 
-  const entityById = useMemo(() => new Map(entities.map((entity) => [entity.id, entity])), [
-    entities,
-  ]);
+  const entityById = useMemo(
+    () => new Map(entities.map((entity) => [entity.id, entity])),
+    [entities],
+  );
   const linkedEntityIds = useMemo(
     () => new Set(relationships.map((relationship) => relationship.entityId)),
     [relationships],

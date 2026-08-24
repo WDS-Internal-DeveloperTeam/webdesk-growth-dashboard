@@ -6,7 +6,13 @@ import { KeywordPageAssignmentsSection } from "@/components/keyword-page-assignm
 import { KeywordStatusActions } from "@/components/keyword-status-actions";
 import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
-import { dlStyle, h2Style, mutedStyle, richContentStyle, sectionStyle } from "@/lib/detail-section-styles";
+import {
+  dlStyle,
+  h2Style,
+  mutedStyle,
+  richContentStyle,
+  sectionStyle,
+} from "@/lib/detail-section-styles";
 import {
   formatTimestamp,
   getEntitiesForKeywordPicker,
@@ -94,7 +100,8 @@ export default async function KeywordDetailPage({ params, searchParams }: Keywor
   // archived/superseded are terminal — the backend rejects any content edit of one via the generic
   // update route once its status genuinely reaches either, matching every sibling detail page's own
   // Edit-link-hiding precedent for the same two statuses.
-  const isTerminal = keyword.approvalStatus === "archived" || keyword.approvalStatus === "superseded";
+  const isTerminal =
+    keyword.approvalStatus === "archived" || keyword.approvalStatus === "superseded";
 
   return (
     <ContentContainer>
