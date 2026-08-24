@@ -12,6 +12,7 @@ import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { HealthModule } from "./health/health.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
+import { KeywordAndEntityLibraryModule } from "./keyword-and-entity-library/keyword-and-entity-library.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { PageInventoryModule } from "./page-inventory/page-inventory.module.js";
@@ -60,6 +61,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     AuthzModule,
     BusinessKnowledgeModule,
     JobsModule,
+    KeywordAndEntityLibraryModule,
     NotificationsModule,
     OperationalContactsModule,
     PageInventoryModule,
