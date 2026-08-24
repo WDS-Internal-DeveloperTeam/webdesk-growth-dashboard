@@ -123,5 +123,22 @@ item to accept as tracked debt.
 | Scope reviewed                | Full code-review disposition (8 findings fixed) and full security-review disposition (0 above threshold), per the published review packet |
 | Disputes raised               | None recorded                                                                                                                             |
 
-A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-steps, per this project's standing "no auto-merge" rule.
+**The gate (G4-dashboard-web-internal-linking-library) was then separately requested and
+approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+second-role review was already complete before the gate was requested), approved commit
+`a43d3f0` on branch `dashboard-web-internal-linking-library` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-internal-linking-library`).
+
+| Field                    | Value                                                                                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-dashboard-web-internal-linking-library                                                                                                |
+| Approver (gate decision) | WebDesk Solution                                                                                                                         |
+| Gate date                | 2026-08-24                                                                                                                               |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                        |
+| Approved commit          | `a43d3f0` on branch `dashboard-web-internal-linking-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `dashboard-web-internal-linking-library` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a
+production deployment — each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule.

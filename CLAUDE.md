@@ -6939,6 +6939,16 @@ b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`, confirming the exact merged commit is
   `docs/project-state/dashboard-web-internal-linking-library-approval-checklist.md`'s "Sign-off"
   section. A gate decision, push/PR, and merge authorization each remain separate,
   not-yet-requested next steps.
+- `[2026-08-24]` **The gate (G4-dashboard-web-internal-linking-library) was then separately
+  requested and approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override,
+  since the second-role review was already complete before the gate was requested), approved
+  commit `a43d3f0` on branch `dashboard-web-internal-linking-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-internal-linking-library`) and
+  `docs/project-state/dashboard-web-internal-linking-library-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
+  merging** — each remains its own separate, not-yet-requested authorization, per this project's
+  standing "no auto-merge" rule.
 
 ## Open client blockers
 
