@@ -31,12 +31,11 @@ import {
   type ListInternalLinksQueryDto,
   type UpdateInternalLinkDto,
 } from "./internal-linking-library.dto.js";
+import { INTERNAL_LINKING_LIBRARY_MODULE_KEY } from "./internal-linking-library.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { InternalLinksService } from "./internal-links.service.js";
 
 type InternalLinkingLibraryRequest = AuthenticatedRequest & RequestWithCorrelationId;
-
-const MODULE_KEY = "keyword_internal_links";
 
 /** `@RequirePermission` is placed on every individual method, never at class level —
  *  `PermissionGuard` only reads `context.getHandler()` (a deliberate fail-closed design), the
@@ -55,7 +54,7 @@ export class InternalLinksController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(INTERNAL_LINKING_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "List internal links for a project, optionally filtered" })
   async list(
     @Param("projectId", new ParseUUIDPipe()) projectId: string,
@@ -68,7 +67,7 @@ export class InternalLinksController {
 
   @Get(":id")
   @UseGuards(PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(INTERNAL_LINKING_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "Get one internal link" })
   async findOne(
     @Param("projectId", new ParseUUIDPipe()) projectId: string,
@@ -82,7 +81,7 @@ export class InternalLinksController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "create")
+  @RequirePermission(INTERNAL_LINKING_LIBRARY_MODULE_KEY, "create")
   @ApiOperation({ summary: "Create an internal link (always starts proposed)" })
   async create(
     @Param("projectId", new ParseUUIDPipe()) projectId: string,
@@ -96,7 +95,7 @@ export class InternalLinksController {
   @Post(":id/update")
   @HttpCode(HttpStatus.OK)
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "edit")
+  @RequirePermission(INTERNAL_LINKING_LIBRARY_MODULE_KEY, "edit")
   @ApiOperation({ summary: "Edit an internal link's content fields (never touches status)" })
   async update(
     @Param("projectId", new ParseUUIDPipe()) projectId: string,
@@ -116,7 +115,7 @@ export class InternalLinksController {
   // established. PermissionGuard still runs (via @UseGuards below) checking only module `view`,
   // so a caller with no access to this module at all is still rejected at the route.
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(INTERNAL_LINKING_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "Transition an internal link's status" })
   async changeStatus(
     @Param("projectId", new ParseUUIDPipe()) projectId: string,

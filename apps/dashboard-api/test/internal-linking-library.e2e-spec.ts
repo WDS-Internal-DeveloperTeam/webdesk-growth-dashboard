@@ -435,6 +435,27 @@ describe("Internal Linking Library module endpoints (e2e, real disposable databa
       .expect(400);
   });
 
+  it("rejects an update re-pointing targetPageId at a page from a different project with 400 (real-database counterpart of create()'s own cross-project test — this path was previously proven only via a mocked existsInProject boolean)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createProposedLink(cookie);
+    const otherProject = await projects.create({
+      publicId: uniqueId("PROJ"),
+      name: "Other Project For Update Cross-Scope Page",
+    });
+    const otherPage = await pages.create({
+      projectId: otherProject.id,
+      publicId: uniqueId("PAGE"),
+      pageName: "Other Project Page (update path)",
+    });
+
+    await request(app.getHttpServer())
+      .post(`/internal-linking-library/projects/${projectId}/links/${created.id}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ targetPageId: otherPage.id })
+      .expect(400);
+  });
+
   it("returns 404 for a GET on a nonexistent link id", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())

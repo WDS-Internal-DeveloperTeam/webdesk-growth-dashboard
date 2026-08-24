@@ -131,6 +131,19 @@ describe("InternalLinksService", () => {
       expect(pages.existsInProject).not.toHaveBeenCalled();
     });
 
+    it("rejects sourcePageId === targetPageId even when the two differ only by UUID casing", async () => {
+      // Zod's .uuid() accepts mixed-case UUIDs unchanged, so a bare `===` would let two
+      // differently-cased representations of the identical page id through.
+      await expect(
+        svc.create(
+          FAKE_PROJECT_ID,
+          { ...validInput, targetPageId: SOURCE_PAGE_ID.toUpperCase() },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(pages.existsInProject).not.toHaveBeenCalled();
+    });
+
     it("rejects a duplicate publicId", async () => {
       links.findByPublicId.mockResolvedValue(link());
 
@@ -297,6 +310,22 @@ describe("InternalLinksService", () => {
       expect(links.update).not.toHaveBeenCalled();
     });
 
+    it("rejects an update that would make sourcePageId === targetPageId even by casing alone", async () => {
+      links.findById.mockResolvedValue(
+        link({ sourcePageId: SOURCE_PAGE_ID, targetPageId: TARGET_PAGE_ID }),
+      );
+
+      await expect(
+        svc.update(
+          "link-1",
+          FAKE_PROJECT_ID,
+          { targetPageId: SOURCE_PAGE_ID.toUpperCase() },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(links.update).not.toHaveBeenCalled();
+    });
+
     it("passes the link's own current status as a CAS guard to the repository write", async () => {
       links.findById.mockResolvedValue(link({ status: "proposed" }));
       links.update.mockResolvedValue(link({ status: "proposed" }));
@@ -341,6 +370,34 @@ describe("InternalLinksService", () => {
           "link-1",
           FAKE_PROJECT_ID,
           { sourcePageId: "55555555-5555-4555-8555-555555555555" },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(links.update).not.toHaveBeenCalled();
+    });
+
+    it("re-validates targetPageId only when it's actually changing", async () => {
+      links.findById.mockResolvedValue(link({ targetPageId: TARGET_PAGE_ID }));
+      links.update.mockResolvedValue(link());
+
+      // Same value as current — no re-validation call expected.
+      await svc.update("link-1", FAKE_PROJECT_ID, { targetPageId: TARGET_PAGE_ID }, "actor-1");
+      expect(pages.existsInProject).not.toHaveBeenCalled();
+
+      const newTargetPageId = "66666666-6666-4666-8666-666666666666";
+      await svc.update("link-1", FAKE_PROJECT_ID, { targetPageId: newTargetPageId }, "actor-1");
+      expect(pages.existsInProject).toHaveBeenCalledWith(newTargetPageId, FAKE_PROJECT_ID);
+    });
+
+    it("rejects re-assigning to a nonexistent targetPageId with 400", async () => {
+      links.findById.mockResolvedValue(link({ targetPageId: TARGET_PAGE_ID }));
+      pages.existsInProject.mockResolvedValue(false);
+
+      await expect(
+        svc.update(
+          "link-1",
+          FAKE_PROJECT_ID,
+          { targetPageId: "66666666-6666-4666-8666-666666666666" },
           "actor-1",
         ),
       ).rejects.toThrow(BadRequestException);

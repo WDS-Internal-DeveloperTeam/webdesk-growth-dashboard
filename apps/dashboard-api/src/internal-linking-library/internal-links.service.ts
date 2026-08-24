@@ -12,7 +12,10 @@ import type {
   InternalLinkStatus,
 } from "@webdesk/database";
 import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
-import { INTERNAL_LINK_REPOSITORY } from "./internal-linking-library.constants.js";
+import {
+  INTERNAL_LINK_REPOSITORY,
+  INTERNAL_LINKING_LIBRARY_MODULE_KEY,
+} from "./internal-linking-library.constants.js";
 import type {
   CreateInternalLinkDto,
   UpdateInternalLinkDto,
@@ -27,12 +30,6 @@ import { ProjectService } from "../projects/project.service.js";
 import { PagesService } from "../page-inventory/pages.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { UsersService } from "../users/users.service.js";
-
-/** The RBAC group key (`06_Roles_and_Permissions.md`, `00013-seed-rbac-matrix.ts:190-198`) —
- *  distinct from `module_registry.key = "internal_linking_library"`. The IDENTICAL string
- *  Keyword & Entity Library's own services already use — both modules were seeded to share this
- *  RBAC group (task package §4), not a coincidence. */
-const MODULE_KEY = "keyword_internal_links";
 
 /** The real, seeded RBAC action required for a given `status` transition. */
 type InternalLinkWorkflowAction = "submit" | "review" | "approve";
@@ -90,6 +87,32 @@ export class InternalLinksService {
     }
   }
 
+  /** A page cannot link to itself (task package D4) — a clean 400, not a database constraint (no
+   *  existing sibling precedent for a same-table self-reference CHECK, and the check needs no
+   *  cross-row query). Compares case-insensitively: Zod's `.uuid()` accepts mixed-case UUIDs
+   *  unchanged, so two differently-cased representations of the identical id must still be treated
+   *  as the same page — a bare `===` would silently let a same-page link through. */
+  private assertDistinctPages(sourcePageId: string, targetPageId: string): void {
+    if (sourcePageId.toLowerCase() === targetPageId.toLowerCase()) {
+      throw new BadRequestException("sourcePageId and targetPageId must not be the same page");
+    }
+  }
+
+  /** Existence-and-same-project validated via `PagesService.existsInProject()` (task package D4) —
+   *  a clean 400, not a silently-accepted dangling reference. Shared by `create()`'s and
+   *  `update()`'s four call sites (two fields, two methods) instead of each hand-copying the same
+   *  "check, then throw" body. */
+  private async assertPageExists(
+    pageId: string,
+    projectId: string,
+    field: "sourcePageId" | "targetPageId",
+  ): Promise<void> {
+    const exists = await this.pages.existsInProject(pageId, projectId);
+    if (!exists) {
+      throw new BadRequestException(`${field} not found: ${pageId}`);
+    }
+  }
+
   /** `projectId` is a route-derived parameter, not part of `CreateInternalLinkDto` (mirrors
    *  `PagesService.create()`'s/`KeywordsService.create()`'s own `(projectId, input, actorUserId)`
    *  shape). */
@@ -100,9 +123,7 @@ export class InternalLinksService {
   ): Promise<InternalLinkEntity> {
     // A page cannot link to itself — checked before any database call, no need to wait on the
     // page-existence checks below (task package D4).
-    if (input.sourcePageId === input.targetPageId) {
-      throw new BadRequestException("sourcePageId and targetPageId must not be the same page");
-    }
+    this.assertDistinctPages(input.sourcePageId, input.targetPageId);
 
     // Every check below shares the already-known projectId with no dependency on any other
     // check's result, so they all run via Promise.all — mirrors PageKeywordAssignmentsService's/
@@ -115,16 +136,8 @@ export class InternalLinksService {
     const checks: Array<Promise<unknown>> = [
       this.links.findByPublicId(input.publicId),
       this.projects.findById(projectId),
-      this.pages.existsInProject(input.sourcePageId, projectId).then((exists) => {
-        if (!exists) {
-          throw new BadRequestException(`sourcePageId not found: ${input.sourcePageId}`);
-        }
-      }),
-      this.pages.existsInProject(input.targetPageId, projectId).then((exists) => {
-        if (!exists) {
-          throw new BadRequestException(`targetPageId not found: ${input.targetPageId}`);
-        }
-      }),
+      this.assertPageExists(input.sourcePageId, projectId, "sourcePageId"),
+      this.assertPageExists(input.targetPageId, projectId, "targetPageId"),
     ];
     if (input.assignedApproverUserId) {
       checks.push(this.assertApproverExists(input.assignedApproverUserId));
@@ -197,42 +210,26 @@ export class InternalLinksService {
 
     const nextSourcePageId = patch.sourcePageId ?? current.sourcePageId;
     const nextTargetPageId = patch.targetPageId ?? current.targetPageId;
-    if (nextSourcePageId === nextTargetPageId) {
-      throw new BadRequestException("sourcePageId and targetPageId must not be the same page");
-    }
+    this.assertDistinctPages(nextSourcePageId, nextTargetPageId);
 
     // Only re-validate a page/approver id that's actually changing from its current value —
     // mirrors PersonasService.update()'s own `relatedServiceIds` "only re-validate on change"
     // pattern; re-checking an unchanged value is both unnecessary and, for a since-removed
-    // approver, would incorrectly block an edit that doesn't touch that field at all.
-    const checks: Array<Promise<void>> = [];
-    if (patch.sourcePageId && patch.sourcePageId !== current.sourcePageId) {
-      checks.push(
-        this.pages.existsInProject(patch.sourcePageId, projectId).then((exists) => {
-          if (!exists) {
-            throw new BadRequestException(`sourcePageId not found: ${patch.sourcePageId}`);
-          }
-        }),
-      );
-    }
-    if (patch.targetPageId && patch.targetPageId !== current.targetPageId) {
-      checks.push(
-        this.pages.existsInProject(patch.targetPageId, projectId).then((exists) => {
-          if (!exists) {
-            throw new BadRequestException(`targetPageId not found: ${patch.targetPageId}`);
-          }
-        }),
-      );
-    }
-    if (
+    // approver, would incorrectly block an edit that doesn't touch that field at all. A single
+    // Promise.all literal, mirroring ServicesService.update()'s own equivalent shape, rather than a
+    // mutable array built up via conditional .push() calls.
+    await Promise.all([
+      patch.sourcePageId && patch.sourcePageId !== current.sourcePageId
+        ? this.assertPageExists(patch.sourcePageId, projectId, "sourcePageId")
+        : Promise.resolve(),
+      patch.targetPageId && patch.targetPageId !== current.targetPageId
+        ? this.assertPageExists(patch.targetPageId, projectId, "targetPageId")
+        : Promise.resolve(),
       patch.assignedApproverUserId &&
       patch.assignedApproverUserId !== current.assignedApproverUserId
-    ) {
-      checks.push(this.assertApproverExists(patch.assignedApproverUserId));
-    }
-    if (checks.length > 0) {
-      await Promise.all(checks);
-    }
+        ? this.assertApproverExists(patch.assignedApproverUserId)
+        : Promise.resolve(),
+    ]);
 
     // current.status is passed as a CAS guard — without it, a concurrent changeStatus()
     // transition landing between the read above and this write could let this edit silently
@@ -280,8 +277,19 @@ export class InternalLinksService {
     actorUserId: string,
   ): Promise<InternalLinkEntity> {
     const link = await this.findById(id, projectId);
+    // Accepted, tracked debt (code review, flagged for second-role review, not fixed here): this
+    // no-op short-circuit returns before assertAllowed() below ever runs, so a caller holding only
+    // the route's baseline `view` grant (no submit/review/approve) gets a 200 re-requesting the
+    // link's own current status, without passing the transition-specific authorization check a
+    // real transition would require. No state mutation occurs and the response is identical to
+    // what GET /:id already permits under the same grant, so the practical exploit value is nil —
+    // but it is a real ordering gap. Left unfixed because it is the byte-identical, already-shipped
+    // pattern PagesService.changeWorkflowStage()/KeywordsService.changeApprovalStatus() both have;
+    // fixing only this new module would diverge from two already-live siblings for a fix whose
+    // correct shape (which single action should gate a same-status no-op?) isn't specified anywhere
+    // and would need its own separate authorization.
     if (link.status === nextStatus) {
-      return link; // no-op, not an error — re-requesting the current status is harmless
+      return link;
     }
 
     const requiredAction = TRANSITIONS[link.status][nextStatus];
@@ -297,7 +305,7 @@ export class InternalLinksService {
     // denied on every transition.
     await this.authorizationService.assertAllowed(
       actorUserId,
-      MODULE_KEY,
+      INTERNAL_LINKING_LIBRARY_MODULE_KEY,
       requiredAction,
       link.projectId,
     );

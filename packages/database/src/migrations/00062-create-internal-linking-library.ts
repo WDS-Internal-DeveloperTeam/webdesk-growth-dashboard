@@ -181,12 +181,17 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
   await context.addIndex("internal_links", ["project_id", "updated_at", "id"], {
     name: "internal_links_project_id_updated_at_id_idx",
   });
-  // Real FK lookup columns that will be queried directly ("list all links from/to this page").
-  await context.addIndex("internal_links", ["source_page_id"], {
-    name: "internal_links_source_page_id_idx",
+  // Composite, not bare single-column — every list() call filters on project_id (it's a required,
+  // route-derived field, never optional), and sourcePageId/targetPageId are real, client-reachable
+  // optional query filters on the same endpoint ("list all links from/to this page, within this
+  // project"). A bare source_page_id/target_page_id index would force a cross-project scan
+  // filtered by project_id afterward; leading with project_id lets Postgres satisfy both filters
+  // from one index.
+  await context.addIndex("internal_links", ["project_id", "source_page_id"], {
+    name: "internal_links_project_id_source_page_id_idx",
   });
-  await context.addIndex("internal_links", ["target_page_id"], {
-    name: "internal_links_target_page_id_idx",
+  await context.addIndex("internal_links", ["project_id", "target_page_id"], {
+    name: "internal_links_project_id_target_page_id_idx",
   });
   // Fuzzy-search support on anchor text, same pattern as keywords_query_text_trgm_idx/
   // pages_page_name_trgm_idx (per 04_Data_Model_and_Ownership.md:241's trigram-index requirement).
