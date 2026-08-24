@@ -769,3 +769,108 @@ export interface PageUrl {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+export type KeywordConfidence = "low" | "medium" | "high";
+
+// Structurally identical to PageWorkflowStage/PersonaApprovalStatus/ServiceApprovalStatus/
+// ProofClaimApprovalStatus/WebsiteStrategyApprovalStatus (the shared 8-value artifact-approval
+// workflow, task package D9) — reused as its own named type rather than an alias so this module's
+// own `-query.ts` file can still narrow to it directly without a cast, matching every sibling
+// module's own precedent. Applies only to `Keyword` (the primary record) — `EntityRecord` and both
+// join types carry no approval status of their own (task package D3/D9).
+export type KeywordApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * The Keyword & Entity Library module's primary record (module #8) — project-scoped (task package
+ * D2), unlike every content-library module before Page Inventory. `keywordType`/`intent`/
+ * `funnelStage`/`country`/`source` are all plain free text — the spec names these as fields but
+ * gives no discrete value list for any of them (task package D6). `searchVolume`/`difficultyScore`
+ * are "metrics" (task package D7) — the two most standard SEO keyword metrics, since the spec
+ * names no exhaustive metric list. `cannibalizationNotes` is rich text (`RichTextEditor`), per the
+ * 2026-08-22 standing rule — sanitized server-side before storage
+ * (`KeywordsService.create()`/`update()`) and again at render time via `SanitizedRichText`.
+ */
+export interface Keyword {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly queryText: string;
+  readonly keywordType: string | null;
+  readonly intent: string | null;
+  readonly funnelStage: string | null;
+  readonly country: string | null;
+  readonly searchVolume: number | null;
+  readonly difficultyScore: number | null;
+  readonly source: string | null;
+  readonly researchDate: string | null;
+  readonly cannibalizationNotes: string | null;
+  readonly confidence: KeywordConfidence | null;
+  readonly approvalStatus: KeywordApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * Lightweight, project-scoped reference records, not full-lifecycle artifacts (task package D3) —
+ * `entityType` is free text (e.g. "Person", "Organization", "Place", "Concept", "Brand"), no enum
+ * invented since the spec names no discrete taxonomy. No `approvalStatus` of their own, mirroring
+ * Proof and Claims Library's `ClaimSource` sub-resource's own identical precedent. Named
+ * `EntityRecord`, not `Entity`, to match the backend's own `EntityRecordEntity` naming and avoid
+ * colliding with any other `Entity`-suffixed type in this file. `description` is rich text
+ * (`RichTextEditor`), per the 2026-08-22 standing rule — same sanitization pairing as `Keyword`'s
+ * own `cannibalizationNotes`.
+ */
+export interface EntityRecord {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly entityType: string | null;
+  readonly description: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * A real many-to-many join between `Keyword` and `EntityRecord` — a pure join row with no
+ * independent meaning once either parent is gone (`onDelete: "CASCADE"` on both FKs, migration
+ * `00060`). No `updatedAt` — the row is either created or removed, never edited in place. Fetched
+ * and managed via its own `/keyword-and-entity-library/projects/:projectId/keywords/:keywordId/
+ * entity-relationships` sub-resource routes, the same shape as `PageUrl`'s own sub-resource
+ * pattern.
+ */
+export interface KeywordEntityRelationship {
+  readonly id: string;
+  readonly keywordId: string;
+  readonly entityId: string;
+  readonly createdBy: string | null;
+  readonly createdAt: string;
+}
+
+/**
+ * A real join between `Keyword` and Page Inventory's own `Page` — `pageId` is existence-and-
+ * same-project validated at the service layer (task package D1), via `PagesService.existsInProject()`.
+ * No `updatedAt` — the row is either created or removed, never edited in place; `assignmentNote` is
+ * carried on create only. Fetched and managed via its own `/keyword-and-entity-library/projects/
+ * :projectId/keywords/:keywordId/page-assignments` sub-resource routes.
+ */
+export interface PageKeywordAssignment {
+  readonly id: string;
+  readonly keywordId: string;
+  readonly pageId: string;
+  readonly assignmentNote: string | null;
+  readonly createdBy: string | null;
+  readonly createdAt: string;
+}
