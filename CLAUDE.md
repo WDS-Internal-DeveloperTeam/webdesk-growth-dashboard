@@ -7078,6 +7078,64 @@ e76ee0609510c9c37b206515e9427cff5e16f820`, confirming the exact merged commit is
   module backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
   module — a separate, not-yet-requested next step, matching every prior module's own
   backend-first precedent.
+- `[2026-08-24]` **Built the `dashboard-web` UI for Content Template Library** — closes this
+  module's last named gap, following the backend's own build-to-production arc (PR #63). Not
+  started automatically — built directly on the explicit "move ahead" instruction. No approved
+  wireframe exists for this module (`03_Detailed_Module_Specifications.md §25` is a flat field
+  list) — sections mirror that grouping (Identity, Sections, Guidance, Status), matching every
+  prior module's own "smallest honest reading" precedent for an unsourced screen. Mirrors Persona
+  Library's file-for-file structure (organization-wide, single table, standard 8-value approval
+  workflow, no sub-resources, no cross-module relationship fields). Per the 2026-08-22 standing
+  rule, the 6 long-text fields (`purpose`/`proofRules`/`seoAeoGeoRequirements`/`schema`/
+  `ctaRules`/`contentDepthGuidance`) convert to `RichTextEditor`, with a paired backend change
+  (`LONG_TEXT_MAX_LENGTH` raised 2000→4000, real write-time sanitization wired into `create()`/
+  `update()`). `ContentTemplatePublishActions` is this app's first real publish/unpublish UI —
+  no sibling precedent — showing Publish only when `approved`+unpublished and Unpublish whenever
+  published regardless of status (D3, no automatic unpublish on a later status transition).
+  **Independent code review then ran** (this project's own `code-review` skill, high effort,
+  8-angle finder pass) — 8 candidates after dedup (6 CONFIRMED, 2 PLAUSIBLE), 6 fixed: most
+  severe, both new status/publish-actions components independently froze their own governing
+  state (`isPublished`/`approvalStatus`) into `useState` at mount and never re-synced from fresh
+  props — a transition made via one wasn't reflected in the other even after `router.refresh()` —
+  fixed with a `useEffect` resync on each component's own prop; the edit route had no
+  terminal-state guard at all, unlike the detail page and unlike Keyword & Entity Library's own
+  edit route (built two modules earlier), a real regression from established practice — fixed by
+  mirroring `EditKeywordPage`'s own redirect precedent; unpublishing an archived/superseded
+  template is genuinely irreversible (no transition anywhere leads back to `approved`) yet got
+  zero confirmation, with the component's own doc comment making a false claim about
+  reversibility — fixed by adding a confirmation for this specific case; the publish-status badge
+  used tokens that collided with the approval-status badge's own tokens, contradicting its own
+  doc comment's stated goal — fixed by switching Unpublished to a non-colliding token; the
+  shared-types `ContentTemplate` doc comment stated a false invariant D3 explicitly violates by
+  design — corrected; and fetch-then-check-`response.ok` boilerplate was hand-copied 3× across
+  the new components/form in this same PR — extracted into a shared `postMutation()` helper in
+  `lib/api-errors.ts`. 2 findings left as accepted, tracked debt, each matching an
+  already-established pattern elsewhere in this codebase (`update()`'s audit `afterState` logging
+  raw pre-sanitization content — the third occurrence of an identical, already-accepted pattern
+  from Service Library → Persona Library; and 6 near-identical per-field blocks in the form
+  component, matching every sibling form's own style). Re-validated: 727/727 `dashboard-web` unit
+  tests (60 new), 837/837 `dashboard-api` unit tests (unchanged), `next build` clean with all 4
+  routes present, 336/336 `dashboard-api` e2e tests (unchanged, confirms no regression),
+  typecheck/lint/prettier all clean, `pnpm audit` 0 vulnerabilities. See
+  `docs/project-state/dashboard-web-content-template-library-approval-checklist.md`.
+- `[2026-08-24]` **Security review run on `dashboard-web-content-template-library`, separately
+  from the code review, against the fixed branch.** 0 findings above threshold. Confirmed: the
+  rich-text sanitization write-time + render-time pattern is applied with no gaps across all 6
+  fields on both `create()` and `update()`; zero new `dangerouslySetInnerHTML`/unsafe sinks
+  outside the existing, already-vetted `SanitizedRichText` component; the new shared
+  `postMutation()` helper's success-path parse tolerance never masks a failed request as
+  successful and crosses no trust boundary; every client-side gate (terminal-state redirect,
+  publish/unpublish visibility, confirm dialogs) is UX-only, with the backend's own RBAC checks,
+  CAS guards, and status/approval validation independently unchanged and still the real
+  enforcement point; and no new route or capability was added — only frontend consuming
+  already-reviewed, already-gated endpoints. A review packet (published as a Claude artifact,
+  "Content Template Library UI Review Packet" — code review + security review findings, fixes,
+  and validation evidence, with a decision section) was then prepared for the required
+  second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). See
+  `docs/project-state/dashboard-web-content-template-library-approval-checklist.md`. **Awaiting
+  that review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
