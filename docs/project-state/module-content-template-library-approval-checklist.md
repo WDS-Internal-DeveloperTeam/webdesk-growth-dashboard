@@ -3,9 +3,10 @@
 **Status:** Built, code review complete (9 candidates surfaced after dedup — 4 CONFIRMED, 5
 PLAUSIBLE; 6 fixed, 3 accepted as tracked debt). Security review complete (0 findings above
 threshold). Required second-role human review complete — Jitesh D, "Approves," no disputes raised.
-Gate `G4-content-template-library` approved (WebDesk Solution, CONFIRM). Pushed to `origin` and
-opened as [PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63).
-Merge authorization remains a separate, not-yet-requested next step.
+Gate `G4-content-template-library` approved (WebDesk Solution, CONFIRM). Pushed to `origin`,
+opened as [PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63),
+all 14 CI checks green, merged as `e76ee0609510c9c37b206515e9427cff5e16f820`, and **verified live
+in production.** This slice's full build-to-production arc is complete.
 
 ## Completion condition
 
@@ -153,5 +154,19 @@ remains its own separate, not-yet-requested authorization, per this project's st
 
 **"Push the branch and open a PR" was then separately requested and executed** — pushed to
 `origin`, opened as
-[PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63).
+
+**"Check CI status on the PR" confirmed all 14 checks green**, including both Vercel preview
+deployments. **"Merge PR #63" was then separately confirmed and executed** — merged with a real
+merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+commit `e76ee0609510c9c37b206515e9427cff5e16f820`. Both Vercel projects auto-deployed on push to
+`main` and were verified live directly, not just via CI's own Vercel status check —
+`dashboard-api`'s `/health` returned `build.commitSha ==
+e76ee0609510c9c37b206515e9427cff5e16f820`, confirming the exact merged commit is what's serving;
+`GET /content-template-library/templates` returned a clean `401` (route live, `SessionGuard`
+enforcing — not a `404`, which would mean the module never actually deployed); and
+`dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+unauthenticated visitor, confirming the session gate is intact. **The Content Template Library
+module backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
+module — a separate, not-yet-requested next step, matching every prior module's own
+backend-first precedent.
