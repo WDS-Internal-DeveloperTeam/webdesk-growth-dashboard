@@ -250,6 +250,37 @@ describe("Review and Approval Center module (real disposable database)", () => {
         const final = await reviews.findById(created.id);
         expect(["approved", "rejected"]).toContain(final?.status);
       });
+
+      it("reports conflict (and never reverses the decision) when expectedStatus is itself terminal (code-review fix)", async () => {
+        const created = await reviews.create({
+          targetModuleKey: "business_knowledge",
+          targetId: randomUUID(),
+          submittedByUserId: submitterId,
+        });
+        const decided = await reviews.updateStatus(
+          created.id,
+          "submitted",
+          "approved",
+          approverId,
+          new Date(),
+        );
+        expect(decided.outcome).toBe("updated");
+
+        // A caller who observed the review as "approved" and replays that as expectedStatus must
+        // never be able to flip it to "rejected" — approved/rejected are permanently terminal.
+        const reverseAttempt = await reviews.updateStatus(
+          created.id,
+          "approved",
+          "rejected",
+          submitterId,
+          new Date(),
+        );
+        expect(reverseAttempt.outcome).toBe("conflict");
+
+        const stillApproved = await reviews.findById(created.id);
+        expect(stillApproved?.status).toBe("approved");
+        expect(stillApproved?.decidedByUserId).toBe(approverId);
+      });
     });
 
     describe("updatePaused() — atomic compare-and-swap, guarded against a terminal status", () => {
@@ -310,16 +341,31 @@ describe("Review and Approval Center module (real disposable database)", () => {
       });
     });
 
-    describe("updateAssignee() — atomic write, guarded against a terminal status", () => {
-      it("reassigns assignedToUserId on an open review", async () => {
+    describe("updateAssignee() — atomic compare-and-swap on the prior assignee, guarded against a terminal status", () => {
+      it("reassigns assignedToUserId on an open review when expectedAssignedToUserId matches", async () => {
         const created = await reviews.create({
           targetModuleKey: "business_knowledge",
           targetId: randomUUID(),
           submittedByUserId: submitterId,
         });
-        const result = await reviews.updateAssignee(created.id, approverId);
+        const result = await reviews.updateAssignee(created.id, null, approverId);
         expect(result.outcome).toBe("updated");
         expect(result.outcome === "updated" && result.entity.assignedToUserId).toBe(approverId);
+      });
+
+      it("reports conflict (and does not write) on a stale expectedAssignedToUserId — the concurrent-delegate race (code-review fix)", async () => {
+        const created = await reviews.create({
+          targetModuleKey: "business_knowledge",
+          targetId: randomUUID(),
+          submittedByUserId: submitterId,
+        });
+        // The review is really unassigned (null); claim we expected it already assigned to
+        // approverId — a stale read, exactly the shape of two concurrent delegate() calls racing.
+        const result = await reviews.updateAssignee(created.id, approverId, submitterId);
+        expect(result.outcome).toBe("conflict");
+
+        const stillUnassigned = await reviews.findById(created.id);
+        expect(stillUnassigned?.assignedToUserId).toBeNull();
       });
 
       it("reports conflict once the review's status has become terminal (rejected) — delegating a decided review is rejected", async () => {
@@ -337,7 +383,7 @@ describe("Review and Approval Center module (real disposable database)", () => {
         );
         expect(decided.outcome).toBe("updated");
 
-        const delegateAttempt = await reviews.updateAssignee(created.id, submitterId);
+        const delegateAttempt = await reviews.updateAssignee(created.id, null, submitterId);
         expect(delegateAttempt.outcome).toBe("conflict");
 
         const stillOriginal = await reviews.findById(created.id);
@@ -347,6 +393,7 @@ describe("Review and Approval Center module (real disposable database)", () => {
       it("reports not_found for a missing review", async () => {
         const result = await reviews.updateAssignee(
           "00000000-0000-4000-8000-000000000000",
+          null,
           approverId,
         );
         expect(result.outcome).toBe("not_found");

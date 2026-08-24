@@ -1,11 +1,12 @@
-import { Op } from "sequelize";
+import { Op, type Transaction, type WhereOptions } from "sequelize";
 import { escapeLikePattern } from "../auth/user.repository.js";
 import { getReviewAndApprovalCenterModels } from "./models.js";
 import { toReviewEntity } from "./entity-mapping.js";
 import type { ReviewEntity, ReviewStatus } from "./entities.js";
 
 /** `approved`/`rejected` are both terminal (task package D2) — no code path resurrects a review
- *  from either. Shared by `updatePaused()`'s/`updateAssignee()`'s own CAS `WHERE` guards. */
+ *  from either. Shared by `updateStatus()`'s/`updatePaused()`'s/`updateAssignee()`'s own CAS
+ *  `WHERE` guards. */
 const TERMINAL_STATUSES: readonly ReviewStatus[] = ["approved", "rejected"];
 
 export interface CreateReviewInput {
@@ -32,20 +33,10 @@ export interface ReviewListFilter {
   readonly offset?: number;
 }
 
-export type UpdateReviewStatusResult =
-  | { readonly outcome: "updated"; readonly entity: ReviewEntity }
+export type CasResult<T> =
+  | { readonly outcome: "updated"; readonly entity: T }
   | { readonly outcome: "not_found" }
-  | { readonly outcome: "conflict"; readonly entity: ReviewEntity };
-
-export type UpdateReviewPausedResult =
-  | { readonly outcome: "updated"; readonly entity: ReviewEntity }
-  | { readonly outcome: "not_found" }
-  | { readonly outcome: "conflict"; readonly entity: ReviewEntity };
-
-export type UpdateReviewAssigneeResult =
-  | { readonly outcome: "updated"; readonly entity: ReviewEntity }
-  | { readonly outcome: "not_found" }
-  | { readonly outcome: "conflict"; readonly entity: ReviewEntity };
+  | { readonly outcome: "conflict"; readonly entity: T };
 
 // Mirrors ContentTemplateRepository's/PersonaRepository's own DEFAULT_LIST_LIMIT/MAX_LIST_LIMIT
 // clamping pattern.
@@ -76,8 +67,8 @@ export class ReviewRepository {
     return toReviewEntity(instance);
   }
 
-  async findById(id: string): Promise<ReviewEntity | null> {
-    const instance = await this.model.findByPk(id);
+  async findById(id: string, transaction?: Transaction): Promise<ReviewEntity | null> {
+    const instance = await this.model.findByPk(id, { transaction });
     return instance ? toReviewEntity(instance) : null;
   }
 
@@ -114,11 +105,47 @@ export class ReviewRepository {
   }
 
   /**
+   * Shared CAS-outcome resolver (code-review finding, `module-review-and-approval-center` branch —
+   * `updateStatus()`/`updatePaused()`/`updateAssignee()` each hand-copied this identical
+   * `affectedCount`-then-`findOne`-disambiguation tail). Runs `model.update(changes, {where,
+   * returning: true, transaction})`; on a zero-row match, a second read distinguishes "no such id"
+   * from "id exists but didn't match the CAS guard" for the caller's own conflict message.
+   */
+  private async casUpdate(
+    id: string,
+    where: WhereOptions,
+    changes: Record<string, unknown>,
+    transaction?: Transaction,
+  ): Promise<CasResult<ReviewEntity>> {
+    const [affectedCount, affectedRows] = await this.model.update(changes, {
+      where,
+      returning: true,
+      transaction,
+    });
+    if (affectedCount > 0 && affectedRows[0]) {
+      return { outcome: "updated", entity: toReviewEntity(affectedRows[0]) };
+    }
+    const current = await this.model.findOne({ where: { id }, transaction });
+    if (!current) {
+      return { outcome: "not_found" };
+    }
+    return { outcome: "conflict", entity: toReviewEntity(current) };
+  }
+
+  /**
    * Atomic compare-and-swap on `(id, status)` — mirrors `ContentTemplateRepository.updateApprovalStatus()`'s/
    * `PersonaRepository.updateStatus()`'s own conditional-`UPDATE` pattern exactly (itself mirroring
    * `IdempotencyKeyRepository.reserve()`). `decidedByUserId`/`decidedAt` are set unconditionally on
    * every successful call — unlike a "stamp once" field, they always record the MOST RECENT
    * decision (this migration's own doc comment).
+   *
+   * `expectedStatus` is rejected up front (code-review finding) when it's itself one of
+   * `TERMINAL_STATUSES` — without this, a caller who observed a review as `approved`/`rejected` and
+   * replays that value as `expectedStatus` would have their CAS `WHERE {id, status: expectedStatus}`
+   * match the row exactly, silently reversing a supposedly-permanent decision. This is checked
+   * before ever issuing the `UPDATE`, not encoded as an additional `WHERE` clause, since ANDing
+   * `status: expectedStatus` with `status: notIn(TERMINAL_STATUSES)` would be self-contradictory the
+   * moment `expectedStatus` itself is terminal.
    */
   async updateStatus(
     id: string,
@@ -126,19 +153,21 @@ export class ReviewRepository {
     nextStatus: ReviewStatus,
     decidedByUserId: string,
     decidedAt: Date,
-  ): Promise<UpdateReviewStatusResult> {
-    const [affectedCount, affectedRows] = await this.model.update(
+    transaction?: Transaction,
+  ): Promise<CasResult<ReviewEntity>> {
+    if (TERMINAL_STATUSES.includes(expectedStatus)) {
+      const current = await this.model.findOne({ where: { id }, transaction });
+      if (!current) {
+        return { outcome: "not_found" };
+      }
+      return { outcome: "conflict", entity: toReviewEntity(current) };
+    }
+    return this.casUpdate(
+      id,
+      { id, status: expectedStatus },
       { status: nextStatus, decidedByUserId, decidedAt },
-      { where: { id, status: expectedStatus }, returning: true },
+      transaction,
     );
-    if (affectedCount > 0 && affectedRows[0]) {
-      return { outcome: "updated", entity: toReviewEntity(affectedRows[0]) };
-    }
-    const current = await this.model.findOne({ where: { id } });
-    if (!current) {
-      return { outcome: "not_found" };
-    }
-    return { outcome: "conflict", entity: toReviewEntity(current) };
   }
 
   /**
@@ -150,44 +179,39 @@ export class ReviewRepository {
     id: string,
     expectedIsPaused: boolean,
     nextIsPaused: boolean,
-  ): Promise<UpdateReviewPausedResult> {
-    const [affectedCount, affectedRows] = await this.model.update(
+    transaction?: Transaction,
+  ): Promise<CasResult<ReviewEntity>> {
+    return this.casUpdate(
+      id,
+      { id, isPaused: expectedIsPaused, status: { [Op.notIn]: TERMINAL_STATUSES } },
       { isPaused: nextIsPaused },
-      {
-        where: { id, isPaused: expectedIsPaused, status: { [Op.notIn]: TERMINAL_STATUSES } },
-        returning: true,
-      },
+      transaction,
     );
-    if (affectedCount > 0 && affectedRows[0]) {
-      return { outcome: "updated", entity: toReviewEntity(affectedRows[0]) };
-    }
-    const current = await this.model.findOne({ where: { id } });
-    if (!current) {
-      return { outcome: "not_found" };
-    }
-    return { outcome: "conflict", entity: toReviewEntity(current) };
   }
 
   /**
-   * Reassigns `assignedToUserId`, guarding that `status` is not terminal — a delegation racing a
-   * concurrent decision surfaces as a clean conflict rather than a silent reassignment on an
-   * already-decided review.
+   * Reassigns `assignedToUserId`, guarding that `status` is not terminal AND (code-review finding)
+   * that the row's current assignee still matches `expectedAssignedToUserId` — without the latter,
+   * two concurrent `delegate()` calls on the same review would both match the identical
+   * status-only `WHERE` clause and both succeed, each writing its own `review_decisions` row, even
+   * though only the last DB write actually wins on `assigned_to_user_id`. `expectedAssignedToUserId`
+   * is nullable, matching `assignedToUserId` itself (an unassigned review has `null`).
    */
   async updateAssignee(
     id: string,
+    expectedAssignedToUserId: string | null,
     nextAssignedToUserId: string,
-  ): Promise<UpdateReviewAssigneeResult> {
-    const [affectedCount, affectedRows] = await this.model.update(
+    transaction?: Transaction,
+  ): Promise<CasResult<ReviewEntity>> {
+    return this.casUpdate(
+      id,
+      {
+        id,
+        assignedToUserId: expectedAssignedToUserId,
+        status: { [Op.notIn]: TERMINAL_STATUSES },
+      },
       { assignedToUserId: nextAssignedToUserId },
-      { where: { id, status: { [Op.notIn]: TERMINAL_STATUSES } }, returning: true },
+      transaction,
     );
-    if (affectedCount > 0 && affectedRows[0]) {
-      return { outcome: "updated", entity: toReviewEntity(affectedRows[0]) };
-    }
-    const current = await this.model.findOne({ where: { id } });
-    if (!current) {
-      return { outcome: "not_found" };
-    }
-    return { outcome: "conflict", entity: toReviewEntity(current) };
   }
 }

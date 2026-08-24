@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { UserEntity, UserRepository } from "@webdesk/database";
 import type { UserSummary } from "@webdesk/shared-types";
 import { USER_REPOSITORY } from "../auth/config/auth.constants.js";
@@ -68,5 +68,26 @@ export class UsersService {
     const validIds = userIds.filter((id) => USER_ID_PATTERN.test(id));
     const users = await this.users.findByIds(validIds);
     return users.map(toUserSummary);
+  }
+
+  /**
+   * Existence-validates a user-FK field, throwing a clean `BadRequestException` (not `findById()`'s
+   * own `NotFoundException`, since a caller-supplied FK failing to resolve is the CALLER's bad
+   * input, not a missing resource) — centralizes the identical shape `ProjectService.assertOwnerExists()`,
+   * `ServicesService.assertOwnerExists()`, and `InternalLinksService.assertApproverExists()` had each
+   * independently hand-copied (code-review finding, `module-review-and-approval-center` branch). Only
+   * this branch's own new call site (`ReviewsService.assertAssigneeExists()`) has been migrated to
+   * call this — retrofitting the three pre-existing copies is out of scope for a branch that doesn't
+   * otherwise touch Projects/Service Library/Internal Linking Library.
+   */
+  async assertUserExists(userId: string, fieldName: string): Promise<void> {
+    try {
+      await this.findById(userId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new BadRequestException(`${fieldName} does not resolve to an active user: ${userId}`);
+      }
+      throw error;
+    }
   }
 }

@@ -8,9 +8,7 @@ export {
   ReviewRepository,
   type CreateReviewInput,
   type ReviewListFilter,
-  type UpdateReviewStatusResult,
-  type UpdateReviewPausedResult,
-  type UpdateReviewAssigneeResult,
+  type CasResult,
 } from "./review.repository.js";
 export {
   ReviewCommentRepository,

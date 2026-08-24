@@ -1,3 +1,4 @@
+import type { Transaction } from "sequelize";
 import { getReviewAndApprovalCenterModels } from "./models.js";
 import { toReviewDecisionEntity } from "./entity-mapping.js";
 import type { ReviewDecisionAction, ReviewDecisionEntity } from "./entities.js";
@@ -23,15 +24,26 @@ export interface CreateReviewDecisionInput {
 export class ReviewDecisionRepository {
   private readonly model = getReviewAndApprovalCenterModels().ReviewDecision;
 
-  async create(input: CreateReviewDecisionInput): Promise<ReviewDecisionEntity> {
-    const instance = await this.model.create({
-      reviewId: input.reviewId,
-      action: input.action,
-      actorUserId: input.actorUserId,
-      notes: input.notes ?? null,
-      delegatedToUserId: input.delegatedToUserId ?? null,
-      ...(input.decidedAt ? { decidedAt: input.decidedAt } : {}),
-    });
+  /** `transaction`, when supplied, lets a caller (`ReviewsService.decide()`/`setPaused()`/
+   *  `delegate()`) commit this write atomically alongside the parent `reviews` CAS update — a
+   *  code-review finding: the two were previously two independent, non-transactional calls, so a
+   *  transient failure here after the CAS write already committed left the review's new state
+   *  durably persisted with zero record of who changed it or why. */
+  async create(
+    input: CreateReviewDecisionInput,
+    transaction?: Transaction,
+  ): Promise<ReviewDecisionEntity> {
+    const instance = await this.model.create(
+      {
+        reviewId: input.reviewId,
+        action: input.action,
+        actorUserId: input.actorUserId,
+        notes: input.notes ?? null,
+        delegatedToUserId: input.delegatedToUserId ?? null,
+        ...(input.decidedAt ? { decidedAt: input.decidedAt } : {}),
+      },
+      { transaction },
+    );
     return toReviewDecisionEntity(instance);
   }
 

@@ -1,4 +1,9 @@
-import type { ReviewDecisionRepository, ReviewEntity, ReviewRepository } from "@webdesk/database";
+import type {
+  ReviewDecisionEntity,
+  ReviewDecisionRepository,
+  ReviewEntity,
+  ReviewRepository,
+} from "@webdesk/database";
 import {
   BadRequestException,
   ConflictException,
@@ -12,6 +17,21 @@ import type { SeparationOfDutiesService } from "../auth/common/separation-of-dut
 import type { UsersService } from "../users/users.service.js";
 import { ReviewsService } from "./reviews.service.js";
 
+// withTransaction() opens a real Sequelize connection (needs DATABASE_URL) — irrelevant to this
+// service's own logic, so it's stubbed to just invoke the callback, matching
+// project.service.spec.ts's own established pattern for the identical mocking need.
+vi.mock("@webdesk/database", async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- vitest's importOriginal<T>() needs the actual module's type inline; no top-level type-only equivalent exists for this generic parameter.
+  const actual = await importOriginal<typeof import("@webdesk/database")>();
+  return {
+    ...actual,
+    withTransaction: vi.fn((fn: (transaction: unknown) => unknown) =>
+      fn({ fakeTransaction: true }),
+    ),
+  };
+});
+
+const FAKE_TRANSACTION = { fakeTransaction: true };
 const NOW = new Date("2026-08-24T00:00:00.000Z");
 
 function review(overrides: Partial<ReviewEntity> = {}): ReviewEntity {
@@ -34,6 +54,19 @@ function review(overrides: Partial<ReviewEntity> = {}): ReviewEntity {
   };
 }
 
+function decision(overrides: Partial<ReviewDecisionEntity> = {}): ReviewDecisionEntity {
+  return {
+    id: "decision-1",
+    reviewId: "review-1",
+    action: "approve",
+    actorUserId: "approver-1",
+    notes: null,
+    delegatedToUserId: null,
+    decidedAt: NOW.toISOString(),
+    ...overrides,
+  };
+}
+
 describe("ReviewsService", () => {
   let reviews: {
     create: ReturnType<typeof vi.fn>;
@@ -43,13 +76,13 @@ describe("ReviewsService", () => {
     updatePaused: ReturnType<typeof vi.fn>;
     updateAssignee: ReturnType<typeof vi.fn>;
   };
-  let reviewDecisions: { create: ReturnType<typeof vi.fn> };
+  let reviewDecisions: { create: ReturnType<typeof vi.fn>; listByReview: ReturnType<typeof vi.fn> };
   let authorizationService: {
     assertAllowed: ReturnType<typeof vi.fn>;
     isValidModuleKey: ReturnType<typeof vi.fn>;
   };
   let separationOfDuties: { assertDistinctActors: ReturnType<typeof vi.fn> };
-  let usersService: { findById: ReturnType<typeof vi.fn> };
+  let usersService: { assertUserExists: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let svc: ReviewsService;
 
@@ -62,10 +95,10 @@ describe("ReviewsService", () => {
       updatePaused: vi.fn(),
       updateAssignee: vi.fn(),
     };
-    reviewDecisions = { create: vi.fn() };
+    reviewDecisions = { create: vi.fn(), listByReview: vi.fn() };
     authorizationService = { assertAllowed: vi.fn(), isValidModuleKey: vi.fn() };
     separationOfDuties = { assertDistinctActors: vi.fn() };
-    usersService = { findById: vi.fn() };
+    usersService = { assertUserExists: vi.fn() };
     auditService = { record: vi.fn() };
     svc = new ReviewsService(
       reviews as unknown as ReviewRepository,
@@ -106,9 +139,9 @@ describe("ReviewsService", () => {
       expect(reviews.create).not.toHaveBeenCalled();
     });
 
-    it("validates a supplied assignedToUserId exists before creating", async () => {
+    it("validates a supplied assignedToUserId exists, concurrently with the module-key check (code-review fix)", async () => {
       authorizationService.isValidModuleKey.mockResolvedValue(true);
-      usersService.findById.mockResolvedValue({ id: "approver-1" });
+      usersService.assertUserExists.mockResolvedValue(undefined);
       reviews.create.mockResolvedValue(review({ assignedToUserId: "approver-1" }));
 
       await svc.create(
@@ -120,12 +153,14 @@ describe("ReviewsService", () => {
         "submitter-1",
       );
 
-      expect(usersService.findById).toHaveBeenCalledWith("approver-1");
+      expect(usersService.assertUserExists).toHaveBeenCalledWith("approver-1", "assignedToUserId");
     });
 
     it("rejects a nonexistent assignedToUserId with a clean 400, not a raw FK-violation 500", async () => {
       authorizationService.isValidModuleKey.mockResolvedValue(true);
-      usersService.findById.mockRejectedValue(new NotFoundException("no such user"));
+      usersService.assertUserExists.mockRejectedValue(
+        new BadRequestException("assignedToUserId does not resolve to an active user"),
+      );
 
       await expect(
         svc.create(
@@ -163,6 +198,26 @@ describe("ReviewsService", () => {
       expect(reviews.list).toHaveBeenCalledWith(
         expect.objectContaining({ assignedToUserId: undefined }),
       );
+    });
+  });
+
+  describe("listDecisions", () => {
+    it("returns a review's decision history after confirming it exists", async () => {
+      reviews.findById.mockResolvedValue(review());
+      reviewDecisions.listByReview.mockResolvedValue([decision()]);
+
+      const result = await svc.listDecisions("review-1");
+
+      expect(reviews.findById).toHaveBeenCalledWith("review-1");
+      expect(reviewDecisions.listByReview).toHaveBeenCalledWith("review-1");
+      expect(result).toEqual([decision()]);
+    });
+
+    it("throws NotFoundException for a nonexistent review, without querying decisions", async () => {
+      reviews.findById.mockResolvedValue(null);
+
+      await expect(svc.listDecisions("no-such-id")).rejects.toThrow(NotFoundException);
+      expect(reviewDecisions.listByReview).not.toHaveBeenCalled();
     });
   });
 
@@ -227,7 +282,7 @@ describe("ReviewsService", () => {
       expect(reviews.updateStatus).not.toHaveBeenCalled();
     });
 
-    it("performs an atomic CAS on the caller-supplied expectedStatus and writes both a review_decisions row and an audit_events row", async () => {
+    it("performs an atomic CAS on the caller-supplied expectedStatus and writes both a review_decisions row and an audit_events row, inside one transaction for the first two", async () => {
       reviews.findById.mockResolvedValue(review());
       reviews.updateStatus.mockResolvedValue({
         outcome: "updated",
@@ -246,6 +301,7 @@ describe("ReviewsService", () => {
         "approved",
         "approver-1",
         expect.any(Date),
+        FAKE_TRANSACTION,
       );
       expect(reviewDecisions.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -254,6 +310,7 @@ describe("ReviewsService", () => {
           actorUserId: "approver-1",
           notes: "Great work",
         }),
+        FAKE_TRANSACTION,
       );
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -281,6 +338,7 @@ describe("ReviewsService", () => {
         "rejected",
         "approver-1",
         expect.any(Date),
+        FAKE_TRANSACTION,
       );
     });
 
@@ -296,6 +354,18 @@ describe("ReviewsService", () => {
       ).rejects.toThrow(ConflictException);
       expect(reviewDecisions.create).not.toHaveBeenCalled();
       expect(auditService.record).not.toHaveBeenCalled();
+    });
+
+    it("throws ConflictException re-deciding an already-terminal review (code-review fix — the repository itself now refuses this, surfaced here as a conflict outcome)", async () => {
+      reviews.findById.mockResolvedValue(review({ status: "approved" }));
+      reviews.updateStatus.mockResolvedValue({
+        outcome: "conflict",
+        entity: review({ status: "approved" }),
+      });
+
+      await expect(
+        svc.decide("review-1", { action: "reject", expectedStatus: "approved" }, "approver-1"),
+      ).rejects.toThrow(ConflictException);
     });
 
     it("throws NotFoundException when the review disappears between the read and the CAS write", async () => {
@@ -329,7 +399,7 @@ describe("ReviewsService", () => {
   });
 
   describe("setPaused", () => {
-    it("requires the 'review' action, then toggles isPaused and records a pause/resume decision (no audit_events write)", async () => {
+    it("requires the 'review' action, then toggles isPaused and records a pause/resume decision (no audit_events write), inside one transaction", async () => {
       reviews.updatePaused.mockResolvedValue({
         outcome: "updated",
         entity: review({ isPaused: true }),
@@ -346,9 +416,10 @@ describe("ReviewsService", () => {
         "review_center",
         "review",
       );
-      expect(reviews.updatePaused).toHaveBeenCalledWith("review-1", false, true);
+      expect(reviews.updatePaused).toHaveBeenCalledWith("review-1", false, true, FAKE_TRANSACTION);
       expect(reviewDecisions.create).toHaveBeenCalledWith(
         expect.objectContaining({ action: "pause", actorUserId: "reviewer-1" }),
+        FAKE_TRANSACTION,
       );
       expect(auditService.record).not.toHaveBeenCalled();
       expect(result.isPaused).toBe(true);
@@ -364,6 +435,7 @@ describe("ReviewsService", () => {
 
       expect(reviewDecisions.create).toHaveBeenCalledWith(
         expect.objectContaining({ action: "resume" }),
+        FAKE_TRANSACTION,
       );
     });
 
@@ -388,8 +460,8 @@ describe("ReviewsService", () => {
   });
 
   describe("delegate", () => {
-    it("requires the 'edit' action, validates the new assignee exists, then reassigns and records a delegate decision (no audit_events write)", async () => {
-      usersService.findById.mockResolvedValue({ id: "new-assignee" });
+    it("requires the 'edit' action, validates the new assignee exists, then reassigns (CAS on expectedAssignedToUserId) and records a delegate decision (no audit_events write), inside one transaction", async () => {
+      usersService.assertUserExists.mockResolvedValue(undefined);
       reviews.updateAssignee.mockResolvedValue({
         outcome: "updated",
         entity: review({ assignedToUserId: "new-assignee" }),
@@ -397,7 +469,7 @@ describe("ReviewsService", () => {
 
       const result = await svc.delegate(
         "review-1",
-        { assignedToUserId: "new-assignee" },
+        { assignedToUserId: "new-assignee", expectedAssignedToUserId: null },
         "admin-1",
       );
 
@@ -406,46 +478,85 @@ describe("ReviewsService", () => {
         "review_center",
         "edit",
       );
-      expect(usersService.findById).toHaveBeenCalledWith("new-assignee");
-      expect(reviews.updateAssignee).toHaveBeenCalledWith("review-1", "new-assignee");
+      expect(usersService.assertUserExists).toHaveBeenCalledWith(
+        "new-assignee",
+        "assignedToUserId",
+      );
+      expect(reviews.updateAssignee).toHaveBeenCalledWith(
+        "review-1",
+        null,
+        "new-assignee",
+        FAKE_TRANSACTION,
+      );
       expect(reviewDecisions.create).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "delegate",
           actorUserId: "admin-1",
           delegatedToUserId: "new-assignee",
         }),
+        FAKE_TRANSACTION,
       );
       expect(auditService.record).not.toHaveBeenCalled();
       expect(result.assignedToUserId).toBe("new-assignee");
     });
 
     it("rejects a nonexistent new assignee with a clean 400, before touching the repository", async () => {
-      usersService.findById.mockRejectedValue(new NotFoundException("no such user"));
+      usersService.assertUserExists.mockRejectedValue(
+        new BadRequestException("assignedToUserId does not resolve to an active user"),
+      );
 
       await expect(
-        svc.delegate("review-1", { assignedToUserId: "no-such-user" }, "admin-1"),
+        svc.delegate(
+          "review-1",
+          { assignedToUserId: "no-such-user", expectedAssignedToUserId: null },
+          "admin-1",
+        ),
       ).rejects.toThrow(BadRequestException);
       expect(reviews.updateAssignee).not.toHaveBeenCalled();
     });
 
+    it("throws ConflictException on a stale expectedAssignedToUserId (the concurrent-delegate race, code-review fix)", async () => {
+      usersService.assertUserExists.mockResolvedValue(undefined);
+      reviews.updateAssignee.mockResolvedValue({
+        outcome: "conflict",
+        entity: review({ assignedToUserId: "someone-else" }),
+      });
+
+      await expect(
+        svc.delegate(
+          "review-1",
+          { assignedToUserId: "new-assignee", expectedAssignedToUserId: "stale-assignee" },
+          "admin-1",
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+
     it("throws ConflictException when the review is already decided (terminal)", async () => {
-      usersService.findById.mockResolvedValue({ id: "new-assignee" });
+      usersService.assertUserExists.mockResolvedValue(undefined);
       reviews.updateAssignee.mockResolvedValue({
         outcome: "conflict",
         entity: review({ status: "rejected" }),
       });
 
       await expect(
-        svc.delegate("review-1", { assignedToUserId: "new-assignee" }, "admin-1"),
+        svc.delegate(
+          "review-1",
+          { assignedToUserId: "new-assignee", expectedAssignedToUserId: null },
+          "admin-1",
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
     it("throws NotFoundException for a missing review", async () => {
-      usersService.findById.mockResolvedValue({ id: "new-assignee" });
+      usersService.assertUserExists.mockResolvedValue(undefined);
       reviews.updateAssignee.mockResolvedValue({ outcome: "not_found" });
 
       await expect(
-        svc.delegate("no-such-id", { assignedToUserId: "new-assignee" }, "admin-1"),
+        svc.delegate(
+          "no-such-id",
+          { assignedToUserId: "new-assignee", expectedAssignedToUserId: null },
+          "admin-1",
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

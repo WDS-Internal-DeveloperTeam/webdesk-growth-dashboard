@@ -5,7 +5,10 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { withTransaction } from "@webdesk/database";
 import type {
+  CasResult,
+  ReviewDecisionEntity,
   ReviewDecisionRepository,
   ReviewEntity,
   ReviewRepository,
@@ -67,38 +70,41 @@ export class ReviewsService {
     private readonly auditService: AuditService,
   ) {}
 
-  /** Existence-validated via `UsersService.findById()` (mirrors
-   *  `InternalLinksService.assertApproverExists()`'s/`ProjectService.assertOwnerExists()`'s own
-   *  precedent exactly) — a clean 400, not a raw FK-violation 500 (`reviews.assigned_to_user_id`
-   *  is a real, FK-constrained column, unlike `target_module_key`/`target_id`). */
-  private async assertAssigneeExists(assignedToUserId: string): Promise<void> {
-    try {
-      await this.usersService.findById(assignedToUserId);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new BadRequestException(
-          `assignedToUserId does not resolve to an active user: ${assignedToUserId}`,
-        );
-      }
-      throw error;
+  /**
+   * Resolves a `CasResult` into its entity or throws the matching HTTP exception — extracted
+   * (code-review finding) after `decide()`/`setPaused()`/`delegate()` each hand-copied the
+   * identical `not_found`/`conflict` two-branch mapping. `conflictMessage` is a thunk so each
+   * caller can still report its own conflict wording without re-deriving the branching itself.
+   */
+  private unwrapCasResult(
+    id: string,
+    result: CasResult<ReviewEntity>,
+    conflictMessage: (entity: ReviewEntity) => string,
+  ): ReviewEntity {
+    if (result.outcome === "not_found") {
+      throw new NotFoundException(`Review not found: ${id}`);
     }
+    if (result.outcome === "conflict") {
+      throw new ConflictException(conflictMessage(result.entity));
+    }
+    return result.entity;
   }
 
   async create(input: CreateReviewDto, actorUserId: string): Promise<ReviewEntity> {
     // targetModuleKey validated against the real module registry (task package D6) — targetId
     // existence is deliberately NOT checked, since no generic cross-module lookup capability
-    // exists to validate it against.
-    const isValidTargetModule = await this.authorizationService.isValidModuleKey(
-      input.targetModuleKey,
-    );
+    // exists to validate it against. Both checks are independent DB-backed lookups, so they run
+    // concurrently (code-review finding — they were previously two sequential round trips).
+    const [isValidTargetModule] = await Promise.all([
+      this.authorizationService.isValidModuleKey(input.targetModuleKey),
+      input.assignedToUserId
+        ? this.usersService.assertUserExists(input.assignedToUserId, "assignedToUserId")
+        : Promise.resolve(),
+    ]);
     if (!isValidTargetModule) {
       throw new BadRequestException(
         `targetModuleKey does not resolve to a real module: ${input.targetModuleKey}`,
       );
-    }
-
-    if (input.assignedToUserId) {
-      await this.assertAssigneeExists(input.assignedToUserId);
     }
 
     const created = await this.reviews.create({
@@ -148,11 +154,25 @@ export class ReviewsService {
     });
   }
 
+  /** This module's own queryable local history (task package D1) — a review's `review_decisions`
+   *  rows, most recent first. Gated on `view`, the same action `findById()`/`list()` use — reading
+   *  a review's decision trail carries no more privilege than reading the review itself. */
+  async listDecisions(id: string): Promise<readonly ReviewDecisionEntity[]> {
+    await this.findById(id);
+    return this.reviewDecisions.listByReview(id);
+  }
+
   /**
    * One method handling all 4 approval-shaped actions (`approve`/`approve_with_notes`/`reject`/
    * `request_revision`, task package §4) — an atomic compare-and-swap on the caller-supplied
    * `expectedStatus`, gated by separation of duties (D4) BEFORE the write, then mirrored into both
-   * `review_decisions` (this module's own local history) and `audit_events` (D5).
+   * `review_decisions` (this module's own local history) and `audit_events` (D5). The CAS write and
+   * the `review_decisions` write are committed atomically via `withTransaction()` (code-review
+   * finding — the two were previously independent, non-transactional calls, so a transient failure
+   * after the CAS write committed could leave the review's new status durably persisted with zero
+   * record of who decided it). `audit_events` stays outside the transaction and best-effort
+   * (unchanged) — that's an already-established, deliberate pattern elsewhere in this codebase, not
+   * something this fix round touches.
    */
   async decide(id: string, dto: DecideReviewDto, actorUserId: string): Promise<ReviewEntity> {
     const review = await this.findById(id);
@@ -179,36 +199,37 @@ export class ReviewsService {
     const nextStatus = NEXT_STATUS_FOR_DECISION[dto.action];
     const decidedAt = new Date();
 
-    const result = await this.reviews.updateStatus(
-      id,
-      dto.expectedStatus,
-      nextStatus,
-      actorUserId,
-      decidedAt,
-    );
-    if (result.outcome === "not_found") {
-      throw new NotFoundException(`Review not found: ${id}`);
-    }
-    if (result.outcome === "conflict") {
-      throw new ConflictException(
-        `Review ${id} status changed concurrently ` +
-          `(expected ${dto.expectedStatus}, now ${result.entity.status}) — reload and retry`,
+    const entity = await withTransaction(async (transaction) => {
+      const result = await this.reviews.updateStatus(
+        id,
+        dto.expectedStatus,
+        nextStatus,
+        actorUserId,
+        decidedAt,
+        transaction,
       );
-    }
+      const updated = this.unwrapCasResult(
+        id,
+        result,
+        (current) =>
+          `Review ${id} status changed concurrently ` +
+          `(expected ${dto.expectedStatus}, now ${current.status}) — reload and retry`,
+      );
 
-    // This module's own queryable local history (task package D1) — always written for a
-    // successful decide() call, distinct from the audit_events mirror below.
-    await this.reviewDecisions.create({
-      reviewId: id,
-      action: dto.action,
-      actorUserId,
-      notes: dto.notes ?? null,
-      decidedAt,
+      // This module's own queryable local history (task package D1) — always written for a
+      // successful decide() call, distinct from the audit_events mirror below.
+      await this.reviewDecisions.create(
+        { reviewId: id, action: dto.action, actorUserId, notes: dto.notes ?? null, decidedAt },
+        transaction,
+      );
+
+      return updated;
     });
 
     // Every decide() action is approval-shaped (task package D5) — always mirrored into the real,
-    // DB-trigger-enforced audit_events table. A failed audit write here is caught and only
-    // console.error'd, not retried or alerted on — the byte-identical, already-accepted pattern
+    // DB-trigger-enforced audit_events table. Deliberately OUTSIDE the transaction above and
+    // best-effort (a failed audit write here is caught and only console.error'd, not retried or
+    // alerted on) — the byte-identical, already-accepted pattern
     // ContentTemplatesService.changeApprovalStatus()/InternalLinksService.changeStatus() both have.
     try {
       await this.auditService.record({
@@ -230,14 +251,17 @@ export class ReviewsService {
       );
     }
 
-    return result.entity;
+    return entity;
   }
 
   /**
    * Toggle `isPaused` — orthogonal to `status` (task package D2), advisory only, never a blocking
    * gate on other transitions. Not routed through `audit_events` (task package D5): "preserve
    * immutable *approval* events," not "immutable everything" — pause/resume are process-management
-   * actions, not approval decisions.
+   * actions, not approval decisions. The CAS write and the `review_decisions` write commit
+   * atomically via `withTransaction()` (code-review finding) — `review_decisions` is the SOLE
+   * record of this action, so an unguarded, non-transactional write here would have made a partial
+   * failure an unrecoverable audit-trail gap, not just a redundant one.
    */
   async setPaused(id: string, dto: SetReviewPausedDto, actorUserId: string): Promise<ReviewEntity> {
     await this.authorizationService.assertAllowed(
@@ -246,30 +270,38 @@ export class ReviewsService {
       "review",
     );
 
-    const result = await this.reviews.updatePaused(id, dto.expectedIsPaused, dto.isPaused);
-    if (result.outcome === "not_found") {
-      throw new NotFoundException(`Review not found: ${id}`);
-    }
-    if (result.outcome === "conflict") {
-      throw new ConflictException(
-        `Review ${id} pause state (or status) changed concurrently — reload and retry`,
+    return withTransaction(async (transaction) => {
+      const result = await this.reviews.updatePaused(
+        id,
+        dto.expectedIsPaused,
+        dto.isPaused,
+        transaction,
       );
-    }
+      const updated = this.unwrapCasResult(
+        id,
+        result,
+        () => `Review ${id} pause state (or status) changed concurrently — reload and retry`,
+      );
 
-    await this.reviewDecisions.create({
-      reviewId: id,
-      action: dto.isPaused ? "pause" : "resume",
-      actorUserId,
+      await this.reviewDecisions.create(
+        { reviewId: id, action: dto.isPaused ? "pause" : "resume", actorUserId },
+        transaction,
+      );
+
+      return updated;
     });
-
-    return result.entity;
   }
 
   /**
    * Reassign `assignedToUserId` — an administrative action (task package D10), gated on `edit`
    * rather than `review`/`approve`, matching that only `super_admin`/`owner_growth_approver` hold
    * `E` in the seeded matrix. Not routed through `audit_events` (task package D5) — process
-   * management, not an approval decision.
+   * management, not an approval decision. Guards `expectedAssignedToUserId` as a CAS value
+   * (code-review finding — without it, two concurrent `delegate()` calls both matched the same
+   * status-only guard and both "succeeded," each writing a `review_decisions` row even though only
+   * one DB write actually won on `assigned_to_user_id`) and commits the CAS write + the
+   * `review_decisions` write atomically via `withTransaction()` for the same reason `decide()`/
+   * `setPaused()` now do.
    */
   async delegate(id: string, dto: DelegateReviewDto, actorUserId: string): Promise<ReviewEntity> {
     await this.authorizationService.assertAllowed(
@@ -278,25 +310,33 @@ export class ReviewsService {
       "edit",
     );
 
-    await this.assertAssigneeExists(dto.assignedToUserId);
+    await this.usersService.assertUserExists(dto.assignedToUserId, "assignedToUserId");
 
-    const result = await this.reviews.updateAssignee(id, dto.assignedToUserId);
-    if (result.outcome === "not_found") {
-      throw new NotFoundException(`Review not found: ${id}`);
-    }
-    if (result.outcome === "conflict") {
-      throw new ConflictException(
-        `Review ${id} is decided (terminal) and can no longer be delegated`,
+    return withTransaction(async (transaction) => {
+      const result = await this.reviews.updateAssignee(
+        id,
+        dto.expectedAssignedToUserId,
+        dto.assignedToUserId,
+        transaction,
       );
-    }
+      const updated = this.unwrapCasResult(
+        id,
+        result,
+        () =>
+          `Review ${id} is decided (terminal), or its assignee changed concurrently — reload and retry`,
+      );
 
-    await this.reviewDecisions.create({
-      reviewId: id,
-      action: "delegate",
-      actorUserId,
-      delegatedToUserId: dto.assignedToUserId,
+      await this.reviewDecisions.create(
+        {
+          reviewId: id,
+          action: "delegate",
+          actorUserId,
+          delegatedToUserId: dto.assignedToUserId,
+        },
+        transaction,
+      );
+
+      return updated;
     });
-
-    return result.entity;
   }
 }

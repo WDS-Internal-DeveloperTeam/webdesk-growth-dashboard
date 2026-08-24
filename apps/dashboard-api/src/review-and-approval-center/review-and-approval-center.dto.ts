@@ -63,6 +63,12 @@ export type SetReviewPausedDto = z.infer<typeof setReviewPausedSchema>;
 
 export const delegateReviewSchema = z.object({
   assignedToUserId: z.string().uuid(),
+  // The review's current assignee the caller last observed — required for the atomic
+  // compare-and-swap (code-review finding, task package §4). `null` means the caller last saw the
+  // review unassigned. Without this, two concurrent delegate() calls on the same review would both
+  // match an identical status-only guard and both "succeed," even though only one DB write
+  // actually wins on assignedToUserId.
+  expectedAssignedToUserId: z.string().uuid().nullable(),
 });
 export type DelegateReviewDto = z.infer<typeof delegateReviewSchema>;
 

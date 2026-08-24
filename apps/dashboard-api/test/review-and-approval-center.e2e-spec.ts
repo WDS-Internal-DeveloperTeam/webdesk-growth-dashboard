@@ -286,7 +286,7 @@ describe("Review and Approval Center module endpoints (e2e, real disposable data
       .post(`/reviews/${created.id}/delegate`)
       .set("Cookie", editorCookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({ assignedToUserId: marketingEditorUserId })
+      .send({ assignedToUserId: marketingEditorUserId, expectedAssignedToUserId: null })
       .expect(403);
 
     const decideResponse = await request(app.getHttpServer())
@@ -306,9 +306,89 @@ describe("Review and Approval Center module endpoints (e2e, real disposable data
       .post(`/reviews/${created.id}/delegate`)
       .set("Cookie", cookie)
       .set("Origin", process.env.WEB_APP_ORIGIN!)
-      .send({ assignedToUserId: marketingEditorUserId })
+      .send({ assignedToUserId: marketingEditorUserId, expectedAssignedToUserId: null })
       .expect(200);
     expect(delegateResponse.body.data.assignedToUserId).toBe(marketingEditorUserId);
+  });
+
+  it("returns 409 delegating on a stale expectedAssignedToUserId (code-review fix, the concurrent-delegate race)", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const created = await createReview(cookie);
+
+    // The review is really unassigned (null); claim we expected it already assigned to a
+    // different user — a stale read, exactly the shape of two concurrent delegate() calls racing.
+    await request(app.getHttpServer())
+      .post(`/reviews/${created.id}/delegate`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({
+        assignedToUserId: marketingEditorUserId,
+        expectedAssignedToUserId: qaSecurityReviewerUserId,
+      })
+      .expect(409);
+
+    const stillUnassigned = await request(app.getHttpServer())
+      .get(`/reviews/${created.id}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(stillUnassigned.body.data.assignedToUserId).toBeNull();
+  });
+
+  it("returns 409 re-deciding an already-terminal review — approved/rejected can never be reversed (code-review fix)", async () => {
+    const submitterCookie = await cookieForNewSession(superAdminUserId);
+    const approverCookie = await cookieForNewSession(ownerGrowthApproverUserId);
+    const created = await createReview(submitterCookie);
+
+    await request(app.getHttpServer())
+      .post(`/reviews/${created.id}/decide`)
+      .set("Cookie", approverCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ action: "approve", expectedStatus: "submitted" })
+      .expect(200);
+
+    // A caller who observed the review as "approved" and replays that as expectedStatus must never
+    // be able to flip it to "rejected".
+    await request(app.getHttpServer())
+      .post(`/reviews/${created.id}/decide`)
+      .set("Cookie", approverCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ action: "reject", expectedStatus: "approved" })
+      .expect(409);
+
+    const stillApproved = await request(app.getHttpServer())
+      .get(`/reviews/${created.id}`)
+      .set("Cookie", submitterCookie)
+      .expect(200);
+    expect(stillApproved.body.data.status).toBe("approved");
+  });
+
+  it("GET /reviews/:id/decisions lists the review's decision history (task package D1)", async () => {
+    const submitterCookie = await cookieForNewSession(superAdminUserId);
+    const approverCookie = await cookieForNewSession(ownerGrowthApproverUserId);
+    const created = await createReview(submitterCookie);
+
+    await request(app.getHttpServer())
+      .post(`/reviews/${created.id}/decide`)
+      .set("Cookie", approverCookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ action: "approve_with_notes", notes: "Looks good", expectedStatus: "submitted" })
+      .expect(200);
+
+    const decisionsResponse = await request(app.getHttpServer())
+      .get(`/reviews/${created.id}/decisions`)
+      .set("Cookie", submitterCookie)
+      .expect(200);
+    expect(decisionsResponse.body.data).toHaveLength(1);
+    expect(decisionsResponse.body.data[0].action).toBe("approve_with_notes");
+    expect(decisionsResponse.body.data[0].notes).toBe("Looks good");
+  });
+
+  it("GET /reviews/:id/decisions returns 404 for a nonexistent review", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    await request(app.getHttpServer())
+      .get(`/reviews/${randomUUID()}/decisions`)
+      .set("Cookie", cookie)
+      .expect(404);
   });
 
   it("?assignedToMe=true resolves to the caller's own id", async () => {

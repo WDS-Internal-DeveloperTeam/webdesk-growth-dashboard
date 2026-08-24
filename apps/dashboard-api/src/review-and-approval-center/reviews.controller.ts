@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { ReviewEntity } from "@webdesk/database";
+import type { ReviewDecisionEntity, ReviewEntity } from "@webdesk/database";
 import type { ApiSuccessResponse } from "@webdesk/shared-types";
 import type { RequestWithCorrelationId } from "../common/correlation-id.middleware.js";
 import { OriginCheckGuard } from "../auth/common/origin-check.guard.js";
@@ -66,6 +66,21 @@ export class ReviewsController {
     @Req() req: ReviewAndApprovalCenterRequest,
   ): Promise<ApiSuccessResponse<ReviewEntity>> {
     const data = await this.reviews.findById(id);
+    return { success: true, data, correlationId: req.correlationId ?? "unknown" };
+  }
+
+  @Get(":id/decisions")
+  @UseGuards(PermissionGuard)
+  @RequirePermission(REVIEW_AND_APPROVAL_CENTER_MODULE_KEY, "view")
+  @ApiOperation({
+    summary:
+      "List a review's decision history (this module's own local, queryable action log — task package D1)",
+  })
+  async listDecisions(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Req() req: ReviewAndApprovalCenterRequest,
+  ): Promise<ApiSuccessResponse<readonly ReviewDecisionEntity[]>> {
+    const data = await this.reviews.listDecisions(id);
     return { success: true, data, correlationId: req.correlationId ?? "unknown" };
   }
 

@@ -31,16 +31,22 @@ export class ReviewCommentsService {
   /** `review_comments.review_id` is FK-constrained (migration `00066`), but a well-formed,
    *  nonexistent `reviewId` would otherwise only be caught at the database layer — surfacing as a
    *  raw, unhandled 500 instead of a clean 404 (mirrors `ClaimSourcesService.create()`'s own
-   *  identical guard). */
+   *  identical guard). Extracted into `assertReviewExists()` (code-review finding) — `create()`
+   *  never reads any field off the fetched review, so it's a pure existence check, same as
+   *  `listByReview()`'s own identical guard below. */
+  private async assertReviewExists(reviewId: string): Promise<void> {
+    const review = await this.reviews.findById(reviewId);
+    if (!review) {
+      throw new NotFoundException(`Review not found: ${reviewId}`);
+    }
+  }
+
   async create(
     reviewId: string,
     input: CreateReviewCommentDto,
     actorUserId: string,
   ): Promise<ReviewCommentEntity> {
-    const review = await this.reviews.findById(reviewId);
-    if (!review) {
-      throw new NotFoundException(`Review not found: ${reviewId}`);
-    }
+    await this.assertReviewExists(reviewId);
 
     const created = await this.comments.create({
       reviewId,
@@ -66,10 +72,7 @@ export class ReviewCommentsService {
    *  missing review should read as a clean 404, not a silent empty array indistinguishable from a
    *  real review with zero comments. */
   async listByReview(reviewId: string): Promise<readonly ReviewCommentEntity[]> {
-    const review = await this.reviews.findById(reviewId);
-    if (!review) {
-      throw new NotFoundException(`Review not found: ${reviewId}`);
-    }
+    await this.assertReviewExists(reviewId);
     return this.comments.listByReview(reviewId);
   }
 }
