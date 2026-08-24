@@ -1,8 +1,8 @@
 # `dashboard-web` Keyword & Entity Library UI — Approval Checklist
 
 **Status:** Built, code review complete (5 candidates surfaced after dedup — 5 CONFIRMED, all
-fixed). Security review complete (0 findings above threshold). Awaiting required second-role human
-review.
+fixed). Security review complete (0 findings above threshold). Required second-role human review
+complete — Jitesh D, "Approves," no disputes raised. Awaiting a gate decision.
 
 ## Completion condition
 
@@ -90,12 +90,31 @@ clean:
   open-redirect surface; every `projectId` traces back to a server-validated `Project.id`, never a
   raw unvalidated query-string value.
 
-## Required second-role human review — PENDING
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (5 CONFIRMED and fixed, 0 accepted debt)
-- [ ] Security-review findings (0 above threshold)
+- [x] Code-review findings (5 CONFIRMED and fixed, 0 accepted debt) — reviewed by: **Jitesh D**,
+      2026-08-24, **Approves**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-24,
+      **Approves**.
 
 Review packet:
 [Keyword & Entity Library UI Review Packet](https://claude.ai/code/artifact/65fb0609-4320-4e42-8037-777af14e0b3e)
 (published as a Claude artifact — code review + security review findings, fixes, and validation
 evidence, with a decision section).
+
+## Sign-off
+
+**Second-role human review: complete.** No disputes raised — every confirmed code-review finding
+was already fixed, none were accepted as tracked debt, and the security review found 0 findings
+above threshold.
+
+| Field                         | Value                                                                                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                                   |
+| Review date                   | 2026-08-24                                                                                                                                                 |
+| Decision                      | Approves                                                                                                                                                   |
+| Scope reviewed                | Full code-review disposition (5 findings fixed, 0 accepted debt) and full security-review disposition (0 above threshold), per the published review packet |
+| Disputes raised               | None recorded                                                                                                                                              |
+
+A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
+steps, per this project's standing "no auto-merge" rule.
