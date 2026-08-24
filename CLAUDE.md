@@ -6697,6 +6697,44 @@ ea53364653e8ee1f14cbdf74cf701865fd9d96be`, confirming the exact merged commit is
   genuinely live in production**, closing out this slice's full build-to-production arc. No
   `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
   matching every prior module's own backend-first precedent.
+- `[2026-08-24]` **Built the `dashboard-web` UI for Keyword & Entity Library** — closes this
+  module's last named gap, following the backend's own build-to-production arc (PR #59). Not
+  started automatically — built directly on the explicit "Start the dashboard-web UI for it"
+  instruction. Keywords are the primary record (list/create/detail/edit, full approval workflow,
+  mirroring Page Inventory's own project-scoped route/picker pattern — the only other
+  project-scoped module in this codebase); entities are a secondary, independently-browsable
+  resource with no workflow (task package D3) and a real hard-delete route — the first top-level
+  hard-delete UI in this app. Two sub-resource sections on the keyword detail page
+  (`KeywordEntityRelationshipsSection`, `KeywordPageAssignmentsSection`) manage the two join
+  tables via `@webdesk/ui`'s `RelationshipPicker`, the latter a genuine cross-module relationship
+  into Page Inventory's own `pages`. Per the 2026-08-22 standing rule, `cannibalizationNotes`
+  (keywords) and `description` (entities) both switch to `RichTextEditor` — a paired, additive
+  backend change (raising the DTO length limit, wiring write-time sanitization) landed in the
+  same branch, matching the established rich-text-conversion pattern. **Independent code review
+  then ran** (this project's own `code-review` skill, high effort, 8-angle finder pass) — 5
+  candidates surfaced after dedup, all 5 CONFIRMED and fixed (most severe: the keywords list
+  page's filter inputs silently truncated a typed value to 100 characters with zero feedback,
+  since the input's `maxLength` didn't match the backend's real column limit — also fixed: a
+  duplicated form-field helper, three pages missing an already-established fetch-concurrency
+  pattern, and a hand-rolled delete button bypassing the design system's `Button` component). One
+  fix extracted a new shared `useRelationshipSection()` hook after the two sub-resource sections
+  were found to independently reimplement ~150 near-identical lines each — past this same
+  branch's own 2-copy extraction threshold. **A separate `security-review` skill run then found 0
+  findings above threshold** — confirmed rich-text sanitization runs end-to-end on every write/
+  render path, the two `RelationshipPicker` sections can't be used to link a cross-project
+  entity/page (the backend independently re-validates both against the caller's own project), the
+  new hard-delete route is genuinely gated server-side (not just the client-side confirm), and no
+  injection/open-redirect surface exists in the project-scoped cookie/href handling. Final
+  numbers: 615/615 `dashboard-web` unit tests, 745/745 `dashboard-api` unit tests, 283/283
+  `dashboard-api` integration/e2e tests — all re-verified against a real disposable database after
+  every fix round; typecheck/lint/CSS-token-check/`next build`/prettier all clean. A review packet
+  (published as a Claude artifact, "Keyword & Entity Library UI Review Packet" — code review +
+  security review findings, fixes, and validation evidence, with a decision section) was then
+  prepared for the required second-role human review, since the implementing agent cannot also be
+  its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-keyword-and-entity-library-approval-checklist.md`. **Awaiting
+  that review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
 
 ## Open client blockers
 
