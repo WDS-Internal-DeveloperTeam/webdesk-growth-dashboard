@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ContentContainer, PageHeader } from "@webdesk/ui";
 import { InternalLinkForm } from "@/components/internal-link-form";
+import { tolerateDiscard } from "@/lib/business-knowledge";
 import { getPagesForInternalLinkPicker } from "@/lib/internal-linking-library";
 import { getProject } from "@/lib/projects";
 import { firstValue } from "@/lib/search-params";
@@ -27,12 +28,22 @@ export default async function NewInternalLinkPage({ searchParams }: NewInternalL
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+
+  // Fired concurrently with the project-existence check below, not sequentially after it —
+  // getPagesForInternalLinkPicker() only needs the already-known projectId string, no field
+  // resolved from the Project entity itself, mirroring the edit page's own identical fix.
+  // tolerateDiscard() avoids an unhandled-rejection warning on the branch where project turns out
+  // null and this promise is never awaited.
+  const pagesPromise = projectIdParam
+    ? tolerateDiscard(getPagesForInternalLinkPicker(projectIdParam))
+    : null;
+
   const project = projectIdParam ? await getProject(projectIdParam) : null;
   if (!project) {
     redirect("/internal-linking-library");
   }
 
-  const pages = await getPagesForInternalLinkPicker(project.id);
+  const pages = await pagesPromise!;
 
   return (
     <ContentContainer>

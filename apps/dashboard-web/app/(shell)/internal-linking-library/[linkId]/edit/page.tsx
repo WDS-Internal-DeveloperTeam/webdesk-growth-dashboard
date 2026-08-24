@@ -6,13 +6,13 @@ import { tolerateDiscard } from "@/lib/business-knowledge";
 import {
   getInternalLink,
   getPagesForInternalLinkPicker,
+  resolveLinkRelationships,
   withProjectId,
 } from "@/lib/internal-linking-library";
-import { getPage } from "@/lib/page-inventory";
+import type { getPage } from "@/lib/page-inventory";
 import { getProject } from "@/lib/projects";
 import { firstValue } from "@/lib/search-params";
 import { getServerSession } from "@/lib/server-session";
-import { getUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
@@ -66,13 +66,17 @@ export default async function EditInternalLinkPage({
     notFound();
   }
 
-  // Resolved once the link itself is known — always awaited immediately below, never
-  // conditionally discarded, so no tolerateDiscard() here.
-  const [sourcePage, targetPage, approver] = await Promise.all([
-    getPage(project.id, link.sourcePageId),
-    getPage(project.id, link.targetPageId),
-    link.assignedApproverUserId ? getUser(link.assignedApproverUserId) : Promise.resolve(null),
-  ]);
+  // Resolved once the link itself is known. `pages` is passed as the local-lookup pool — the
+  // link's own sourcePageId/targetPageId were originally chosen from this identical fetch, so the
+  // common case resolves with no extra network round trip; resolveLinkRelationships() only falls
+  // back to a real getPage() call on a genuine miss (a page outside the picker's bounded top-100
+  // window), and guards every lookup against a non-essential-lookup failure degrading to null
+  // rather than crashing this page.
+  const { sourcePage, targetPage, approver } = await resolveLinkRelationships(
+    project.id,
+    link,
+    pages,
+  );
 
   return (
     <ContentContainer>

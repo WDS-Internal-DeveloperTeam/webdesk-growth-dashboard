@@ -87,8 +87,10 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
       allowNull: true,
     },
     /** A placement/surrounding-context description could reasonably run to a paragraph
-     *  (task package D5) — a generously-sized TEXT column, capped at the DTO layer with a Zod
-     *  `.max(2000)`. */
+     *  (task package D5) — a generously-sized TEXT column. Capped at the DTO layer, originally
+     *  with a Zod `.max(2000)`; raised to `.max(4000)` once the `dashboard-web` UI gave this field
+     *  its first real editor (`RichTextEditor`, per the 2026-08-22 standing rule) — see
+     *  `internal-linking-library.dto.ts`'s own `contextField` for the current, authoritative cap. */
     context: {
       type: DataTypes.TEXT,
       allowNull: true,

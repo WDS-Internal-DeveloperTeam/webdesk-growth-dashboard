@@ -94,7 +94,10 @@ targetPageId` (a page cannot link to itself) — enforced at the service layer w
   the same discipline this project applied to Keyword & Entity Library's `keywordType`/`intent`
   and every other ambiguous categorical field across this codebase's history. `context` gets a
   generously-sized `TEXT` column (a placement/surrounding-context description could reasonably run
-  to a paragraph) with a Zod `.max(2000)` cap; the others stay short (`VARCHAR(255)`).
+  to a paragraph) — originally a Zod `.max(2000)` cap; raised to `.max(4000)` once the
+  `dashboard-web` UI gave `context` its first real editor (`RichTextEditor`, per the 2026-08-22
+  standing rule — see `docs/implementation/dashboard-web-internal-linking-library.md` if produced,
+  or the branch's own commit history). The others stay short (`VARCHAR(255)`).
 - **D6 — `priority` is a 3-value string enum (`low`/`medium`/`high`).** No numeric or discrete
   scale is given in the spec, but "priority" is unambiguously ordinal — matches Keyword & Entity
   Library's own `confidence` field precedent for the identical shape of unsourced-but-clearly-

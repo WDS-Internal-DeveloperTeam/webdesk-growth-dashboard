@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import type { ApiSuccessResponse, InternalLink, Page } from "@webdesk/shared-types";
+import type { ApiSuccessResponse, InternalLink, Page, UserSummary } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
 import { formatTimestamp } from "./format-timestamp";
 import {
@@ -12,8 +12,9 @@ import {
   withProjectId,
   type InternalLinkLibraryQuery,
 } from "./internal-linking-library-query";
-import { getPages } from "./page-inventory";
+import { getPage, getPages } from "./page-inventory";
 import { isUuid } from "./uuid";
+import { getUser } from "./users";
 
 export {
   buildInternalLinkLibraryHref,
@@ -103,6 +104,63 @@ export async function getInternalLink(
     throw new Error(`Failed to load internal link (status ${response.status})`);
   }
   return ((await response.json()) as ApiSuccessResponse<InternalLink>).data;
+}
+
+export interface ResolvedLinkRelationships {
+  readonly sourcePage: Page | null;
+  readonly targetPage: Page | null;
+  readonly approver: UserSummary | null;
+}
+
+/**
+ * Resolves a link's `sourcePageId`/`targetPageId`/`assignedApproverUserId` to display data —
+ * shared by the detail and edit pages (previously a byte-for-byte duplicated inline block in
+ * both). Each of the three lookups is independently guarded: `getUser()`/`getPage()` both throw
+ * on any non-404 non-OK status (e.g. a 403), and `GET /users/:userId` is gated on `users_roles:view`,
+ * a grant only 2 of the 7 seeded roles hold — every other role viewing a link with an assigned
+ * approver would otherwise crash the whole page. These are secondary, non-essential lookups (the
+ * page's primary content — the link itself — doesn't depend on them), so a failure degrades to
+ * `null` (rendered as "could not be resolved"/the raw id) rather than crashing via the error
+ * boundary, mirroring `apps/dashboard-web/app/(shell)/projects/[projectId]/edit/page.tsx`'s own
+ * identical `getUser()` guard.
+ *
+ * `pagePool` (optional) is an already-fetched page list — the edit page already fetches
+ * `getPagesForInternalLinkPicker()` for its own pickers, and `sourcePageId`/`targetPageId` were
+ * originally chosen from that identical pool, so a local lookup resolves the common case with no
+ * extra network round trip; `getPage()` only fires on a genuine miss (a page outside the picker's
+ * bounded top-100 window). The detail page has no such pool and always calls `getPage()` directly.
+ */
+export async function resolveLinkRelationships(
+  projectId: string,
+  link: InternalLink,
+  pagePool?: readonly Page[],
+): Promise<ResolvedLinkRelationships> {
+  const findInPool = (pageId: string): Page | undefined => pagePool?.find((p) => p.id === pageId);
+
+  const resolvePage = async (pageId: string, label: string): Promise<Page | null> => {
+    const fromPool = findInPool(pageId);
+    if (fromPool) {
+      return fromPool;
+    }
+    try {
+      return await getPage(projectId, pageId);
+    } catch (error) {
+      console.error(`Failed to resolve internal link ${label} page`, error);
+      return null;
+    }
+  };
+
+  const [sourcePage, targetPage, approver] = await Promise.all([
+    resolvePage(link.sourcePageId, "source"),
+    resolvePage(link.targetPageId, "target"),
+    link.assignedApproverUserId
+      ? getUser(link.assignedApproverUserId).catch((error: unknown) => {
+          console.error("Failed to resolve internal link approver", error);
+          return null;
+        })
+      : Promise.resolve(null),
+  ]);
+  return { sourcePage, targetPage, approver };
 }
 
 /** Same bounded-top-100, degrade-on-failure pattern as `getPagesForKeywordPicker()`, reusing

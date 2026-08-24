@@ -17,13 +17,12 @@ import {
   getInternalLink,
   internalLinkStatusBadge,
   PRIORITY_LABEL,
+  resolveLinkRelationships,
   withProjectId,
 } from "@/lib/internal-linking-library";
-import { getPage } from "@/lib/page-inventory";
 import { getProject } from "@/lib/projects";
 import { firstValue } from "@/lib/search-params";
 import { getServerSession } from "@/lib/server-session";
-import { getUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
@@ -82,14 +81,11 @@ export default async function InternalLinkDetailPage({
   }
 
   // Resolved once the link itself is known (each depends on a real field of `link`, unlike the
-  // project-scoped fetch above) — fired concurrently with each other via Promise.all, not
-  // sequentially. No tolerateDiscard() here — unlike the promises above, these are always awaited
-  // immediately below, never conditionally discarded.
-  const [sourcePage, targetPage, approver] = await Promise.all([
-    getPage(project.id, link.sourcePageId),
-    getPage(project.id, link.targetPageId),
-    link.assignedApproverUserId ? getUser(link.assignedApproverUserId) : Promise.resolve(null),
-  ]);
+  // project-scoped fetch above) — resolveLinkRelationships() fires all three concurrently via
+  // Promise.all internally, and each is individually guarded against a non-essential-lookup
+  // failure (e.g. a 403 from a role lacking users_roles:view) degrading to null rather than
+  // crashing this page.
+  const { sourcePage, targetPage, approver } = await resolveLinkRelationships(project.id, link);
 
   const badge = internalLinkStatusBadge(link.status);
 

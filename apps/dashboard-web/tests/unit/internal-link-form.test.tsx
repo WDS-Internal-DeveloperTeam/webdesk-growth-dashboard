@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { InternalLink, Page } from "@webdesk/shared-types";
+import type { InternalLink, Page, UserSummary } from "@webdesk/shared-types";
 
 const pushMock = vi.fn();
 
@@ -217,6 +217,38 @@ describe("InternalLinkForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("blocks submitting a same-page-different-casing pair via the case-insensitive submit-time guard, not just the (case-sensitive) exclusion filter", async () => {
+    // SinglePagePicker's own exclusion filter compares page.id with an exact !== (see its own doc
+    // comment: "purely a UX nicety, not the enforcement point") — so two distinct pages.prop
+    // entries whose ids are the same UUID in different casing are NOT mutually excluded from each
+    // other's picker, and can both be selected. handleSubmit's own guard at "sourcePage.id
+    // .toLowerCase() === targetPage.id.toLowerCase()" is what actually catches this case,
+    // mirroring the backend's own case-insensitive assertDistinctPages() fix. Uses a hex-letter id
+    // (not SOURCE_PAGE_ID, which is all digits and so unaffected by .toUpperCase()) so the
+    // uppercased id is genuinely a different string, not an accidental no-op.
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as typeof fetch;
+    const HEX_PAGE_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+    const pagesWithCaseDuplicate: readonly Page[] = [
+      ...PAGES,
+      pageFixture(HEX_PAGE_ID, "Contact"),
+      pageFixture(HEX_PAGE_ID.toUpperCase(), "Contact (duplicate id, different case)"),
+    ];
+
+    render(
+      <InternalLinkForm mode="create" projectId={PROJECT_ID} pages={pagesWithCaseDuplicate} />,
+    );
+    fireEvent.change(screen.getByLabelText("Public ID"), { target: { value: "LINK-NEW" } });
+    selectPageOption("Source page", "Contact");
+    selectPageOption("Target page", "Contact (duplicate id, different case)");
+    fireEvent.click(screen.getByRole("button", { name: "Create link" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Source and target must be different pages.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("create mode: submits publicId + both selected pages, omitting untouched optional fields, then navigates to the new link's detail route with projectId preserved", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(LINK_ID));
     global.fetch = fetchMock as typeof fetch;
@@ -309,6 +341,71 @@ describe("InternalLinkForm", () => {
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
     expect(body.targetPageId).toBe(OTHER_PAGE_ID);
+  });
+
+  it("edit mode: preserves a resolvable approver's id on save when the picker was never touched", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(LINK_ID));
+    global.fetch = fetchMock as typeof fetch;
+    const APPROVER_ID = "66666666-6666-6666-6666-666666666666";
+    const approver: UserSummary = {
+      id: APPROVER_ID,
+      displayName: "Jitesh D",
+      email: "jitesh@example.com",
+    };
+
+    render(
+      <InternalLinkForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        linkId={LINK_ID}
+        initial={linkFixture({ assignedApproverUserId: APPROVER_ID })}
+        pages={PAGES}
+        initialSourcePage={{ id: SOURCE_PAGE_ID, displayName: "Homepage" }}
+        initialTargetPage={{ id: TARGET_PAGE_ID, displayName: "Pricing" }}
+        initialApprover={approver}
+      />,
+    );
+
+    // Editing an unrelated field and saving must NOT silently clear the approver assignment —
+    // the same data-loss bug class ProjectForm's own owner field once had.
+    fireEvent.change(screen.getByLabelText("Link type"), { target: { value: "contextual" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.assignedApproverUserId).toBe(APPROVER_ID);
+  });
+
+  it("edit mode: preserves an unresolvable approver's id on save when the picker was never touched", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(LINK_ID));
+    global.fetch = fetchMock as typeof fetch;
+    const UNRESOLVABLE_APPROVER_ID = "77777777-7777-7777-7777-777777777777";
+
+    render(
+      <InternalLinkForm
+        mode="edit"
+        projectId={PROJECT_ID}
+        linkId={LINK_ID}
+        // Approver resolution failed (e.g. a disabled account) — initialApprover is null even
+        // though the link genuinely has an assigned, just-unresolvable approver.
+        initial={linkFixture({ assignedApproverUserId: UNRESOLVABLE_APPROVER_ID })}
+        pages={PAGES}
+        initialSourcePage={{ id: SOURCE_PAGE_ID, displayName: "Homepage" }}
+        initialTargetPage={{ id: TARGET_PAGE_ID, displayName: "Pricing" }}
+        initialApprover={null}
+      />,
+    );
+
+    expect(screen.queryByText(/could not be resolved/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Link type"), { target: { value: "contextual" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.assignedApproverUserId).toBe(UNRESOLVABLE_APPROVER_ID);
   });
 
   it("submits the selected priority value", async () => {

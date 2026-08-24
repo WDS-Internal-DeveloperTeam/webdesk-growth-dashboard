@@ -3,6 +3,7 @@ import type { StatusToken } from "@webdesk/ui";
 import { DEFAULT_PAGE_SIZE, parsePageSize, type PageSize } from "./pagination";
 import { withProjectId } from "./project-scoped-href";
 import { firstValue } from "./search-params";
+import { isUuid } from "./uuid";
 
 export { withProjectId };
 
@@ -108,8 +109,6 @@ export interface InternalLinkLibraryQuery {
  * dropped to `null` rather than sent through — the backend's own `.uuid()` check would otherwise
  * reject the whole request with a 400 for what should just degrade to "no filter."
  */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function parseInternalLinkLibrarySearchParams(
   projectId: string,
   raw: Record<string, string | string[] | undefined>,
@@ -125,8 +124,8 @@ export function parseInternalLinkLibrarySearchParams(
 
   return {
     projectId,
-    sourcePageId: sourcePageId && UUID_PATTERN.test(sourcePageId) ? sourcePageId : null,
-    targetPageId: targetPageId && UUID_PATTERN.test(targetPageId) ? targetPageId : null,
+    sourcePageId: sourcePageId && isUuid(sourcePageId) ? sourcePageId : null,
+    targetPageId: targetPageId && isUuid(targetPageId) ? targetPageId : null,
     status: STATUS_VALUES.includes(status as InternalLinkStatus)
       ? (status as InternalLinkStatus)
       : null,
