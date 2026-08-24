@@ -1,5 +1,6 @@
 import type {
   AuthEventRepository,
+  ModuleRegistryRepository,
   ModuleRepository,
   RolePermissionRepository,
   UserRepository,
@@ -20,6 +21,7 @@ describe("AuthorizationService", () => {
   let userRoles: { findRoleIdsForUser: ReturnType<typeof vi.fn> };
   let users: { findById: ReturnType<typeof vi.fn> };
   let events: { record: ReturnType<typeof vi.fn> };
+  let moduleRegistry: { findByKey: ReturnType<typeof vi.fn> };
   let service: AuthorizationService;
 
   beforeEach(() => {
@@ -28,12 +30,14 @@ describe("AuthorizationService", () => {
     userRoles = { findRoleIdsForUser: vi.fn() };
     users = { findById: vi.fn() };
     events = { record: vi.fn() };
+    moduleRegistry = { findByKey: vi.fn() };
     service = new AuthorizationService(
       modules as unknown as ModuleRepository,
       rolePermissions as unknown as RolePermissionRepository,
       userRoles as unknown as UserRoleRepository,
       users as unknown as UserRepository,
       events as unknown as AuthEventRepository,
+      moduleRegistry as unknown as ModuleRegistryRepository,
     );
   });
 
@@ -236,6 +240,19 @@ describe("AuthorizationService", () => {
           reason: expect.stringContaining("no_grant"),
         }),
       );
+    });
+  });
+
+  describe("isValidModuleKey", () => {
+    it("returns true when the module registry has a matching key", async () => {
+      moduleRegistry.findByKey.mockResolvedValue({ key: "review_and_approval_center" });
+      expect(await service.isValidModuleKey("review_and_approval_center")).toBe(true);
+      expect(moduleRegistry.findByKey).toHaveBeenCalledWith("review_and_approval_center");
+    });
+
+    it("returns false when no module registry entry matches the key", async () => {
+      moduleRegistry.findByKey.mockResolvedValue(null);
+      expect(await service.isValidModuleKey("no-such-module")).toBe(false);
     });
   });
 });
