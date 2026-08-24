@@ -104,6 +104,55 @@ describe("ContentTemplatesService", () => {
       expect(templates.create).not.toHaveBeenCalled();
     });
 
+    it("sanitizes rich-text fields before writing, stripping a disallowed tag (dashboard-web UI rich-text rollout)", async () => {
+      templates.findByPublicId.mockResolvedValue(null);
+      templates.create.mockResolvedValue(template());
+
+      await svc.create(
+        {
+          publicId: "TEMPLATE-X",
+          pageType: "X",
+          purpose: "<script>alert(1)</script><p>Convert visitors</p>",
+          proofRules: null,
+          seoAeoGeoRequirements: undefined,
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = templates.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.purpose).toBe("<p>Convert visitors</p>");
+      // null/undefined pass through unchanged rather than being coerced into an empty string.
+      expect(writtenInput.proofRules).toBeNull();
+      expect(writtenInput.seoAeoGeoRequirements).toBeUndefined();
+    });
+
+    it("sanitizes every one of the 6 long-text fields on create, not just purpose", async () => {
+      templates.findByPublicId.mockResolvedValue(null);
+      templates.create.mockResolvedValue(template());
+      const dirty = "<p>Text</p><script>bad</script>";
+      const clean = "<p>Text</p>";
+
+      await svc.create(
+        {
+          publicId: "TEMPLATE-X",
+          pageType: "X",
+          proofRules: dirty,
+          seoAeoGeoRequirements: dirty,
+          schema: dirty,
+          ctaRules: dirty,
+          contentDepthGuidance: dirty,
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = templates.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.proofRules).toBe(clean);
+      expect(writtenInput.seoAeoGeoRequirements).toBe(clean);
+      expect(writtenInput.schema).toBe(clean);
+      expect(writtenInput.ctaRules).toBe(clean);
+      expect(writtenInput.contentDepthGuidance).toBe(clean);
+    });
+
     it("translates a concurrent publicId collision into a clean 400, not a raw 500", async () => {
       templates.findByPublicId.mockResolvedValue(null);
       templates.create.mockRejectedValue(uniqueConstraintError());
@@ -189,6 +238,38 @@ describe("ContentTemplatesService", () => {
         expect.objectContaining({ pageType: "Renamed", updatedBy: "actor-1" }),
         "draft",
       );
+    });
+
+    it("sanitizes rich-text fields before writing, stripping a disallowed tag", async () => {
+      templates.findById.mockResolvedValue(template({ approvalStatus: "draft" }));
+      templates.update.mockResolvedValue(template());
+
+      await svc.update(
+        "template-1",
+        { proofRules: "<script>alert(1)</script><p>Cite a third-party source</p>" },
+        "actor-1",
+      );
+
+      const [, writtenPatch] = templates.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.proofRules).toBe("<p>Cite a third-party source</p>");
+    });
+
+    it("skips re-sanitizing a rich-text field the patch resends unchanged from the current stored value", async () => {
+      // A value containing a tag the sanitizer's own allowlist would strip if it ran, stored as
+      // the "current" value (representing e.g. a row written before this sanitizer existed) and
+      // resent unchanged. If sanitizeNullableRichTextIfChanged() actually skipped re-sanitizing,
+      // the disallowed tag survives verbatim; if it re-ran the real sanitizer despite the values
+      // matching, the tag would be stripped — this test can tell the two apart.
+      const dirtyButUnchanged = "<p>Text</p><script>still-there-if-skipped</script>";
+      templates.findById.mockResolvedValue(
+        template({ approvalStatus: "draft", proofRules: dirtyButUnchanged }),
+      );
+      templates.update.mockResolvedValue(template());
+
+      await svc.update("template-1", { proofRules: dirtyButUnchanged }, "actor-1");
+
+      const [, writtenPatch] = templates.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(writtenPatch.proofRules).toBe(dirtyButUnchanged);
     });
 
     it("never accepts approvalStatus/version/isPublished/publishedAt through the general update patch", async () => {
