@@ -1,8 +1,9 @@
 # `dashboard-web` Internal Linking Library UI — Approval Checklist
 
 **Status:** Built, code review complete (8 candidates surfaced after dedup — 8 CONFIRMED, all
-fixed). Security review complete (0 findings above threshold). Awaiting required second-role human
-review.
+fixed). Security review complete (0 findings above threshold). Required second-role human review
+complete — Jitesh D, "Approves," no disputes raised. A gate decision, push/PR, and merge
+authorization each remain separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -19,7 +20,7 @@ for this slice can be requested.
 | 6   | Security review complete                   | ✅ `security-review` skill run separately, against the fixed branch — 0 findings above threshold, including dedicated focus on the rich-text sanitization loop, the deliberately-unvalidated `relatedStrategyRecordId` field, IDOR-adjacent picker paths, and the new error-catching's log hygiene                                                                                                          |
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ None — every confirmed finding was fixed in this pass                                                                                                                                                                                                                                                                                                                                                    |
 | 8   | Live end-to-end verified                   | ✅ Independently re-verified: every high-risk file read directly (the two `SinglePagePicker` instances, the `UserPicker`/`approverTouched` wiring, the RBAC-crash fix, the backend sanitization wiring), every test suite re-run against a fresh local disposable PostgreSQL 17 database, `next build` confirmed clean, all 4 routes live-rendered in the Browser pane with clean unauthenticated redirects |
-| 9   | Documentation updated                      | ✅ `CLAUDE.md`'s "Recent decisions" entries to be updated after second-role review                                                                                                                                                                                                                                                                                                                          |
+| 9   | Documentation updated                      | ✅ `CLAUDE.md`'s "Recent decisions" entries updated                                                                                                                                                                                                                                                                                                                                                         |
 | 10  | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-internal-linking-library`, commits `9bf4179` (shared types + backend rich-text conversion) → `1263a8b` (frontend UI) → `1beb91d` (code-review fixes) — not yet pushed to `origin`                                                                                                                                                                                                  |
 
 ## Forbidden-actions check
@@ -96,15 +97,31 @@ branch (commit `1beb91d`). **0 findings above threshold.** Confirmed:
   `dashboard-api`'s unmodified `OriginCheckGuard`/`PermissionGuard`/session-cookie enforcement —
   no security-boundary change in this branch.
 
-## Required second-role human review — PENDING
+## Required second-role human review — COMPLETE
 
-- [ ] Code-review findings (8 CONFIRMED and fixed) — not yet reviewed.
-- [ ] Security-review findings (0 above threshold) — not yet reviewed.
+- [x] Code-review findings (8 CONFIRMED and fixed) — reviewed by: **Jitesh D**, 2026-08-24,
+      **Approves**.
+- [x] Security-review findings (0 above threshold) — reviewed by: **Jitesh D**, 2026-08-24,
+      **Approves**.
 
 Review packet:
 [Internal Linking Library UI Review Packet](https://claude.ai/code/artifact/7e03d0c3-2c0c-46df-9c29-510a05e9a68b)
 (published as a Claude artifact — code review + security review findings, fixes, and validation
 evidence, with a decision section).
+
+## Sign-off
+
+**Second-role human review: complete.** No disputes raised — every confirmed code-review finding
+was already fixed, and the security review found 0 findings above threshold, so there was no open
+item to accept as tracked debt.
+
+| Field                         | Value                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                  |
+| Review date                   | 2026-08-24                                                                                                                                |
+| Decision                      | Approves                                                                                                                                  |
+| Scope reviewed                | Full code-review disposition (8 findings fixed) and full security-review disposition (0 above threshold), per the published review packet |
+| Disputes raised               | None recorded                                                                                                                             |
 
 A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
 steps, per this project's standing "no auto-merge" rule.
