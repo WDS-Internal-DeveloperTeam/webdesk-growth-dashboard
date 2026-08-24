@@ -16,11 +16,13 @@ const APPROVAL_STATUS_VALUES = [
 
 export const contentTemplateApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
-// Backend-only pass (task package §5) — no dashboard-web UI, no RichTextEditor wiring yet, so
-// these stay plain TEXT columns capped at .max(2000) (D8), matching Internal Linking Library's own
-// `context` field precedent before its dashboard-web UI existed. `.nullish()` so an explicit
-// `null` can clear a field on update, same convention every sibling module's own text fields use.
-const LONG_TEXT_MAX_LENGTH = 2000;
+// Raised 2000 -> 4000 (D8's own stated trigger: "raised 2000->4000 only once a real rich-text
+// editor gave it a UI, per the 2026-08-22 standing rule") now that the dashboard-web UI exists and
+// these 6 fields render via RichTextEditor — the same 2x markup-overhead ratio every prior
+// rich-text conversion in this codebase used (e.g. Persona Library's 20,000 -> 40,000).
+// `.nullish()` so an explicit `null` can clear a field on update, same convention every sibling
+// module's own text fields use.
+const LONG_TEXT_MAX_LENGTH = 4000;
 const longTextField = z.string().max(LONG_TEXT_MAX_LENGTH).nullish();
 
 // Guidance labels, not identifier lists — no existence validation (D7). `.nullish()` so an

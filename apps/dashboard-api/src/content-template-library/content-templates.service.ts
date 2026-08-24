@@ -11,6 +11,7 @@ import type {
   ContentTemplateListFilter,
   ContentTemplateRepository,
 } from "@webdesk/database";
+import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import {
   CONTENT_TEMPLATE_LIBRARY_MODULE_KEY,
   CONTENT_TEMPLATE_REPOSITORY,
@@ -76,8 +77,20 @@ export class ContentTemplatesService {
 
     let created: ContentTemplateEntity;
     try {
+      // Each of the 6 rich-text fields hand-enumerated once, the same shape Persona Library's/
+      // Service Library's own create() rich-text wiring already establishes (2026-08-22 standing
+      // rule: every dashboard-web long-text field uses RichTextEditor, paired with real backend
+      // sanitization) — a 3rd+ near-identical occurrence with no shared "sanitize these N named
+      // fields" helper, the same accepted, tracked-debt duplication Persona Library's own
+      // create() already records for itself.
       created = await this.templates.create({
         ...input,
+        purpose: sanitizeNullableRichText(input.purpose),
+        proofRules: sanitizeNullableRichText(input.proofRules),
+        seoAeoGeoRequirements: sanitizeNullableRichText(input.seoAeoGeoRequirements),
+        schema: sanitizeNullableRichText(input.schema),
+        ctaRules: sanitizeNullableRichText(input.ctaRules),
+        contentDepthGuidance: sanitizeNullableRichText(input.contentDepthGuidance),
         createdBy: actorUserId,
       });
     } catch (error) {
@@ -143,9 +156,29 @@ export class ContentTemplatesService {
     // read and this write could let this edit silently succeed against what is now an
     // archived/superseded row, the exact race Website Strategy Center's own
     // updateInPlace()/expectedApprovalStatus already closed once for the identical bug class).
+    //
+    // sanitizeNullableRichTextIfChanged() (2026-08-22 standing rule) reuses `current`'s own values
+    // — already fetched above for the terminal-status check — to skip re-sanitizing a rich-text
+    // field the patch resends unchanged, the same optimization Persona Library's/Service Library's
+    // own update() already applies for their own rich-text fields.
     const updated = await this.templates.update(
       id,
-      { ...patch, updatedBy: actorUserId },
+      {
+        ...patch,
+        purpose: sanitizeNullableRichTextIfChanged(patch.purpose, current.purpose),
+        proofRules: sanitizeNullableRichTextIfChanged(patch.proofRules, current.proofRules),
+        seoAeoGeoRequirements: sanitizeNullableRichTextIfChanged(
+          patch.seoAeoGeoRequirements,
+          current.seoAeoGeoRequirements,
+        ),
+        schema: sanitizeNullableRichTextIfChanged(patch.schema, current.schema),
+        ctaRules: sanitizeNullableRichTextIfChanged(patch.ctaRules, current.ctaRules),
+        contentDepthGuidance: sanitizeNullableRichTextIfChanged(
+          patch.contentDepthGuidance,
+          current.contentDepthGuidance,
+        ),
+        updatedBy: actorUserId,
+      },
       current.approvalStatus,
     );
     if (!updated) {
