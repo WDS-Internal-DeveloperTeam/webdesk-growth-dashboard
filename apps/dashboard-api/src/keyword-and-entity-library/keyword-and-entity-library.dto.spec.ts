@@ -36,3 +36,36 @@ describe("createEntitySchema — shortTextField length", () => {
     ).toThrow();
   });
 });
+
+// Regression test for the dashboard-web UI build (2026-08-24): longTextField was raised
+// 20,000 -> 40,000 to accommodate rich-text markup overhead once cannibalizationNotes/description
+// switch to the rich-text editor, matching every prior rich-text-conversion PR's own 2x ratio.
+describe("longTextField length", () => {
+  it("accepts a cannibalizationNotes value at exactly the new 40,000-char limit", () => {
+    const result = createKeywordSchema.parse({
+      publicId: "KW-1",
+      queryText: "best seo tools",
+      cannibalizationNotes: "a".repeat(40_000),
+    });
+    expect(result.cannibalizationNotes).toHaveLength(40_000);
+  });
+
+  it("rejects a cannibalizationNotes value over the new 40,000-char limit", () => {
+    expect(() =>
+      createKeywordSchema.parse({
+        publicId: "KW-1",
+        queryText: "best seo tools",
+        cannibalizationNotes: "a".repeat(40_001),
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a description value over the old 20,000-char limit, confirming the raise actually took effect", () => {
+    const result = createEntitySchema.parse({
+      publicId: "ENT-1",
+      name: "Acme",
+      description: "a".repeat(25_000),
+    });
+    expect(result.description).toHaveLength(25_000);
+  });
+});

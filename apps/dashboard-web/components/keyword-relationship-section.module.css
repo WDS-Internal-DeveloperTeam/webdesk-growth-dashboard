@@ -1,0 +1,61 @@
+/*
+ * Shared by `keyword-entity-relationships-section.tsx` and `keyword-page-assignments-section.tsx`
+ * — both render the same shape (a list of currently-linked rows + a `RelationshipPicker` add
+ * widget below it), so the layout/row/button styling lives here once rather than being redeclared
+ * per component, matching `project-roster-section.module.css`'s own "shared by two sibling
+ * components" precedent. Composes the row/list/button pieces from that same file — a real join
+ * sub-resource's "list of related things + a picker to add another" shape is structurally
+ * identical to a roster's, despite the different filename prefix (the identical "flagged, not
+ * silently worked around with a duplicate file" note `page-urls-section.module.css`/
+ * `claim-sources-section.module.css` already record for the same reuse-across-a-differently-
+ * prefixed-file pattern).
+ */
+
+.list {
+  composes: list from "./project-roster-section.module.css";
+}
+
+.row {
+  composes: row from "./project-roster-section.module.css";
+}
+
+.primaryText {
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.secondaryText {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.removeButton {
+  composes: removeButton from "./project-roster-section.module.css";
+}
+
+.pickerWrapper {
+  margin-top: var(--webdesk-dashboard-space-md);
+}
+
+.noteField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+  margin-bottom: var(--webdesk-dashboard-space-sm);
+  max-width: 24rem;
+}
+
+.noteLabel {
+  composes: label from "./form-fields.module.css";
+}
+
+.noteInput {
+  composes: input from "./form-fields.module.css";
+}
+
+.error {
+  composes: error from "./project-roster-section.module.css";
+}
+
+.muted {
+  composes: muted from "./project-roster-section.module.css";
+}

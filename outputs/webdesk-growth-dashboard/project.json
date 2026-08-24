@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-keyword-and-entity-library",
+    "current_gate": "G4-dashboard-web-keyword-and-entity-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-23T00:00:00Z",
-    "version": 63
+    "updated_at": "2026-08-24T00:00:00Z",
+    "version": 64
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -643,6 +643,20 @@
       "notes": "Keyword & Entity Library module backend (branch module-keyword-and-entity-library, not yet pushed/opened as a PR) -- module #8 on the Recommended Module Roadmap, built on the explicit 'Start Keyword & Entity Library' instruction, the mechanically-correct next candidate per docs/phase-plans/module-implementation-roadmap.md (Wave 3, both dependencies -- website_strategy_center, page_inventory -- already live). Two genuine architectural forks confirmed directly with the user first (AskUserQuestion): table scope (the full 4-table relational model the canonical data-model doc names -- keywords, entities, keyword_entity_relationships, page_keyword_assignments -- chosen over a simplified single-table fallback, since both dependencies already exist so a real FK-validated join is buildable now) and project scoping (keywords/entities are project-scoped, chosen over organization-wide, since keyword research is inherently tied to a specific client website). 8 further field-level design decisions made directly, matching this project's own precedent for judgment calls on an unsourced module -- see docs/task-packages/module-keyword-and-entity-library.md. Built by a background agent with a fully-specified prompt (the exact schema, file layout, and known bug classes from prior modules to avoid repeating -- terminal-state CAS races, class-level RBAC decorators, raw repository exports across module boundaries), then independently re-verified in full by the orchestrating session -- every high-risk file read directly (migration up/down, RBAC decorator placement, the CAS guard built into KeywordRepository.update()/updateStatus() from day one rather than needing a security-review fix-round the way Page Inventory did, the narrow read-only PagesService.existsInProject() cross-module delegating method), every test suite independently re-run against a fresh local disposable PostgreSQL 17 database. Independent code review (this project's own code-review skill, high effort, 8-angle finder pass) surfaced 5 candidates after dedup, 4 CONFIRMED and fixed (most severe: a DTO length limit of 255 characters on 5 fields whose actual columns are VARCHAR(100), so a 101-255-character value passed Zod but crashed the real INSERT/UPDATE with an unhandled 500 -- also fixed: two join-table create() methods running independent existence checks sequentially instead of via Promise.all, the exact bug class a prior Persona Library code review already caught once; a malformed-UUID guard duplicated across both join-table services that was actually unreachable dead code, since the DTO already enforces .uuid() before either service method runs; an inline type duplicating an existing DTO), 1 REFUTED (EntityRepository.update()'s {id}-only scoping, verified consistent with KeywordRepository.update()'s own identical scoping and Page Inventory's own established PageRepository.update() precedent -- not a new gap). A separate security-review skill run then found 0 findings above threshold -- confirmed correct RBAC decorator placement, correct projectId threading into the dynamic per-transition authorization check (the exact gap Page Inventory's own code review caught was not repeated here), correct IDOR scoping on all 4 tables including both join tables, no SQL injection surface, and independently re-verified the code-review fix removing the malformed-UUID guard as genuinely sound. Final numbers: 734/734 dashboard-api unit tests, 28/28 packages/database unit tests, 292/292 packages/database integration tests, 283/283 dashboard-api integration/e2e tests -- all re-verified against a real disposable database after every fix round; typecheck/lint/prettier all clean; migration up/down/up round-trip clean (61 migrations); validate:module-registry still 43 modules/21 permission groups; pnpm audit 0 vulnerabilities. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-23, decision 'Approves', no disputes raised) was already complete before this gate was requested -- see docs/project-state/module-keyword-and-entity-library-approval-checklist.md's 'Sign-off' section.",
       "approved_commit": "4307d7f",
       "record": "docs/project-state/module-keyword-and-entity-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-keyword-and-entity-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-keyword-and-entity-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-24T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Keyword & Entity Library module (branch dashboard-web-keyword-and-entity-library, not yet pushed/opened as a PR), following the backend's own build-to-production arc (PR #59). Keywords are the primary record (list/create/detail/edit, full approval workflow, mirroring Page Inventory's own project-scoped route/picker pattern -- the only other project-scoped module in this codebase); entities are a secondary, independently-browsable resource with no workflow (task package D3) and a real hard-delete route -- the first top-level hard-delete UI in this app. Two sub-resource sections on the keyword detail page (KeywordEntityRelationshipsSection, KeywordPageAssignmentsSection) manage the two join tables via @webdesk/ui's RelationshipPicker, the latter a genuine cross-module relationship into Page Inventory's own pages. Per the 2026-08-22 standing rule, cannibalizationNotes (keywords) and description (entities) both switch to RichTextEditor -- a paired, additive backend change (raising the DTO length limit, wiring write-time sanitization) landed in the same branch, matching the established rich-text-conversion pattern. Independent code review (this project's own code-review skill, high effort, 8-angle finder pass) surfaced 5 candidates after dedup, all 5 CONFIRMED and fixed (most severe: the keywords list page's filter inputs silently truncated a typed value to 100 characters with zero feedback, since the input's maxLength didn't match the backend's real column limit -- also fixed: a duplicated form-field helper, three pages missing an already-established fetch-concurrency pattern, and a hand-rolled delete button bypassing the design system's Button component). One fix extracted a new shared useRelationshipSection() hook after the two sub-resource sections were found to independently reimplement ~150 near-identical lines each -- past this same branch's own 2-copy extraction threshold. A separate security-review skill run then found 0 findings above threshold -- confirmed rich-text sanitization runs end-to-end on every write/render path, the two RelationshipPicker sections can't be used to link a cross-project entity/page (the backend independently re-validates both against the caller's own project), the new hard-delete route is genuinely gated server-side (not just the client-side confirm), and no injection/open-redirect surface exists in the project-scoped cookie/href handling. Final numbers: 615/615 dashboard-web unit tests, 745/745 dashboard-api unit tests, 283/283 dashboard-api integration/e2e tests -- all re-verified against a real disposable database after every fix round; typecheck/lint/CSS-token-check/next build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-24, decision 'Approves', no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-keyword-and-entity-library-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "4126d29",
+      "record": "docs/project-state/dashboard-web-keyword-and-entity-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
@@ -2204,6 +2218,22 @@
       },
       "project_version_before": 62,
       "project_version_after": 63
+    },
+    {
+      "timestamp": "2026-08-24T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-dashboard-web-keyword-and-entity-library for dashboard-web-keyword-and-entity-library -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-dashboard-web-keyword-and-entity-library",
+        "scope": "dashboard-web-keyword-and-entity-library",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-24, decision 'Approves', no disputes raised) was already complete before the gate was requested. See docs/project-state/dashboard-web-keyword-and-entity-library-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "4126d29",
+        "branch": "dashboard-web-keyword-and-entity-library"
+      },
+      "project_version_before": 63,
+      "project_version_after": 64
     }
   ]
 }

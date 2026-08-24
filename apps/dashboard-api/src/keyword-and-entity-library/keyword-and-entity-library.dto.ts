@@ -25,7 +25,11 @@ export const keywordConfidenceSchema = z.enum(CONFIDENCE_VALUES);
 // (module-keyword-and-entity-library). Matches listKeywordsQuerySchema's own already-correct
 // `.max(100)` limit on the same fields' filter counterparts.
 const shortTextField = z.string().max(100).nullish();
-const longTextField = z.string().max(20_000).nullish();
+// 40,000, not 20,000 -- raised for the `dashboard-web` UI build (2026-08-24), which switches
+// `cannibalizationNotes`/`description` to the rich-text editor per the 2026-08-22 standing rule.
+// Matches every prior rich-text-conversion PR's own 2x markup-overhead ratio (Business Knowledge
+// Center, Service Library, Persona Library, Proof and Claims Library, Website Strategy Center).
+const longTextField = z.string().max(40_000).nullish();
 const dateOnlyField = z.string().date().nullish();
 
 // --- keywords ---

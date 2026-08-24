@@ -4,7 +4,11 @@ import type {
   EntityRecordListFilter,
   EntityRepository,
 } from "@webdesk/database";
-import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
+import {
+  isSequelizeUniqueConstraintError,
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+} from "@webdesk/validation";
 import { ENTITY_REPOSITORY } from "./keyword-and-entity-library.constants.js";
 import type { CreateEntityDto, UpdateEntityDto } from "./keyword-and-entity-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -40,7 +44,15 @@ export class EntitiesService {
 
     let created: EntityRecordEntity;
     try {
-      created = await this.entities.create({ ...input, projectId, createdBy: actorUserId });
+      created = await this.entities.create({
+        ...input,
+        // Sanitized before storage (dashboard-web UI build, 2026-08-24) — description switches to
+        // the rich-text editor per the 2026-08-22 standing rule; mirrors PersonasService.create()'s
+        // own identical wiring.
+        description: sanitizeNullableRichText(input.description),
+        projectId,
+        createdBy: actorUserId,
+      });
     } catch (error) {
       if (isSequelizeUniqueConstraintError(error)) {
         throw new BadRequestException(`publicId already in use: ${input.publicId}`);
@@ -87,10 +99,16 @@ export class EntitiesService {
   ): Promise<EntityRecordEntity> {
     // Pre-fetch for the same "404 before any write, including a cross-project id" reason
     // KeywordsService.update()/PagesService.update() both establish — no CAS guard needed here,
-    // entities have no approval workflow (task package D3).
-    await this.findById(id, projectId);
+    // entities have no approval workflow (task package D3). Now also load-bearing for
+    // `sanitizeNullableRichTextIfChanged()` below (dashboard-web UI build, 2026-08-24), which needs
+    // the current stored value to skip re-sanitizing an unchanged one.
+    const current = await this.findById(id, projectId);
 
-    const updated = await this.entities.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.entities.update(id, {
+      ...patch,
+      description: sanitizeNullableRichTextIfChanged(patch.description, current.description),
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Entity not found: ${id}`);
     }
