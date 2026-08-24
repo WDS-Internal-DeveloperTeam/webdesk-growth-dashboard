@@ -146,15 +146,53 @@ describe("ContentTemplatesService", () => {
   });
 
   describe("update", () => {
-    it("throws NotFoundException when the repository update finds nothing to update", async () => {
-      templates.update.mockResolvedValue(null);
+    it("throws NotFoundException when the template doesn't exist", async () => {
+      templates.findById.mockResolvedValue(null);
 
       await expect(svc.update("missing", { pageType: "New" }, "actor-1")).rejects.toThrow(
         NotFoundException,
       );
+      expect(templates.update).not.toHaveBeenCalled();
+    });
+
+    it.each(["archived", "superseded"] as const)(
+      "rejects with a clean 400 when the template is %s (terminal, no code path resurrects it)",
+      async (approvalStatus) => {
+        templates.findById.mockResolvedValue(template({ approvalStatus }));
+
+        await expect(svc.update("template-1", { pageType: "New" }, "actor-1")).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(templates.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it("throws ConflictException when the CAS write finds 0 affected rows but the row still exists", async () => {
+      templates.findById
+        .mockResolvedValueOnce(template({ approvalStatus: "draft" }))
+        .mockResolvedValueOnce(template({ approvalStatus: "submitted" }));
+      templates.update.mockResolvedValue(null);
+
+      await expect(svc.update("template-1", { pageType: "New" }, "actor-1")).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it("passes the current approvalStatus as a CAS guard to the repository", async () => {
+      templates.findById.mockResolvedValue(template({ approvalStatus: "draft" }));
+      templates.update.mockResolvedValue(template({ pageType: "Renamed", version: 2 }));
+
+      await svc.update("template-1", { pageType: "Renamed" }, "actor-1");
+
+      expect(templates.update).toHaveBeenCalledWith(
+        "template-1",
+        expect.objectContaining({ pageType: "Renamed", updatedBy: "actor-1" }),
+        "draft",
+      );
     });
 
     it("never accepts approvalStatus/version/isPublished/publishedAt through the general update patch", async () => {
+      templates.findById.mockResolvedValue(template({ approvalStatus: "draft" }));
       templates.update.mockResolvedValue(template({ pageType: "Renamed", version: 2 }));
 
       // TypeScript's own UpdateContentTemplateDto type already excludes these fields; this proves
@@ -169,6 +207,7 @@ describe("ContentTemplatesService", () => {
     });
 
     it("returns the repository's updated entity, with version incremented server-side", async () => {
+      templates.findById.mockResolvedValue(template({ approvalStatus: "draft" }));
       templates.update.mockResolvedValue(template({ pageType: "Renamed", version: 4 }));
 
       const result = await svc.update("template-1", { pageType: "Renamed" }, "actor-1");
@@ -332,10 +371,35 @@ describe("ContentTemplatesService", () => {
         false,
         true,
         "actor-1",
+        "approved",
       );
       expect(result.isPublished).toBe(true);
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: "publish", action: "publish" }),
+      );
+    });
+
+    it("passes the current approvalStatus as a CAS guard, closing the concurrent-status-change race", async () => {
+      templates.findById.mockResolvedValue(
+        template({ approvalStatus: "approved", isPublished: false }),
+      );
+      authorizationService.assertAllowed.mockResolvedValue(undefined);
+      // Simulates a concurrent changeApprovalStatus() call flipping the row to `archived` between
+      // this publish() call's own findById() read and its updatePublishState() write — the CAS
+      // guard on approvalStatus makes the write fail, surfacing a clean 409 instead of silently
+      // publishing a non-approved template.
+      templates.updatePublishState.mockResolvedValue({
+        outcome: "conflict",
+        entity: template({ approvalStatus: "archived", isPublished: false }),
+      });
+
+      await expect(svc.publish("template-1", "actor-1")).rejects.toThrow(ConflictException);
+      expect(templates.updatePublishState).toHaveBeenCalledWith(
+        "template-1",
+        false,
+        true,
+        "actor-1",
+        "approved",
       );
     });
 

@@ -119,14 +119,27 @@ export class ContentTemplateRepository {
    * Postgres-evaluated `version + 1` literal (D5), with `returning: true` getting the post-update
    * row (including the server-computed `version`) back from the `UPDATE` itself rather than a
    * second round trip — mirrors `PersonaRepository.update()`'s own identical pattern.
+   *
+   * `expectedApprovalStatus` is an optional CAS guard, mirroring `PageRepository.update()`'s own
+   * `expectedWorkflowStage` parameter (a previously-fixed bug class in this codebase, originating
+   * from `WebsiteStrategyRecordRepository.updateInPlace()`'s `expectedApprovalStatus`): without
+   * it, `ContentTemplatesService.update()`'s own terminal-state check reads `approvalStatus` into
+   * application memory, but the actual write here would still be unconditional — a concurrent
+   * `updateApprovalStatus()` transition landing between that read and this write could let an
+   * edit silently succeed against what is now an archived/superseded row (code-review finding).
    */
   async update(
     id: string,
     patch: Partial<ContentTemplateUpdateFields>,
+    expectedApprovalStatus?: ContentTemplateApprovalStatus,
   ): Promise<ContentTemplateEntity | null> {
+    const where: Record<string, unknown> = { id };
+    if (expectedApprovalStatus) {
+      where.approvalStatus = expectedApprovalStatus;
+    }
     const [affectedCount, affectedRows] = await this.model.update(
       { ...patch, version: literal("version + 1") },
-      { where: { id }, returning: true },
+      { where, returning: true },
     );
     if (affectedCount === 0 || !affectedRows[0]) {
       return null;
@@ -174,20 +187,36 @@ export class ContentTemplateRepository {
    * unpublish-then-republish cycle does NOT reset `publishedAt` to the later time. When
    * `nextIsPublished === false`, `publishedAt` is left untouched entirely (no assignment at all,
    * not even a no-op one), preserving it as permanent history of the first publish.
+   *
+   * `expectedApprovalStatus` is an optional second CAS guard, passed only by `publish()` (D2's
+   * "only an `approved` template may be published" rule) — `unpublish()` never passes it, since
+   * D2 gives unpublish no status restriction. Without it, `publish()`'s own upfront
+   * `approvalStatus === "approved"` check reads the status into application memory, but this
+   * write was still unconditional on it — a concurrent `updateApprovalStatus()` transition (e.g.
+   * `approved -> archived`) landing between that read and this write could let the publish still
+   * succeed, since `isPublished` alone was still `false` (code-review finding): the template would
+   * end up `archived`/`superseded` yet `isPublished: true`, the exact state the migration's own
+   * doc comment says the application layer must prevent.
    */
   async updatePublishState(
     id: string,
     expectedIsPublished: boolean,
     nextIsPublished: boolean,
     updatedBy: string | null,
+    expectedApprovalStatus?: ContentTemplateApprovalStatus,
   ): Promise<UpdateContentTemplatePublishStateResult> {
     const values: Record<string, unknown> = { isPublished: nextIsPublished, updatedBy };
     if (nextIsPublished) {
       values.publishedAt = literal('COALESCE("published_at", NOW())');
     }
 
+    const where: Record<string, unknown> = { id, isPublished: expectedIsPublished };
+    if (expectedApprovalStatus) {
+      where.approvalStatus = expectedApprovalStatus;
+    }
+
     const [affectedCount, affectedRows] = await this.model.update(values, {
-      where: { id, isPublished: expectedIsPublished },
+      where,
       returning: true,
     });
     if (affectedCount > 0 && affectedRows[0]) {

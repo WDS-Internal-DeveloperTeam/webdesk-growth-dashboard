@@ -11,7 +11,10 @@ import type {
   ContentTemplateListFilter,
   ContentTemplateRepository,
 } from "@webdesk/database";
-import { CONTENT_TEMPLATE_REPOSITORY } from "./content-template-library.constants.js";
+import {
+  CONTENT_TEMPLATE_LIBRARY_MODULE_KEY,
+  CONTENT_TEMPLATE_REPOSITORY,
+} from "./content-template-library.constants.js";
 import type {
   CreateContentTemplateDto,
   UpdateContentTemplateDto,
@@ -20,11 +23,6 @@ import type {
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuthorizationService } from "../authz/authorization.service.js";
-
-// The real, seeded RBAC permission group for this module (task package §0) —
-// `00013-seed-rbac-matrix.ts:127-135`. This module is the first real consumer of both this group
-// and the real, previously-unused `publish`/`unpublish` RBAC actions.
-const MODULE_KEY = "page_content";
 
 /** The real, seeded RBAC action (`06_Roles_and_Permissions.md`) required for a given
  *  `approvalStatus` transition — identical vocabulary to Persona Library's/Service Library's own. */
@@ -127,9 +125,43 @@ export class ContentTemplatesService {
     patch: UpdateContentTemplateDto,
     actorUserId: string,
   ): Promise<ContentTemplateEntity> {
-    const updated = await this.templates.update(id, { ...patch, updatedBy: actorUserId });
+    const current = await this.findById(id);
+
+    // archived/superseded are both terminal (TRANSITIONS's own entries for both are `{}` — no
+    // code path resurrects a record from either) — content on a terminal row must never change
+    // (code-review finding: this guard was missing entirely, unlike Website Strategy Center's/
+    // Page Inventory's own identical `update()` guard, which this mirrors).
+    if (current.approvalStatus === "archived" || current.approvalStatus === "superseded") {
+      throw new BadRequestException(
+        `Content template ${id} is ${current.approvalStatus} and can no longer be edited`,
+      );
+    }
+
+    // current.approvalStatus is passed as a CAS guard (code-review finding: the terminal-state
+    // check above reads approvalStatus into application memory, but without this the actual write
+    // was still unconditional — a concurrent changeApprovalStatus() transition landing between the
+    // read and this write could let this edit silently succeed against what is now an
+    // archived/superseded row, the exact race Website Strategy Center's own
+    // updateInPlace()/expectedApprovalStatus already closed once for the identical bug class).
+    const updated = await this.templates.update(
+      id,
+      { ...patch, updatedBy: actorUserId },
+      current.approvalStatus,
+    );
     if (!updated) {
-      throw new NotFoundException(`Content template not found: ${id}`);
+      // 0 affected rows means either the row is genuinely gone (no hard-delete exists for this
+      // module today, but this still guards a hypothetical future one, matching every sibling
+      // module's own identical belt-and-suspenders check) or — the real case the CAS guard above
+      // exists for — its approvalStatus changed concurrently since the read. Distinguish the two
+      // with a fresh read rather than assuming either, mirroring
+      // WebsiteStrategyRecordsService.update()'s/PagesService.update()'s own disambiguation.
+      const stillExists = await this.templates.findById(id);
+      if (!stillExists) {
+        throw new NotFoundException(`Content template not found: ${id}`);
+      }
+      throw new ConflictException(
+        `Content template ${id} approval status changed concurrently while editing — reload and retry`,
+      );
     }
 
     await this.auditService.record({
@@ -162,7 +194,11 @@ export class ContentTemplatesService {
         `Invalid content template approval status transition: ${template.approvalStatus} -> ${nextStatus}`,
       );
     }
-    await this.authorizationService.assertAllowed(actorUserId, MODULE_KEY, requiredAction);
+    await this.authorizationService.assertAllowed(
+      actorUserId,
+      CONTENT_TEMPLATE_LIBRARY_MODULE_KEY,
+      requiredAction,
+    );
 
     const result = await this.templates.updateApprovalStatus(
       id,
@@ -212,6 +248,14 @@ export class ContentTemplatesService {
    * no-op success — deliberately asymmetric with `changeApprovalStatus()`'s own
    * same-status-is-a-no-op short circuit, per D2's explicit "returning a clean 409... rather than
    * silently succeeding twice."
+   *
+   * `template.approvalStatus` (`"approved"`, the value the check above just confirmed) is also
+   * passed as a CAS guard to `updatePublishState()` — the check above only reads
+   * `approvalStatus` into application memory; without also guarding the write on it, a concurrent
+   * `changeApprovalStatus()` transition (e.g. `approved -> archived`) landing between the read and
+   * this write could still let the publish succeed, since `isPublished` alone was still `false`
+   * (code-review finding — the module's own migration doc comment already says this exact
+   * combination, published while non-`approved`, must never happen).
    */
   async publish(id: string, actorUserId: string): Promise<ContentTemplateEntity> {
     const template = await this.findById(id);
@@ -221,15 +265,28 @@ export class ContentTemplatesService {
           `'${template.approvalStatus}' — only an approved template may be published.`,
       );
     }
-    await this.authorizationService.assertAllowed(actorUserId, MODULE_KEY, "publish");
+    await this.authorizationService.assertAllowed(
+      actorUserId,
+      CONTENT_TEMPLATE_LIBRARY_MODULE_KEY,
+      "publish",
+    );
 
-    const result = await this.templates.updatePublishState(id, false, true, actorUserId);
+    const NOT_YET_PUBLISHED = false;
+    const NOW_PUBLISHED = true;
+    const result = await this.templates.updatePublishState(
+      id,
+      NOT_YET_PUBLISHED,
+      NOW_PUBLISHED,
+      actorUserId,
+      template.approvalStatus,
+    );
     if (result.outcome === "not_found") {
       throw new NotFoundException(`Content template not found: ${id}`);
     }
     if (result.outcome === "conflict") {
       throw new ConflictException(
-        `Content template ${id} was published concurrently, or is already published — reload and retry.`,
+        `Content template ${id} was published concurrently, is already published, or its ` +
+          `approval status changed concurrently — reload and retry.`,
       );
     }
 
@@ -264,9 +321,20 @@ export class ContentTemplatesService {
    * publish time, preserved as permanent history (D2).
    */
   async unpublish(id: string, actorUserId: string): Promise<ContentTemplateEntity> {
-    await this.authorizationService.assertAllowed(actorUserId, MODULE_KEY, "unpublish");
+    await this.authorizationService.assertAllowed(
+      actorUserId,
+      CONTENT_TEMPLATE_LIBRARY_MODULE_KEY,
+      "unpublish",
+    );
 
-    const result = await this.templates.updatePublishState(id, true, false, actorUserId);
+    const CURRENTLY_PUBLISHED = true;
+    const NOW_UNPUBLISHED = false;
+    const result = await this.templates.updatePublishState(
+      id,
+      CURRENTLY_PUBLISHED,
+      NOW_UNPUBLISHED,
+      actorUserId,
+    );
     if (result.outcome === "not_found") {
       throw new NotFoundException(`Content template not found: ${id}`);
     }

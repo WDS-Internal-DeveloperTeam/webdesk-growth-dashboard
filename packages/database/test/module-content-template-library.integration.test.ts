@@ -136,6 +136,36 @@ describe("Content Template Library module (real disposable database)", () => {
       expect(updatedAgain?.version).toBe(3);
     });
 
+    it("update()'s optional expectedApprovalStatus guard rejects (returns null) a stale-status write and leaves the row untouched", async () => {
+      const created = await templates.create({
+        publicId: uniqueId("TEMPLATE"),
+        pageType: "CAS Guard Fixture",
+      });
+
+      // Claim we expected the row to still be "submitted" when it's really "draft" — a stale read.
+      const result = await templates.update(
+        created.id,
+        { pageType: "Should Not Apply" },
+        "submitted",
+      );
+      expect(result).toBeNull();
+
+      const stillOriginal = await templates.findById(created.id);
+      expect(stillOriginal?.pageType).toBe("CAS Guard Fixture");
+      expect(stillOriginal?.version).toBe(1);
+    });
+
+    it("update() with the correct expectedApprovalStatus succeeds normally", async () => {
+      const created = await templates.create({
+        publicId: uniqueId("TEMPLATE"),
+        pageType: "CAS Guard Match Fixture",
+      });
+
+      const result = await templates.update(created.id, { pageType: "Renamed" }, "draft");
+      expect(result?.pageType).toBe("Renamed");
+      expect(result?.version).toBe(2);
+    });
+
     it("update() with concurrent-style repeated calls still increments version atomically (no lost updates)", async () => {
       const created = await templates.create({
         publicId: uniqueId("TEMPLATE"),
@@ -335,6 +365,63 @@ describe("Content Template Library module (real disposable database)", () => {
         const final = await templates.findById(created.id);
         expect(final?.isPublished).toBe(true);
         expect(final?.publishedAt).not.toBeNull();
+      });
+
+      it("the expectedApprovalStatus CAS guard rejects a publish write once a concurrent status change has already committed — closing the TOCTOU race the guard was added for", async () => {
+        // NOTE: this deliberately does NOT assert "archived and published can never both be true"
+        // — D3 explicitly allows exactly that combination as a valid, non-racy outcome (a
+        // published, approved template that LATER moves to archived stays published; see the e2e
+        // suite's own "unpublish succeeds even after the template later moves to archived" test).
+        // What the guard actually has to prevent is narrower: `publish()`'s own atomic write must
+        // never succeed based on a STALE read of approvalStatus taken before the write — it must
+        // re-check `approvalStatus = 'approved'` at write time, atomically with the isPublished
+        // CAS. This test proves that directly and deterministically, not via an unordered race.
+        const created = await templates.create({
+          publicId: uniqueId("TEMPLATE"),
+          pageType: "TOCTOU Guard Fixture",
+        });
+        const approved = await templates.updateApprovalStatus(
+          created.id,
+          "draft",
+          "approved",
+          null,
+        );
+        expect(approved.outcome).toBe("updated");
+
+        // Simulates ContentTemplatesService.publish()'s own upfront findById() read: at this
+        // moment, approvalStatus genuinely is "approved" — a real, valid read, not stale yet.
+        const readAtPublishTime = await templates.findById(created.id);
+        expect(readAtPublishTime?.approvalStatus).toBe("approved");
+
+        // Simulates a concurrent ContentTemplatesService.changeApprovalStatus(id, "archived")
+        // call landing and committing BEFORE publish()'s own write executes — the exact race
+        // window the original TOCTOU finding described.
+        const archived = await templates.updateApprovalStatus(
+          created.id,
+          "approved",
+          "archived",
+          null,
+        );
+        expect(archived.outcome).toBe("updated");
+
+        // publish()'s own write now runs, using the (now-stale) approvalStatus it read earlier as
+        // its CAS guard. Before this fix, updatePublishState() had no approvalStatus guard at all
+        // and this write would have succeeded unconditionally (only isPublished was checked),
+        // leaving the row archived AND published via a genuinely stale read. With the guard, the
+        // write's WHERE clause re-checks `approval_status = 'approved'` against the row as it
+        // actually is now — archived, not approved — so it correctly fails to match.
+        const publishResult = await templates.updatePublishState(
+          created.id,
+          false,
+          true,
+          null,
+          readAtPublishTime!.approvalStatus,
+        );
+        expect(publishResult.outcome).toBe("conflict");
+
+        const final = await templates.findById(created.id);
+        expect(final?.approvalStatus).toBe("archived");
+        expect(final?.isPublished).toBe(false);
       });
     });
   });

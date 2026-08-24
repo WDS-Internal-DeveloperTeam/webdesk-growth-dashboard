@@ -31,15 +31,11 @@ import {
   type ListContentTemplatesQueryDto,
   type UpdateContentTemplateDto,
 } from "./content-template-library.dto.js";
+import { CONTENT_TEMPLATE_LIBRARY_MODULE_KEY } from "./content-template-library.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { ContentTemplatesService } from "./content-templates.service.js";
 
 type ContentTemplateLibraryRequest = AuthenticatedRequest & RequestWithCorrelationId;
-
-// The real, seeded RBAC permission group for this module (task package §0) — this module is the
-// first real consumer of both this group and the real, previously-unused `publish`/`unpublish`
-// RBAC actions (00013-seed-rbac-matrix.ts:127-135).
-const MODULE_KEY = "page_content";
 
 @ApiTags("content-template-library")
 @Controller("content-template-library/templates")
@@ -49,7 +45,7 @@ export class ContentTemplatesController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(CONTENT_TEMPLATE_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "List content templates, optionally filtered" })
   async list(
     @Query(new ZodValidationPipe(listContentTemplatesQuerySchema))
@@ -62,7 +58,7 @@ export class ContentTemplatesController {
 
   @Get(":id")
   @UseGuards(PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(CONTENT_TEMPLATE_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "Get one content template" })
   async findOne(
     @Param("id", new ParseUUIDPipe()) id: string,
@@ -75,7 +71,7 @@ export class ContentTemplatesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "create")
+  @RequirePermission(CONTENT_TEMPLATE_LIBRARY_MODULE_KEY, "create")
   @ApiOperation({ summary: "Create a content template (always starts draft, unpublished)" })
   async create(
     @Body(new ZodValidationPipe(createContentTemplateSchema)) body: CreateContentTemplateDto,
@@ -88,7 +84,7 @@ export class ContentTemplatesController {
   @Post(":id/update")
   @HttpCode(HttpStatus.OK)
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "edit")
+  @RequirePermission(CONTENT_TEMPLATE_LIBRARY_MODULE_KEY, "edit")
   @ApiOperation({
     summary:
       "Edit a content template's content fields (increments version, never touches " +
@@ -111,7 +107,7 @@ export class ContentTemplatesController {
   // established. PermissionGuard still runs (via @UseGuards below) checking only module `view`,
   // so a caller with no access to this module at all is still rejected at the route.
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(CONTENT_TEMPLATE_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "Transition a content template's approval status" })
   async changeStatus(
     @Param("id", new ParseUUIDPipe()) id: string,
@@ -135,7 +131,7 @@ export class ContentTemplatesController {
   // own 400/404/409 outcomes are reachable before/instead of a blanket 403. PermissionGuard still
   // runs checking only module `view`.
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(CONTENT_TEMPLATE_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "Publish an approved content template" })
   async publish(
     @Param("id", new ParseUUIDPipe()) id: string,
@@ -148,7 +144,7 @@ export class ContentTemplatesController {
   @Post(":id/unpublish")
   @HttpCode(HttpStatus.OK)
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(MODULE_KEY, "view")
+  @RequirePermission(CONTENT_TEMPLATE_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "Unpublish a content template (allowed regardless of approvalStatus)" })
   async unpublish(
     @Param("id", new ParseUUIDPipe()) id: string,
