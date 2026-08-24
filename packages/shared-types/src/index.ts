@@ -874,3 +874,53 @@ export interface PageKeywordAssignment {
   readonly createdBy: string | null;
   readonly createdAt: string;
 }
+
+export type InternalLinkPriority = "low" | "medium" | "high";
+
+/**
+ * A genuinely bespoke, 4-state workflow (task package D1) — the first bespoke workflow vocabulary
+ * in this codebase; every prior module (Service/Persona/Proof-and-Claims/Website-Strategy-Center/
+ * Page-Inventory/Keyword-and-Entity-Library) reuses the identical 8-value generic artifact
+ * lifecycle. NOT structurally identical to `ArtifactApprovalStatus` — do not reuse that shared
+ * vocabulary/badge map for this module. See `apps/dashboard-api/src/internal-linking-library/
+ * internal-links.service.ts`'s own `TRANSITIONS` table for the exact allowed transitions (no
+ * terminal state — every state has at least one valid outbound transition).
+ */
+export type InternalLinkStatus = "proposed" | "approved" | "implemented" | "verified";
+
+/**
+ * The Internal Linking Library module's parent (and only) entity — a single project-scoped table,
+ * no sub-resource/join tables (task package D3): a link IS the relationship (source page -> target
+ * page), it has no independent sub-resources of its own. `relationship`/`anchor`/`linkType`/
+ * `detector` are all plain free text (task package D5). `context` is rich text (`RichTextEditor`),
+ * per the 2026-08-22 standing rule — sanitized server-side before storage
+ * (`InternalLinksService.create()`/`update()`) and again at render time via `SanitizedRichText`.
+ * `sourcePageId`/`targetPageId` are existence-and-same-project validated FKs into Page Inventory's
+ * own `pages` table (task package D4) — a link may never have `sourcePageId === targetPageId`.
+ * `assignedApproverUserId` is a nullable, existence-validated FK into `users` (task package D7).
+ * `relatedStrategyRecordId` is a plain, UNVALIDATED uuid-shaped string — no real FK exists into
+ * `website_strategy_records` (task package D8). `implementedAt`/`verifiedAt` are server-stamped
+ * only, and never overwritten once first set.
+ */
+export interface InternalLink {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly sourcePageId: string;
+  readonly targetPageId: string;
+  readonly relationship: string | null;
+  readonly anchor: string | null;
+  readonly context: string | null;
+  readonly linkType: string | null;
+  readonly priority: InternalLinkPriority | null;
+  readonly status: InternalLinkStatus;
+  readonly detector: string | null;
+  readonly assignedApproverUserId: string | null;
+  readonly relatedStrategyRecordId: string | null;
+  readonly implementedAt: string | null;
+  readonly verifiedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

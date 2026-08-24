@@ -12,12 +12,17 @@ export const internalLinkPrioritySchema = z.enum(PRIORITY_VALUES);
 // Matches the real VARCHAR(255) columns (migration 00062) this backs
 // (relationship/anchor/linkType/detector).
 const shortTextField = z.string().max(255).nullish();
-// context gets a generously-sized TEXT column at the DB layer, capped here at 2000 chars
-// (task package D5) — a placement/surrounding-context description could reasonably run to a
-// paragraph, but is not open-ended free text the way a rich-text field would be. No dashboard-web
-// UI exists yet in this pass, so no rich-text-editor/sanitization wiring applies here (the
-// 2026-08-22 standing rule is scoped to dashboard-web long-text fields).
-const contextField = z.string().max(2000).nullish();
+// context gets a generously-sized TEXT column at the DB layer. Raised 2000 -> 4000 (the same 2x
+// markup-overhead ratio every prior rich-text conversion in this codebase used — Business
+// Knowledge Center/Service Library/Persona Library/Website Strategy Center/Proof and Claims
+// Library all went 20,000 -> 40,000) now that the `dashboard-web` Internal Linking Library UI
+// gives `context` its first real UI, per the 2026-08-22 standing rule requiring every new
+// dashboard-web long-text field to use `RichTextEditor`, never a plain textarea. Sanitized
+// server-side via `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`
+// (`@webdesk/validation`) in `InternalLinksService.create()`/`update()`, and again at render time
+// via `SanitizedRichText` — the same double-sanitization pattern every other rich-text field in
+// this app already establishes.
+const contextField = z.string().max(4000).nullish();
 
 // --- internal_links ---
 

@@ -226,6 +226,34 @@ describe("InternalLinksService", () => {
 
       await expect(svc.create(FAKE_PROJECT_ID, validInput, "actor-1")).rejects.toBe(dbError);
     });
+
+    it("sanitizes context before writing, stripping a disallowed tag (2026-08-22 rich-text editor rollout)", async () => {
+      links.findByPublicId.mockResolvedValue(null);
+      links.create.mockResolvedValue(link());
+
+      await svc.create(
+        FAKE_PROJECT_ID,
+        { ...validInput, context: "<script>alert(1)</script><p>Placed in the hero CTA</p>" },
+        "actor-1",
+      );
+
+      const [writtenInput] = links.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.context).toBe("<p>Placed in the hero CTA</p>");
+    });
+
+    it("passes a null/undefined context through unchanged rather than sanitizing it", async () => {
+      links.findByPublicId.mockResolvedValue(null);
+      links.create.mockResolvedValue(link());
+
+      await svc.create(FAKE_PROJECT_ID, { ...validInput, context: null }, "actor-1");
+      let [writtenInput] = links.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.context).toBeNull();
+
+      links.create.mockClear();
+      await svc.create(FAKE_PROJECT_ID, validInput, "actor-1");
+      [writtenInput] = links.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.context).toBeUndefined();
+    });
   });
 
   describe("findById", () => {
@@ -426,6 +454,36 @@ describe("InternalLinksService", () => {
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ action: "update", entityType: "internal_link" }),
       );
+    });
+
+    it("sanitizes a changed context before writing, stripping a disallowed tag (2026-08-22 rich-text editor rollout)", async () => {
+      links.findById.mockResolvedValue(link({ context: "<p>Old context</p>" }));
+      links.update.mockResolvedValue(link({ context: "<p>New context</p>" }));
+
+      await svc.update(
+        "link-1",
+        FAKE_PROJECT_ID,
+        { context: "<script>alert(1)</script><p>New context</p>" },
+        "actor-1",
+      );
+
+      const [, patchArg] = links.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.context).toBe("<p>New context</p>");
+    });
+
+    it("skips re-sanitizing a context value the patch resends unchanged from the current stored value", async () => {
+      // A value containing a tag the sanitizer's own allowlist would strip if it ran, stored as
+      // the "current" value and resent unchanged — proves sanitizeNullableRichTextIfChanged() is
+      // actually wired in with `current.context` (not just always-sanitize, which would still
+      // strip this and give a false pass).
+      const dirty = "<script>alert(1)</script><p>Placed in the hero CTA</p>";
+      links.findById.mockResolvedValue(link({ context: dirty }));
+      links.update.mockResolvedValue(link({ context: dirty }));
+
+      await svc.update("link-1", FAKE_PROJECT_ID, { context: dirty, anchor: "new" }, "actor-1");
+
+      const [, patchArg] = links.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.context).toBe(dirty);
     });
   });
 

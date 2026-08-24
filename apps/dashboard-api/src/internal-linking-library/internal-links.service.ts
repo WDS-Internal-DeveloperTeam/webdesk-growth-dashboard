@@ -11,7 +11,11 @@ import type {
   InternalLinkRepository,
   InternalLinkStatus,
 } from "@webdesk/database";
-import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
+import {
+  isSequelizeUniqueConstraintError,
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+} from "@webdesk/validation";
 import {
   INTERNAL_LINK_REPOSITORY,
   INTERNAL_LINKING_LIBRARY_MODULE_KEY,
@@ -152,6 +156,10 @@ export class InternalLinksService {
     try {
       created = await this.links.create({
         ...input,
+        // context is rich text (RichTextEditor, per the 2026-08-22 standing rule) — sanitized here
+        // before it ever reaches storage, mirroring PersonasService.create()'s/ServicesService.create()'s
+        // own identical wiring. Rendered again via SanitizedRichText at read time as defense-in-depth.
+        context: sanitizeNullableRichText(input.context),
         projectId,
         createdBy: actorUserId,
       });
@@ -238,7 +246,15 @@ export class InternalLinksService {
     // bug class.
     const updated = await this.links.update(
       id,
-      { ...patch, updatedBy: actorUserId },
+      {
+        ...patch,
+        // Only re-sanitizes when context is actually changing, mirroring
+        // PersonasService.update()'s own skip-if-unchanged optimization — sanitizeNullableRichTextIfChanged()
+        // returns `undefined` (an omitted key) when `patch.context` is `undefined`, so this is a
+        // no-op on every update that doesn't touch context at all.
+        context: sanitizeNullableRichTextIfChanged(patch.context, current.context),
+        updatedBy: actorUserId,
+      },
       current.status,
     );
     if (!updated) {
