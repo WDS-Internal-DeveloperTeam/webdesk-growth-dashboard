@@ -1,0 +1,48 @@
+.form {
+  composes: form from "./page-form.module.css";
+}
+
+.fieldset {
+  composes: fieldset from "./page-form.module.css";
+}
+
+.fieldsetLegend {
+  composes: fieldsetLegend from "./page-form.module.css";
+}
+
+.field {
+  composes: field from "./form-fields.module.css";
+}
+
+.label {
+  composes: label from "./form-fields.module.css";
+}
+
+.helperText {
+  composes: helperText from "./form-fields.module.css";
+}
+
+.readonlyValue {
+  composes: readonlyValue from "./page-form.module.css";
+}
+
+.input,
+.select {
+  composes: input from "./form-fields.module.css";
+}
+
+.error {
+  composes: error from "./form-fields.module.css";
+}
+
+.actions {
+  composes: actions from "./form-fields.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./form-fields.module.css";
+}
+
+.cancelLink {
+  composes: cancelLink from "./form-fields.module.css";
+}
