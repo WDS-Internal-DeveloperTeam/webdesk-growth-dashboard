@@ -11,6 +11,7 @@ import { AuthzModule } from "./authz/authz.module.js";
 import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { HealthModule } from "./health/health.module.js";
+import { InternalLinkingLibraryModule } from "./internal-linking-library/internal-linking-library.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
 import { KeywordAndEntityLibraryModule } from "./keyword-and-entity-library/keyword-and-entity-library.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
@@ -60,6 +61,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     AuthModule,
     AuthzModule,
     BusinessKnowledgeModule,
+    InternalLinkingLibraryModule,
     JobsModule,
     KeywordAndEntityLibraryModule,
     NotificationsModule,

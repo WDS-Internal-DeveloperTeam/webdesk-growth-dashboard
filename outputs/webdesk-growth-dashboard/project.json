@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-keyword-and-entity-library",
+    "current_gate": "G4-internal-linking-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-24T00:00:00Z",
-    "version": 64
+    "version": 65
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -657,6 +657,20 @@
       "notes": "dashboard-web UI for the Keyword & Entity Library module (branch dashboard-web-keyword-and-entity-library, not yet pushed/opened as a PR), following the backend's own build-to-production arc (PR #59). Keywords are the primary record (list/create/detail/edit, full approval workflow, mirroring Page Inventory's own project-scoped route/picker pattern -- the only other project-scoped module in this codebase); entities are a secondary, independently-browsable resource with no workflow (task package D3) and a real hard-delete route -- the first top-level hard-delete UI in this app. Two sub-resource sections on the keyword detail page (KeywordEntityRelationshipsSection, KeywordPageAssignmentsSection) manage the two join tables via @webdesk/ui's RelationshipPicker, the latter a genuine cross-module relationship into Page Inventory's own pages. Per the 2026-08-22 standing rule, cannibalizationNotes (keywords) and description (entities) both switch to RichTextEditor -- a paired, additive backend change (raising the DTO length limit, wiring write-time sanitization) landed in the same branch, matching the established rich-text-conversion pattern. Independent code review (this project's own code-review skill, high effort, 8-angle finder pass) surfaced 5 candidates after dedup, all 5 CONFIRMED and fixed (most severe: the keywords list page's filter inputs silently truncated a typed value to 100 characters with zero feedback, since the input's maxLength didn't match the backend's real column limit -- also fixed: a duplicated form-field helper, three pages missing an already-established fetch-concurrency pattern, and a hand-rolled delete button bypassing the design system's Button component). One fix extracted a new shared useRelationshipSection() hook after the two sub-resource sections were found to independently reimplement ~150 near-identical lines each -- past this same branch's own 2-copy extraction threshold. A separate security-review skill run then found 0 findings above threshold -- confirmed rich-text sanitization runs end-to-end on every write/render path, the two RelationshipPicker sections can't be used to link a cross-project entity/page (the backend independently re-validates both against the caller's own project), the new hard-delete route is genuinely gated server-side (not just the client-side confirm), and no injection/open-redirect surface exists in the project-scoped cookie/href handling. Final numbers: 615/615 dashboard-web unit tests, 745/745 dashboard-api unit tests, 283/283 dashboard-api integration/e2e tests -- all re-verified against a real disposable database after every fix round; typecheck/lint/CSS-token-check/next build/prettier all clean. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-24, decision 'Approves', no disputes raised) was already complete before this gate was requested -- see docs/project-state/dashboard-web-keyword-and-entity-library-approval-checklist.md's 'Sign-off' section.",
       "approved_commit": "4126d29",
       "record": "docs/project-state/dashboard-web-keyword-and-entity-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-internal-linking-library",
+      "type": "qa-security-gate",
+      "scope": "module-internal-linking-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-24T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Internal Linking Library module backend (branch module-internal-linking-library, not yet pushed/opened as a PR) -- module #9 on the Recommended Module Roadmap, built on the explicit 'Start Internal Linking Library' instruction. One genuine architectural fork confirmed directly with the user first (AskUserQuestion): a bespoke 4-state workflow (proposed -> approved -> implemented -> verified), chosen over the standard 8-value generic lifecycle every prior module reuses -- the first bespoke workflow vocabulary in this codebase -- after research surfaced that the roadmap's own phrasing for this workflow isn't actually sourced anywhere in the canonical workflow-state-machines doc. Migration 00062 creates a single project-scoped internal_links table with existence-validated FKs into Page Inventory's pages (source/target) and a nullable existence-validated approver FK into users; relatedStrategyRecordId is deliberately an unvalidated plain UUID string, since Website Strategy Center shipped with no validation hook for this relationship. InternalLinkRepository.updateStatus() introduces a genuinely new mechanism -- an atomic compare-and-swap on (id, status) that also conditionally stamps implementedAt/verifiedAt via a COALESCE(column, NOW()) SQL literal baked into the same UPDATE, so 'stamp once, never overwrite' stays atomic with the CAS guard itself. Built by a background agent with a fully-specified prompt, then independently re-verified in full by the orchestrating session -- every high-risk file (migration, repository, service, controller RBAC placement via grep, DTO, module wiring, both packages/database barrel exports, app.module.ts wiring) read directly, and every test suite re-run fresh against a real local disposable PostgreSQL 17 database rather than trusted from the agent's own report. Independent code review (this project's own code-review skill, high effort, 8-angle finder pass, 1-vote verification) surfaced 10 candidates after dedup, 9 CONFIRMED and 1 REFUTED. 8 of 9 CONFIRMED findings fixed: most severe, self-link rejection in both create() and update() used case-sensitive === on UUID strings, so two differently-cased representations of the identical page id (both valid per Zod's case-insensitive .uuid()) bypassed the guard -- fixed by extracting a shared assertDistinctPages() helper comparing case-insensitively. Also fixed: the 'call existsInProject, throw if false' pattern hand-copied 4 times instead of reusing the file's own established assertApproverExists()-style private-helper convention (extracted assertPageExists()); update()'s conditional field-revalidation using a mutable checks array with 3 .push() calls instead of the sibling ServicesService.update()'s cleaner Promise.all([cond ? assertX() : Promise.resolve(), ...]) literal; the RBAC MODULE_KEY string literal independently declared in both the service and controller instead of the module's own already-existing constants.ts (promoted to INTERNAL_LINKING_LIBRARY_MODULE_KEY); no composite index covering (project_id, source_page_id)/(project_id, target_page_id) despite project_id being mandatory on every list() call (migration 00062 amended -- it hadn't shipped anywhere yet -- to lead both page-id indexes with project_id); the self-link check itself duplicated between create()/update(); and update()'s targetPageId re-validation branch and its cross-project-page real-database path both having zero test coverage, unlike the structurally identical sourcePageId branch (both closed with new tests). 1 CONFIRMED finding left as accepted, tracked debt, flagged directly in code: changeStatus()'s same-status no-op short-circuit returns before the per-transition assertAllowed() check runs -- the byte-identical, already-shipped ordering PagesService.changeWorkflowStage()/KeywordsService.changeApprovalStatus() both have, with no state mutation and no data exposure beyond what the identical GET route already permits under the same grant. 1 candidate REFUTED: a missing DB-level CHECK constraint for source_page_id <> target_page_id -- the task package's own D4 decision explicitly considered and rejected this, and the cited sibling precedents aren't actually the same constraint shape. A separate security-review skill run then found 0 findings above threshold -- confirmed method-level RBAC placement throughout, changeStatus() correctly threading the already-IDOR-verified link.projectId into assertAllowed(), no residual bypass in the fixed self-link/page-existence checks, the search filter's escapeLikePattern() reuse closing any SQL-injection surface, the COALESCE timestamp mechanism being a fixed literal with no interpolated input, and relatedStrategyRecordId never reaching any SQL/URL/file-path sink. Final numbers: 787/787 dashboard-api unit tests (42/42 for this module), 28/28 packages/database unit tests, 23/23 packages/database integration tests, 312/312 dashboard-api e2e/integration tests (29/29 for this module) -- all re-verified against a real disposable database after every fix round; typecheck/lint/prettier all clean; migration up/down/up round-trip clean (63 migrations, confirming the amended composite indexes); validate:module-registry still 43 modules/21 permission groups; pnpm audit 0 vulnerabilities. status=passed/decision=CONFIRM (a clean pass, not an override) because the required second-role human review (Jitesh D, 2026-08-24, decision 'Approves', no disputes raised) was already complete before this gate was requested -- see docs/project-state/module-internal-linking-library-approval-checklist.md's 'Sign-off' section.",
+      "approved_commit": "b026170",
+      "record": "docs/project-state/module-internal-linking-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
@@ -2234,6 +2248,22 @@
       },
       "project_version_before": 63,
       "project_version_after": 64
+    },
+    {
+      "timestamp": "2026-08-24T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "approved gate G4-internal-linking-library for module-internal-linking-library -- decision: CONFIRM",
+      "details": {
+        "gate": "G4-internal-linking-library",
+        "scope": "module-internal-linking-library",
+        "decision": "CONFIRM",
+        "reasoning": "A clean pass, not an override, because the required second-role human review (Jitesh D, 2026-08-24, decision 'Approves', no disputes raised) was already complete before the gate was requested. See docs/project-state/module-internal-linking-library-approval-checklist.md's 'Sign-off' section.",
+        "approved_commit": "b026170",
+        "branch": "module-internal-linking-library"
+      },
+      "project_version_before": 64,
+      "project_version_after": 65
     }
   ]
 }

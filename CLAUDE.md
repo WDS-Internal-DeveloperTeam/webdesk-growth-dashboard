@@ -6767,6 +6767,97 @@ b54fc51b437da4f7df6d84db36d0c035ecb41059`, confirming the exact merged commit is
   build-to-production arc — backend and now the full UI (keywords list/detail/create/edit, status
   actions, entities list/detail/create/edit, both sub-resource sections) are both live for the
   Keyword & Entity Library module.
+- `[2026-08-24]` **Started the Internal Linking Library module backend** (module #9 on the
+  Recommended Module Roadmap) — presented as "what's next" and built directly on the explicit
+  "Start Internal Linking Library" instruction. `docs/task-packages/module-internal-linking-library.md`
+  records the full account. One genuine architectural fork confirmed directly with the user first
+  (`AskUserQuestion`): a bespoke 4-state workflow (`proposed → approved → implemented →
+verified`) chosen over the standard 8-value generic lifecycle every prior module reuses — the
+  first bespoke workflow vocabulary in this codebase — after research surfaced that the roadmap's
+  own phrasing for this workflow isn't actually sourced anywhere in the canonical
+  workflow-state-machines doc. Migration `00062` creates a single project-scoped `internal_links`
+  table with existence-validated FKs into Page Inventory's `pages` (source/target) and a nullable
+  existence-validated approver FK into `users`; `relatedStrategyRecordId` is deliberately an
+  unvalidated plain UUID string, since Website Strategy Center shipped with no validation hook for
+  this relationship. `InternalLinkRepository.updateStatus()` introduces a genuinely new mechanism —
+  an atomic compare-and-swap on `(id, status)` that also conditionally stamps
+  `implementedAt`/`verifiedAt` via a `COALESCE(column, NOW())` SQL literal baked into the same
+  `UPDATE`, so "stamp once, never overwrite" stays atomic with the CAS guard itself. Built by a
+  background agent with a fully-specified prompt, then independently re-verified in full by the
+  orchestrating session — every high-risk file (migration, repository, service, controller RBAC
+  placement via grep, DTO, module wiring, both `packages/database` barrel exports, `app.module.ts`
+  wiring) read directly, and every test suite re-run fresh against a real local disposable
+  PostgreSQL 17 database rather than trusted from the agent's own report: 28/28
+  `packages/database` unit tests, a full 63-migration up/down/up round-trip, 23/23
+  `packages/database` integration tests, 38/38 `dashboard-api` unit tests for this module (787/787
+  overall), 28/28 `dashboard-api` e2e tests for this module (311/311 overall), module-registry
+  validation (43 modules, 21 permission groups), `pnpm audit` 0 vulnerabilities, prettier clean.
+  **Independent code review then ran** (this project's own `code-review` skill, high effort,
+  8-angle finder pass, 1-vote verification) — 10 candidates survived dedup, 9 CONFIRMED and 1
+  REFUTED. 8 of 9 CONFIRMED findings fixed: most severe, self-link rejection in both `create()`
+  and `update()` used case-sensitive `===` on UUID strings, so two differently-cased
+  representations of the identical page id (both valid per Zod's case-insensitive `.uuid()`)
+  bypassed the guard — fixed by extracting a shared `assertDistinctPages()` helper comparing
+  case-insensitively. Also fixed: the "call `existsInProject`, throw if false" pattern hand-copied
+  4 times instead of reusing the file's own established `assertApproverExists()`-style
+  private-helper convention (extracted `assertPageExists()`); `update()`'s conditional
+  field-revalidation using a mutable `checks` array with 3 `.push()` calls instead of the sibling
+  `ServicesService.update()`'s cleaner `Promise.all([cond ? assertX() : Promise.resolve(), ...])`
+  literal; the RBAC `MODULE_KEY` string literal independently declared in both the service and
+  controller instead of the module's own already-existing `constants.ts` (promoted to
+  `INTERNAL_LINKING_LIBRARY_MODULE_KEY`); no composite index covering
+  `(project_id, source_page_id)`/`(project_id, target_page_id)` despite `project_id` being
+  mandatory on every `list()` call (migration `00062` amended — it hadn't shipped anywhere yet —
+  to lead both page-id indexes with `project_id`); the self-link check itself duplicated between
+  `create()`/`update()`; and `update()`'s `targetPageId` re-validation branch and its
+  cross-project-page real-database path both having zero test coverage, unlike the structurally
+  identical `sourcePageId` branch (both closed with new tests, including a real e2e counterpart
+  mirroring `create()`'s own cross-project test). **1 CONFIRMED finding left as accepted, tracked
+  debt, flagged directly in code**: `changeStatus()`'s same-status no-op short-circuit returns
+  before the per-transition `assertAllowed()` check runs — the byte-identical, already-shipped
+  ordering `PagesService.changeWorkflowStage()`/`KeywordsService.changeApprovalStatus()` both have,
+  with no state mutation and no data exposure beyond what the identical `GET` route already
+  permits under the same grant; fixing only this new module would diverge from two already-live
+  siblings for a fix whose correct shape isn't specified anywhere. **1 candidate REFUTED**: a
+  missing DB-level `CHECK` constraint for `source_page_id <> target_page_id` — the task package's
+  own D4 decision explicitly considered and rejected this, and the cited sibling precedents aren't
+  actually the same constraint shape (bound/completeness/format checks, not a same-table
+  self-referential inequality). Re-validated: 42/42 module unit tests (787/787 overall), 29/29
+  module e2e tests (312/312 overall), migration round-trip re-confirmed with the new composite
+  indexes present, typecheck/lint/prettier clean. **A separate `security-review` skill run then
+  found 0 findings above threshold** — confirmed method-level RBAC placement throughout,
+  `changeStatus()` correctly threading the already-IDOR-verified `link.projectId` into
+  `assertAllowed()`, no residual bypass in the fixed self-link/page-existence checks, the search
+  filter's `escapeLikePattern()` reuse closing any SQL-injection surface, the COALESCE timestamp
+  mechanism being a fixed literal with no interpolated input, and `relatedStrategyRecordId` never
+  reaching any SQL/URL/file-path sink — purely inert stored data. A review packet (published as a
+  Claude artifact, "Internal Linking Library Review Packet" — code review + security review
+  findings, fixes, and validation evidence, with a decision section) was then prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). See `docs/project-state/module-internal-linking-library-approval-checklist.md`.
+- `[2026-08-24]` **Required second-role human review complete for
+  `module-internal-linking-library`.** The review packet (code review + security review findings,
+  fixes, and the 1 accepted-debt/1 refuted item, with a decision section) was reviewed. **Jitesh D
+  reviewed it and returned "Approves,"** no disputes raised — the 1 open accepted-debt item
+  (`changeStatus()`'s no-op ordering, matching an already-shipped sibling pattern) and the 1
+  refuted finding were both accepted as recorded rather than sent back for another pass. See
+  `docs/project-state/module-internal-linking-library-approval-checklist.md`'s "Sign-off" section.
+  A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
+  steps.
+- `[2026-08-24]` **The gate (G4-internal-linking-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `b026170` on branch `module-internal-linking-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-internal-linking-library`) and
+  `docs/project-state/module-internal-linking-library-approval-checklist.md`'s "Sign-off" section.
+  **This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
+  each remains its own separate, not-yet-requested authorization, per this project's standing "no
+  auto-merge" rule.
+- `[2026-08-24]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-internal-linking-library` — pushed to `origin`, opened as
+  [PR #61](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/61). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 
