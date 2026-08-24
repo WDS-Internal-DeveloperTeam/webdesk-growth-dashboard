@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { Button } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { withProjectId } from "@/lib/keyword-and-entity-library-query";
@@ -55,26 +56,16 @@ export function EntityDeleteButton({
 
   return (
     <span style={{ display: "inline-flex", flexDirection: "column", gap: "0.25rem" }}>
-      <button
+      <Button
         type="button"
+        variant="danger"
         onClick={() => {
           void handleDelete();
         }}
         disabled={pending}
-        style={{
-          fontSize: "0.875rem",
-          fontWeight: 500,
-          color: "var(--webdesk-dashboard-color-danger)",
-          background: "none",
-          border: "1px solid var(--webdesk-dashboard-color-danger)",
-          borderRadius: "0.25rem",
-          padding: "0.4rem 0.9rem",
-          cursor: pending ? "not-allowed" : "pointer",
-          opacity: pending ? 0.6 : 1,
-        }}
       >
         {pending ? "Deleting…" : "Delete"}
-      </button>
+      </Button>
       {error ? (
         <span
           role="alert"

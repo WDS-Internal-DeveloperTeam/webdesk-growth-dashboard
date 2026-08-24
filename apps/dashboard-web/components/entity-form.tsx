@@ -5,6 +5,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import type { EntityRecord } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { plainTextFieldValue } from "@/lib/form-field-value";
 import { withProjectId } from "@/lib/keyword-and-entity-library-query";
 import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { RichTextEditor } from "./rich-text-editor";
@@ -55,9 +56,7 @@ export function EntityForm(props: EntityFormProps): ReactNode {
       const trimmedName = name.trim();
 
       function textField(value: string): string | null | undefined {
-        const trimmed = value.trim();
-        if (trimmed !== "") return trimmed;
-        return props.mode === "create" ? undefined : null;
+        return plainTextFieldValue(value, props.mode);
       }
 
       function richTextField(value: string): string | null | undefined {

@@ -1,15 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type {
-  ApiSuccessResponse,
-  EntityRecord,
-  KeywordEntityRelationship,
-} from "@webdesk/shared-types";
+import { useMemo, type ReactNode } from "react";
+import type { EntityRecord, KeywordEntityRelationship } from "@webdesk/shared-types";
 import { RelationshipPicker, type RelationshipOption } from "@webdesk/ui";
-import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
-import { usePendingIds } from "@/lib/use-pending-ids";
+import { useRelationshipSection } from "@/lib/use-relationship-section";
 import styles from "./keyword-relationship-section.module.css";
 
 export interface KeywordEntityRelationshipsSectionProps {
@@ -43,7 +38,11 @@ function toRelationshipOptions(records: readonly EntityRecord[]): readonly Relat
  * used instead of relying on its chips for display. Picking an option from the picker's own dropdown
  * immediately POSTs the new relationship (no separate "Add" button — `onSelect` fires exactly once
  * per click, matching every other `RelationshipPicker` consumer's own click-to-select semantics);
- * removing a row immediately POSTs `.../:id/delete`.
+ * removing a row immediately POSTs `.../:id/delete`. The add/remove state machine itself lives in
+ * the shared `useRelationshipSection()` hook (code-review finding, `dashboard-web-keyword-and-
+ * entity-library` — this component and `KeywordPageAssignmentsSection` independently reimplemented
+ * ~150 identical lines of it before the hook existed); only the row-rendering (this component's own
+ * `entityType` secondary-line text) stays here.
  *
  * No `router.refresh()` after a mutation here — the same reasoning `ProjectEnvironmentsSection`/
  * `ClaimSourcesSection`/`PageUrlsSection` all already establish: no other section on the detail page
@@ -55,23 +54,20 @@ export function KeywordEntityRelationshipsSection({
   initialRelationships,
   entities,
 }: KeywordEntityRelationshipsSectionProps): ReactNode {
-  const [relationships, setRelationships] = useState(initialRelationships);
-  const [query, setQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const { pendingIds, markPending } = usePendingIds();
+  const basePath = `${getApiBaseUrl()}/keyword-and-entity-library/projects/${projectId}/keywords/${keywordId}/entity-relationships`;
 
-  useEffect(() => {
-    setRelationships(initialRelationships);
-  }, [initialRelationships]);
+  const { links, query, setQuery, error, pendingIds, linkedRecordIds, add, remove } =
+    useRelationshipSection<KeywordEntityRelationship>({
+      basePath,
+      initialLinks: initialRelationships,
+      getLinkedRecordId: (relationship) => relationship.entityId,
+      buildAddBody: (entityId) => ({ entityId }),
+      failureVerb: { add: "link entity", remove: "unlink entity" },
+    });
 
   const entityById = useMemo(
     () => new Map(entities.map((entity) => [entity.id, entity])),
     [entities],
-  );
-  const linkedEntityIds = useMemo(
-    () => new Set(relationships.map((relationship) => relationship.entityId)),
-    [relationships],
   );
 
   const options = useMemo(() => {
@@ -79,73 +75,19 @@ export function KeywordEntityRelationshipsSection({
     return toRelationshipOptions(
       entities.filter(
         (entity) =>
-          !linkedEntityIds.has(entity.id) &&
+          !linkedRecordIds.has(entity.id) &&
           (lowerQuery === "" || entity.name.toLowerCase().includes(lowerQuery)),
       ),
     ).slice(0, 20);
-  }, [entities, linkedEntityIds, query]);
-
-  const basePath = `${getApiBaseUrl()}/keyword-and-entity-library/projects/${projectId}/keywords/${keywordId}/entity-relationships`;
-
-  async function handleAdd(option: RelationshipOption): Promise<void> {
-    if (adding) {
-      return;
-    }
-    setError(null);
-    setAdding(true);
-    try {
-      const response = await fetch(basePath, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entityId: option.id }),
-      });
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
-        return;
-      }
-      const body = (await response.json()) as ApiSuccessResponse<KeywordEntityRelationship>;
-      setRelationships((current) => [...current, body.data]);
-      setQuery("");
-    } catch (err) {
-      console.error("Failed to link entity", err);
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setAdding(false);
-    }
-  }
-
-  async function handleRemove(relationship: KeywordEntityRelationship): Promise<void> {
-    if (pendingIds.has(relationship.id)) {
-      return;
-    }
-    setError(null);
-    markPending(relationship.id, true);
-    try {
-      const response = await fetch(`${basePath}/${relationship.id}/delete`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!response.ok && response.status !== 204) {
-        setError(await parseApiErrorMessage(response));
-        return;
-      }
-      setRelationships((current) => current.filter((item) => item.id !== relationship.id));
-    } catch (err) {
-      console.error("Failed to unlink entity", err);
-      setError("Something went wrong. Please try again.");
-    } finally {
-      markPending(relationship.id, false);
-    }
-  }
+  }, [entities, linkedRecordIds, query]);
 
   return (
     <div>
-      {relationships.length === 0 ? (
+      {links.length === 0 ? (
         <p className={styles.muted}>No entities linked yet.</p>
       ) : (
         <ul className={styles.list}>
-          {relationships.map((relationship) => {
+          {links.map((relationship) => {
             const entity = entityById.get(relationship.entityId);
             return (
               <li key={relationship.id} className={styles.row}>
@@ -160,7 +102,7 @@ export function KeywordEntityRelationshipsSection({
                   className={styles.removeButton}
                   disabled={pendingIds.has(relationship.id)}
                   onClick={() => {
-                    void handleRemove(relationship);
+                    void remove(relationship);
                   }}
                 >
                   {pendingIds.has(relationship.id) ? "…" : "Remove"}
@@ -179,7 +121,7 @@ export function KeywordEntityRelationshipsSection({
           options={options}
           selected={[]}
           onSelect={(option) => {
-            void handleAdd(option);
+            void add(option);
           }}
           onRemove={() => {}}
           hint="Search and select an entity to link to this keyword."

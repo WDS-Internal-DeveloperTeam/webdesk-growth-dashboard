@@ -164,10 +164,20 @@ export default async function KeywordLibraryListPage({
         {/* Preserves the reader's page-size choice across a filter submit — matches every sibling
             list page's own identical hidden field. */}
         <input type="hidden" name="pageSize" value={query.pageSize} />
-        <TextFilter label="Keyword type" name="keywordType" value={query.keywordType} />
-        <TextFilter label="Intent" name="intent" value={query.intent} />
-        <TextFilter label="Funnel stage" name="funnelStage" value={query.funnelStage} />
-        <TextFilter label="Country" name="country" value={query.country} />
+        <TextFilter
+          label="Keyword type"
+          name="keywordType"
+          value={query.keywordType}
+          maxLength={100}
+        />
+        <TextFilter label="Intent" name="intent" value={query.intent} maxLength={100} />
+        <TextFilter
+          label="Funnel stage"
+          name="funnelStage"
+          value={query.funnelStage}
+          maxLength={100}
+        />
+        <TextFilter label="Country" name="country" value={query.country} maxLength={100} />
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
           <span style={labelStyle}>Confidence</span>
           <select
@@ -326,10 +336,17 @@ function TextFilter({
   label,
   name,
   value,
+  maxLength = 255,
 }: {
   readonly label: string;
   readonly name: string;
   readonly value: string | null;
+  /** Defaults to 255 (matches `search`'s backend limit); the 4 short-text filter fields
+   *  (`keywordType`/`intent`/`funnelStage`/`country`) pass 100 explicitly to match
+   *  `parseKeywordLibrarySearchParams`'s own `.slice(0, 100)` — without it, the input silently
+   *  accepted up to 255 characters that the parser then truncated with no feedback shown
+   *  (code-review finding, `dashboard-web-keyword-and-entity-library`). */
+  readonly maxLength?: number;
 }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
@@ -339,7 +356,7 @@ function TextFilter({
         type="text"
         name={name}
         defaultValue={value ?? ""}
-        maxLength={255}
+        maxLength={maxLength}
         style={selectStyle}
       />
     </label>

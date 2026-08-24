@@ -29,6 +29,13 @@ const getKeywordMock = vi.fn();
 vi.mock("@/lib/keyword-and-entity-library", () => ({
   getKeyword: (projectId: string, keywordId: string) => getKeywordMock(projectId, keywordId),
   withProjectId: (path: string, projectId: string) => `${path}?projectId=${projectId}`,
+  // Real implementation is a plain no-op passthrough for `.catch()`-purposes only — the mock
+  // mirrors that exactly, since the page's own code review fix (parallelizing the project check
+  // with the keyword fetch) now depends on this export existing.
+  tolerateDiscard: <T,>(promise: Promise<T>): Promise<T> => {
+    promise.catch(() => {});
+    return promise;
+  },
 }));
 
 import EditKeywordPage from "../../app/(shell)/keyword-and-entity-library/[keywordId]/edit/page.js";

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ContentContainer, PageHeader } from "@webdesk/ui";
 import { KeywordForm } from "@/components/keyword-form";
-import { getKeyword, withProjectId } from "@/lib/keyword-and-entity-library";
+import { getKeyword, tolerateDiscard, withProjectId } from "@/lib/keyword-and-entity-library";
 import { getProject } from "@/lib/projects";
 import { firstValue } from "@/lib/search-params";
 import { getServerSession } from "@/lib/server-session";
@@ -22,13 +22,22 @@ export default async function EditKeywordPage({ params, searchParams }: EditKeyw
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  const { keywordId } = await params;
+
+  // Fired concurrently with the project-existence check below, not sequentially after it —
+  // getKeyword() only needs the already-known projectId string, no field resolved from the
+  // Project entity itself (code-review finding, dashboard-web-keyword-and-entity-library, mirrors
+  // the identical fix already applied on the keyword detail page).
+  const keywordPromise = projectIdParam
+    ? tolerateDiscard(getKeyword(projectIdParam, keywordId))
+    : null;
+
   const project = projectIdParam ? await getProject(projectIdParam) : null;
   if (!project) {
     redirect("/keyword-and-entity-library");
   }
 
-  const { keywordId } = await params;
-  const keyword = await getKeyword(project.id, keywordId);
+  const keyword = await keywordPromise!;
   if (!keyword) {
     notFound();
   }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { ApiSuccessResponse, Page, PageKeywordAssignment } from "@webdesk/shared-types";
+import { useMemo, useState, type ReactNode } from "react";
+import type { Page, PageKeywordAssignment } from "@webdesk/shared-types";
 import { RelationshipPicker, type RelationshipOption } from "@webdesk/ui";
-import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
-import { usePendingIds } from "@/lib/use-pending-ids";
+import { useRelationshipSection } from "@/lib/use-relationship-section";
 import styles from "./keyword-relationship-section.module.css";
 
 const ASSIGNMENT_NOTE_MAX_LENGTH = 500;
@@ -34,7 +33,10 @@ function toRelationshipOptions(records: readonly Page[]): readonly RelationshipO
  * whatever note is currently typed at the moment a page is picked is what gets attached to that
  * assignment, then cleared. This keeps the add flow to a single click (matching every sibling
  * `RelationshipPicker` consumer's own click-to-select semantics) rather than introducing a second,
- * inconsistent "pick, then press a separate Add button" step just for this one field.
+ * inconsistent "pick, then press a separate Add button" step just for this one field. The shared
+ * add/remove state machine lives in `useRelationshipSection()`; `assignmentNote` is the one piece of
+ * state genuinely local to this component (it's not part of the join list itself, only the pending
+ * value for the NEXT add), threaded into the shared hook via `buildAddBody`/`onAdded`.
  */
 export function KeywordPageAssignmentsSection({
   projectId,
@@ -42,99 +44,39 @@ export function KeywordPageAssignmentsSection({
   initialAssignments,
   pages,
 }: KeywordPageAssignmentsSectionProps): ReactNode {
-  const [assignments, setAssignments] = useState(initialAssignments);
-  const [query, setQuery] = useState("");
   const [assignmentNote, setAssignmentNote] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const { pendingIds, markPending } = usePendingIds();
+  const basePath = `${getApiBaseUrl()}/keyword-and-entity-library/projects/${projectId}/keywords/${keywordId}/page-assignments`;
 
-  useEffect(() => {
-    setAssignments(initialAssignments);
-  }, [initialAssignments]);
+  const { links, query, setQuery, error, pendingIds, linkedRecordIds, add, remove } =
+    useRelationshipSection<PageKeywordAssignment>({
+      basePath,
+      initialLinks: initialAssignments,
+      getLinkedRecordId: (assignment) => assignment.pageId,
+      buildAddBody: (pageId) => ({ pageId, assignmentNote: assignmentNote.trim() || null }),
+      onAdded: () => setAssignmentNote(""),
+      failureVerb: { add: "assign page", remove: "remove page assignment" },
+    });
 
   const pageById = useMemo(() => new Map(pages.map((page) => [page.id, page])), [pages]);
-  const assignedPageIds = useMemo(
-    () => new Set(assignments.map((assignment) => assignment.pageId)),
-    [assignments],
-  );
 
   const options = useMemo(() => {
     const lowerQuery = query.trim().toLowerCase();
     return toRelationshipOptions(
       pages.filter(
         (page) =>
-          !assignedPageIds.has(page.id) &&
+          !linkedRecordIds.has(page.id) &&
           (lowerQuery === "" || page.pageName.toLowerCase().includes(lowerQuery)),
       ),
     ).slice(0, 20);
-  }, [pages, assignedPageIds, query]);
-
-  const basePath = `${getApiBaseUrl()}/keyword-and-entity-library/projects/${projectId}/keywords/${keywordId}/page-assignments`;
-
-  async function handleAdd(option: RelationshipOption): Promise<void> {
-    if (adding) {
-      return;
-    }
-    setError(null);
-    setAdding(true);
-    try {
-      const response = await fetch(basePath, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pageId: option.id,
-          assignmentNote: assignmentNote.trim() || null,
-        }),
-      });
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
-        return;
-      }
-      const body = (await response.json()) as ApiSuccessResponse<PageKeywordAssignment>;
-      setAssignments((current) => [...current, body.data]);
-      setQuery("");
-      setAssignmentNote("");
-    } catch (err) {
-      console.error("Failed to assign page", err);
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setAdding(false);
-    }
-  }
-
-  async function handleRemove(assignment: PageKeywordAssignment): Promise<void> {
-    if (pendingIds.has(assignment.id)) {
-      return;
-    }
-    setError(null);
-    markPending(assignment.id, true);
-    try {
-      const response = await fetch(`${basePath}/${assignment.id}/delete`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!response.ok && response.status !== 204) {
-        setError(await parseApiErrorMessage(response));
-        return;
-      }
-      setAssignments((current) => current.filter((item) => item.id !== assignment.id));
-    } catch (err) {
-      console.error("Failed to remove page assignment", err);
-      setError("Something went wrong. Please try again.");
-    } finally {
-      markPending(assignment.id, false);
-    }
-  }
+  }, [pages, linkedRecordIds, query]);
 
   return (
     <div>
-      {assignments.length === 0 ? (
+      {links.length === 0 ? (
         <p className={styles.muted}>No pages assigned yet.</p>
       ) : (
         <ul className={styles.list}>
-          {assignments.map((assignment) => {
+          {links.map((assignment) => {
             const page = pageById.get(assignment.pageId);
             return (
               <li key={assignment.id} className={styles.row}>
@@ -149,7 +91,7 @@ export function KeywordPageAssignmentsSection({
                   className={styles.removeButton}
                   disabled={pendingIds.has(assignment.id)}
                   onClick={() => {
-                    void handleRemove(assignment);
+                    void remove(assignment);
                   }}
                 >
                   {pendingIds.has(assignment.id) ? "…" : "Remove"}
@@ -182,7 +124,7 @@ export function KeywordPageAssignmentsSection({
           options={options}
           selected={[]}
           onSelect={(option) => {
-            void handleAdd(option);
+            void add(option);
           }}
           onRemove={() => {}}
           hint="Search and select a Page Inventory page. Any note above is attached to the assignment."
