@@ -7158,8 +7158,21 @@ e76ee0609510c9c37b206515e9427cff5e16f820`, confirming the exact merged commit is
   standing "no auto-merge" rule.
 - `[2026-08-24]` **"Push the branch and open a PR" was separately requested and executed** on
   `dashboard-web-content-template-library` — pushed to `origin`, opened as
-  [PR #64](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/64). Merge
-  authorization remains a separate, not-yet-requested next step.
+  [PR #64](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/64). All 14
+  CI checks confirmed green.
+- `[2026-08-24]` **"Merge PR #64" was separately requested and executed.** Merged with a real merge
+  commit (not squash/rebase), matching every prior merge in this project's history — merge commit
+  `befd1de3f583c4bcf271a1bd70a44fd392df7a29`, all 14 CI checks green beforehand. Both Vercel
+  projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+  Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+befd1de3f583c4bcf271a1bd70a44fd392df7a29`, confirming the exact merged commit is what's serving;
+  `GET /content-template-library/templates` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed); and
+  `dashboard-web`'s `/content-template-library` correctly redirects (307) an unauthenticated
+  visitor to `/auth/sign-in`. **The `dashboard-web` Content Template Library UI is now genuinely
+  live in production**, closing out this slice's full build-to-production arc — backend and now
+  the full UI (list, detail, create/edit form, status actions, publish/unpublish actions) are both
+  live for the Content Template Library module.
 
 ## Open client blockers
 
