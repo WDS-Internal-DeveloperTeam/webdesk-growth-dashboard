@@ -3,8 +3,11 @@
 **Status:** Built, code review complete (10 candidates surfaced after dedup — 9 CONFIRMED, 1
 REFUTED — 8 of 9 CONFIRMED fixed, 1 left as accepted tracked debt, recorded directly in code).
 Security review complete (0 findings above threshold). Required second-role human review
-complete — Jitesh D, "Approves," no disputes raised. A gate decision, push/PR, and merge
-authorization each remain separate, not-yet-requested next steps.
+complete — Jitesh D, "Approves," no disputes raised. Gate (G4-internal-linking-library) approved —
+WebDesk Solution, decision CONFIRM, approved commit `b026170` on branch
+`module-internal-linking-library`. Merged
+([PR #61](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/61), merge
+commit `b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -168,5 +171,26 @@ project's standing "no auto-merge" rule.
 
 **"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
 opened as
-[PR #61](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/61). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #61](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/61). All 14
+CI checks confirmed green (typecheck, lint, unit tests, integration tests, production build,
+database migration test, secret-pattern scan, dependency audit, formatting, workspace-boundary
+check, and both Vercel preview deployments).
+
+## Merge — COMPLETE
+
+**"Merge PR #61" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`, confirming the exact merged commit is what's serving.
+- `GET /internal-linking-library/projects/:projectId/links` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed).
+- `dashboard-web`'s `/` resolves (307) to `/auth/sign-in` for an unauthenticated visitor,
+  confirming the session gate is intact.
+
+**The Internal Linking Library module backend is now genuinely live in production.** No
+`dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step, matching
+every prior module's own backend-first precedent.

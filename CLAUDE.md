@@ -6856,8 +6856,20 @@ verified`) chosen over the standard 8-value generic lifecycle every prior module
   auto-merge" rule.
 - `[2026-08-24]` **"Push the branch and open a PR" was separately requested and executed** on
   `module-internal-linking-library` — pushed to `origin`, opened as
-  [PR #61](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/61). Merge
-  authorization remains a separate, not-yet-requested next step.
+  [PR #61](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/61). All 14
+  CI checks confirmed green.
+- `[2026-08-24]` **"Merge PR #61" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`, all 14 CI checks green beforehand. Both
+  Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+  CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`, confirming the exact merged commit is what's serving;
+  `GET /internal-linking-library/projects/:projectId/links` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+  and `dashboard-web`'s `/` resolves (307) to `/auth/sign-in` for an unauthenticated visitor,
+  confirming the session gate is intact. **The Internal Linking Library module backend is now
+  genuinely live in production.** No `dashboard-web` UI exists yet for this module — a separate,
+  not-yet-requested next step, matching every prior module's own backend-first precedent.
 
 ## Open client blockers
 
