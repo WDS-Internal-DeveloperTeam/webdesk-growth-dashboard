@@ -6753,8 +6753,20 @@ ea53364653e8ee1f14cbdf74cf701865fd9d96be`, confirming the exact merged commit is
   standing "no auto-merge" rule.
 - `[2026-08-24]` **"Push the branch and open a PR" was separately requested and executed** on
   `dashboard-web-keyword-and-entity-library` — pushed to `origin`, opened as
-  [PR #60](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/60). Merge
-  authorization remains a separate, not-yet-requested next step.
+  [PR #60](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/60). All 14
+  CI checks confirmed green.
+- `[2026-08-24]` **"Merge PR #60" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `b54fc51b437da4f7df6d84db36d0c035ecb41059`, all 14 CI checks green beforehand. Both
+  Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+  CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+b54fc51b437da4f7df6d84db36d0c035ecb41059`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/keyword-and-entity-library` correctly redirects (307) an unauthenticated
+  visitor to `/auth/sign-in`, confirming the session gate is intact. **The `dashboard-web`
+  Keyword & Entity Library UI is now genuinely live in production**, closing out this slice's full
+  build-to-production arc — backend and now the full UI (keywords list/detail/create/edit, status
+  actions, entities list/detail/create/edit, both sub-resource sections) are both live for the
+  Keyword & Entity Library module.
 
 ## Open client blockers
 

@@ -4,8 +4,9 @@
 fixed). Security review complete (0 findings above threshold). Required second-role human review
 complete — Jitesh D, "Approves," no disputes raised. Gate
 (G4-dashboard-web-keyword-and-entity-library) approved — WebDesk Solution, decision CONFIRM,
-approved commit `4126d29` on branch `dashboard-web-keyword-and-entity-library`. Push/PR and merge
-authorization remain separate, not-yet-requested next steps.
+approved commit `4126d29` on branch `dashboard-web-keyword-and-entity-library`. Merged
+([PR #60](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/60), merge
+commit `b54fc51b437da4f7df6d84db36d0c035ecb41059`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -146,5 +147,23 @@ project's standing "no auto-merge" rule.
 
 **"Push the branch and open a PR" was separately requested and executed.** Pushed to `origin`,
 opened as
-[PR #60](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/60). Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #60](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/60). All 14
+CI checks confirmed green.
+
+## Merge — COMPLETE
+
+**"Merge PR #60" was separately requested and executed.** All 14 CI checks green first. Merged
+with a real merge commit (not squash/rebase), matching every prior merge in this project's
+history — merge commit `b54fc51b437da4f7df6d84db36d0c035ecb41059`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check:
+
+- `dashboard-api`'s `/health` returned `build.commitSha ==
+b54fc51b437da4f7df6d84db36d0c035ecb41059`, confirming the exact merged commit is what's serving.
+- `dashboard-web`'s `/keyword-and-entity-library` correctly redirects (307) an unauthenticated
+  visitor to `/auth/sign-in`, confirming the session gate is intact.
+
+**The `dashboard-web` Keyword & Entity Library UI is now genuinely live in production** — closing
+out this slice's full build-to-production arc, and the Keyword & Entity Library module's own
+overall arc: backend and now the full UI (keywords list/detail/create/edit, status actions,
+entities list/detail/create/edit, both sub-resource sections) are all live.
