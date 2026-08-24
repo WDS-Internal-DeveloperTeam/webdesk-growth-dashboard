@@ -6953,6 +6953,21 @@ b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`, confirming the exact merged commit is
   `dashboard-web-internal-linking-library` — pushed to `origin`, opened as
   [PR #62](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/62). Merge
   authorization remains a separate, not-yet-requested next step.
+- `[2026-08-24]` **"Check CI status on the PR" confirmed all 14 checks green on PR #62**, including
+  both Vercel preview deployments. **"Merge PR #62" was then separately requested and executed** —
+  merged with a real merge commit (not squash/rebase), matching every prior merge in this
+  project's history — merge commit `e439ca5be99d62a01944d9062926c470139e672b`. Both Vercel
+  projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+  Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+e439ca5be99d62a01944d9062926c470139e672b`, confirming the exact merged commit is what's serving;
+  `GET /internal-linking-library/projects/:projectId/links` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+  and `dashboard-web`'s `/internal-linking-library` resolves (307) to `/auth/sign-in` for an
+  unauthenticated visitor (a transient stale-edge-cache `404` on the first two checks was ruled
+  out via repeated, cache-busted checks, not a real defect). **The `dashboard-web` Internal
+  Linking Library UI is now genuinely live in production**, closing out this slice's full
+  build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
+  actions) are both live for the Internal Linking Library module.
 
 ## Open client blockers
 
