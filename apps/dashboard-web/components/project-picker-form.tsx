@@ -11,6 +11,10 @@ import {
 export interface ProjectPickerFormProps {
   readonly projects: readonly Project[];
   readonly defaultProjectId: string | null;
+  /** Defaults to "View pages" (Page Inventory's own original, only consumer) — Keyword & Entity
+   *  Library, the 2nd project-scoped module to reuse this component, passes "View keywords"
+   *  instead, so the submit button reads correctly for whichever module rendered it. */
+  readonly submitLabel?: string;
 }
 
 /** Mirrors `ProjectSwitcher`'s own `COOKIE_MAX_AGE_SECONDS` exactly — the two pickers write the
@@ -35,6 +39,7 @@ const labelStyle = {
 export function ProjectPickerForm({
   projects,
   defaultProjectId,
+  submitLabel = "View pages",
 }: ProjectPickerFormProps): ReactNode {
   const hasDefault =
     defaultProjectId !== null && projects.some((project) => project.id === defaultProjectId);
@@ -74,7 +79,7 @@ export function ProjectPickerForm({
         </select>
       </label>
       <button type="submit" style={submitButtonStyle}>
-        View pages
+        {submitLabel}
       </button>
     </form>
   );

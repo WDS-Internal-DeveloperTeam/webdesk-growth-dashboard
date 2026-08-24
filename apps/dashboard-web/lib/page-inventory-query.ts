@@ -197,10 +197,8 @@ export function buildPageInventoryHref(
   return `/page-inventory?${params.toString()}`;
 }
 
-/** Builds an href to another Page Inventory route (`new`/`:pageId`/`:pageId/edit`), always
- *  preserving `?projectId=` — every route under this module hard-requires it, since the backend's
- *  own routes are `page-inventory/projects/:projectId/pages/...`. */
-export function withProjectId(path: string, projectId: string): string {
-  const params = new URLSearchParams({ projectId });
-  return `${path}?${params.toString()}`;
-}
+// `withProjectId` now lives in `lib/project-scoped-href.ts` — extracted after
+// `keyword-and-entity-library-query.ts` became its 2nd independent consumer, see that file's own
+// doc comment. Re-exported here so every existing call site importing it from this module is
+// unaffected.
+export { withProjectId } from "./project-scoped-href";
