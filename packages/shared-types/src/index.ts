@@ -924,3 +924,55 @@ export interface InternalLink {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+// Structurally identical to PersonaApprovalStatus/ServiceApprovalStatus/ProofClaimApprovalStatus/
+// WebsiteStrategyApprovalStatus/KeywordApprovalStatus (the shared 8-value artifact-approval
+// workflow, task package D4) — reused as its own named type rather than an alias so this module's
+// own `-query.ts` file can still narrow to it directly without a cast, matching every sibling
+// module's own precedent.
+export type ContentTemplateApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * The Content Template Library module's single primary entity (module #10) — organization-wide,
+ * not project-scoped (task package D9), single table, no sub-resources. `requiredSections`/
+ * `optionalSections` are nullable free-text arrays (task package D7) — guidance labels, not FK
+ * references, and genuinely nullable at the database layer (unlike Persona Library's own
+ * NOT-NULL-default-`[]` array columns). `purpose`/`proofRules`/`seoAeoGeoRequirements`/`schema`/
+ * `ctaRules`/`contentDepthGuidance` are rich text (`RichTextEditor`), per the 2026-08-22 standing
+ * rule — sanitized server-side before storage (`ContentTemplatesService.create()`/`update()`) and
+ * again at render time via `SanitizedRichText`. `isPublished`/`publishedAt` are the first real
+ * publish/unpublish mechanism in this codebase (task package D1) — orthogonal to `approvalStatus`
+ * (task package D2): a template may be `draft` and unpublished, `approved` and published, or
+ * `approved` and unpublished, but never published while in any non-`approved` status.
+ * `publishedAt` is server-stamped once on the first successful publish and never cleared by
+ * `unpublish()`.
+ */
+export interface ContentTemplate {
+  readonly id: string;
+  readonly publicId: string;
+  readonly pageType: string;
+  readonly purpose: string | null;
+  readonly requiredSections: readonly string[] | null;
+  readonly optionalSections: readonly string[] | null;
+  readonly proofRules: string | null;
+  readonly seoAeoGeoRequirements: string | null;
+  readonly schema: string | null;
+  readonly ctaRules: string | null;
+  readonly contentDepthGuidance: string | null;
+  readonly approvalStatus: ContentTemplateApprovalStatus;
+  readonly version: number;
+  readonly isPublished: boolean;
+  readonly publishedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
