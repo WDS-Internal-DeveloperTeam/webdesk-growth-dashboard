@@ -3,8 +3,9 @@
 **Status:** Built, code review complete (9 candidates surfaced after dedup — 4 CONFIRMED, 5
 PLAUSIBLE; 6 fixed, 3 accepted as tracked debt). Security review complete (0 findings above
 threshold). Required second-role human review complete — Jitesh D, "Approves," no disputes raised.
-Gate `G4-content-template-library` approved (WebDesk Solution, CONFIRM). Push/PR and merge
-authorization each remain separate, not-yet-requested next steps.
+Gate `G4-content-template-library` approved (WebDesk Solution, CONFIRM). Pushed to `origin` and
+opened as [PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63).
+Merge authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -22,7 +23,7 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ 3 PLAUSIBLE findings accepted as tracked debt, each matching an already-accepted pattern elsewhere in this codebase (recorded in the commit message and this file's "Independent code review — summary" below)                                                                                                                        |
 | 8   | Live end-to-end verified                   | ✅ Independently re-verified: every high-risk file read directly (repository CAS logic, service RBAC placement, controller decorator placement, migrations, both `packages/database` barrel exports), every test suite re-run against a fresh local disposable PostgreSQL 17 database, `pnpm audit` clean                                |
 | 9   | Documentation updated                      | ✅ `CLAUDE.md`'s "Recent decisions" entries updated                                                                                                                                                                                                                                                                                      |
-| 10  | Exact branch/commit verified and recorded  | ✅ Branch `module-content-template-library`, commits `6662f75` (schema/repository) → `032803f` (service/controller) → `998bdb7` (tests) → `ae28621` (code-review fixes) — not yet pushed to `origin`                                                                                                                                     |
+| 10  | Exact branch/commit verified and recorded  | ✅ Branch `module-content-template-library`, commits `6662f75` → `032803f` → `998bdb7` → `ae28621` (code-review fixes) → `d0f6afe` → `b4e2662` (gate approval docs) → `760342c` — pushed to `origin`, opened as [PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63)                                 |
 
 ## Forbidden-actions check
 
@@ -149,3 +150,8 @@ already complete before the gate was requested), approved commit `b4e2662` on br
 This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
 remains its own separate, not-yet-requested authorization, per this project's standing
 "no auto-merge" rule.
+
+**"Push the branch and open a PR" was then separately requested and executed** — pushed to
+`origin`, opened as
+[PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63). Merge
+authorization remains a separate, not-yet-requested next step.
