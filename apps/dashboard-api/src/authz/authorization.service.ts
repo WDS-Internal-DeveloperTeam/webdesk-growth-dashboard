@@ -1,6 +1,7 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import type {
   AuthEventRepository,
+  ModuleRegistryRepository,
   ModuleRepository,
   RolePermissionRepository,
   UserRepository,
@@ -8,6 +9,7 @@ import type {
 } from "@webdesk/database";
 import { AUTH_EVENT_REPOSITORY, USER_REPOSITORY } from "../auth/config/auth.constants.js";
 import {
+  MODULE_REGISTRY_REPOSITORY,
   MODULE_REPOSITORY,
   ROLE_PERMISSION_REPOSITORY,
   USER_ROLE_REPOSITORY,
@@ -52,6 +54,7 @@ export class AuthorizationService {
     @Inject(USER_ROLE_REPOSITORY) private readonly userRoles: UserRoleRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(AUTH_EVENT_REPOSITORY) private readonly events: AuthEventRepository,
+    @Inject(MODULE_REGISTRY_REPOSITORY) private readonly moduleRegistry: ModuleRegistryRepository,
   ) {}
 
   /**
@@ -208,6 +211,24 @@ export class AuthorizationService {
    * reads `request.params?.projectId` for, but this call site sits outside
    * that guard entirely.
    */
+  /**
+   * A narrow, read-only delegating method — backed by `ModuleRegistryRepository.findByKey()`, the
+   * real canonical 43-module registry (`module_registry`, migration `00035`), not the RBAC-facing
+   * `modules` table `evaluate()` above reads. Added for Review and Approval Center's own
+   * `target_module_key` validation (task package D6, `docs/task-packages/module-review-and-
+approval-center.md`) — a review may target a record in ANY current or future module, so its
+   * `create()` needs a real existence check against the full module vocabulary, not just the
+   * caller's own grants. Deliberately does NOT export `MODULE_REGISTRY_REPOSITORY` itself across
+   * the `AuthzModule` boundary for a consumer to query directly — the same "narrow delegating
+   * method, not a raw repository export" fix pattern already established for
+   * `RoleAssignmentService.findUserIdsForRoleInProject()`/`USER_ROLE_REPOSITORY` and (as of
+   * Persona Library's own security review) `ServicesService.existingServiceIds()`/
+   * `SERVICE_REPOSITORY`.
+   */
+  async isValidModuleKey(key: string): Promise<boolean> {
+    return (await this.moduleRegistry.findByKey(key)) !== null;
+  }
+
   async assertAllowed(
     userId: string,
     moduleKey: string,

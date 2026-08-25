@@ -1,5 +1,5 @@
 import type { UserEntity, UserRepository } from "@webdesk/database";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UsersService } from "./users.service.js";
 
@@ -98,6 +98,43 @@ describe("UsersService", () => {
       await service.findByIds([VALID_USER_ID, "not-a-uuid"]);
 
       expect(users.findByIds).toHaveBeenCalledWith([VALID_USER_ID]);
+    });
+  });
+
+  describe("assertUserExists", () => {
+    it("resolves without throwing for an active user", async () => {
+      users.findById.mockResolvedValue(userFixture());
+      await expect(
+        service.assertUserExists(VALID_USER_ID, "assignedToUserId"),
+      ).resolves.toBeUndefined();
+    });
+
+    it("throws BadRequestException (not NotFoundException) for a well-formed but nonexistent user id", async () => {
+      users.findById.mockResolvedValue(null);
+      await expect(
+        service.assertUserExists(WELL_FORMED_NONEXISTENT_ID, "assignedToUserId"),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("includes the caller-supplied field name in the error message", async () => {
+      users.findById.mockResolvedValue(null);
+      await expect(
+        service.assertUserExists(WELL_FORMED_NONEXISTENT_ID, "delegateToUserId"),
+      ).rejects.toThrow(/delegateToUserId/);
+    });
+
+    it("throws BadRequestException for a disabled user, same as nonexistent", async () => {
+      users.findById.mockResolvedValue(userFixture({ accountStatus: "disabled" }));
+      await expect(service.assertUserExists(VALID_USER_ID, "assignedToUserId")).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it("throws BadRequestException for a malformed id, without calling the repository", async () => {
+      await expect(service.assertUserExists("not-a-uuid", "assignedToUserId")).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(users.findById).not.toHaveBeenCalled();
     });
   });
 });

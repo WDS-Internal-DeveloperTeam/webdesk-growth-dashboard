@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-content-template-library",
+    "current_gate": "G4-review-and-approval-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-24T00:00:00Z",
-    "version": 68
+    "version": 69
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -714,6 +714,20 @@
       "approved_commit": "6de8303",
       "record": "docs/project-state/dashboard-web-content-template-library-approval-checklist.md",
       "scope_excludes": "None -- closes the last named gap for the Content Template Library module (backend and full UI now both authored). Push/PR and merge authorization are each their own separate, not-yet-requested next step."
+    },
+    {
+      "id": "G4-review-and-approval-center",
+      "type": "qa-security-gate",
+      "scope": "module-review-and-approval-center",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-25T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Review and Approval Center module backend (module #11) -- a cross-cutting engine attaching to records in OTHER modules via a polymorphic (targetModuleKey, targetId) reference. Independent code review (8-angle finder pass, high effort) surfaced 8 candidates, all 8 CONFIRMED, all 8 fixed -- most severe: updateStatus() had no terminal-status CAS guard, letting a decided review be reversed; non-atomic, unguarded review_decisions writes across decide()/setPaused()/delegate(); updateAssignee() had no CAS on the prior assignee; review_decisions was write-only with no GET route. Security review found 0 findings above threshold. No findings left as accepted, tracked debt -- every CONFIRMED finding was fixed. Clean pass, not an override, since the required second-role human review (Jitesh D, \"Approved,\" no disputes raised) was already complete before this gate was requested.",
+      "approved_commit": "60a0c8a",
+      "record": "docs/project-state/module-review-and-approval-center-approval-checklist.md",
+      "scope_excludes": "Push/PR and merge authorization are each their own separate, not-yet-requested next step, per this project's standing \"no auto-merge\" rule."
     }
   ],
   "budget": {
@@ -2340,6 +2354,15 @@
       "details": "G4-dashboard-web-content-template-library approved (CONFIRM) -- clean pass, not an override, since the second-role review was already complete before the gate was requested.",
       "project_version_before": 67,
       "project_version_after": 68
+    },
+    {
+      "timestamp": "2026-08-25T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-review-and-approval-center approved (CONFIRM) for module-review-and-approval-center, approved commit 60a0c8a.",
+      "project_version_before": 68,
+      "project_version_after": 69
     }
   ]
 }
