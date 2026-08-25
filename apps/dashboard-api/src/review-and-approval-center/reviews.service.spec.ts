@@ -323,6 +323,32 @@ describe("ReviewsService", () => {
       expect(result.status).toBe("approved");
     });
 
+    it("sanitizes notes before writing them to both review_decisions and audit_events (code-review finding — the prior version stored/audited dto.notes verbatim, unsanitized)", async () => {
+      reviews.findById.mockResolvedValue(review());
+      reviews.updateStatus.mockResolvedValue({
+        outcome: "updated",
+        entity: review({ status: "approved" }),
+      });
+
+      await svc.decide(
+        "review-1",
+        {
+          action: "approve_with_notes",
+          notes: "<p>Great work</p><script>alert(1)</script>",
+          expectedStatus: "submitted",
+        },
+        "approver-1",
+      );
+
+      expect(reviewDecisions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ notes: "<p>Great work</p>" }),
+        FAKE_TRANSACTION,
+      );
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: "<p>Great work</p>" }),
+      );
+    });
+
     it("maps reject to the rejected status", async () => {
       reviews.findById.mockResolvedValue(review());
       reviews.updateStatus.mockResolvedValue({

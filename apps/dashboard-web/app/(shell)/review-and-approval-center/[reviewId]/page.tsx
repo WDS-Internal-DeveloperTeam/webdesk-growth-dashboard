@@ -5,6 +5,7 @@ import { ContentContainer, Fact, PageHeader, StatusBadge, typographyTokens } fro
 import { ReviewCommentsSection } from "@/components/review-comments-section";
 import { ReviewDecisionActions } from "@/components/review-decision-actions";
 import { ReviewProcessActions } from "@/components/review-process-actions";
+import { SanitizedRichText } from "@/components/sanitized-rich-text";
 import { dlStyle, h2Style, mutedStyle, sectionStyle } from "@/lib/detail-section-styles";
 import {
   formatTimestamp,
@@ -207,7 +208,12 @@ function DecisionEntry({
           {users.get(decision.delegatedToUserId)?.displayName ?? decision.delegatedToUserId}
         </p>
       ) : null}
-      {decision.notes ? <p style={{ marginTop: "0.4rem" }}>{decision.notes}</p> : null}
+      {/* `notes` is real sanitized HTML from RichTextEditor (2026-08-22 standing rule,
+          code-review finding on this branch) — rendered via the shared SanitizedRichText
+          component, never as raw text, matching every other rich-text field in this app. */}
+      {decision.notes ? (
+        <SanitizedRichText html={decision.notes} style={{ marginTop: "0.4rem" }} />
+      ) : null}
     </li>
   );
 }

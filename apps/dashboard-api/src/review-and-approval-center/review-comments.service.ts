@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   ReviewCommentEntity,
   ReviewCommentRepository,
@@ -55,10 +55,23 @@ export class ReviewCommentsService {
     // required and never null (createReviewCommentSchema's own `z.string().min(1)`), so it uses
     // `sanitizeRichTextHtml()` directly rather than the nullable-contract wrapper other modules'
     // optional rich-text fields use.
+    //
+    // The `.min(1)` Zod validated on the RAW input, but `sanitizeRichTextHtml()`'s
+    // `disallowedTagsMode: "discard"` strips a `nonTextTags` element (e.g. `<script>...</script>`)
+    // along with its own text content — a caller could otherwise submit a non-empty body that
+    // sanitizes down to `""`, silently violating the "real comment" contract with no error (a
+    // real, reachable gap for any caller hitting this route directly, bypassing the UI's own
+    // client-side `isEmptyRichTextHtml()` guard — code-review finding). Checked AFTER
+    // sanitization, since that's the only point the true stored value is known.
+    const sanitizedBody = sanitizeRichTextHtml(input.body);
+    if (sanitizedBody.trim().length === 0) {
+      throw new BadRequestException("Comment body must not be empty after sanitization.");
+    }
+
     const created = await this.comments.create({
       reviewId,
       authorUserId: actorUserId,
-      body: sanitizeRichTextHtml(input.body),
+      body: sanitizedBody,
     });
 
     await this.auditService.record({

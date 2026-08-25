@@ -233,4 +233,23 @@ describe("ReviewForm", () => {
       "Something went wrong. Please try again.",
     );
   });
+
+  // postMutation()'s own documented contract: success data may degrade to undefined on a
+  // missing/malformed response body — this new review's `id` has no locally-known fallback to
+  // navigate to unlike every other mutation in this app (code-review finding).
+  it("shows a clear message and does not navigate when a successful response carries no data", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, correlationId: "corr-1" }),
+    } as Response) as typeof fetch;
+
+    render(<ReviewForm modules={MODULES} />);
+    fireEvent.change(screen.getByLabelText("Target ID"), { target: { value: VALID_TARGET_ID } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit review" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The review was created, but its details couldn't be loaded. Please check the list.",
+    );
+    expect(pushMock).not.toHaveBeenCalled();
+  });
 });

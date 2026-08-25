@@ -43,13 +43,18 @@ export function ReviewCommentsSection({ reviewId, comments, authors }: ReviewCom
             const author = authors.get(comment.authorUserId);
             return (
               <li key={comment.id} className={styles.row}>
-                <span className={styles.rowMain}>
+                {/* A <div>, not a <span> (code-review finding): SanitizedRichText renders a
+                    block-level <div dangerouslySetInnerHTML>, which is invalid HTML content
+                    nested inside an inline <span> — every sibling row (e.g.
+                    ClaimSourcesSection's own .rowMain) only ever nests <span>/<a> children, so
+                    this is the one row shape in this app that needs the block-level wrapper. */}
+                <div className={styles.rowMain}>
                   <span className={styles.primaryText}>
                     {author?.displayName ?? comment.authorUserId}
                   </span>
                   <span className={styles.secondaryText}>{formatTimestamp(comment.createdAt)}</span>
                   <SanitizedRichText html={comment.body} className={styles.commentBody} />
-                </span>
+                </div>
               </li>
             );
           })}

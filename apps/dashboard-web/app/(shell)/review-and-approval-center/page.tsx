@@ -12,7 +12,6 @@ import { buildHrefBySize } from "@/lib/pagination";
 import {
   buildReviewsHref,
   formatTimestamp,
-  getModuleRegistry,
   getReviews,
   moduleDisplayName,
   parseReviewsSearchParams,
@@ -40,11 +39,11 @@ interface ReviewAndApprovalCenterListPageProps {
  * default in `parseReviewsSearchParams()` itself, with a real link to switch to the unfiltered
  * "All reviews" view.
  *
- * The `targetModuleKey` filter's own options come from `GET /authz/module-registry` (real backend
- * data, not a hand-typed enum — the module keys are dynamic) — see `getModuleRegistry()`'s own doc
- * comment for the verified RBAC alignment between this endpoint and this module's own `create`
- * action, and for why it degrades to an empty option list rather than crashing for a caller who
- * lacks `users_roles:view`. The "New review" action link is always shown regardless — the same
+ * The `targetModuleKey` filter's own options come from the session's own already-fetched
+ * `session.navigation` (`GET /me/navigation`, real backend data, not a hand-typed enum) — see
+ * `lib/review-and-approval-center.ts`'s removed-`getModuleRegistry()` doc comment for why this
+ * replaced a direct, more narrowly-gated `GET /authz/module-registry` fetch (code-review finding).
+ * The "New review" action link is always shown regardless — the same
  * "let the backend enforce, the UI just calls it" convention `/projects`'s own "New project" link
  * already establishes, rather than a client-side guess about the caller's own capabilities.
  */
@@ -60,11 +59,8 @@ export default async function ReviewAndApprovalCenterListPage({
   }
 
   const query = parseReviewsSearchParams(await searchParams);
-  const [{ items: reviews, hasNextPage }, modulesRaw] = await Promise.all([
-    getReviews(query),
-    getModuleRegistry(),
-  ]);
-  const modules = sortModulesForPicker(modulesRaw);
+  const { items: reviews, hasNextPage } = await getReviews(query);
+  const modules = sortModulesForPicker(session.navigation);
 
   const userIds = new Set<string>();
   reviews.forEach((review) => {

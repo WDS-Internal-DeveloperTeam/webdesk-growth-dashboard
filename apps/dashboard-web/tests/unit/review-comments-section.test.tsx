@@ -72,6 +72,19 @@ describe("ReviewCommentsSection", () => {
     expect(document.querySelector("script")).not.toBeInTheDocument();
   });
 
+  it("wraps each row's content in a block-level element, not an inline <span> (code-review finding: SanitizedRichText renders a block-level <div>, invalid nested inside a <span>)", () => {
+    const authors = new Map<string, UserSummary>([[AUTHOR_ID, AUTHOR]]);
+    render(
+      <ReviewCommentsSection
+        reviewId={REVIEW_ID}
+        comments={[commentFixture()]}
+        authors={authors}
+      />,
+    );
+    const primaryText = screen.getByText("Jane Doe");
+    expect(primaryText.parentElement?.tagName).toBe("DIV");
+  });
+
   it("renders the add-comment form (RichTextEditor, not a plain textarea) below the list", () => {
     render(
       <ReviewCommentsSection

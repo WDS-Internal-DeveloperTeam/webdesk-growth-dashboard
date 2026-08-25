@@ -4,7 +4,7 @@ import type {
   ReviewEntity,
   ReviewRepository,
 } from "@webdesk/database";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
 import { ReviewCommentsService } from "./review-comments.service.js";
@@ -101,6 +101,15 @@ describe("ReviewCommentsService", () => {
         authorUserId: "actor-1",
         body: "<p>Looks good so far</p>",
       });
+    });
+
+    it("rejects with 400 a non-empty body that sanitizes down to nothing (code-review finding)", async () => {
+      reviews.findById.mockResolvedValue(review());
+
+      await expect(
+        svc.create("review-1", { body: "<script>alert(1)</script>" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(comments.create).not.toHaveBeenCalled();
     });
   });
 

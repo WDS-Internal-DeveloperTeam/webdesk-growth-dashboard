@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { withTransaction } from "@webdesk/database";
+import { sanitizeNullableRichText } from "@webdesk/validation";
 import type {
   CasResult,
   ReviewDecisionEntity,
@@ -198,6 +199,14 @@ export class ReviewsService {
 
     const nextStatus = NEXT_STATUS_FOR_DECISION[dto.action];
     const decidedAt = new Date();
+    // `notes` is now real HTML from dashboard-web's RichTextEditor (per the 2026-08-22 standing
+    // rule — code-review finding: the original doc comment here claimed "every sibling module's
+    // own status-actions reason field never uses the rich-text editor," which turned out to be
+    // false — no sibling *StatusActions component has a comparable field to compare against, and
+    // Website Strategy Center's own `notes` field already uses RichTextEditor under this same
+    // rule). Sanitized once here and reused for both the local `review_decisions` write and the
+    // `audit_events` mirror below.
+    const sanitizedNotes = sanitizeNullableRichText(dto.notes) ?? null;
 
     const entity = await withTransaction(async (transaction) => {
       const result = await this.reviews.updateStatus(
@@ -219,7 +228,7 @@ export class ReviewsService {
       // This module's own queryable local history (task package D1) — always written for a
       // successful decide() call, distinct from the audit_events mirror below.
       await this.reviewDecisions.create(
-        { reviewId: id, action: dto.action, actorUserId, notes: dto.notes ?? null, decidedAt },
+        { reviewId: id, action: dto.action, actorUserId, notes: sanitizedNotes, decidedAt },
         transaction,
       );
 
@@ -241,7 +250,7 @@ export class ReviewsService {
         action: dto.action,
         beforeState: { status: review.status },
         afterState: { status: nextStatus },
-        reason: dto.notes ?? null,
+        reason: sanitizedNotes,
         retentionCategory: "approval-audit-7y",
       });
     } catch (error) {

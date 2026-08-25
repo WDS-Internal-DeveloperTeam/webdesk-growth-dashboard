@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import type {
   ApiSuccessResponse,
-  ModuleRegistrySummary,
   Review,
   ReviewComment,
   ReviewDecision,
@@ -148,34 +147,12 @@ export async function getReviewComments(id: string): Promise<readonly ReviewComm
   return ((await response.json()) as ApiSuccessResponse<readonly ReviewComment[]>).data;
 }
 
-/**
- * Fetches the full module registry for the list page's `targetModuleKey` filter and the create
- * form's `targetModuleKey` field — the real backing data for both `<select>`s, sourced from
- * `GET /authz/module-registry` rather than a hand-typed enum, since the 43 module keys are real
- * backend data, not a fixed frontend vocabulary. `users_roles:view` gates that route (per the real
- * seeded RBAC matrix, only `super_admin`/`owner_growth_approver` hold it) — the SAME two roles
- * that hold `review_center:create`, so every caller who can reach the create form is guaranteed to
- * be able to load this list too. A caller who can only VIEW reviews (the 4 mid-tier roles plus
- * `read_only`) generally lacks `users_roles:view`, so this degrades to an empty array — mirrors
- * `getServicesForPersonaPicker()`'s own identical degrade-on-failure precedent — rather than
- * crashing the list page's own filter dropdown for the common case. That degrade means the list
- * page's own "Target module" filter simply offers no options besides "All modules" for those
- * callers, an honest reflection of what data they can actually request, not a fabricated list.
- */
-export async function getModuleRegistry(): Promise<readonly ModuleRegistrySummary[]> {
-  try {
-    const apiBaseUrl = getApiBaseUrl();
-    const cookieStore = await cookies();
-    const response = await fetch(`${apiBaseUrl}/authz/module-registry`, {
-      headers: { cookie: cookieStore.toString() },
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      return [];
-    }
-    return ((await response.json()) as ApiSuccessResponse<readonly ModuleRegistrySummary[]>).data;
-  } catch (error) {
-    console.error("Failed to load the module registry for the review target-module picker:", error);
-    return [];
-  }
-}
+// `getModuleRegistry()` (a direct `GET /authz/module-registry` fetch, `users_roles:view`-gated —
+// only 2 of 7 roles) was removed (code-review finding) in favor of `getServerSession()`'s own
+// already-fetched `session.navigation` field (`GET /me/navigation`, `SessionGuard`-only, held by
+// every role): both return the same `ModuleRegistrySummary[]` shape, `session.navigation` is
+// already loaded on every page render (no redundant fetch), and — verified against the real seeded
+// RBAC matrix — its own view-capability filter excludes only the two admin-configuration modules
+// (`users_roles`/`system_settings`) that shouldn't be review targets anyway. The prior version
+// silently returned an empty picker for 5 of 7 roles today, not just as a future-RBAC-change risk.
+// Callers now pass `session.navigation` directly to `sortModulesForPicker()`.

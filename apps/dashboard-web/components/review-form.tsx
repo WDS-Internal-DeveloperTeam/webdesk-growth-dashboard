@@ -15,15 +15,16 @@ const VERSION_LABEL_MAX_LENGTH = 255;
 
 export interface ReviewFormProps {
   /** Already sorted alphabetically by display name (`sortModulesForPicker()`) — real backing data
-   *  for the `targetModuleKey` field, sourced from `GET /authz/module-registry`. A real, verified
-   *  RBAC alignment makes this dropdown safe rather than a guess: only `super_admin`/
-   *  `owner_growth_approver` hold `review_center:create` (this form's own gate), and those are the
-   *  SAME two roles that hold `users_roles:view` (`GET /authz/module-registry`'s own gate) — no
-   *  caller who can reach this form is ever denied this lookup. Can still be empty if the fetch
-   *  itself failed (a genuine transient error, not an RBAC mismatch) — the empty-state warning
-   *  below covers that case honestly rather than silently letting the form become unsubmittable
-   *  with no explanation, mirroring `ContentTemplateLibraryForm`'s own precedent for its required
-   *  `categoryId` field. */
+   *  for the `targetModuleKey` field, sourced from `getServerSession()`'s own already-fetched
+   *  `session.navigation` (`GET /me/navigation`, `SessionGuard`-only) rather than a dedicated
+   *  `GET /authz/module-registry` fetch — held by every authenticated session regardless of role
+   *  (code-review finding: the original `GET /authz/module-registry` version was gated on
+   *  `users_roles:view`, held by only 2 of 7 seeded roles, silently returning an empty picker for
+   *  the other 5 even though `review_center:create` — this form's own gate — is held more
+   *  broadly). Can still be empty if the underlying navigation fetch itself failed (a genuine
+   *  transient error) — the empty-state warning below covers that case honestly rather than
+   *  silently letting the form become unsubmittable with no explanation, mirroring
+   *  `ContentTemplateLibraryForm`'s own precedent for its required `categoryId` field. */
   readonly modules: readonly ModuleRegistrySummary[];
 }
 
@@ -84,6 +85,17 @@ export function ReviewForm({ modules }: ReviewFormProps): ReactNode {
       });
       if (!result.ok) {
         setError(result.message);
+        return;
+      }
+      // Unlike every other mutation in this app, the new review's `id` has no locally-known
+      // equivalent to fall back on — but `postMutation()`'s own documented contract says its
+      // success `data` may still degrade to `undefined` on a missing/malformed response body
+      // (code-review finding). Guard explicitly rather than navigating to a literal "undefined"
+      // route or throwing inside this try block.
+      if (!result.data) {
+        setError(
+          "The review was created, but its details couldn't be loaded. Please check the list.",
+        );
         return;
       }
       router.push(`/review-and-approval-center/${result.data.id}`);

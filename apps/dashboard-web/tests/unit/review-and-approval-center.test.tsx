@@ -13,7 +13,6 @@ import type {
 } from "@webdesk/shared-types";
 import {
   buildReviewsHref,
-  getModuleRegistry,
   getReview,
   getReviewComments,
   getReviewDecisions,
@@ -494,40 +493,8 @@ describe("getReviewComments", () => {
   });
 });
 
-describe("getModuleRegistry", () => {
-  const originalFetch = global.fetch;
-  const originalConsoleError = console.error;
-
-  beforeEach(() => {
-    process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.example.com";
-    vi.mocked(cookies).mockResolvedValue({ toString: () => "sid=abc" } as never);
-    console.error = vi.fn();
-  });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-    console.error = originalConsoleError;
-    vi.restoreAllMocks();
-  });
-
-  it("degrades to an empty array on a non-OK response (e.g. a 403 for a caller lacking users_roles:view) instead of throwing", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 } as Response);
-    expect(await getModuleRegistry()).toEqual([]);
-  });
-
-  it("degrades to an empty array and logs on a network error, instead of throwing", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("network down"));
-    expect(await getModuleRegistry()).toEqual([]);
-    expect(console.error).toHaveBeenCalled();
-  });
-
-  it("returns the module list on a 200", async () => {
-    const modules = [moduleFixture("service_library")];
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: modules, correlationId: "test" }),
-    } as Response);
-
-    expect(await getModuleRegistry()).toEqual(modules);
-  });
-});
+// getModuleRegistry() (a direct GET /authz/module-registry fetch) was removed (code-review
+// finding, see lib/review-and-approval-center.ts's own doc comment) in favor of
+// getServerSession()'s already-fetched session.navigation — no fetch function remains here to
+// unit-test; moduleDisplayName()/sortModulesForPicker() are still exercised above against
+// plain ModuleRegistrySummary fixtures, now the caller's own responsibility to supply.

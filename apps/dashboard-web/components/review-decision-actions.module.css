@@ -35,10 +35,6 @@
   composes: label from "./form-fields.module.css";
 }
 
-.notesTextarea {
-  composes: textarea from "./form-fields.module.css";
-}
-
 .cancelButton {
   font-size: var(--webdesk-dashboard-font-size-sm);
   color: var(--webdesk-dashboard-color-foreground-muted);

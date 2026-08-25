@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { Review, ReviewStatus, UserSummary } from "@webdesk/shared-types";
 import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { useSyncedState } from "@/lib/use-synced-state";
 import { UserPicker } from "./user-picker";
 import styles from "./review-process-actions.module.css";
 
@@ -45,26 +46,20 @@ export function ReviewProcessActions({
   assignedToUser: initialAssignedToUser,
 }: ReviewProcessActionsProps): ReactNode {
   const router = useRouter();
-  const [isPaused, setIsPaused] = useState(initialIsPaused);
-  const [assignedToUserId, setAssignedToUserId] = useState(initialAssignedToUserId);
-  const [selectedUser, setSelectedUser] = useState<UserSummary | null>(initialAssignedToUser);
+  // Re-synced from the server-passed props whenever they change, via the shared useSyncedState()
+  // hook (code-review finding: this project's own standing feedback names "duplication/reuse
+  // misses" as its #1 recurring review-finding category — this component's own pair of hand-
+  // written useEffect resyncs was itself the 5th independent hand-copy of the identical
+  // ContentTemplatePublishActions-established pattern). initialAssignedToUserId/
+  // initialAssignedToUser always change together (both derive from the same review prop one
+  // level up), so syncing them via two independent calls is safe.
+  const [isPaused, setIsPaused] = useSyncedState(initialIsPaused);
+  const [assignedToUserId, setAssignedToUserId] = useSyncedState(initialAssignedToUserId);
+  const [selectedUser, setSelectedUser] = useSyncedState<UserSummary | null>(initialAssignedToUser);
   const [pauseError, setPauseError] = useState<string | null>(null);
   const [delegateError, setDelegateError] = useState<string | null>(null);
   const [pausePending, setPausePending] = useState(false);
   const [delegatePending, setDelegatePending] = useState(false);
-
-  // Re-syncs from the server-passed props whenever they change — mirrors
-  // ContentTemplatePublishActions's own precedent: without this, a transition made via the
-  // sibling ReviewDecisionActions component's own router.refresh(), or a second tab/operator,
-  // would go unreflected here.
-  useEffect(() => {
-    setIsPaused(initialIsPaused);
-  }, [initialIsPaused]);
-
-  useEffect(() => {
-    setAssignedToUserId(initialAssignedToUserId);
-    setSelectedUser(initialAssignedToUser);
-  }, [initialAssignedToUserId, initialAssignedToUser]);
 
   if (status === "approved" || status === "rejected") {
     return null;
@@ -73,16 +68,21 @@ export function ReviewProcessActions({
   async function handleTogglePause(): Promise<void> {
     setPauseError(null);
     setPausePending(true);
+    // The locally-known target value — `postMutation()`'s own documented contract says its
+    // success `data` may degrade to `undefined` on a missing/malformed response body, so this
+    // updates local state from what was actually sent, not `result.data.isPaused` (code-review
+    // finding, mirrors ReviewDecisionActions' own identical fix).
+    const nextIsPaused = !isPaused;
     try {
       const result = await postMutation<Review>(`${getApiBaseUrl()}/reviews/${reviewId}/pause`, {
-        isPaused: !isPaused,
+        isPaused: nextIsPaused,
         expectedIsPaused: isPaused,
       });
       if (!result.ok) {
         setPauseError(result.message);
         return;
       }
-      setIsPaused(result.data.isPaused);
+      setIsPaused(nextIsPaused);
       router.refresh();
     } catch (err) {
       console.error("Failed to change review pause state", err);
@@ -107,7 +107,9 @@ export function ReviewProcessActions({
         setDelegateError(result.message);
         return;
       }
-      setAssignedToUserId(result.data.assignedToUserId);
+      // The locally-known target value, not `result.data.assignedToUserId` — same reasoning as
+      // handleTogglePause() above (code-review finding).
+      setAssignedToUserId(selectedUser.id);
       router.refresh();
     } catch (err) {
       console.error("Failed to delegate review", err);

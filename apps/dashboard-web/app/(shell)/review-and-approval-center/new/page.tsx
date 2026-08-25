@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ContentContainer, PageHeader } from "@webdesk/ui";
 import { ReviewForm } from "@/components/review-form";
-import { getModuleRegistry, sortModulesForPicker } from "@/lib/review-and-approval-center";
+import { sortModulesForPicker } from "@/lib/review-and-approval-center";
 import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,9 @@ export default async function NewReviewPage() {
     return null;
   }
 
-  const modules = sortModulesForPicker(await getModuleRegistry());
+  // Sourced from the session's own already-fetched navigation list (code-review finding) — see
+  // lib/review-and-approval-center.ts's removed-getModuleRegistry() doc comment for why.
+  const modules = sortModulesForPicker(session.navigation);
 
   return (
     <ContentContainer>
