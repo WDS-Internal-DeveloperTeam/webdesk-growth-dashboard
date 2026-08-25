@@ -85,6 +85,23 @@ describe("ReviewCommentsService", () => {
       ).rejects.toThrow(NotFoundException);
       expect(comments.create).not.toHaveBeenCalled();
     });
+
+    it("sanitizes body before writing, stripping a disallowed tag (dashboard-web rich-text editor rollout)", async () => {
+      reviews.findById.mockResolvedValue(review());
+      comments.create.mockResolvedValue(comment());
+
+      await svc.create(
+        "review-1",
+        { body: "<script>alert(1)</script><p>Looks good so far</p>" },
+        "actor-1",
+      );
+
+      expect(comments.create).toHaveBeenCalledWith({
+        reviewId: "review-1",
+        authorUserId: "actor-1",
+        body: "<p>Looks good so far</p>",
+      });
+    });
   });
 
   describe("listByReview", () => {

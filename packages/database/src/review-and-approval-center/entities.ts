@@ -47,8 +47,10 @@ export interface ReviewEntity {
   readonly updatedAt: string;
 }
 
-/** A plain comment thread entry — no rich-text editing (D-scope: no `dashboard-web` UI exists yet
- *  for this module). */
+/** A comment thread entry. `body` is real, server-sanitized HTML from `dashboard-web`'s
+ *  `RichTextEditor` (added alongside that module's UI build, 2026-08-24/25, per the 2026-08-22
+ *  standing rich-text rule) — see `apps/dashboard-api/src/review-and-approval-center/
+ *  review-comments.service.ts#create()`. */
 export interface ReviewCommentEntity {
   readonly id: string;
   readonly reviewId: string;

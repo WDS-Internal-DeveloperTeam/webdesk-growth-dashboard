@@ -16,10 +16,18 @@ const DECIDE_REVIEW_ACTION_VALUES = [
 ] as const;
 export const decideReviewActionSchema = z.enum(DECIDE_REVIEW_ACTION_VALUES);
 
-// Plain text, capped at 2000 chars (task package §3) — no RichTextEditor, no dashboard-web UI
-// exists yet for this module.
+// `notes` (a short, ephemeral decision-justification string attached to a single decide()/pause()
+// call) and `targetLabel`/`versionALabel`/`versionBLabel` (short identifiers, not authored
+// narrative content) deliberately stay plain text — no sibling `*StatusActions` component in this
+// app uses RichTextEditor for an analogous "reason"/"notes" field, and these labels are too short
+// to warrant it. `COMMENT_BODY_MAX_LENGTH` was raised 2000 -> 4000 alongside the dashboard-web UI
+// build (2026-08-24/25) switching `review_comments.body` to RichTextEditor, per the 2026-08-22
+// standing rule — the same 2x markup-overhead ratio every prior rich-text conversion in this
+// codebase used. `body` is sanitized server-side before storage
+// (`review-comments.service.ts#create()`) and again at render time via the shared
+// `SanitizedRichText` component, mirroring every sibling module's own rich-text fields.
 const NOTES_MAX_LENGTH = 2000;
-const COMMENT_BODY_MAX_LENGTH = 2000;
+const COMMENT_BODY_MAX_LENGTH = 4000;
 const TARGET_LABEL_MAX_LENGTH = 500;
 const VERSION_LABEL_MAX_LENGTH = 255;
 

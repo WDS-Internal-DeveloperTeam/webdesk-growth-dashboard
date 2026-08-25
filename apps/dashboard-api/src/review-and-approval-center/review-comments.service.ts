@@ -4,6 +4,7 @@ import type {
   ReviewCommentRepository,
   ReviewRepository,
 } from "@webdesk/database";
+import { sanitizeRichTextHtml } from "@webdesk/validation";
 import {
   REVIEW_COMMENT_REPOSITORY,
   REVIEW_REPOSITORY,
@@ -48,10 +49,16 @@ export class ReviewCommentsService {
   ): Promise<ReviewCommentEntity> {
     await this.assertReviewExists(reviewId);
 
+    // `body` is now real HTML from dashboard-web's RichTextEditor (the dashboard-web UI build,
+    // 2026-08-24/25 — per the 2026-08-22 standing rule) — sanitized server-side before storage,
+    // mirroring PersonasService.create()'s/ClaimsService.create()'s own identical wiring. `body` is
+    // required and never null (createReviewCommentSchema's own `z.string().min(1)`), so it uses
+    // `sanitizeRichTextHtml()` directly rather than the nullable-contract wrapper other modules'
+    // optional rich-text fields use.
     const created = await this.comments.create({
       reviewId,
       authorUserId: actorUserId,
-      body: input.body,
+      body: sanitizeRichTextHtml(input.body),
     });
 
     await this.auditService.record({
