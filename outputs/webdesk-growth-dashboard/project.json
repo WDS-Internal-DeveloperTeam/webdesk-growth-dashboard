@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-review-and-approval-center",
+    "current_gate": "G4-dashboard-web-review-and-approval-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -44,8 +44,8 @@
       "delivery_head": "TBD"
     },
     "created_at": "2026-08-06T00:00:00Z",
-    "updated_at": "2026-08-24T00:00:00Z",
-    "version": 69
+    "updated_at": "2026-08-25T00:00:00Z",
+    "version": 71
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -728,6 +728,20 @@
       "approved_commit": "60a0c8a",
       "record": "docs/project-state/module-review-and-approval-center-approval-checklist.md",
       "scope_excludes": "Push/PR and merge authorization are each their own separate, not-yet-requested next step, per this project's standing \"no auto-merge\" rule."
+    },
+    {
+      "id": "G4-dashboard-web-review-and-approval-center",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-review-and-approval-center",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-25T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Review and Approval Center module -- closes this module's last named gap, following the backend's own build-to-production arc (PR #65). A genuinely novel UI shape: a polymorphic (targetModuleKey, targetId) review engine attaching to records in OTHER modules, not a single content-record library. Four routes (inbox list defaulting to assignedToMe=true, create form, [reviewId] detail -- no generic edit route, every mutation is one of decide/pause/delegate/comment); ReviewDecisionActions/ReviewProcessActions as two independent CAS-guarded client islands; ReviewCommentsSection deliberately kept a Server Component since SanitizedRichText is Node-only. Includes a paired backend change wiring review_comments.body into RichTextEditor + sanitizeRichTextHtml(), per the 2026-08-22 standing rule. Independent code review (8-angle finder pass, high effort) surfaced 9 candidates after dedup (7 CONFIRMED, 2 PLAUSIBLE, 0 REFUTED), all 9 fixed -- most severe: the targetModuleKey picker was sourced from GET /authz/module-registry, gated on users_roles:view (held by only 2 of 7 seeded roles), silently empty for the other 5 roles today; fixed by removing getModuleRegistry() entirely in favor of session.navigation (GET /me/navigation, SessionGuard-only). Also fixed: three postMutation()-contract violations (ReviewForm navigating on possibly-undefined result.data.id, ReviewProcessActions' pause/delegate handlers reading local state from possibly-undefined response data); notes field wrongly kept plain text on a fabricated sibling precedent, converted to RichTextEditor with a paired backend sanitization fix in decide() (previously stored/audited unsanitized, a second finding); a 5th hand-copy of a prop-resync useEffect pattern, extracted into a shared useSyncedState() hook; and invalid DOM nesting (a block-level SanitizedRichText div inside an inline span). Separate security review found 0 findings above threshold -- confirmed the rich-text sanitization write/render pairing has no bypass, the session.navigation swap has no authorization implication (POST /reviews stays independently gated server-side), and every CAS-guard-relevant client state update is purely cosmetic with the backend's atomic compare-and-swap as the sole real enforcement point. No findings left as accepted, tracked debt -- every CONFIRMED and PLAUSIBLE finding was fixed. Required second-role human review complete -- Jitesh D, Approved, no disputes raised. Clean pass, not an override, since that review was already complete before this gate was requested. 878/878 dashboard-api unit tests, 371/371 packages/database integration tests, 362/362 dashboard-api e2e tests, 800/800 dashboard-web unit tests, next build clean with all 4 routes present, typecheck/lint/prettier clean, pnpm audit 0 vulnerabilities.",
+      "approved_commit": "f5544ef",
+      "record": "docs/project-state/dashboard-web-review-and-approval-center-approval-checklist.md",
+      "scope_excludes": "None -- closes the last named gap for the Review and Approval Center module (backend and full UI now both authored). Push/PR and merge authorization are each their own separate, not-yet-requested next step."
     }
   ],
   "budget": {
@@ -2363,6 +2377,24 @@
       "details": "Gate G4-review-and-approval-center approved (CONFIRM) for module-review-and-approval-center, approved commit 60a0c8a.",
       "project_version_before": 68,
       "project_version_after": 69
+    },
+    {
+      "timestamp": "2026-08-25T00:00:00Z",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "action": "second_role_review_approved",
+      "details": "Required second-role human review complete for dashboard-web-review-and-approval-center (Review and Approval Center UI Review Packet) -- decision: Approved, no disputes raised. Every CONFIRMED and PLAUSIBLE code-review finding (9 total) was already fixed in this round; no accepted tracked debt remains open on this branch.",
+      "project_version_before": 69,
+      "project_version_after": 70
+    },
+    {
+      "timestamp": "2026-08-25T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-dashboard-web-review-and-approval-center approved (CONFIRM) for dashboard-web-review-and-approval-center, approved commit f5544ef.",
+      "project_version_before": 70,
+      "project_version_after": 71
     }
   ]
 }

@@ -1,0 +1,27 @@
+.wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--webdesk-dashboard-space-xl);
+}
+
+.pauseGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.delegateGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.actionButton {
+  composes: actionButton from "./status-actions.module.css";
+}
+
+.error {
+  composes: error from "./status-actions.module.css";
+}

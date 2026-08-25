@@ -4,7 +4,7 @@ import type {
   ReviewEntity,
   ReviewRepository,
 } from "@webdesk/database";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
 import { ReviewCommentsService } from "./review-comments.service.js";
@@ -83,6 +83,32 @@ describe("ReviewCommentsService", () => {
       await expect(
         svc.create("no-such-review", { body: "Orphan comment" }, "actor-1"),
       ).rejects.toThrow(NotFoundException);
+      expect(comments.create).not.toHaveBeenCalled();
+    });
+
+    it("sanitizes body before writing, stripping a disallowed tag (dashboard-web rich-text editor rollout)", async () => {
+      reviews.findById.mockResolvedValue(review());
+      comments.create.mockResolvedValue(comment());
+
+      await svc.create(
+        "review-1",
+        { body: "<script>alert(1)</script><p>Looks good so far</p>" },
+        "actor-1",
+      );
+
+      expect(comments.create).toHaveBeenCalledWith({
+        reviewId: "review-1",
+        authorUserId: "actor-1",
+        body: "<p>Looks good so far</p>",
+      });
+    });
+
+    it("rejects with 400 a non-empty body that sanitizes down to nothing (code-review finding)", async () => {
+      reviews.findById.mockResolvedValue(review());
+
+      await expect(
+        svc.create("review-1", { body: "<script>alert(1)</script>" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
       expect(comments.create).not.toHaveBeenCalled();
     });
   });

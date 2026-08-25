@@ -1,0 +1,55 @@
+.wrapper {
+  composes: wrapper from "./status-actions.module.css";
+}
+
+.actionButton {
+  composes: actionButton from "./status-actions.module.css";
+}
+
+.terminalButton {
+  composes: terminalButton from "./status-actions.module.css";
+}
+
+.error {
+  composes: error from "./status-actions.module.css";
+}
+
+.notesForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  max-width: 32rem;
+}
+
+.notesFormTitle {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  color: var(--webdesk-dashboard-color-foreground);
+  margin: 0;
+}
+
+.notesLabel {
+  composes: label from "./form-fields.module.css";
+}
+
+.cancelButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}

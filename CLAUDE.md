@@ -7288,6 +7288,103 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   now genuinely live in production.** No `dashboard-web` UI exists yet for this module — a
   separate, not-yet-requested next step, matching every prior module's own backend-first
   precedent.
+- `[2026-08-25]` **Built the `dashboard-web` UI for the Review and Approval Center module** —
+  closes this module's last named gap, following the backend's own build-to-production arc
+  (PR #65). Not started automatically — built directly on the explicit "start wire dashboard-web
+  UI" instruction. No approved wireframe exists for this module, and it needed a genuinely novel
+  UI shape unlike every sibling module: a polymorphic `(targetModuleKey, targetId)` review engine
+  attaching to records in OTHER modules, not a single content-record library. Built four routes
+  under `app/(shell)/review-and-approval-center/` (an "inbox" list defaulting to
+  `assignedToMe=true`, a create form, a `[reviewId]` detail page — no generic edit route, since
+  every mutation is one of decide/pause/delegate/comment, each its own dedicated backend action).
+  `ReviewForm` (create-only): `targetModuleKey`/`targetId`/`targetLabel`/an `UserPicker`-backed
+  `assignedToUserId`/opaque `versionALabel`/`versionBLabel` comparison labels — `targetId` is a
+  plain, client-side UUID-format-checked text input, not a picker (task package D6's own explicit
+  design, no generic cross-module lookup exists). `ReviewDecisionActions` (the 4 approval-shaped
+  `decide()` actions) and `ReviewProcessActions` (Pause/Resume, Delegate) are two independent
+  client islands on the same detail page, each an atomic CAS confirm against the review's own
+  current state, both hidden once `status` is terminal. `ReviewCommentsSection` deliberately stays
+  a Server Component (not a client component with local optimistic state like the established
+  `ClaimSourcesSection` sub-resource precedent) — `SanitizedRichText` is explicitly Node-only, so
+  the add-comment form calls `router.refresh()` instead of appending locally. A paired backend
+  change (`review-comments.service.ts#create()`) wires `review_comments.body` into
+  `RichTextEditor` + `sanitizeRichTextHtml()` ahead of the UI build, per the 2026-08-22 standing
+  rule. Added `Review`/`ReviewComment`/`ReviewDecision` to `packages/shared-types`, mirroring
+  `packages/database/src/review-and-approval-center/entities.ts`. **Independent code review then
+  ran** (this project's own `code-review` skill, high effort, 8-angle finder pass, 1-vote
+  verification) — 9 candidates survived dedup (7 CONFIRMED, 2 PLAUSIBLE, 0 REFUTED), **all 9
+  fixed**: most severe, the list/create pages' `targetModuleKey` picker was sourced from
+  `GET /authz/module-registry`, gated on `users_roles:view` (held by only 2 of 7 seeded roles) —
+  silently empty for the other 5 roles today, not a future-RBAC-change risk — fixed by removing
+  `getModuleRegistry()` entirely in favor of `getServerSession()`'s already-fetched
+  `session.navigation` (`GET /me/navigation`, `SessionGuard`-only, held by every authenticated
+  session), closing both the RBAC gap and a redundant fetch in one change. Also fixed: `ReviewForm`
+  navigating to `result.data.id` and `ReviewProcessActions`' pause/delegate handlers updating local
+  state from `result.data.isPaused`/`result.data.assignedToUserId`, all three ignoring
+  `postMutation()`'s own documented undefined-on-malformed-response contract (fixed with an
+  explicit null-data guard in `ReviewForm` and by updating `ReviewProcessActions` from the
+  locally-known target values instead, mirroring `ReviewDecisionActions`' own already-correct
+  pattern); `review-decision-actions.tsx`'s own doc comment fabricating a sibling-component
+  precedent for keeping `notes` plain text — no such comparable field exists anywhere in this
+  codebase, and Website Strategy Center's own `notes` field already uses `RichTextEditor` under the
+  2026-08-22 standing rule — fixed by converting `notes` to `RichTextEditor`, paired with a real
+  backend change (`reviews.service.ts#decide()` now sanitizes `dto.notes` via
+  `sanitizeNullableRichText()` before writing it to both `review_decisions` and its `audit_events`
+  mirror — previously stored/audited verbatim, unsanitized, a second independent finding —
+  `NOTES_MAX_LENGTH` raised 2000→4000, and the detail page's Decision History section now renders
+  `notes` via the shared `SanitizedRichText` component); the prop-resync-via-`useEffect` pattern
+  hand-copied a 5th time across `ReviewDecisionActions`/`ReviewProcessActions` (twice), matching
+  this project's own standing feedback about duplication/reuse misses, fixed by extracting a new
+  `useSyncedState()` hook (`lib/use-synced-state.ts`); and `ReviewCommentsSection` nesting
+  `SanitizedRichText`'s block-level `<div dangerouslySetInnerHTML>` inside an inline
+  `<span className={styles.rowMain}>` wrapper — invalid HTML content, unlike every sibling row
+  (e.g. `ClaimSourcesSection`) which only ever nests `<span>`/`<a>` children — fixed by changing the
+  wrapper to a `<div>` (verified safe, since `.rowMain` composes from a flex-column base with no
+  tag-specific styling). Re-validated against a fresh local disposable PostgreSQL 17 database:
+  878/878 `dashboard-api` unit tests (2 new — a real sanitization test proving a `<script>` payload
+  in `notes` is stripped before reaching both `review_decisions`/`audit_events`), 371/371
+  `packages/database` integration tests (migration round-trip re-confirmed), 362/362
+  `dashboard-api` e2e tests (real seeded RBAC), 800/800 `dashboard-web` unit tests (4 new),
+  typecheck/lint/CSS-token-check/`next build`/prettier all clean, `pnpm audit` 0 vulnerabilities.
+  **A separate `security-review` skill run then found 0 findings above threshold** — confirmed the
+  rich-text sanitization write/render pairing has no bypass path on either new field
+  (`review_comments.body`, `review_decisions.notes`), the `session.navigation`-vs-
+  `GET /authz/module-registry` swap has no authorization implication (`POST /reviews` stays
+  independently gated by its own `@RequirePermission` plus
+  `AuthorizationService.isValidModuleKey()`, both unmodified by this diff), `targetId`/
+  `targetModuleKey` have no injection surface, the comments/decisions fetch functions' cookie-
+  forwarding matches every sibling module's own pattern, and every CAS-guard-relevant client-state
+  update is purely cosmetic — the backend's own atomic compare-and-swap methods remain the sole
+  real enforcement point. A review packet (published as a Claude artifact, "Review and Approval
+  Center UI Review Packet" — code review + security review findings, fixes, and validation
+  evidence, with a decision section) was then prepared for the required second-role human review,
+  since the implementing agent cannot also be its own reviewer (ADR-0010). See
+  `docs/project-state/dashboard-web-review-and-approval-center-approval-checklist.md`. **Awaiting
+  that review** — a gate decision, push/PR, and merge authorization each remain separate,
+  not-yet-requested next steps.
+- `[2026-08-25]` **Required second-role human review complete for
+  `dashboard-web-review-and-approval-center`.** The review packet (code review + security review
+  findings, fixes, and validation evidence, with a decision section) was reviewed. **Jitesh D
+  reviewed it and returned "Approved,"** no disputes raised — every CONFIRMED and PLAUSIBLE
+  code-review finding (9 total) was already fixed in this round, so there was no open item to
+  accept as tracked debt. See
+  `docs/project-state/dashboard-web-review-and-approval-center-approval-checklist.md`'s "Sign-off"
+  section. A gate decision, push/PR, and merge authorization remain separate, not-yet-requested
+  next steps.
+- `[2026-08-25]` **The gate (G4-dashboard-web-review-and-approval-center) was then separately
+  requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+  since the second-role review was already complete before the gate was requested), approved
+  commit `f5544ef` on branch `dashboard-web-review-and-approval-center` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-review-and-approval-center`) and
+  `docs/project-state/dashboard-web-review-and-approval-center-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
+  merging** — each remains its own separate, not-yet-requested authorization, per this project's
+  standing "no auto-merge" rule.
+- `[2026-08-25]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-review-and-approval-center` — pushed to `origin`, opened as
+  [PR #66](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/66). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

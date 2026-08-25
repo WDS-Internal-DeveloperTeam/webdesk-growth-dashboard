@@ -1,0 +1,65 @@
+/*
+ * Composes from `project-subresource-section.module.css` — the same list/row/add-form shape
+ * `ClaimSourcesSection` already reuses (see that file's own doc comment on the shared base's
+ * generic, non-Projects-specific styling despite its `project-` filename prefix).
+ */
+
+.list {
+  composes: list from "./project-subresource-section.module.css";
+}
+
+.row {
+  composes: row from "./project-subresource-section.module.css";
+}
+
+.rowMain {
+  composes: rowMain from "./project-subresource-section.module.css";
+}
+
+.primaryText {
+  composes: primaryText from "./project-subresource-section.module.css";
+}
+
+.secondaryText {
+  composes: secondaryText from "./project-subresource-section.module.css";
+}
+
+/* Real, sanitized HTML from RichTextEditor, not plain text — see review-comments-section.tsx's
+   own doc comment for why this stays server-rendered via SanitizedRichText. */
+.commentBody {
+  margin-top: var(--webdesk-dashboard-space-xs);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.addForm {
+  composes: addForm from "./project-subresource-section.module.css";
+}
+
+.addFormTitle {
+  composes: addFormTitle from "./project-subresource-section.module.css";
+}
+
+.field {
+  composes: field from "./project-subresource-section.module.css";
+}
+
+.label {
+  composes: label from "./project-subresource-section.module.css";
+}
+
+.formActions {
+  composes: formActions from "./project-subresource-section.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./project-subresource-section.module.css";
+}
+
+.error {
+  composes: error from "./project-subresource-section.module.css";
+}
+
+.muted {
+  composes: muted from "./project-subresource-section.module.css";
+}
