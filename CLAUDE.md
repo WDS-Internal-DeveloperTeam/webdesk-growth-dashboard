@@ -7262,6 +7262,16 @@ befd1de3f583c4bcf271a1bd70a44fd392df7a29`, confirming the exact merged commit is
   `docs/project-state/module-review-and-approval-center-approval-checklist.md`'s "Sign-off"
   section. A gate decision, push/PR, and merge authorization each remain separate,
   not-yet-requested next steps.
+- `[2026-08-25]` **The gate (G4-review-and-approval-center) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `60a0c8a` on branch `module-review-and-approval-center` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-review-and-approval-center`) and
+  `docs/project-state/module-review-and-approval-center-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize pushing the branch, opening a PR, or
+  merging** — each remains its own separate, not-yet-requested authorization, per this project's
+  standing "no auto-merge" rule.
 
 ## Open client blockers
 

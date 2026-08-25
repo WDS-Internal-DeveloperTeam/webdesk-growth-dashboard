@@ -2,8 +2,9 @@
 
 **Status:** Built, code review complete (8 candidates surfaced after dedup, 8 CONFIRMED, all 8
 fixed). Security review complete (0 findings above threshold). Required second-role human review
-complete — Jitesh D, "Approved," no disputes raised. A gate decision, push/PR, and merge
-authorization each remain separate, not-yet-requested next steps.
+complete — Jitesh D, "Approved," no disputes raised. Gate `G4-review-and-approval-center` approved
+(WebDesk Solution, CONFIRM). Push/PR and merge authorization each remain separate,
+not-yet-requested next steps.
 
 ## Completion condition
 
@@ -109,5 +110,21 @@ open item to accept as tracked debt.
 | Scope reviewed                | Full code-review disposition (8/8 fixed) and full security-review disposition (0 above threshold), per the published review packet |
 | Disputes raised               | None recorded                                                                                                                      |
 
-A gate decision, push/PR, and merge authorization each remain separate, not-yet-requested next
-steps.
+**The gate (G4-review-and-approval-center) was then separately requested and approved** —
+WebDesk Solution, decision CONFIRM (a clean pass, not an override, since the second-role review
+was already complete before the gate was requested), approved commit `60a0c8a` on branch
+`module-review-and-approval-center` — see `outputs/webdesk-growth-dashboard/project.json`'s
+`gates[]` (`current_gate` now `G4-review-and-approval-center`).
+
+| Field                    | Value                                                                                                                               |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-review-and-approval-center                                                                                                       |
+| Approver (gate decision) | WebDesk Solution                                                                                                                    |
+| Gate date                | 2026-08-25                                                                                                                          |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                   |
+| Approved commit          | `60a0c8a` on branch `module-review-and-approval-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`           |
+| Scope                    | `module-review-and-approval-center` only. Push/PR and merge authorization are each their own separate, not-yet-requested next step. |
+
+This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
+remains its own separate, not-yet-requested authorization, per this project's standing
+"no auto-merge" rule.
