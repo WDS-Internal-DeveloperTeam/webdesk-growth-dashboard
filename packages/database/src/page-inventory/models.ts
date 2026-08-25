@@ -1,5 +1,8 @@
 import { DataTypes, type Model, type ModelStatic, type Sequelize } from "sequelize";
 import { getConnection } from "../connection.js";
+// Owned by the Page Workspace module (migration `00068`) but physically a `pages` column, so
+// the model must declare it. Imported, never re-declared, so the two can never diverge.
+import { PAGE_LIFECYCLE_STAGES } from "../page-workspace/entities.js";
 
 export interface PageInventoryModels {
   readonly Page: ModelStatic<Model>;
@@ -50,6 +53,12 @@ export function getPageInventoryModels(
         allowNull: false,
         defaultValue: "draft",
       },
+      lifecycleStage: {
+        type: DataTypes.ENUM(...PAGE_LIFECYCLE_STAGES),
+        allowNull: false,
+        defaultValue: "proposed",
+      },
+      lifecyclePreviousStage: { type: DataTypes.ENUM(...PAGE_LIFECYCLE_STAGES), allowNull: true },
       targetKeyword: { type: DataTypes.STRING(255), allowNull: true },
       designVersion: { type: DataTypes.STRING(255), allowNull: true },
       repositoryFiles: { type: DataTypes.TEXT, allowNull: true },
