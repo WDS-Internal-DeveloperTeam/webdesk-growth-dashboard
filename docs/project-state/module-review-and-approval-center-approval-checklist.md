@@ -3,8 +3,9 @@
 **Status:** Built, code review complete (8 candidates surfaced after dedup, 8 CONFIRMED, all 8
 fixed). Security review complete (0 findings above threshold). Required second-role human review
 complete — Jitesh D, "Approved," no disputes raised. Gate `G4-review-and-approval-center` approved
-(WebDesk Solution, CONFIRM). Push/PR and merge authorization each remain separate,
-not-yet-requested next steps.
+(WebDesk Solution, CONFIRM). Pushed to `origin` and opened as
+[PR #65](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/65). Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -22,7 +23,7 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ None — every CONFIRMED finding was fixed, no accepted-debt items on this branch                                                                                                                                                                                                                       |
 | 8   | Live end-to-end verified                   | ✅ Independently re-verified: every high-risk file read directly (migration, all three CAS repository methods, RBAC decorator placement, the dynamic per-action check in `decide()`, both barrel files), every test suite re-run against a fresh local disposable database                               |
 | 9   | Documentation updated                      | ✅ `CLAUDE.md`'s "Recent decisions" entries updated                                                                                                                                                                                                                                                      |
-| 10  | Exact branch/commit verified and recorded  | ✅ Branch `module-review-and-approval-center`, commits `4c6abac` (schema/repository) → `17f0787` (service/controller) → `f8c6bf2` (tests) → `50ed6d1` (code-review fixes) — not yet pushed to `origin`                                                                                                   |
+| 10  | Exact branch/commit verified and recorded  | ✅ Branch `module-review-and-approval-center`, commits `4c6abac` → `17f0787` → `f8c6bf2` → `50ed6d1` → `572e768` → `60a0c8a` → `4241ed6` — pushed to `origin`, [PR #65](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/65)                                                  |
 
 ## Forbidden-actions check
 
