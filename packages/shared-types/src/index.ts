@@ -979,3 +979,81 @@ export interface ContentTemplate {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * The Review and Approval Center module (module #11) — a cross-cutting engine that attaches to
+ * records owned by OTHER modules via a polymorphic `(targetModuleKey, targetId)` reference (task
+ * package D1, `docs/task-packages/module-review-and-approval-center.md`), not a content-record
+ * library of its own. Organization-wide, not project-scoped (D7). Mirrors
+ * `packages/database/src/review-and-approval-center/entities.ts` exactly — see that file for the
+ * full field-level rationale (why `approve`/`approve_with_notes` share one `status` transition,
+ * why `isPaused` is orthogonal to `status`, etc.).
+ */
+
+/** The 4-value workflow (task package D2) — `approved`/`rejected` terminal, `submitted`/
+ *  `revision_requested` open. Deliberately NOT `ArtifactApprovalStatus` (the 8-value workflow
+ *  Service/Persona/Proof-and-Claims/Website Strategy/Content Template Library all share) — this
+ *  module's own workflow is a genuinely different, smaller vocabulary. */
+export type ReviewStatus = "submitted" | "revision_requested" | "approved" | "rejected";
+
+/** The full action vocabulary a `ReviewDecision` row may record — a strict superset of the 4
+ *  approval-shaped `POST .../:id/decide` actions, plus the 3 process-management actions
+ *  (`pause`/`resume`/`delegate`) that never change `status`. */
+export type ReviewDecisionAction =
+  | "approve"
+  | "approve_with_notes"
+  | "request_revision"
+  | "reject"
+  | "pause"
+  | "resume"
+  | "delegate";
+
+/** The primary workflow record. `content`/`notes`-shaped fields don't exist here — this module
+ *  attaches to another record's own content via `targetModuleKey`/`targetId`, it doesn't hold
+ *  content of its own. `versionALabel`/`versionBLabel` are opaque, human-supplied labels (e.g.
+ *  "v3" vs. "v4"), not a real diff — this module has no generic cross-module diffing capability. */
+export interface Review {
+  readonly id: string;
+  readonly targetModuleKey: string;
+  readonly targetId: string;
+  readonly targetLabel: string | null;
+  readonly status: ReviewStatus;
+  /** Orthogonal to `status` — advisory only, toggled by pause/resume, never a blocking gate on
+   *  other transitions. */
+  readonly isPaused: boolean;
+  readonly submittedByUserId: string;
+  readonly assignedToUserId: string | null;
+  /** Stamped on every `decide()` call — records the MOST RECENT decision, overwritten on each
+   *  successive call. */
+  readonly decidedByUserId: string | null;
+  readonly decidedAt: string | null;
+  readonly versionALabel: string | null;
+  readonly versionBLabel: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** A comment thread entry. `body` is real, server-sanitized HTML from `dashboard-web`'s
+ *  `RichTextEditor` — rendered exclusively via the shared `SanitizedRichText` component, matching
+ *  every sibling module's own rich-text field. */
+export interface ReviewComment {
+  readonly id: string;
+  readonly reviewId: string;
+  readonly authorUserId: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
+/** An append-only, queryable local action-history row — this module's own history, distinct from
+ *  the real, DB-trigger-enforced `audit_events` table, which separately receives a copy of every
+ *  genuine approval-shaped decision. */
+export interface ReviewDecision {
+  readonly id: string;
+  readonly reviewId: string;
+  readonly action: ReviewDecisionAction;
+  readonly actorUserId: string;
+  readonly notes: string | null;
+  /** Set only when `action === "delegate"`. */
+  readonly delegatedToUserId: string | null;
+  readonly decidedAt: string;
+}
