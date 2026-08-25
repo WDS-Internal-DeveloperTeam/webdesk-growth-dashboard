@@ -7385,6 +7385,20 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   `dashboard-web-review-and-approval-center` — pushed to `origin`, opened as
   [PR #66](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/66). Merge
   authorization remains a separate, not-yet-requested next step.
+- `[2026-08-25]` **"Merge PR #66" was separately confirmed and executed.** All 14 CI checks
+  confirmed green first. Merged with a real merge commit (not squash/rebase), matching every prior
+  merge in this project's history — merge commit
+  `1a99ffc640acc9dc836912e2c0a2a37c0144975b`. Both Vercel projects auto-deployed on push to `main`
+  and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+1a99ffc640acc9dc836912e2c0a2a37c0144975b`, confirming the exact merged commit is what's serving;
+  `GET /reviews` returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which
+  would mean the module never actually deployed); and `dashboard-web`'s new
+  `/review-and-approval-center` route correctly redirects (307) an unauthenticated visitor to
+  `/auth/sign-in`. **The `dashboard-web` Review and Approval Center UI is now genuinely live in
+  production**, closing out this slice's full build-to-production arc — backend and now the full
+  UI (inbox list, create form, detail page with decision actions, process actions, and comments)
+  are both live for the Review and Approval Center module.
 
 ## Open client blockers
 
