@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-25T00:00:00Z",
-    "version": 73
+    "version": 74
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -2427,6 +2427,15 @@
       "details": "Gate G4-page-workspace approved (CONFIRM) for module-page-workspace, approved commit 0ee593d. Second-role review was complete beforehand (Jitesh D, Approved), which is the basis for CONFIRM rather than OVERRIDE. Carries one explicitly recorded open item: the integration and e2e suites have never been executed against a real database -- the first gate in this project's history approved without that validation.",
       "project_version_before": 72,
       "project_version_after": 73
+    },
+    {
+      "timestamp": "2026-08-26T00:00:00Z",
+      "actor": "Claude (implementer)",
+      "actor_type": "agent",
+      "action": "validation_gap_closed",
+      "details": "The open item carried by gate G4-page-workspace is closed. Both previously-unrun suites executed against a real database and CI on main is fully green (11/11 jobs) at edf82e7: 22/22 page-workspace e2e, 384/384 dashboard-api e2e, 389/389 packages/database integration. Getting there surfaced three real defects: two genuine e2e bugs (no role holds both submit and approve in one group, so the helper 403d; and three artifact types collided on the (page_id, artifact_type) unique index across one shared page), a syntax error introduced by the first fix commit that made the file fail to parse and cascaded into all 21 other e2e suites, and a pre-existing repo-wide Windows bug in buildMigrationsGlob() where path.join emitted backslashes that glob treats as escapes -- umzug reported 0 executed and 0 pending against 69 migration files, so up() was a silent no-op and nobody could run migrations or database tests on Windows. Also noted: apps/dashboard-api/tsconfig.json includes only src, so the entire test/ directory is invisible to pnpm typecheck. Production verified live at edf82e7 with GET /page-workspace/... returning a clean 401. Migrations 00068/00069 still NOT run against production.",
+      "project_version_before": 73,
+      "project_version_after": 74
     }
   ]
 }

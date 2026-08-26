@@ -121,7 +121,47 @@ Recorded as CONFIRM rather than OVERRIDE because the required second-role human 
 "Approved") was complete **before** this gate was requested — the same basis every prior gate used,
 and the specific thing whose absence made Phase 1C's G4-1C an override.
 
-### Open item carried by this gate
+### Resolution note — the open item is now CLOSED (2026-08-26, after the gate)
+
+Recorded as an addendum rather than by rewriting the sections below, which accurately describe
+the state at the time the gate was approved.
+
+Both suites have now been executed against a real database, and CI on `main` is fully green
+(all 11 jobs, including Integration tests) at commit `edf82e7`:
+
+| Suite                                      | Result    |
+| ------------------------------------------ | --------- |
+| `page-workspace` e2e                       | 22 / 22   |
+| `dashboard-api` e2e (all 23 files)         | 384 / 384 |
+| `packages/database` integration (23 files) | 389 / 389 |
+
+Getting there surfaced three real defects that no earlier check could have caught:
+
+1. **Two genuine e2e bugs** (commit `5722ce1`). No role holds both `submit` and `approve` in the
+   same permission group — `super_admin` is `VCERAPX` on `page_content`, approve yes, submit no —
+   so the test helper 403'd on its first transition. And every artifact was created on one shared
+   page while three artifact types were created more than once, colliding on the real
+   `(page_id, artifact_type)` unique index. Both were mistakes in the test; the module correctly
+   implements the seeded matrix. A regression test now asserts the submit/approve separation
+   directly.
+2. **A syntax error** introduced by that same fix commit's bulk rename (four `const base = base;`
+   lines), which made the file fail to parse — skipping all 22 tests and, because `afterAll` never
+   ran, leaving the shared database dirty and taking all 21 other e2e suites down with it. Fixed
+   in `edf82e7`.
+3. **A pre-existing, repo-wide Windows bug** in `packages/database/src/migrate.ts` (fixed
+   separately in `0c3193d`): `buildMigrationsGlob()` used `path.join`, and a backslash is an
+   escape character in glob syntax, so the pattern matched nothing. umzug reported zero executed
+   AND zero pending against 69 migration files, making `up()` a silent no-op while `migrate`
+   printed success. **No one could run this repo's migrations or database tests on Windows at
+   all.** Unrelated to this module; found only because reproducing the CI failure locally required
+   a working migrator.
+
+**A gap this closes in the tooling, worth acting on separately:** `apps/dashboard-api/tsconfig.json`
+has `include: ["src"]`, so the entire `test/` directory is invisible to `pnpm typecheck`. That is
+why a file containing a redeclaration passed local typecheck. Every e2e spec in this repo is
+currently unchecked.
+
+### Open item carried by this gate (as it stood at approval time)
 
 This gate is nonetheless **the first in this project's history approved without real-database
 validation.** All 50 prior gates cite real integration and e2e run counts; this one cannot, because
