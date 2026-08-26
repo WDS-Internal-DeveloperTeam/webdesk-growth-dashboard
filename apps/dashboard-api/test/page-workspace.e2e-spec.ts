@@ -70,6 +70,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
   let developerCookie: string;
   let designerCookie: string;
   let qaCookie: string;
+  let marketingEditorCookie: string;
   let readOnlyCookie: string;
 
   let projectId: string;
@@ -112,17 +113,36 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     return cookieForNewSession(user.id);
   }
 
-  /** Creates an artifact of `artifactType` plus its first draft version, as super_admin. */
-  async function createArtifact(artifactType: string, page = pageId) {
+  /**
+   * Creates an artifact of `artifactType` plus its first draft version, as super_admin.
+   *
+   * Each call provisions its OWN page. That is not incidental: `(page_id, artifact_type)` is a
+   * real unique index, so any two tests wanting the same tab would collide on a shared page and
+   * the second would get a 409 instead of its fixture. Returns ready-built URLs so call sites
+   * never have to reconstruct them against the wrong page.
+   */
+  async function createArtifact(artifactType: string) {
+    const page = await pages.create({
+      projectId,
+      publicId: uniqueId("PAGE"),
+      pageName: `Fixture page for ${artifactType}`,
+    });
+    const listUrl = artifactsUrl(projectId, page.id);
     const response = await request(app.getHttpServer())
-      .post(artifactsUrl(projectId, page))
+      .post(listUrl)
       .set("Cookie", superAdminCookie)
       .set("Origin", origin())
       .send({ artifactType, content: "<p>seed</p>" })
       .expect(201);
-    return response.body.data as {
+    const data = response.body.data as {
       artifact: { id: string };
       version: { id: string; versionNumber: number; status: string };
+    };
+    return {
+      ...data,
+      pageId: page.id,
+      listUrl,
+      base: `${listUrl}/${data.artifact.id}/versions/${data.version.id}`,
     };
   }
 
@@ -170,6 +190,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     designerCookie = await cookieForRole("designer", "designer_creative_reviewer");
     qaCookie = await cookieForRole("qa", "qa_security_reviewer");
     readOnlyCookie = await cookieForRole("readonly", "read_only");
+    marketingEditorCookie = await cookieForRole("marketing", "marketing_editor");
 
     const project = await projects.create({
       publicId: uniqueId("PROJ"),
@@ -201,10 +222,10 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
    */
   describe("per-artifact-type permission groups (D2)", () => {
     it("lets a developer edit the Implementation tab (development_code: VCES)", async () => {
-      const { artifact, version } = await createArtifact("implementation");
+      const { base } = await createArtifact("implementation");
 
       await request(app.getHttpServer())
-        .patch(`${artifactsUrl()}/${artifact.id}/versions/${version.id}`)
+        .patch(base)
         .set("Cookie", developerCookie)
         .set("Origin", origin())
         .send({ content: "<p>developer edit</p>" })
@@ -212,10 +233,10 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     });
 
     it("denies that same developer the Content tab (page_content: V only)", async () => {
-      const { artifact, version } = await createArtifact("content");
+      const { base } = await createArtifact("content");
 
       await request(app.getHttpServer())
-        .patch(`${artifactsUrl()}/${artifact.id}/versions/${version.id}`)
+        .patch(base)
         .set("Cookie", developerCookie)
         .set("Origin", origin())
         .send({ content: "<p>developer edit</p>" })
@@ -223,10 +244,10 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     });
 
     it("lets a designer edit the UI Specification tab (creative_design: VCERAS)", async () => {
-      const { artifact, version } = await createArtifact("ui_specification");
+      const { base } = await createArtifact("ui_specification");
 
       await request(app.getHttpServer())
-        .patch(`${artifactsUrl()}/${artifact.id}/versions/${version.id}`)
+        .patch(base)
         .set("Cookie", designerCookie)
         .set("Origin", origin())
         .send({ content: "<p>designer edit</p>" })
@@ -234,10 +255,10 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     });
 
     it("denies that same designer the Implementation tab (development_code: V only)", async () => {
-      const { artifact, version } = await createArtifact("component_map");
+      const { base } = await createArtifact("component_map");
       // Sanity: the designer CAN edit a creative_design tab...
       await request(app.getHttpServer())
-        .patch(`${artifactsUrl()}/${artifact.id}/versions/${version.id}`)
+        .patch(base)
         .set("Cookie", designerCookie)
         .set("Origin", origin())
         .send({ content: "<p>ok</p>" })
@@ -246,7 +267,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
       // ...but not a development_code one.
       const dev = await createArtifact("code_review");
       await request(app.getHttpServer())
-        .patch(`${artifactsUrl()}/${dev.artifact.id}/versions/${dev.version.id}`)
+        .patch(dev.base)
         .set("Cookie", designerCookie)
         .set("Origin", origin())
         .send({ content: "<p>nope</p>" })
@@ -254,10 +275,10 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     });
 
     it("denies a read-only session every edit, on every tab", async () => {
-      const { artifact, version } = await createArtifact("audit");
+      const { base } = await createArtifact("audit");
 
       await request(app.getHttpServer())
-        .patch(`${artifactsUrl()}/${artifact.id}/versions/${version.id}`)
+        .patch(base)
         .set("Cookie", readOnlyCookie)
         .set("Origin", origin())
         .send({ content: "<p>nope</p>" })
@@ -267,8 +288,8 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
 
   describe("separation of duties falls out of the group mapping", () => {
     it("a developer can submit an Implementation version but never approve it", async () => {
-      const { artifact, version } = await createArtifact("implementation");
-      const base = `${artifactsUrl()}/${artifact.id}/versions/${version.id}`;
+      const { base } = await createArtifact("implementation");
+      const base = base;
 
       // development_code gives `developer` VCES — submit is in, approve is not.
       await request(app.getHttpServer())
@@ -287,8 +308,8 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     });
 
     it("a QA reviewer can carry that same version through review to approval", async () => {
-      const { artifact, version } = await createArtifact("implementation");
-      const base = `${artifactsUrl()}/${artifact.id}/versions/${version.id}`;
+      const { base } = await createArtifact("implementation");
+      const base = base;
 
       await request(app.getHttpServer())
         .post(`${base}/status`)
@@ -316,9 +337,33 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
       expect(approved.body.data.approvedAt).not.toBeNull();
     });
 
+    it("denies even super_admin the submit action, which no approver role holds", async () => {
+      // Surprising but correct, and the reason an earlier version of this suite failed in CI:
+      // NO role holds both `submit` and `approve` in the same group. super_admin is VCERAPX on
+      // page_content — approve yes, submit no. Asserted explicitly so a future change to either
+      // the seeded matrix or VERSION_TRANSITIONS cannot quietly erode this separation.
+      const { base } = await createArtifact("overview");
+      const base = base;
+
+      await request(app.getHttpServer())
+        .post(`${base}/status`)
+        .set("Cookie", superAdminCookie)
+        .set("Origin", origin())
+        .send({ status: "submitted" })
+        .expect(403);
+
+      // marketing_editor (VCESR) is the only page_content role that can.
+      await request(app.getHttpServer())
+        .post(`${base}/status`)
+        .set("Cookie", marketingEditorCookie)
+        .set("Origin", origin())
+        .send({ status: "submitted" })
+        .expect(201);
+    });
+
     it("requires a reason to reject or request revision", async () => {
-      const { artifact, version } = await createArtifact("qa");
-      const base = `${artifactsUrl()}/${artifact.id}/versions/${version.id}`;
+      const { base } = await createArtifact("qa");
+      const base = base;
 
       await request(app.getHttpServer())
         .post(`${base}/status`)
@@ -352,10 +397,29 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
 
   describe("approved versions are immutable, and reopening forks a new one (D7)", () => {
     /** Drives a fresh artifact all the way to `approved` as super_admin. */
+    /**
+     * Drives a fresh `ideal_structure` artifact (a `page_content` tab) to `approved`.
+     *
+     * This deliberately takes TWO actors, because the seeded matrix gives no single role both
+     * `submit` and `approve` on `page_content`: `marketing_editor` is the only holder of `S`
+     * (VCESR), while `super_admin` holds `A` but not `S` (VCERAPX). An earlier version of this
+     * helper drove the whole chain as super_admin and 403'd on the very first transition — the
+     * mistake was in the test, not the module, which is faithfully implementing the separation of
+     * duties the matrix encodes.
+     */
     async function approvedArtifact() {
-      const { artifact, version } = await createArtifact("ideal_structure");
-      const base = `${artifactsUrl()}/${artifact.id}/versions/${version.id}`;
-      for (const status of ["submitted", "under_review", "approved"]) {
+      const { artifact, base, listUrl } = await createArtifact("ideal_structure");
+
+      // Author submits...
+      await request(app.getHttpServer())
+        .post(`${base}/status`)
+        .set("Cookie", marketingEditorCookie)
+        .set("Origin", origin())
+        .send({ status: "submitted" })
+        .expect(201);
+
+      // ...a different actor reviews and approves.
+      for (const status of ["under_review", "approved"]) {
         await request(app.getHttpServer())
           .post(`${base}/status`)
           .set("Cookie", superAdminCookie)
@@ -363,7 +427,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
           .send({ status })
           .expect(201);
       }
-      return { artifact, version, base };
+      return { artifact, base, listUrl };
     }
 
     it("refuses an in-place edit of an approved version", async () => {
@@ -389,7 +453,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     });
 
     it("forks a new draft version, supersedes the old one, and records why", async () => {
-      const { artifact, base } = await approvedArtifact();
+      const { listUrl, artifact, base } = await approvedArtifact();
 
       const reopened = await request(app.getHttpServer())
         .post(`${base}/reopen`)
@@ -405,7 +469,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
       });
 
       const history = await request(app.getHttpServer())
-        .get(`${artifactsUrl()}/${artifact.id}/versions`)
+        .get(`${listUrl}/${artifact.id}/versions`)
         .set("Cookie", superAdminCookie)
         .expect(200);
 
@@ -492,7 +556,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
 
   describe("scoping and IDOR prevention", () => {
     it("refuses to reach an artifact through another project's id", async () => {
-      const { artifact } = await createArtifact("overview");
+      const { artifact, pageId: ownPageId } = await createArtifact("overview");
       const other = await projects.create({
         publicId: uniqueId("PROJ"),
         name: "Other Project",
@@ -500,7 +564,7 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
 
       await request(app.getHttpServer())
         .get(
-          `/page-workspace/projects/${other.id}/pages/${pageId}/artifacts/${artifact.id}/versions`,
+          `/page-workspace/projects/${other.id}/pages/${ownPageId}/artifacts/${artifact.id}/versions`,
         )
         .set("Cookie", superAdminCookie)
         .expect(404);
@@ -522,10 +586,10 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
     });
 
     it("rejects a duplicate artifact for the same tab with a conflict, not a 500", async () => {
-      await createArtifact("creative_direction");
+      const { listUrl } = await createArtifact("creative_direction");
 
       await request(app.getHttpServer())
-        .post(artifactsUrl())
+        .post(listUrl)
         .set("Cookie", superAdminCookie)
         .set("Origin", origin())
         .send({ artifactType: "creative_direction" })
