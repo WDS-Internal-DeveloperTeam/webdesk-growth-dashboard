@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-review-and-approval-center",
+    "current_gate": "G4-page-workspace",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-25T00:00:00Z",
-    "version": 72
+    "version": 73
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -742,6 +742,20 @@
       "approved_commit": "f5544ef",
       "record": "docs/project-state/dashboard-web-review-and-approval-center-approval-checklist.md",
       "scope_excludes": "None -- closes the last named gap for the Review and Approval Center module (backend and full UI now both authored). Push/PR and merge authorization are each their own separate, not-yet-requested next step."
+    },
+    {
+      "id": "G4-page-workspace",
+      "type": "qa-security-gate",
+      "scope": "module-page-workspace",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-26T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Page Workspace module #12 backend core slice -- the first module in this project built against genuinely sourced spec material (03_Detailed_Module_Specifications.md S6, 05_Workflow_State_Machines.md S1/S2/S3/S12, 04_Data_Model_and_Ownership.md S5/S12) rather than a flat field list. Two tables (page_artifacts, page_artifact_versions, migration 00068) plus two additive pages columns for the 22-state delivery lifecycle; 15 artifact types; 7 routes; no dashboard-web UI (backend only). Three scoping forks confirmed with the project owner before any code was written: D2 (each artifact type resolves its OWN RBAC permission group, checked dynamically -- gating everything on page_content would have left developers unable to edit Implementation, designers unable to edit the UI Specification, and QA unable to edit QA, contradicting the seeded matrix; needs no new RBAC migration), D4 (new pages.lifecycle_stage column rather than reusing workflow_stage, which ships live as the generic 8-value approval vocabulary), D1 (core slice; page_relationships/page_component_usage/page_deployments deferred, two of the three would carry unvalidated FKs into modules that do not exist). D8: deliberately does NOT call into Review and Approval Center despite the roadmap positioning it as the generic approval system -- review_center grants create to only super_admin/owner_growth_approver while marketing_editor holds submit on page_content, so routing submission through it would 403 exactly the role the matrix intends to let submit. Independent code review (high effort, 8 angles): 7 findings, 6 CONFIRMED and all fixed, 1 PLAUSIBLE accepted as tracked debt. Most severe: createArtifact() inserted the artifact row OUTSIDE the transaction (the repository's create() took no Transaction, and transaction.ts is explicit that this codebase has no ambient propagation), so a failed version insert left an orphaned artifact that the (page_id, artifact_type) unique index then made impossible to recreate -- a permanent 409 on that tab. Also fixed: archiving a version permanently bricked its tab; content edits were audited as a no-op draft->draft status pair; approved_for_planning was misclassified as a data_change by an endsWith(\"_approved\") test; listForPage() accepted userId and ignored it, leaving the D2 boundary unenforced; and a duplicated ownership guard. Six regression tests added, one per fix. Finding 7 (same-status return preceding the permission check) left open, matching already-accepted debt in PagesService/KeywordsService. Separate security review: 0 findings at or above threshold. Cleared the D2 dynamic authorization model (no caller-supplied module key reaches assertAllowed(); @RequirePermission method-level on all 7 routes; transition tables indexed by Zod-validated enums so no prototype-pollution path), the lifecycle resume edge (cannot reach a stage the caller had not already occupied), IDOR scoping, injection, stored XSS, mass assignment, and CSRF. Three sub-threshold observations recorded, none actioned. Required second-role human review complete -- Jitesh D, decision \"Approved\", no disputes, completed BEFORE this gate was requested. Recorded as CONFIRM on that basis, consistent with every prior gate except G4-1C. OPEN ITEM CARRIED BY THIS GATE, recorded rather than silently absorbed: the integration suite (356 lines) and e2e suite (554 lines) are written, typecheck cleanly, and are committed, but NEITHER HAS EVER BEEN EXECUTED -- the working machine has PostgreSQL installed with no provisioned disposable database. This is the first gate in this project's history approved without real-database validation; all 50 prior gates cite real integration/e2e run counts. Those two suites are specifically what would substantiate this module's central claims (that migration 00068 round-trips, that the compare-and-swap guards hold under concurrent writes, and that the per-artifact-type authorization behaves correctly against genuinely seeded RBAC roles). That design is currently argued and unit-tested against mocks, not demonstrated. The implementer recommended the narrower \"Approved, pending test execution\" at second-role review; a plain approval was chosen instead. What WAS validated: 925/925 dashboard-api unit tests (47 new), build 9/9, lint 15/15 at --max-warnings=0, prettier clean, pnpm audit 0 vulnerabilities, and a direct runtime check that the CJS entrypoint really exports all three new repositories (the gap behind the 2026-08-12 production outage).",
+      "approved_commit": "0ee593d",
+      "record": "docs/project-state/module-page-workspace-approval-checklist.md",
+      "scope_excludes": "No dashboard-web UI (backend only). page_relationships/page_component_usage/page_deployments deferred per D1. Does NOT authorize pushing the branch, opening a PR, merging, or running migrations 00068/00069 against production -- each remains its own separate, not-yet-requested step. Does not close the unrun integration/e2e suites named in the notes."
     }
   ],
   "budget": {
@@ -2404,6 +2418,15 @@
       "details": "Required second-role human review (ADR-0010) completed for module-page-workspace: decision \"Approved\", no disputes. Accepts the 1 open code-review finding (#7, same-status return preceding the permission check) as tracked debt, the 3 sub-threshold security observations, and the outstanding gap that the integration and e2e suites have never been executed against a real database. The implementer had recommended the narrower \"Approved, pending test execution\"; the reviewer chose a plain approval.",
       "project_version_before": 71,
       "project_version_after": 72
+    },
+    {
+      "timestamp": "2026-08-26T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-page-workspace approved (CONFIRM) for module-page-workspace, approved commit 0ee593d. Second-role review was complete beforehand (Jitesh D, Approved), which is the basis for CONFIRM rather than OVERRIDE. Carries one explicitly recorded open item: the integration and e2e suites have never been executed against a real database -- the first gate in this project's history approved without that validation.",
+      "project_version_before": 72,
+      "project_version_after": 73
     }
   ]
 }

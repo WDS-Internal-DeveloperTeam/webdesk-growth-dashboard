@@ -110,8 +110,29 @@ Not yet requested. A gate decision is separate from the second-role review above
 authorizes pushing the branch, opening a PR, or merging — each remains its own explicit step,
 per this project's standing no-auto-merge rule.
 
-| Field           | Value     |
-| --------------- | --------- |
-| Decision        | _pending_ |
-| Approved commit | _pending_ |
-| Date            | _pending_ |
+| Field           | Value            |
+| --------------- | ---------------- |
+| Approver        | WebDesk Solution |
+| Decision        | **CONFIRM**      |
+| Approved commit | `0ee593d`        |
+| Date            | 2026-08-26       |
+
+Recorded as CONFIRM rather than OVERRIDE because the required second-role human review (Jitesh D,
+"Approved") was complete **before** this gate was requested — the same basis every prior gate used,
+and the specific thing whose absence made Phase 1C's G4-1C an override.
+
+### Open item carried by this gate
+
+This gate is nonetheless **the first in this project's history approved without real-database
+validation.** All 50 prior gates cite real integration and e2e run counts; this one cannot, because
+the two suites have never been executed (see the "Outstanding gap" section above).
+
+That is recorded here and in `project.json`'s gate entry rather than absorbed silently, so the
+record does not imply a level of verification that was never performed. What the gate does rest on:
+925/925 unit tests, build 9/9, lint 15/15, prettier, `pnpm audit` clean, a runtime CJS export
+check, a high-effort code review with all six confirmed findings fixed, and a security review with
+zero findings above threshold.
+
+Closing the gap remains straightforward and does not require re-gating: provision a local
+disposable database and run both suites, or push the branch and let CI's own `postgres:16`
+service container run them.
