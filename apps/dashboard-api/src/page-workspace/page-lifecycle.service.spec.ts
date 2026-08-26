@@ -214,6 +214,23 @@ describe("PageLifecycleService", () => {
     );
   });
 
+  it("classifies approved_for_planning as an approval gate (code-review regression)", async () => {
+    // The classifier previously tested `stage.endsWith("_approved")`, which silently missed this
+    // one — it STARTS with "approved" — so a genuine approval gate was filed as a data_change
+    // under the shorter retention.
+    pages.findById.mockResolvedValue(page({ lifecycleStage: "proposed" }));
+    updatesTo("approved_for_planning");
+
+    await svc.changeStage(ACTOR, PROJECT_ID, PAGE_ID, { stage: "approved_for_planning" });
+
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "approval",
+        retentionCategory: "approval-audit-7y",
+      }),
+    );
+  });
+
   it("records a non-approval transition as a plain data change", async () => {
     pages.findById.mockResolvedValue(page({ lifecycleStage: "ready_for_development" }));
     updatesTo("in_development");

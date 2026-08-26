@@ -89,10 +89,14 @@ describe("PageArtifactsService", () => {
     findById: ReturnType<typeof vi.fn>;
     listForArtifact: ReturnType<typeof vi.fn>;
     findLatestVersionNumber: ReturnType<typeof vi.fn>;
+    findLiveVersion: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     updateStatus: ReturnType<typeof vi.fn>;
   };
-  let authorizationService: { assertAllowed: ReturnType<typeof vi.fn> };
+  let authorizationService: {
+    assertAllowed: ReturnType<typeof vi.fn>;
+    evaluate: ReturnType<typeof vi.fn>;
+  };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let pagesService: { existsInProject: ReturnType<typeof vi.fn> };
   let svc: PageArtifactsService;
@@ -110,10 +114,16 @@ describe("PageArtifactsService", () => {
       findById: vi.fn(),
       listForArtifact: vi.fn(),
       findLatestVersionNumber: vi.fn(),
+      // Default: nothing open on the artifact, so reopen() is free to fork a new draft.
+      findLiveVersion: vi.fn().mockResolvedValue(null),
       update: vi.fn(),
       updateStatus: vi.fn(),
     };
-    authorizationService = { assertAllowed: vi.fn() };
+    authorizationService = {
+      assertAllowed: vi.fn(),
+      // listForPage() filters by per-group view (D2); default to permitting every group.
+      evaluate: vi.fn().mockResolvedValue({ allowed: true }),
+    };
     auditService = { record: vi.fn() };
     pagesService = { existsInProject: vi.fn().mockResolvedValue(true) };
     svc = new PageArtifactsService(
@@ -339,7 +349,7 @@ describe("PageArtifactsService", () => {
     });
 
     it.each(["draft", "submitted", "under_review", "rejected"] as const)(
-      "refuses to reopen a %s version — only an approved one can be reopened",
+      "refuses to reopen a %s version — only approved or archived can be reopened",
       async (status: PageArtifactVersionStatus) => {
         versions.findById.mockResolvedValue(version({ status }));
 
@@ -406,6 +416,74 @@ describe("PageArtifactsService", () => {
       await expect(
         svc.createArtifact(ACTOR, PROJECT_ID, PAGE_ID, { artifactType: "content" }),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+  describe("code-review regressions", () => {
+    it("creates the artifact row inside the same transaction as its first version", async () => {
+      // Previously the artifact INSERT ran outside withTransaction(), so a failure in the version
+      // insert left an orphaned artifact that the unique index then made impossible to recreate.
+      artifacts.create.mockResolvedValue(artifact());
+      versions.create.mockResolvedValue(version());
+
+      await svc.createArtifact(ACTOR, PROJECT_ID, PAGE_ID, { artifactType: "content" });
+
+      const [, transaction] = artifacts.create.mock.calls[0] as [unknown, unknown];
+      expect(transaction).toBeDefined();
+    });
+
+    it("reopens an archived version, so archiving cannot permanently brick a tab", async () => {
+      versions.findById.mockResolvedValue(version({ status: "archived" }));
+      versions.findLiveVersion.mockResolvedValue(null);
+      versions.findLatestVersionNumber.mockResolvedValue(1);
+      versions.create.mockResolvedValue(version({ id: "new", versionNumber: 2 }));
+
+      await svc.reopen(ACTOR, PROJECT_ID, PAGE_ID, ARTIFACT_ID, VERSION_ID, { reason: "revive" });
+
+      // An archived source stays archived — terminal still means terminal; only an approved
+      // source gets superseded by its successor.
+      expect(versions.updateStatus).not.toHaveBeenCalled();
+      const [created] = versions.create.mock.calls[0] as [Record<string, unknown>];
+      expect(created).toMatchObject({ versionNumber: 2, status: "draft" });
+    });
+
+    it("refuses to reopen when the artifact already has an open version", async () => {
+      versions.findById.mockResolvedValue(version({ status: "archived" }));
+      versions.findLiveVersion.mockResolvedValue(version({ id: "other", status: "draft" }));
+
+      await expect(
+        svc.reopen(ACTOR, PROJECT_ID, PAGE_ID, ARTIFACT_ID, VERSION_ID, { reason: "revive" }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(versions.create).not.toHaveBeenCalled();
+    });
+
+    it("audits which fields an edit actually changed, not a no-op status pair", async () => {
+      versions.findById.mockResolvedValue(version({ content: "<p>before</p>", branch: "main" }));
+      versions.update.mockResolvedValue(version({ content: "<p>after me</p>", branch: "release" }));
+
+      await svc.updateVersion(ACTOR, PROJECT_ID, PAGE_ID, ARTIFACT_ID, VERSION_ID, {
+        content: "<p>after me</p>",
+        branch: "release",
+      });
+
+      const [event] = auditService.record.mock.calls[0] as [Record<string, unknown>];
+      // Short provenance fields are recorded exactly; rich text is reduced to a length so the
+      // audit row does not carry a duplicate of the document.
+      expect(event.beforeState).toEqual({ content: { length: 13 }, branch: "main" });
+      expect(event.afterState).toEqual({ content: { length: 15 }, branch: "release" });
+    });
+
+    it("omits artifacts whose permission group the caller cannot view", async () => {
+      artifacts.listForPage.mockResolvedValue([
+        artifact({ id: "a1", artifactType: "content" }),
+        artifact({ id: "a2", artifactType: "implementation" }),
+      ]);
+      authorizationService.evaluate.mockImplementation(async (_user: string, group: string) => ({
+        allowed: group === "page_content",
+      }));
+
+      const result = await svc.listForPage(ACTOR, PROJECT_ID, PAGE_ID);
+
+      expect(result.map((a) => a.id)).toEqual(["a1"]);
     });
   });
 });

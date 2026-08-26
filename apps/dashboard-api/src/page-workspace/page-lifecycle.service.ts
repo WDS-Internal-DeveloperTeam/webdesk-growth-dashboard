@@ -19,6 +19,25 @@ import type { ChangeLifecycleStageDto } from "./page-workspace.dto.js";
 type LifecycleAction = "edit" | "submit" | "review" | "approve";
 
 /**
+ * The stages that genuinely represent an approval gate, listed explicitly.
+ *
+ * This was previously derived with `stage.endsWith("_approved") || stage === "verified"`, which
+ * silently missed `approved_for_planning` — it STARTS with "approved" rather than ending with
+ * "_approved" — so a real approval gate was recorded as a `data_change` under the shorter
+ * retention. Enumerating them removes the trap; `LifecycleAction` alone cannot stand in for this,
+ * because several non-approval transitions (archiving, rolling back) also require `approve`.
+ */
+const APPROVAL_STAGES: readonly PageLifecycleStage[] = [
+  "approved_for_planning",
+  "search_approved",
+  "content_approved",
+  "design_approved",
+  "staging_approved",
+  "production_approved",
+  "verified",
+];
+
+/**
  * The five "interrupt" states from `05_Workflow_State_Machines.md §3`'s alternative-states list
  * that any active stage can drop into, plus `archived`. Declared once and spread into every
  * active stage's entry rather than hand-repeated 16 times.
@@ -199,10 +218,10 @@ export class PageLifecycleService {
       );
     }
 
-    // `05_Workflow_State_Machines.md §1`: every transition creates an audit event. The stages that
-    // represent a real approval gate inherit the longer approval retention, matching how
+    // `05_Workflow_State_Machines.md §1`: every transition creates an audit event. The stages in
+    // APPROVAL_STAGES inherit the longer approval retention, matching how
     // PagesService.changeWorkflowStage() classifies its own.
-    const isApproval = input.stage.endsWith("_approved") || input.stage === "verified";
+    const isApproval = APPROVAL_STAGES.includes(input.stage);
     try {
       await this.auditService.record({
         eventType: isApproval ? "approval" : "data_change",

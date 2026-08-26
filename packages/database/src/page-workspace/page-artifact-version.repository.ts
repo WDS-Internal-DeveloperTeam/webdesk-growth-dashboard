@@ -1,4 +1,4 @@
-import { type Transaction } from "sequelize";
+import { Op, type Transaction } from "sequelize";
 import { getPageWorkspaceModels } from "./models.js";
 import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { PageArtifactVersionEntity, PageArtifactVersionStatus } from "./entities.js";
@@ -113,6 +113,28 @@ export class PageArtifactVersionRepository {
     }
     const { versionNumber } = toEntityWithIsoDates<PageArtifactVersionEntity>(instance);
     return versionNumber;
+  }
+
+  /**
+   * The artifact's current non-terminal version, if any. "Live" means a version that can still be
+   * worked on or decided — anything outside {superseded, archived, rejected}. `reopen()` uses this
+   * to guarantee an artifact never ends up with two simultaneously editable versions.
+   */
+  async findLiveVersion(
+    artifactId: string,
+    projectId: string,
+    transaction?: Transaction,
+  ): Promise<PageArtifactVersionEntity | null> {
+    const instance = await this.model.findOne({
+      where: {
+        artifactId,
+        projectId,
+        status: { [Op.notIn]: ["superseded", "archived", "rejected"] },
+      },
+      order: [["versionNumber", "DESC"]],
+      ...(transaction ? { transaction } : {}),
+    });
+    return instance ? toEntityWithIsoDates<PageArtifactVersionEntity>(instance) : null;
   }
 
   /**

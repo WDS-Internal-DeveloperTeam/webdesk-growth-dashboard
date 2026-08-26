@@ -15,20 +15,26 @@ import type { PageArtifactEntity, PageArtifactType } from "./entities.js";
 export class PageArtifactRepository {
   private readonly model = getPageWorkspaceModels().PageArtifact;
 
-  async create(input: {
-    readonly pageId: string;
-    readonly projectId: string;
-    readonly artifactType: PageArtifactType;
-    readonly createdBy: string | null;
-  }): Promise<PageArtifactEntity> {
-    const instance = await this.model.create({
-      pageId: input.pageId,
-      projectId: input.projectId,
-      artifactType: input.artifactType,
-      currentVersionId: null,
-      createdBy: input.createdBy,
-      updatedBy: input.createdBy,
-    });
+  async create(
+    input: {
+      readonly pageId: string;
+      readonly projectId: string;
+      readonly artifactType: PageArtifactType;
+      readonly createdBy: string | null;
+    },
+    transaction?: Transaction,
+  ): Promise<PageArtifactEntity> {
+    const instance = await this.model.create(
+      {
+        pageId: input.pageId,
+        projectId: input.projectId,
+        artifactType: input.artifactType,
+        currentVersionId: null,
+        createdBy: input.createdBy,
+        updatedBy: input.createdBy,
+      },
+      transaction ? { transaction } : {},
+    );
     return toEntityWithIsoDates<PageArtifactEntity>(instance);
   }
 

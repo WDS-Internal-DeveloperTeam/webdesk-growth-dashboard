@@ -33,6 +33,40 @@ import type {
   UpdateArtifactVersionDto,
 } from "./page-workspace.dto.js";
 
+/**
+ * Statuses a version can be reopened FROM (finding 2).
+ *
+ * `approved` is the case the spec names. `archived` is included because otherwise archiving a
+ * version permanently bricks its tab: `archived` is terminal, `reopen()` was the only other code
+ * path that creates a version, and `createArtifact()` cannot help because it also inserts the
+ * artifact row and so fails the (page_id, artifact_type) unique index. The archived version
+ * itself is never mutated — terminal still means terminal; reopening only forks a NEW draft
+ * beside it.
+ */
+const REOPENABLE_STATUSES: readonly PageArtifactVersionStatus[] = ["approved", "archived"];
+
+const RICH_TEXT_FIELDS = new Set(["content", "notes"]);
+
+/**
+ * Renders the changed fields of a version for an audit row. `content`/`notes` are reduced to a
+ * character count rather than copied verbatim: the audit trail needs to show THAT they changed
+ * and by roughly how much, not carry a duplicate of the document. Everything else (the Git
+ * provenance fields) is short and is recorded exactly.
+ */
+function summarizeFields(
+  source: Record<string, string | null>,
+  fields: readonly string[],
+): Record<string, unknown> {
+  const summary: Record<string, unknown> = {};
+  for (const field of fields) {
+    const value = source[field];
+    summary[field] = RICH_TEXT_FIELDS.has(field)
+      ? { length: value === null || value === undefined ? 0 : value.length }
+      : (value ?? null);
+  }
+  return summary;
+}
+
 /** The RBAC action a caller must hold, within the ARTIFACT's OWN permission group, to reach each
  *  status. Action names mirror `ServicesService`'s own already-code-reviewed mapping exactly
  *  (`-> draft` requires `submit`, so an author whose work was rejected or sent back can actually
@@ -136,10 +170,7 @@ export class PageArtifactsService {
     artifactId: string,
     versionId: string,
   ): Promise<{ version: PageArtifactVersionEntity; artifact: PageArtifactEntity }> {
-    const artifact = await this.loadArtifactOrThrow(artifactId, projectId);
-    if (artifact.pageId !== pageId) {
-      throw new NotFoundException(`Artifact not found: ${artifactId}`);
-    }
+    const artifact = await this.loadArtifactInPageOrThrow(artifactId, pageId, projectId);
     const version = await this.loadVersionOrThrow(versionId, projectId);
     if (version.artifactId !== artifactId) {
       throw new NotFoundException(`Artifact version not found: ${versionId}`);
@@ -158,13 +189,52 @@ export class PageArtifactsService {
     return artifact;
   }
 
+  /** The single ownership guard for "this artifact really is on this page". Previously duplicated
+   *  between `listVersions()` and `loadVersionInContextOrThrow()`, where the two copies could
+   *  drift; both now route through here. */
+  private async loadArtifactInPageOrThrow(
+    artifactId: string,
+    pageId: string,
+    projectId: string,
+  ): Promise<PageArtifactEntity> {
+    const artifact = await this.loadArtifactOrThrow(artifactId, projectId);
+    if (artifact.pageId !== pageId) {
+      throw new NotFoundException(`Artifact not found: ${artifactId}`);
+    }
+    return artifact;
+  }
+
+  /**
+   * Artifacts on a page, filtered to the ones the caller may actually view.
+   *
+   * The 15 artifact types span four permission groups (D2), so a single route-level gate cannot
+   * express "may view this tab". Rather than one check per artifact, the DISTINCT groups present
+   * are evaluated once each — at most four regardless of how many artifacts the page has.
+   *
+   * Today every seeded role holds `view` on all four groups, so this filters nothing; it exists
+   * so that narrowing any group's `view` grant later cannot silently start leaking tabs through
+   * this route while `listVersions()` correctly denies them.
+   */
   async listForPage(
     userId: string,
     projectId: string,
     pageId: string,
   ): Promise<readonly PageArtifactEntity[]> {
     await this.assertPageInProject(pageId, projectId);
-    return this.artifacts.listForPage(pageId, projectId);
+    const all = await this.artifacts.listForPage(pageId, projectId);
+
+    const groups = [...new Set(all.map((a) => ARTIFACT_PERMISSION_GROUP[a.artifactType]))];
+    const viewable = new Set<string>();
+    await Promise.all(
+      groups.map(async (group) => {
+        const decision = await this.authorizationService.evaluate(userId, group, "view", projectId);
+        if (decision.allowed) {
+          viewable.add(group);
+        }
+      }),
+    );
+
+    return all.filter((a) => viewable.has(ARTIFACT_PERMISSION_GROUP[a.artifactType]));
   }
 
   /** The "History" tab (task package D3) — a derived view over this artifact's own versions,
@@ -176,10 +246,7 @@ export class PageArtifactsService {
     artifactId: string,
     options: { readonly limit?: number; readonly offset?: number },
   ): Promise<readonly PageArtifactVersionEntity[]> {
-    const artifact = await this.loadArtifactOrThrow(artifactId, projectId);
-    if (artifact.pageId !== pageId) {
-      throw new NotFoundException(`Artifact not found: ${artifactId}`);
-    }
+    const artifact = await this.loadArtifactInPageOrThrow(artifactId, pageId, projectId);
     await this.assertArtifactPermission(userId, artifact.artifactType, "view", projectId);
     return this.versions.listForArtifact(artifactId, projectId, options);
   }
@@ -204,12 +271,15 @@ export class PageArtifactsService {
 
     try {
       const created = await withTransaction(async (transaction) => {
-        const artifact = await this.artifacts.create({
-          pageId,
-          projectId,
-          artifactType: input.artifactType,
-          createdBy: userId,
-        });
+        const artifact = await this.artifacts.create(
+          {
+            pageId,
+            projectId,
+            artifactType: input.artifactType,
+            createdBy: userId,
+          },
+          transaction,
+        );
         const version = await this.versions.create(
           {
             artifactId: artifact.id,
@@ -290,23 +360,30 @@ export class PageArtifactsService {
       );
     }
 
+    const nextValues: Record<string, string | null> = {
+      ...(patch.content !== undefined
+        ? { content: sanitizeNullableRichText(patch.content) ?? null }
+        : {}),
+      ...(patch.notes !== undefined
+        ? { notes: sanitizeNullableRichText(patch.notes) ?? null }
+        : {}),
+      ...(patch.repository !== undefined ? { repository: patch.repository ?? null } : {}),
+      ...(patch.path !== undefined ? { path: patch.path ?? null } : {}),
+      ...(patch.branch !== undefined ? { branch: patch.branch ?? null } : {}),
+      ...(patch.commitSha !== undefined ? { commitSha: patch.commitSha ?? null } : {}),
+      ...(patch.contentChecksum !== undefined
+        ? { contentChecksum: patch.contentChecksum ?? null }
+        : {}),
+    };
+
+    const changedFields = Object.keys(nextValues).filter(
+      (field) => nextValues[field] !== (version as unknown as Record<string, string | null>)[field],
+    );
+
     const updated = await this.versions.update(
       versionId,
       projectId,
-      {
-        ...(patch.content !== undefined
-          ? { content: sanitizeNullableRichText(patch.content) }
-          : {}),
-        ...(patch.notes !== undefined ? { notes: sanitizeNullableRichText(patch.notes) } : {}),
-        ...(patch.repository !== undefined ? { repository: patch.repository ?? null } : {}),
-        ...(patch.path !== undefined ? { path: patch.path ?? null } : {}),
-        ...(patch.branch !== undefined ? { branch: patch.branch ?? null } : {}),
-        ...(patch.commitSha !== undefined ? { commitSha: patch.commitSha ?? null } : {}),
-        ...(patch.contentChecksum !== undefined
-          ? { contentChecksum: patch.contentChecksum ?? null }
-          : {}),
-        updatedBy: userId,
-      },
+      { ...nextValues, updatedBy: userId },
       "draft",
     );
 
@@ -321,10 +398,8 @@ export class PageArtifactsService {
       projectId,
       updated,
       "update",
-      { status: version.status },
-      {
-        status: updated.status,
-      },
+      summarizeFields(version as unknown as Record<string, string | null>, changedFields),
+      summarizeFields(updated as unknown as Record<string, string | null>, changedFields),
     );
     return updated;
   }
@@ -419,27 +494,44 @@ export class PageArtifactsService {
       versionId,
     );
 
-    if (version.status !== "approved") {
+    if (!REOPENABLE_STATUSES.includes(version.status)) {
       throw new BadRequestException(
-        `Only an approved version can be reopened; version ${versionId} is ${version.status}`,
+        `Only an approved or archived version can be reopened; version ${versionId} is ` +
+          version.status,
       );
     }
     await this.assertArtifactPermission(userId, artifact.artifactType, "approve", projectId);
 
+    // Reopening must never leave two simultaneously editable versions on one artifact. For an
+    // approved source the supersede below enforces that on its own, but an archived source is
+    // already terminal and supersedes nothing, so the check has to be explicit.
+    const live = await this.versions.findLiveVersion(artifact.id, projectId);
+    if (live && live.id !== version.id) {
+      throw new ConflictException(
+        `Artifact ${artifact.id} already has an open version (v${live.versionNumber}, ` +
+          `${live.status}) — work on that instead of reopening v${version.versionNumber}`,
+      );
+    }
+
     try {
       const next = await withTransaction(async (transaction) => {
-        const superseded = await this.versions.updateStatus(
-          versionId,
-          projectId,
-          "approved",
-          "superseded",
-          userId,
-          transaction,
-        );
-        if (superseded.outcome !== "updated") {
-          throw new ConflictException(
-            `Version ${versionId} changed concurrently and could not be reopened — reload and retry`,
+        // An archived source stays archived; only an approved one is superseded by its
+        // successor. The compare-and-swap is also what makes two concurrent reopens of the same
+        // approved version safe — the loser sees `conflict` and rolls back.
+        if (version.status === "approved") {
+          const superseded = await this.versions.updateStatus(
+            versionId,
+            projectId,
+            "approved",
+            "superseded",
+            userId,
+            transaction,
           );
+          if (superseded.outcome !== "updated") {
+            throw new ConflictException(
+              `Version ${versionId} changed concurrently and could not be reopened — reload and retry`,
+            );
+          }
         }
 
         const latest = await this.versions.findLatestVersionNumber(
@@ -482,7 +574,7 @@ export class PageArtifactsService {
         projectId,
         next,
         `reopen:v${version.versionNumber}->v${next.versionNumber}`,
-        { versionNumber: version.versionNumber, status: "approved" },
+        { versionNumber: version.versionNumber, status: version.status },
         { versionNumber: next.versionNumber, status: "draft" },
         input.reason,
       );
