@@ -289,7 +289,6 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
   describe("separation of duties falls out of the group mapping", () => {
     it("a developer can submit an Implementation version but never approve it", async () => {
       const { base } = await createArtifact("implementation");
-      const base = base;
 
       // development_code gives `developer` VCES — submit is in, approve is not.
       await request(app.getHttpServer())
@@ -309,7 +308,6 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
 
     it("a QA reviewer can carry that same version through review to approval", async () => {
       const { base } = await createArtifact("implementation");
-      const base = base;
 
       await request(app.getHttpServer())
         .post(`${base}/status`)
@@ -343,7 +341,6 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
       // page_content — approve yes, submit no. Asserted explicitly so a future change to either
       // the seeded matrix or VERSION_TRANSITIONS cannot quietly erode this separation.
       const { base } = await createArtifact("overview");
-      const base = base;
 
       await request(app.getHttpServer())
         .post(`${base}/status`)
@@ -363,7 +360,6 @@ describe("Page Workspace module endpoints (e2e, real disposable database)", () =
 
     it("requires a reason to reject or request revision", async () => {
       const { base } = await createArtifact("qa");
-      const base = base;
 
       await request(app.getHttpServer())
         .post(`${base}/status`)
