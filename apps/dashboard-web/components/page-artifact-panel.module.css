@@ -1,0 +1,45 @@
+/* Composes from the shared bases rather than restating them — the same reuse the Service Library
+ * review established after finding a third byte-identical copy of this treatment. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-md);
+}
+
+.actions {
+  composes: wrapper from "./status-actions.module.css";
+  margin-top: var(--webdesk-dashboard-space-sm);
+}
+
+.actionButton {
+  composes: actionButton from "./status-actions.module.css";
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+}
+
+.meta {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0;
+}
+
+.label {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0;
+}
+
+.empty {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0;
+}
+
+.readView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+}

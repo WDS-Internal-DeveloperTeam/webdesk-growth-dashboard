@@ -21,6 +21,8 @@ function pageFixture(id: string, overrides: Partial<Page> = {}): Page {
     template: null,
     roadmapPhaseId: null,
     workflowStage: "draft",
+    lifecycleStage: "proposed",
+    lifecyclePreviousStage: null,
     targetKeyword: null,
     designVersion: null,
     repositoryFiles: null,
