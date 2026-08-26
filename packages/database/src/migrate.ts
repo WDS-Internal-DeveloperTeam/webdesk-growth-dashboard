@@ -26,7 +26,15 @@ function buildMigrationsGlob(): string {
   const url = import.meta.url;
   const here = path.dirname(fileURLToPath(url));
   const extension = url.endsWith(".ts") ? "ts" : "js";
-  return path.join(here, "migrations", `*.${extension}`);
+  // Separators are normalized to "/" because glob patterns are NOT paths: a
+  // backslash is an ESCAPE character in glob syntax, not a directory
+  // separator. On Windows `path.join` yields "C:\...\migrations\*.js",
+  // which silently matches nothing — umzug then reports zero executed AND
+  // zero pending migrations against a database with 69 migration files on
+  // disk, so `up()` is a no-op and every database-backed test fails with
+  // "relation \"users\" does not exist". On Linux and macOS the separator is
+  // already "/", so this replace is a no-op there and CI never surfaced it.
+  return `${here}/migrations/*.${extension}`.split(path.sep).join("/");
 }
 
 export function buildMigrator(env = loadDatabaseEnv()) {
