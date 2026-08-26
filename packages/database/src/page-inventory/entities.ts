@@ -9,6 +9,8 @@
  * scoped to a project's own `roadmap_items`.
  */
 
+import type { PageLifecycleStage } from "../page-workspace/entities.js";
+
 export type PageExistingOrProposed = "existing" | "proposed";
 export type PageIndexStatus = "index" | "noindex" | "unknown";
 
@@ -52,6 +54,13 @@ export interface PageEntity {
   readonly template: string | null;
   readonly roadmapPhaseId: string | null;
   readonly workflowStage: PageWorkflowStage;
+  /** The page DELIVERY lifecycle (migration `00068`, Page Workspace task package D4) — a
+   *  genuinely separate axis from `workflowStage` above, which governs this page RECORD's own
+   *  approval. Owned and transitioned by the Page Workspace module, not this one. */
+  readonly lifecycleStage: PageLifecycleStage;
+  /** Stamped on entering `paused`/`blocked` so those two states are resumable inside an
+   *  allowlist rather than needing an open-ended "resume to anything" edge (D5). */
+  readonly lifecyclePreviousStage: PageLifecycleStage | null;
   readonly targetKeyword: string | null;
   readonly designVersion: string | null;
   readonly repositoryFiles: string | null;
