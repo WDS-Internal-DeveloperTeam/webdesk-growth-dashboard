@@ -45,7 +45,7 @@
     },
     "created_at": "2026-08-06T00:00:00Z",
     "updated_at": "2026-08-25T00:00:00Z",
-    "version": 74
+    "version": 75
   },
   "tech_stack": {
     "runtime": "node@24",
@@ -2436,6 +2436,15 @@
       "details": "The open item carried by gate G4-page-workspace is closed. Both previously-unrun suites executed against a real database and CI on main is fully green (11/11 jobs) at edf82e7: 22/22 page-workspace e2e, 384/384 dashboard-api e2e, 389/389 packages/database integration. Getting there surfaced three real defects: two genuine e2e bugs (no role holds both submit and approve in one group, so the helper 403d; and three artifact types collided on the (page_id, artifact_type) unique index across one shared page), a syntax error introduced by the first fix commit that made the file fail to parse and cascaded into all 21 other e2e suites, and a pre-existing repo-wide Windows bug in buildMigrationsGlob() where path.join emitted backslashes that glob treats as escapes -- umzug reported 0 executed and 0 pending against 69 migration files, so up() was a silent no-op and nobody could run migrations or database tests on Windows. Also noted: apps/dashboard-api/tsconfig.json includes only src, so the entire test/ directory is invisible to pnpm typecheck. Production verified live at edf82e7 with GET /page-workspace/... returning a clean 401. Migrations 00068/00069 still NOT run against production.",
       "project_version_before": 73,
       "project_version_after": 74
+    },
+    {
+      "timestamp": "2026-08-26T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "production_migration_applied",
+      "details": "Migrations 00068-create-page-workspace and 00069-mark-page-workspace-in-development applied to the production database under explicit authorization. Independently confirmed via a separate read-only migrate:status check (69 executed, 0 pending) and a list-tables check showing page_artifacts and page_artifact_versions present among 61 tables -- not relying on the migrate command own success message. Live verification: /health ok at commit d2aa5b7 in production, GET /page-workspace/... returns a clean 401 (route live, SessionGuard enforcing, not a 404), dashboard-web / returns 307 to the sign-in redirect. Unusually for this project, the migration was run from the Windows workstation rather than the Mac mini, using a prod-db.env copied there by the user; that file is gitignored and untracked, and should be deleted from the Windows machine since the directory syncs to OneDrive and the file carries GOOGLE_OAUTH_CLIENT_SECRET and TOTP_ENCRYPTION_KEY alongside DATABASE_URL. The Page Workspace module backend is now genuinely live in production.",
+      "project_version_before": 74,
+      "project_version_after": 75
     }
   ]
 }
