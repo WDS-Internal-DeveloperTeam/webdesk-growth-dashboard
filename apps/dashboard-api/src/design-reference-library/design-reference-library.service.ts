@@ -294,12 +294,11 @@ export class DesignReferenceLibraryService {
       "publish",
     );
 
-    const NOT_YET_PUBLISHED = false;
-    const NOW_PUBLISHED = true;
+    // expected isPublished=false -> next isPublished=true
     const result = await this.records.updatePublishState(
       id,
-      NOT_YET_PUBLISHED,
-      NOW_PUBLISHED,
+      false,
+      true,
       actorUserId,
       record.approvalStatus,
     );
@@ -349,14 +348,8 @@ export class DesignReferenceLibraryService {
       "unpublish",
     );
 
-    const CURRENTLY_PUBLISHED = true;
-    const NOW_UNPUBLISHED = false;
-    const result = await this.records.updatePublishState(
-      id,
-      CURRENTLY_PUBLISHED,
-      NOW_UNPUBLISHED,
-      actorUserId,
-    );
+    // expected isPublished=true -> next isPublished=false
+    const result = await this.records.updatePublishState(id, true, false, actorUserId);
     if (result.outcome === "not_found") {
       throw new NotFoundException(`Design reference record not found: ${id}`);
     }
