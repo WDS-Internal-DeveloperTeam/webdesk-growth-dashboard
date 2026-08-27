@@ -7,15 +7,15 @@
 
 ### Pre-implementation verification
 
-| Check                                | Result                                                                                    |
-| ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Recommended roadmap position         | Row 14, Wave 4 — `canonical-inputs/Recommended_Module_Roadmap.md`                          |
+| Check                                | Result                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Recommended roadmap position         | Row 14, Wave 4 — `canonical-inputs/Recommended_Module_Roadmap.md`                              |
 | Dependency-computed roadmap position | `docs/phase-plans/module-implementation-roadmap.md`, `libraries` group, no listed prerequisite |
-| Registry dependency (seeded)         | `null` — no prerequisite module                                                            |
-| RBAC permission group (seeded)       | `creative_design`, already seeded (migration `00013`) — **no new RBAC migration**          |
-| Confidentiality level (seeded)       | `null` — organization-wide, no confidential-field mechanism needed                         |
-| Open Critical/High security finding  | None                                                                                        |
-| Blocking credential                  | None                                                                                        |
+| Registry dependency (seeded)         | `null` — no prerequisite module                                                                |
+| RBAC permission group (seeded)       | `creative_design`, already seeded (migration `00013`) — **no new RBAC migration**              |
+| Confidentiality level (seeded)       | `null` — organization-wide, no confidential-field mechanism needed                             |
+| Open Critical/High security finding  | None                                                                                           |
+| Blocking credential                  | None                                                                                           |
 
 Source material: `03_Detailed_Module_Specifications.md §11` (flat field list only — "source URL,
 screenshot, page/section type, likes, dislikes, desktop behavior, mobile behavior, motion notes,
@@ -97,4 +97,57 @@ No `dashboard-web` UI — backend only, matching every prior module's own backen
 
 ## As-built
 
-_(appended once the build completes)_
+Built directly (no subagent delegation) on branch `module-design-reference-library`, off `main` at
+the Brand Library UI merge commit (`3e2e7c4`). Mirrored Brand Library's file-for-file structure —
+`packages/database/src/design-reference-library/` (`entities.ts`, `models.ts`,
+`entity-mapping.ts`, `design-reference-record.repository.ts`, `index.ts`), migrations `00072`
+(create table) / `00073` (mark `in_development`), and `apps/dashboard-api/src/design-reference-library/`
+(`design-reference-library.constants.ts`, `.dto.ts`, `database.providers.ts`, `.service.ts`,
+`.controller.ts`, `.module.ts`, `.service.spec.ts`), plus `test/design-reference-library.e2e-spec.ts`
+and `packages/database/test/module-design-reference-library.integration.test.ts`. Wired into
+`app.module.ts` alphabetically (between Content Template Library and Internal Linking Library) and
+into both `packages/database` barrel files (`index.ts`/`index.cjs.ts`).
+
+One deviation from the task prompt's own field characterization, resolved in favor of the Scope
+section's own D6 wording: `tags` is a **non-nullable** string array defaulting to `[]` (mirroring
+`PersonaEntity.roles`'s/`ServiceEntity.icpIds`'s identical shape, which D6 explicitly names as the
+precedent to mirror), not a nullable column as an earlier characterization of the field suggested.
+
+Every atomic CAS pattern (`update()`'s `expectedApprovalStatus` guard, `updateApprovalStatus()`,
+`updatePublishState()` with its `COALESCE`-stamp-once `publishedAt` contract) was copied verbatim
+from `BrandLibraryRecordRepository`/`BrandLibraryService`, including the already-fixed
+`isSequelizeUniqueConstraintError()` (not a hand-rolled `.name` check) and method-level (never
+class-level) `@RequirePermission` placement.
+
+### Validation (real local disposable PostgreSQL 17 database)
+
+- Migration round-trip: up → down (2 steps) → up, confirmed via `migrate-status` — 73 executed, 0
+  pending, both before and after.
+- `packages/database` build (`tsc` ESM + CJS via `tsc -p tsconfig.cjs.json`) — clean.
+- `packages/database` integration tests: 26/26 new (`module-design-reference-library.integration.test.ts`),
+  442/442 overall on a full-suite run (25 test files).
+- `packages/database` unit tests: 28/28 (unchanged — no new unit tests here, module-registry
+  validation logic untouched).
+- `pnpm validate:module-registry`: 43 modules, 21 permission groups, all references resolve
+  (unaffected — this module was already registry-seeded since migration `00015`, only its
+  `implementation_status` changed).
+- `dashboard-api` typecheck/lint (`--max-warnings=0`)/`nest build`: all clean.
+- `dashboard-api` unit tests: 45/45 new (`design-reference-library.service.spec.ts`), 1015/1015
+  overall.
+- `dashboard-api` e2e tests: 26/26 new (`design-reference-library.e2e-spec.ts`), covering the full
+  RBAC matrix (`super_admin`/`read_only`/`designer_creative_reviewer`/`owner_growth_approver`/
+  `marketing_editor`), safe-URL-scheme rejection on both `sourceUrl`/`screenshotUrl`, the empty-patch
+  400, explicit-null field clearing, the terminal-state 400, and the full publish/unpublish CAS
+  surface (400/403/404/409). One full-suite run (25 files, 435 tests) showed 22 unrelated failures
+  in `website-strategy-center.e2e-spec.ts`; re-run in isolation (22/22 passed) and re-run as part of
+  a second full-suite pass (435/435 passed) both confirmed this was a pre-existing, order-dependent
+  flake in the shared-database e2e harness, not a regression introduced by this branch — the new
+  `design-reference-library.e2e-spec.ts` itself passed cleanly (26/26) in every run, including the
+  one full-suite run that failed elsewhere.
+- `pnpm exec prettier --check`: clean (one file needed `--write` after initial authoring, applied
+  and re-verified).
+- `pnpm audit`: 0 vulnerabilities.
+
+Not yet done: independent code review, security review, second-role human review, a gate decision,
+push/PR, or merge — each remains its own separate, not-yet-requested next step, matching every
+prior module's own precedent. No `dashboard-web` UI exists yet for this module.
