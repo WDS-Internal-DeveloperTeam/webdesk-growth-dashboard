@@ -740,6 +740,11 @@ export interface Page {
   readonly template: string | null;
   readonly roadmapPhaseId: string | null;
   readonly workflowStage: PageWorkflowStage;
+  /** The page DELIVERY lifecycle (migration `00068`) — a separate axis from `workflowStage`
+   *  above, which governs this page RECORD's own approval. Owned by the Page Workspace module. */
+  readonly lifecycleStage: PageLifecycleStage;
+  /** Stamped on entering `paused`/`blocked` so those states are resumable inside an allowlist. */
+  readonly lifecyclePreviousStage: PageLifecycleStage | null;
   readonly targetKeyword: string | null;
   readonly designVersion: string | null;
   readonly repositoryFiles: string | null;
@@ -1056,4 +1061,102 @@ export interface ReviewDecision {
   /** Set only when `action === "delegate"`. */
   readonly delegatedToUserId: string | null;
   readonly decidedAt: string;
+}
+
+/**
+ * Page Workspace (module #12). Mirrors `packages/database/src/page-workspace/entities.ts`.
+ *
+ * `content`/`notes` are typed as nullable rather than optional: unlike Business Knowledge
+ * Center's confidential-field redaction, this module has no redaction mechanism (the module
+ * registry's own seeded `confidentialityLevel` for `page_workspace` is `null`), so the keys are
+ * always present.
+ */
+export type PageArtifactType =
+  | "overview"
+  | "live_snapshot"
+  | "audit"
+  | "ideal_structure"
+  | "search"
+  | "content"
+  | "creative_direction"
+  | "ux_wireframe"
+  | "ui_specification"
+  | "component_map"
+  | "implementation"
+  | "code_review"
+  | "security"
+  | "qa"
+  | "deployment";
+
+/** The shared 8-value generic artifact lifecycle (`05_Workflow_State_Machines.md §2`). */
+export type PageArtifactVersionStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/** The 22-state page DELIVERY lifecycle (`05_Workflow_State_Machines.md §3`) — a separate axis
+ *  from `PageWorkflowStage`, which governs the page RECORD's own approval. */
+export type PageLifecycleStage =
+  | "proposed"
+  | "approved_for_planning"
+  | "in_strategy"
+  | "search_approved"
+  | "content_approved"
+  | "design_approved"
+  | "ready_for_development"
+  | "in_development"
+  | "code_review"
+  | "security_qa"
+  | "ready_for_staging"
+  | "staging_deployed"
+  | "staging_approved"
+  | "production_approved"
+  | "production_deployed"
+  | "verified"
+  | "revision_requested"
+  | "blocked"
+  | "paused"
+  | "failed"
+  | "rolled_back"
+  | "archived";
+
+export interface PageArtifact {
+  readonly id: string;
+  readonly pageId: string;
+  readonly projectId: string;
+  readonly artifactType: PageArtifactType;
+  readonly currentVersionId: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface PageArtifactVersion {
+  readonly id: string;
+  readonly artifactId: string;
+  readonly pageId: string;
+  readonly projectId: string;
+  readonly versionNumber: number;
+  readonly status: PageArtifactVersionStatus;
+  readonly content: string | null;
+  readonly notes: string | null;
+  readonly repository: string | null;
+  readonly path: string | null;
+  readonly branch: string | null;
+  readonly commitSha: string | null;
+  readonly contentChecksum: string | null;
+  readonly reopenedReason: string | null;
+  readonly reopenedFromVersionId: string | null;
+  readonly approvedByUserId: string | null;
+  readonly approvedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }

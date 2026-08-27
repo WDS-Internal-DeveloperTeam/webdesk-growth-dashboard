@@ -5,6 +5,7 @@ import { ContentContainer, Fact, PageHeader, StatusBadge, typographyTokens } fro
 import { PageStatusActions } from "@/components/page-status-actions";
 import { PageUrlsSection } from "@/components/page-urls-section";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
+import { buildWorkspaceHref, DEFAULT_TAB_KEY } from "@/lib/page-workspace-query";
 import { tolerateDiscard } from "@/lib/business-knowledge";
 import { dlStyle, h2Style, mutedStyle, sectionStyle } from "@/lib/detail-section-styles";
 import {
@@ -100,6 +101,13 @@ export default async function PageInventoryDetailPage({
               pageId={page.id}
               workflowStage={page.workflowStage}
             />
+            {/* Task package D4 (dashboard-web-page-workspace): the workspace is where a page's
+                16 artifact tabs and delivery lifecycle live. Shown regardless of workflow stage —
+                unlike Edit, opening a workspace is a read action, and an archived page's
+                artifacts and history stay worth reading. */}
+            <Link href={buildWorkspaceHref(page.id, project.id, DEFAULT_TAB_KEY)}>
+              Open workspace
+            </Link>
             {!isTerminal ? (
               <Link
                 href={withProjectId(`/page-inventory/${page.id}/edit`, project.id)}

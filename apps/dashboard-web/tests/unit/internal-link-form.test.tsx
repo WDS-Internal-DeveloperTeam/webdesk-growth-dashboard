@@ -35,6 +35,8 @@ function pageFixture(id: string, pageName: string): Page {
     template: null,
     roadmapPhaseId: null,
     workflowStage: "draft",
+    lifecycleStage: "proposed",
+    lifecyclePreviousStage: null,
     targetKeyword: null,
     designVersion: null,
     repositoryFiles: null,
