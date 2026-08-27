@@ -5295,6 +5295,32 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   - This is a review-process rule, not a security-standards rule — nothing about which findings
     count as real or how they're verified changes; only how much automated scanning runs before a
     human looks at the result.
+- **Standing rule, effective 2026-08-27: collapse the task-package + implementation-doc pair into
+  one file per module, going forward.** Every module built in this project so far produced up to
+  5 separate documents narrating largely the same thing in fresh prose each time: a task package
+  (pre-build scope/design), an implementation doc (as-built record), an approval checklist
+  (review/gate sign-off), a review-packet artifact (for the second-role reviewer), and a
+  `CLAUDE.md` entry (session-context summary). Given directly by the user as real, unnecessary
+  duplication — not retroactive, existing `docs/task-packages/*.md`/`docs/implementation/*.md`
+  pairs stay as they are; this only changes how a NEW module's documentation is authored:
+  - **One file, two passes**: `docs/implementation/<slug>.md`. Before any code is written, author
+    a `## Scope` section at the top — the same content a task package used to hold (design
+    decisions, forks confirmed with the project owner, what's explicitly out of scope). Once the
+    module is built, append the as-built sections below it (what's built, verification status,
+    code-review findings, security-review findings) — the same content the implementation doc
+    already held. `docs/task-packages/*.md` is retired as a separate pre-existing file for any
+    new module.
+  - **Approval checklist** (`docs/project-state/*-approval-checklist.md`) stays a separate file,
+    unchanged — it's the compact, table-based sign-off record `project.json`'s `gates[]`/
+    `audit_log` point to, genuinely distinct from the narrative doc, not duplicative enough to be
+    worth merging.
+  - **Review packet** (published Claude artifact): only for full-pipeline (risky) changes, per the
+    review-pipeline right-sizing rule above. For a light-tier change, the approval checklist's own
+    findings table is what the second-role reviewer reads — no separate artifact.
+  - **`CLAUDE.md`'s own "Active tasks"/"Recent decisions" entries**: link to the relevant section
+    of the implementation doc rather than restating its narrative — a pointer plus the one or two
+    facts that matter for session context (what's live, what gate passed, what's still open), not
+    a second retelling of the design decisions.
 - When adding a new export to `packages/database/src/index.ts` (the ESM barrel), you MUST also add
   it to `packages/database/src/index.cjs.ts` — a **separate, manually-maintained** CommonJS
   entrypoint that Vercel's Function bundler actually `require()`s in production. Missing this
