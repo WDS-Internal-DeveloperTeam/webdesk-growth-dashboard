@@ -784,6 +784,20 @@
       "approved_commit": "cfe5cf5",
       "record": "docs/project-state/module-brand-library-approval-checklist.md",
       "scope_excludes": "No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module's own backend-first precedent. This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-brand-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-brand-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-27T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Brand Library module -- list, detail, create, and edit routes plus status/publish-actions components, closing module #13's last named gap, following the backend's own build-to-production arc (PR #70, live). Mirrors Content Template Library's own dashboard-web UI file-for-file (both are single organization-wide tables with the standard 8-value ArtifactApprovalStatus workflow plus a real publish/unpublish mechanism). New packages/shared-types (BrandLibraryRecordType/BrandLibraryApprovalStatus/BrandLibraryRecord); lib/brand-library-query.ts/lib/brand-library.ts (the same zero-non-type-import-file split content-template-library-query.ts/content-template-library.ts establish); BrandLibraryForm (publicId/recordType both create-only and read-only on edit, matching updateBrandLibraryRecordSchema's own .omit() contract; fileReference validated client-side via the existing isSafeHttpUrl() guard before submit; description/usageNotes via RichTextEditor, no backend sanitization change needed since BrandLibraryService.create()/update() already wired sanitizeNullableRichText()/sanitizeNullableRichTextIfChanged() in from day one); BrandLibraryStatusActions (the 6th independent hand-copy of the shared TRANSITIONS-mirroring pattern, confirmed byte-identical against the real backend table); BrandLibraryPublishActions (confirmed against the real backend publish()/unpublish() gates directly). Per this project's own 2026-08-27 'right-size the review pipeline' standing rule, reviewed at LIGHT TIER, not the full 8-angle pipeline -- a small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new endpoint and no new RBAC/auth logic. A single direct read-through pass verified the create-only field contract, the client-side URL validation, the transitions table, the publish/unpublish gating, reuse of shared helpers, failure isolation, the terminal-state edit-route guard, and test coverage -- 0 findings. A separate security-review pass was skipped per the same standing rule, since this diff touches nothing security-relevant. Final numbers, independently re-verified by the orchestrating session and not trusted from the build agent's own report: 886/886 dashboard-web unit tests (55 new), typecheck clean across @webdesk/shared-types/dashboard-web/dashboard-api/dashboard-worker, eslint --max-warnings=0 clean, CSS-token check clean (45 files), next build clean with all 4 new /brand-library routes present, prettier clean, pnpm audit 0 vulnerabilities. Required second-role human review complete -- Jitesh D, decision 'Approved', via the direct 'gate it and push the branch' instruction; light tier, so this checklist's own findings table served as the review artifact rather than a separately published packet. Recorded as CONFIRM, not an override, since that review was already complete before this gate was requested.",
+      "approved_commit": "e0ea072",
+      "record": "docs/project-state/dashboard-web-brand-library-approval-checklist.md",
+      "scope_excludes": "No local dashboard-api existed in this environment, so the authenticated success-path rendering was not visually confirmed -- live verification will happen after merge, matching every prior UI slice's own pattern. This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2518,7 +2532,16 @@
       "details": "Gate G4-brand-library approved for the Brand Library module backend, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved as-is' -- was already complete before the gate was requested). Approved commit cfe5cf5 on branch module-brand-library. See docs/project-state/module-brand-library-approval-checklist.md's Sign-off section for the full record.",
       "project_version_before": 79,
       "project_version_after": 80
+    },
+    {
+      "timestamp": "2026-08-27T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-dashboard-web-brand-library approved for the dashboard-web Brand Library UI, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved' -- was already complete before the gate was requested, per the light-tier review process). Approved commit e0ea072 on branch dashboard-web-brand-library. See docs/project-state/dashboard-web-brand-library-approval-checklist.md's Sign-off section for the full record.",
+      "project_version_before": 80,
+      "project_version_after": 81
     }
   ],
-  "current_gate": "G4-brand-library"
+  "current_gate": "G4-dashboard-web-brand-library"
 }
