@@ -43,7 +43,14 @@ const APPROVAL_STATUS_VALUES = [
 export const designTokenApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
 const MAX_USAGE_REFERENCES = 50;
-const usageReferencesField = z.array(z.string().min(1).max(255)).max(MAX_USAGE_REFERENCES);
+// .nullish(), not just .optional() — every other nullable field in this file distinguishes
+// "omitted" (no change) from "explicit null" (clear), and a caller following that convention for
+// this field must be able to do the same (code-review finding, matching the identical fix already
+// made once in persona-library.dto.ts's stringListField/idListField).
+const usageReferencesField = z
+  .array(z.string().min(1).max(255))
+  .max(MAX_USAGE_REFERENCES)
+  .nullish();
 
 export const listDesignTokensQuerySchema = z.object({
   group: designTokenGroupSchema.optional(),
@@ -63,7 +70,7 @@ export const createDesignTokenSchema = z.object({
   semanticPurpose: z.string().max(2_000).nullish(),
   responsiveVariation: z.string().max(2_000).nullish(),
   themeVariation: designTokenThemeVariationSchema.nullish(),
-  usageReferences: usageReferencesField.optional(),
+  usageReferences: usageReferencesField,
 });
 export type CreateDesignTokenDto = z.infer<typeof createDesignTokenSchema>;
 
@@ -78,7 +85,7 @@ export const updateDesignTokenSchema = z
     semanticPurpose: z.string().max(2_000).nullish(),
     responsiveVariation: z.string().max(2_000).nullish(),
     themeVariation: designTokenThemeVariationSchema.nullish(),
-    usageReferences: usageReferencesField.optional(),
+    usageReferences: usageReferencesField,
   })
   // Rejects a genuinely empty patch (`{}`) with a clean 400 instead of silently succeeding as a
   // no-op that still writes an essentially-empty audit event, mirroring every sibling module's

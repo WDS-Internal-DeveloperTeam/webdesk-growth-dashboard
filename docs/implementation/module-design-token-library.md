@@ -105,5 +105,37 @@ auto-supersede-on-approve path); a real migration up/down/up round-trip (`pnpm m
 the integration suite's own up→down-to-0 cycle) — 75 migrations, 0 pending after re-applying;
 `pnpm validate:module-registry` — 43 modules, 21 permission groups, unaffected; `pnpm audit` — 0
 vulnerabilities. Backend-only pass — `dashboard-web` UI is a separate, not-yet-requested next step,
-matching every prior module's own backend-first precedent. Not yet code-reviewed, security-
-reviewed, gated, pushed, or merged — each remains its own separate, not-yet-requested next step.
+matching every prior module's own backend-first precedent.
+
+**Independent code review then ran** (this project's own `code-review` skill, high effort, 8-angle
+finder pass, 1-vote self-verification, all claims independently re-verified against real
+command output before proceeding, not trusted from the build agent's own report). 7 candidates
+survived dedup and verification (5 CONFIRMED, 2 REFUTED). 3 CONFIRMED findings fixed: (1)
+`usageReferences` used `.optional()` instead of `.nullish()`, unlike every other nullable field in
+the same DTO — regressed a bug shape this codebase already fixed once (Persona Library) — fixed at
+the DTO layer, and the actual service/repository logic fixed to match (the approved-fork branch's
+naive `patch.usageReferences ?? current.usageReferences` silently treated an explicit `null` the
+same as omission; the repository's `updateInPlace()` would have thrown on `[...null]` had the DTO
+alone been widened without this fix); (2) two hand-rolled `error.name === "SequelizeUniqueConstraintError"`
+checks reintroduced the exact pattern the shared `isSequelizeUniqueConstraintError()` helper
+(`@webdesk/validation`) was extracted to stop, already correctly used by the two most recently
+built sibling modules — replaced both call sites; (3) `create()`/`createNewVersion()`'s two
+independently-maintained ~13-field row builders (inherited from the Website Strategy Center
+template) were consolidated into one shared `buildVersionRow()` private helper. 4 new regression
+tests added (2 unit, 2 real-database integration) directly covering the null-clearing fix. 2
+CONFIRMED findings left as accepted, tracked debt: the `group` field's 15-value enum is a genuine
+invented collapsing of the canonical spec's own unfixed taxonomy that was never separately
+confirmed with the user the way the three other design decisions were — surfaced directly to the
+user post-review rather than unilaterally changed (see the decision recorded immediately below);
+and `list()`'s missing supporting index for its `is_current`+sort access pattern is inherited
+byte-for-byte from Website Strategy Center's own already-reviewed migration, where a prior review's
+`EXPLAIN ANALYZE` against a 53,770-row synthetic dataset found real-world impact modest. 2
+candidates were REFUTED (a redundant pre-create SELECT, and a repository-filter/DTO-query-type
+duplication both matched established, already-accepted repo-wide conventions, not fresh
+regressions). Re-validated after fixes: 1059/1059 `dashboard-api` unit tests (44 new for this
+module), 467/467 `packages/database` integration tests (25 new), 457/457 `dashboard-api`
+e2e/integration tests (unaffected, unchanged), a real migration up/down/up round-trip, module
+registry validation (43/21), typecheck/lint/prettier all clean, `pnpm audit` 0 vulnerabilities.
+
+Not yet security-reviewed, gated, pushed, or merged — each remains its own separate,
+not-yet-requested next step.

@@ -41,8 +41,52 @@ const MAX_LIST_LIMIT = 200;
  * the `Transaction` handle through multiple separate repository calls, not a single repository
  * method that opens its own transaction internally.
  */
+interface DesignTokenVersionRowInput {
+  readonly publicId: string;
+  readonly group: DesignTokenGroup;
+  readonly name: string;
+  readonly value: string;
+  readonly unit: string | null;
+  readonly semanticPurpose: string | null;
+  readonly responsiveVariation: string | null;
+  readonly themeVariation: DesignTokenThemeVariation | null;
+  readonly usageReferences: readonly string[];
+  readonly createdBy: string | null;
+}
+
 export class DesignTokenRepository {
   private readonly model = getDesignTokenLibraryModels().DesignToken;
+
+  /** Shared row-builder for both `create()` (a brand-new logical record) and `createNewVersion()`
+   *  (a new version row of an existing one) — the two previously hand-duplicated the identical
+   *  field list, a real risk that a field added to one and not the other silently drops a
+   *  caller-supplied value (allowNull columns with no defaultValue store NULL, no error) on
+   *  whichever path was missed (code-review fix). `recordId`/`versionNumber`/`isCurrent` are
+   *  supplied per-call, not by this helper, since they differ by construction between the two
+   *  callers. */
+  private buildVersionRow(
+    input: DesignTokenVersionRowInput,
+    recordId: string,
+    versionNumber: number,
+  ): Record<string, unknown> {
+    return {
+      recordId,
+      publicId: input.publicId,
+      group: input.group,
+      versionNumber,
+      isCurrent: true,
+      name: input.name,
+      value: input.value,
+      unit: input.unit,
+      semanticPurpose: input.semanticPurpose,
+      responsiveVariation: input.responsiveVariation,
+      themeVariation: input.themeVariation,
+      usageReferences: [...input.usageReferences],
+      approvalStatus: "draft",
+      createdBy: input.createdBy,
+      updatedBy: input.createdBy,
+    };
+  }
 
   /** Starts a brand-new logical record: a fresh `recordId`, `versionNumber: 1`, `isCurrent: true`,
    *  `approvalStatus: "draft"`. `recordId` is generated here (not left to a database default)
@@ -60,23 +104,24 @@ export class DesignTokenRepository {
     usageReferences?: readonly string[];
     createdBy?: string | null;
   }): Promise<DesignTokenEntity> {
-    const instance = await this.model.create({
-      recordId: randomUUID(),
-      publicId: input.publicId,
-      group: input.group,
-      versionNumber: 1,
-      isCurrent: true,
-      name: input.name,
-      value: input.value,
-      unit: input.unit ?? null,
-      semanticPurpose: input.semanticPurpose ?? null,
-      responsiveVariation: input.responsiveVariation ?? null,
-      themeVariation: input.themeVariation ?? null,
-      usageReferences: input.usageReferences ? [...input.usageReferences] : [],
-      approvalStatus: "draft",
-      createdBy: input.createdBy ?? null,
-      updatedBy: input.createdBy ?? null,
-    });
+    const instance = await this.model.create(
+      this.buildVersionRow(
+        {
+          publicId: input.publicId,
+          group: input.group,
+          name: input.name,
+          value: input.value,
+          unit: input.unit ?? null,
+          semanticPurpose: input.semanticPurpose ?? null,
+          responsiveVariation: input.responsiveVariation ?? null,
+          themeVariation: input.themeVariation ?? null,
+          usageReferences: input.usageReferences ?? [],
+          createdBy: input.createdBy ?? null,
+        },
+        randomUUID(),
+        1,
+      ),
+    );
     return toEntityWithIsoDates<DesignTokenEntity>(instance);
   }
 
@@ -105,23 +150,22 @@ export class DesignTokenRepository {
     transaction?: Transaction,
   ): Promise<DesignTokenEntity> {
     const instance = await this.model.create(
-      {
-        recordId: input.recordId,
-        publicId: input.publicId,
-        group: input.group,
-        versionNumber: input.versionNumber,
-        isCurrent: true,
-        name: input.name,
-        value: input.value,
-        unit: input.unit,
-        semanticPurpose: input.semanticPurpose,
-        responsiveVariation: input.responsiveVariation,
-        themeVariation: input.themeVariation,
-        usageReferences: [...input.usageReferences],
-        approvalStatus: "draft",
-        createdBy: input.createdBy ?? null,
-        updatedBy: input.createdBy ?? null,
-      },
+      this.buildVersionRow(
+        {
+          publicId: input.publicId,
+          group: input.group,
+          name: input.name,
+          value: input.value,
+          unit: input.unit,
+          semanticPurpose: input.semanticPurpose,
+          responsiveVariation: input.responsiveVariation,
+          themeVariation: input.themeVariation,
+          usageReferences: input.usageReferences,
+          createdBy: input.createdBy ?? null,
+        },
+        input.recordId,
+        input.versionNumber,
+      ),
       { transaction },
     );
     return toEntityWithIsoDates<DesignTokenEntity>(instance);
@@ -194,7 +238,7 @@ export class DesignTokenRepository {
       semanticPurpose: string | null;
       responsiveVariation: string | null;
       themeVariation: DesignTokenThemeVariation | null;
-      usageReferences: readonly string[];
+      usageReferences: readonly string[] | null;
       isCurrent: boolean;
       updatedBy: string | null;
     }>,
@@ -213,7 +257,11 @@ export class DesignTokenRepository {
     const { usageReferences, ...rest } = patch;
     const values: Record<string, unknown> = { ...rest };
     if (usageReferences !== undefined) {
-      values.usageReferences = [...usageReferences];
+      // An explicit `null` clears to `[]`, matching create()'s own null/undefined -> [] fallback
+      // — usageReferences is never actually nullable in storage, only omittable-or-clearable at
+      // the API layer (code-review fix: a naive `[...usageReferences]` here would throw on
+      // `null`, since spreading `null` is not iterable).
+      values.usageReferences = usageReferences ? [...usageReferences] : [];
     }
     const [affectedCount, affectedRows] = await this.model.update(values, {
       where,

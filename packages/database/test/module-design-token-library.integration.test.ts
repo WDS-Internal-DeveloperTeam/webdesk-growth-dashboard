@@ -145,6 +145,32 @@ describe("Design Token Library module (real disposable database)", () => {
       expect(await tokens.updateInPlace(randomUUID(), { name: "x" })).toBeNull();
     });
 
+    it("updateInPlace() clears usageReferences to [] on an explicit null, without throwing (regression: spreading a raw null would crash)", async () => {
+      const created = await tokens.create({
+        publicId: uniqueId("DTL-USAGE"),
+        group: "spacing",
+        name: "Space 8",
+        value: "32px",
+        usageReferences: ["hero-section"],
+      });
+
+      const updated = await tokens.updateInPlace(created.id, { usageReferences: null });
+      expect(updated?.usageReferences).toEqual([]);
+    });
+
+    it("updateInPlace() leaves usageReferences untouched when omitted from the patch", async () => {
+      const created = await tokens.create({
+        publicId: uniqueId("DTL-USAGE-2"),
+        group: "spacing",
+        name: "Space 12",
+        value: "48px",
+        usageReferences: ["hero-section"],
+      });
+
+      const updated = await tokens.updateInPlace(created.id, { name: "Renamed" });
+      expect(updated?.usageReferences).toEqual(["hero-section"]);
+    });
+
     it("updateApprovalStatus() changes approvalStatus when the expected current status matches", async () => {
       const created = await tokens.create({
         publicId: uniqueId("DTL-SHADOW"),

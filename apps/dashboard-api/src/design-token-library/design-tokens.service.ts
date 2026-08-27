@@ -12,6 +12,7 @@ import type {
   DesignTokenListFilter,
   DesignTokenRepository,
 } from "@webdesk/database";
+import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
 import { DESIGN_TOKEN_REPOSITORY, MODULE_KEY } from "./design-token-library.constants.js";
 import type { CreateDesignTokenDto, UpdateDesignTokenDto } from "./design-token-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -96,12 +97,11 @@ export class DesignTokensService {
       // unique index is `WHERE is_current = true`, so this is specifically a race between two
       // brand-new records, not a version-creation race) — the real unique index catches the race
       // loser, but without this catch it would otherwise surface as a raw 500 instead of the same
-      // clean 400 the check above already gives the non-racing caller. Checked by `.name`, not
-      // `instanceof`, since `dashboard-api` never imports `sequelize` directly (ADR-0006/
-      // `only-database-package-touches-sequelize` — only `packages/database` may) —
-      // `SequelizeUniqueConstraintError` is the fixed, documented name Sequelize's own
-      // `UniqueConstraintError` class always carries.
-      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+      // clean 400 the check above already gives the non-racing caller. Uses the shared
+      // `isSequelizeUniqueConstraintError()` helper (`@webdesk/validation`, already used by
+      // Page Inventory/Brand Library/Design Reference Library and others), not a hand-rolled
+      // `.name` check (code-review fix).
+      if (isSequelizeUniqueConstraintError(error)) {
         throw new BadRequestException(`publicId already in use: ${input.publicId}`);
       }
       throw error;
@@ -264,7 +264,14 @@ export class DesignTokensService {
                 : current.responsiveVariation,
             themeVariation:
               patch.themeVariation !== undefined ? patch.themeVariation : current.themeVariation,
-            usageReferences: patch.usageReferences ?? current.usageReferences,
+            // undefined -> inherit current; explicit null or [] -> clear to []. Distinct from a
+            // naive `patch.usageReferences ?? current.usageReferences`, which would wrongly treat
+            // an explicit null the same as omission and silently keep the old references instead
+            // of clearing them (code-review fix).
+            usageReferences:
+              patch.usageReferences !== undefined
+                ? (patch.usageReferences ?? [])
+                : current.usageReferences,
             createdBy: actorUserId,
           },
           transaction,
@@ -276,10 +283,9 @@ export class DesignTokensService {
       // nextVersionNumber — the second createNewVersion() INSERT then collides on the
       // (record_id, version_number) unique index (migration 00074). Mirrors create()'s own
       // handling of the analogous publicId race a few methods above, but surfaces as a 409 (a
-      // real concurrent-edit conflict), not a 400 (an input-validation error) — checked by
-      // `.name`, not `instanceof`, since dashboard-api never imports sequelize directly
-      // (ADR-0006).
-      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+      // real concurrent-edit conflict), not a 400 (an input-validation error) — uses the shared
+      // `isSequelizeUniqueConstraintError()` helper (code-review fix).
+      if (isSequelizeUniqueConstraintError(error)) {
         throw new ConflictException(
           `Design token ${recordId} was edited concurrently — reload and retry`,
         );

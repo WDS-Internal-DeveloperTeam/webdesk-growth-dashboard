@@ -412,6 +412,40 @@ describe("DesignTokensService", () => {
       );
     });
 
+    it("clears usageReferences to [] when the patch explicitly sends null, distinct from omitting it (regression: a naive `patch.usageReferences ?? current.usageReferences` would wrongly keep the old references on an explicit null)", async () => {
+      const approved = token({
+        approvalStatus: "approved",
+        usageReferences: ["hero-section", "footer"],
+      });
+      tokens.findCurrentByRecordId.mockResolvedValue(approved);
+      tokens.updateInPlace.mockResolvedValue(token({ ...approved, isCurrent: false }));
+      tokens.createNewVersion.mockResolvedValue(token());
+
+      await svc.update("record-1", { usageReferences: null }, "actor-1");
+
+      expect(tokens.createNewVersion).toHaveBeenCalledWith(
+        expect.objectContaining({ usageReferences: [] }),
+        expect.anything(),
+      );
+    });
+
+    it("inherits the current version's usageReferences when the patch omits the field entirely", async () => {
+      const approved = token({
+        approvalStatus: "approved",
+        usageReferences: ["hero-section", "footer"],
+      });
+      tokens.findCurrentByRecordId.mockResolvedValue(approved);
+      tokens.updateInPlace.mockResolvedValue(token({ ...approved, isCurrent: false }));
+      tokens.createNewVersion.mockResolvedValue(token());
+
+      await svc.update("record-1", { name: "New name only" }, "actor-1");
+
+      expect(tokens.createNewVersion).toHaveBeenCalledWith(
+        expect.objectContaining({ usageReferences: ["hero-section", "footer"] }),
+        expect.anything(),
+      );
+    });
+
     it("never allows group to change between versions — createNewVersion is always called with the CURRENT version's own group, not anything from the patch (the update DTO itself has no group field to send)", async () => {
       const approved = token({ approvalStatus: "approved", group: "typography" });
       tokens.findCurrentByRecordId.mockResolvedValue(approved);
