@@ -3,9 +3,12 @@
 **Status:** Built, independently re-verified, code review complete (2 CONFIRMED findings, both
 fixed; 0 open), security review complete (0 findings above threshold). Required second-role human
 review complete — Jitesh D, "Approved," no disputes raised. Gate
-`G4-dashboard-web-design-reference-library` approved (WebDesk Solution, CONFIRM). Awaiting
-push/PR/merge — each its own separate authorization per this project's standing "no auto-merge"
-rule.
+`G4-dashboard-web-design-reference-library` approved (WebDesk Solution, CONFIRM). Pushed to
+`origin`, opened as
+[PR #73](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/73), all 14
+CI checks green, merged as `92b99a57d4a41153866cae6be6905c00d02500d5`, and **verified live in
+production.** This module's full build-to-production arc is complete — backend and now the full
+UI (list, detail, create/edit form, status actions, publish/unpublish actions) are both live.
 
 ## Completion condition
 
@@ -92,6 +95,15 @@ was requested), approved commit `61edbe3` on branch `dashboard-web-design-refere
 see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
 `G4-dashboard-web-design-reference-library`).
 
-**This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
-each remains its own separate, not-yet-requested authorization, per this project's standing
-"no auto-merge" rule.
+**"Push the branch and open a PR" was then separately requested and executed** — pushed to
+`origin`, opened as
+[PR #73](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/73), all 14
+CI checks green. **"Merge PR #73" was then separately requested and executed** — merged with a
+real merge commit (not squash/rebase), matching every prior merge in this project's history —
+merge commit `92b99a57d4a41153866cae6be6905c00d02500d5`. Both Vercel projects auto-deployed on
+push to `main` and were verified live directly, not just via CI's own Vercel status check —
+`dashboard-api`'s `/health` returned `build.commitSha ==
+92b99a57d4a41153866cae6be6905c00d02500d5`, confirming the exact merged commit is what's serving;
+and `dashboard-web`'s `/design-reference-library` resolves cleanly for an unauthenticated visitor.
+**The `dashboard-web` Design Reference Library UI is now genuinely live in production**, closing
+out this module's full build-to-production arc.
