@@ -1047,6 +1047,62 @@ export interface BrandLibraryRecord {
   readonly updatedAt: string;
 }
 
+// Structurally identical to BrandLibraryApprovalStatus/ContentTemplateApprovalStatus/
+// PersonaApprovalStatus/ServiceApprovalStatus/ProofClaimApprovalStatus/
+// WebsiteStrategyApprovalStatus/KeywordApprovalStatus (the shared 8-value artifact-approval
+// workflow) — reused verbatim as its own named type, matching every sibling module's own
+// precedent, rather than an alias, so this module's own `-query.ts` file can narrow to it
+// directly without a cast.
+export type DesignReferenceApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * The Design Reference Library module's single primary entity (module #14) — organization-wide,
+ * not project-scoped, single table, no `recordType` discriminator (every record is the same shape
+ * — one external design reference). `sourceUrl`/`screenshotUrl` are plain nullable URL strings,
+ * validated as safe http(s) URLs at the DTO layer only, rendered as real links/an image only when
+ * `isSafeHttpUrl()` confirms it client-side too, mirroring `BrandLibraryRecord.fileReference`'s own
+ * guard. `likes`/`dislikes`/`motionNotes`/`accessibilityConcerns`/`performanceConcerns` are rich
+ * text (`RichTextEditor`), sanitized server-side before storage and again at render time via
+ * `SanitizedRichText`. `pageSectionType`/`desktopBehavior`/`mobileBehavior` are plain text, not rich
+ * text. `tags` is a plain, unvalidated, non-nullable string array (defaulting to `[]`). `isPublished`/
+ * `publishedAt` mirror Brand Library's own publish/unpublish mechanism exactly — orthogonal to
+ * `approvalStatus`: `publish()` requires `approvalStatus === "approved"`, but `isPublished` is NOT
+ * cleared by a later status transition. `publishedAt` is server-stamped once on the first successful
+ * publish and never cleared by `unpublish()`.
+ */
+export interface DesignReferenceRecord {
+  readonly id: string;
+  readonly publicId: string;
+  readonly title: string;
+  readonly sourceUrl: string | null;
+  readonly screenshotUrl: string | null;
+  readonly pageSectionType: string | null;
+  readonly likes: string | null;
+  readonly dislikes: string | null;
+  readonly desktopBehavior: string | null;
+  readonly mobileBehavior: string | null;
+  readonly motionNotes: string | null;
+  readonly accessibilityConcerns: string | null;
+  readonly performanceConcerns: string | null;
+  readonly tags: readonly string[];
+  readonly approvalStatus: DesignReferenceApprovalStatus;
+  readonly version: number;
+  readonly isPublished: boolean;
+  readonly publishedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 /**
  * The Review and Approval Center module (module #11) — a cross-cutting engine that attaches to
  * records owned by OTHER modules via a polymorphic `(targetModuleKey, targetId)` reference (task
