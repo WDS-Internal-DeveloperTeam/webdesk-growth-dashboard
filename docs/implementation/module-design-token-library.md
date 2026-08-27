@@ -137,5 +137,11 @@ module), 467/467 `packages/database` integration tests (25 new), 457/457 `dashbo
 e2e/integration tests (unaffected, unchanged), a real migration up/down/up round-trip, module
 registry validation (43/21), typecheck/lint/prettier all clean, `pnpm audit` 0 vulnerabilities.
 
+**The `group` taxonomy decision was then presented to the user directly** (`AskUserQuestion`,
+2026-08-27) — the user chose to **keep the 15-value enum as-is**, treating it as a routine
+implementation-level judgment call (matching every module's own field-choice decisions) and
+accepting the future-migration cost if it's ever wrong. Both this and the `list()` missing-index
+finding are recorded as accepted, tracked debt.
+
 Not yet security-reviewed, gated, pushed, or merged — each remains its own separate,
 not-yet-requested next step.
