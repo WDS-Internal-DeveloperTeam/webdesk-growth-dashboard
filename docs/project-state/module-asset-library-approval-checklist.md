@@ -3,7 +3,7 @@
 **Status:** Built, fully validated against a real disposable database, independently code-reviewed
 (4 findings — 3 fixed and re-validated, 1 escalated to the security review), security-reviewed
 (0 findings above threshold). Required second-role human review complete — **Jitesh D, "Approved,"
-no disputes raised.** Awaiting a gate decision. Not pushed to `origin`; no PR opened.
+no disputes raised.** Gate `G4-asset-library` approved (WebDesk Solution, CONFIRM). Not pushed to `origin`; no PR opened.
 
 Module #15 on `canonical-inputs/Recommended_Module_Roadmap.md`. Backend only — `apps/dashboard-web`
 is untouched, matching every prior module's own backend-first precedent.
@@ -121,12 +121,13 @@ validation evidence.
 
 ## Sign-off — G4-asset-library gate
 
-| Field           | Value                         |
-| --------------- | ----------------------------- |
-| Decision        | _pending — not yet requested_ |
-| Approver        | _pending_                     |
-| Date            | _pending_                     |
-| Approved commit | _pending_                     |
+| Field           | Value                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Decision        | **CONFIRM** — a clean pass, not an override, since the required second-role review was already complete beforehand  |
+| Approver        | WebDesk Solution                                                                                                    |
+| Date            | 2026-08-27                                                                                                          |
+| Approved commit | `83fd801` on branch `module-asset-library`                                                                          |
+| Recorded in     | `outputs/webdesk-growth-dashboard/project.json` — `gates[]` (`current_gate` now `G4-asset-library`) and `audit_log` |
 
 A gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
 remains its own separate authorization, per this project's standing "no auto-merge" rule.
