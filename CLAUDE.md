@@ -3099,6 +3099,58 @@ targetId)` reference with no foreign key, built directly on the explicit "Build 
     separate, not-yet-requested next step, matching every prior module's own backend-first
     precedent.
 
+55. **`dashboard-web` Brand Library UI — built, reviewed, gated, merged
+    ([PR #71](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/71),
+    merge commit `3e2e7c486c3f839056fbcf67221228c68f5437b1`); now genuinely live in production
+    (2026-08-27).** Closes the Brand Library module's last named gap, following the backend's own
+    build-to-production arc (PR #70). Not started automatically — built directly on the explicit
+    "Yes, start it" instruction, following the direct question "have you built the UI for it?".
+    Mirrors Content Template Library's own `dashboard-web` UI file-for-file — both are single
+    organization-wide tables with the standard 8-value `ArtifactApprovalStatus` workflow plus a
+    real publish/unpublish mechanism. `BrandLibraryForm` treats `publicId`/`recordType` as
+    create-only, matching `updateBrandLibraryRecordSchema`'s own `.omit()` contract;
+    `fileReference` is validated client-side via the existing `isSafeHttpUrl()` guard before
+    submit; `description`/`usageNotes` use the existing `RichTextEditor` — no backend
+    sanitization change was needed, since `BrandLibraryService.create()`/`update()` already wired
+    `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()` in from day one, confirmed
+    by reading the service directly rather than assumed. Four routes under
+    `app/(shell)/brand-library/` (list, detail, create, edit). **Reviewed at light tier**, per
+    this project's own 2026-08-27 "right-size the review pipeline" standing rule — a small,
+    frontend-only UI slice consuming an already-reviewed, already-gated backend with no new
+    endpoint or auth logic. A single direct read-through pass (not the 8-angle fan-out) verified
+    the create-only field contract against the real backend DTO, the client-side URL validation,
+    the status-actions transition table against the real backend `TRANSITIONS` table, the
+    publish/unpublish gating against the real backend logic, reuse of established shared helpers,
+    failure isolation, the terminal-state edit-route guard, and test coverage — **0 findings**. A
+    separate security-review pass was skipped per the same standing rule, since the diff touches
+    nothing security-relevant. Final numbers, independently re-verified by the orchestrating
+    session and not trusted from the build agent's own report: 886/886 `dashboard-web` unit tests
+    (55 new), typecheck clean across `@webdesk/shared-types`/`dashboard-web`/`dashboard-api`/
+    `dashboard-worker`, `eslint --max-warnings=0` clean, CSS-token check clean (45 files),
+    `next build` clean with all 4 new routes present, `prettier --check` clean, `pnpm audit` 0
+    vulnerabilities. **Required second-role human review complete** — Jitesh D, "Approved," via
+    the direct "gate it and push the branch" instruction; light tier, so the approval checklist's
+    own findings table served as the review artifact rather than a separately published packet.
+    **The gate (G4-dashboard-web-brand-library) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM, approved commit `e0ea072` on branch
+    `dashboard-web-brand-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-dashboard-web-brand-library`) and
+    `docs/project-state/dashboard-web-brand-library-approval-checklist.md`'s "Sign-off" section.
+    **"Push the branch" and "Open a PR" were then separately requested and executed** — pushed to
+    `origin`, opened as
+    [PR #71](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/71), all
+    14 CI checks confirmed green. **"Merge PR #71" was then separately requested and executed** —
+    merge commit `3e2e7c486c3f839056fbcf67221228c68f5437b1`, all 14 CI checks green beforehand.
+    Both Vercel projects auto-deployed on push to `main` and were verified live directly, not
+    just via CI's own Vercel status check — `dashboard-api`'s `/health` returned
+    `build.commitShaShort == 3e2e7c4`, confirming the exact merged commit is what's serving; and
+    `dashboard-web`'s `/brand-library` and `/brand-library/new` both correctly redirect (307) an
+    unauthenticated visitor to sign-in (a transient stale-edge-cache `404` on the first two checks
+    was ruled out via repeated, cache-busted checks, not a real defect). **The `dashboard-web`
+    Brand Library UI is now genuinely live in production**, closing out this slice's full
+    build-to-production arc — backend and now the full UI (list, detail, create/edit form,
+    status/publish actions) are both live for the Brand Library module.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full

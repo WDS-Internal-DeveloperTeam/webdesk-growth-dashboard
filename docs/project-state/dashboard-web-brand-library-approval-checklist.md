@@ -1,8 +1,14 @@
 # `dashboard-web` Brand Library UI — Approval Checklist (light tier)
 
 **Status:** Built, light-tier review complete (0 findings), no separate security review needed per
-the 2026-08-27 "right-size the review pipeline" standing rule. Awaiting required second-role human
-review.
+the 2026-08-27 "right-size the review pipeline" standing rule. Required second-role human review
+complete — Jitesh D, "Approved." Gate `G4-dashboard-web-brand-library` approved (WebDesk Solution,
+CONFIRM). Pushed to `origin`, opened as
+[PR #71](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/71), all 14
+CI checks green, merged as `3e2e7c486c3f839056fbcf67221228c68f5437b1`, and **verified live in
+production.** This slice's build-to-production arc is complete — backend and now the full UI
+(list, detail, create/edit form, status/publish actions) are both live for the Brand Library
+module.
 
 ## Completion condition
 
@@ -14,9 +20,9 @@ review.
 | 4   | Full validation clean        | ✅ `@webdesk/shared-types`/`dashboard-web`/`dashboard-api`/`dashboard-worker` typecheck all clean (independently re-run); `eslint --max-warnings=0` clean; CSS-token check clean (45 files); `next build` clean, all 4 new routes present; `prettier --check` clean; `pnpm audit` 0 vulnerabilities                                                                                                                                               |
 | 5   | Light-tier review complete   | ✅ Single direct read-through pass (not the 8-angle fan-out) — verified the `recordType`/`publicId` create-only contract against the real backend DTO, `fileReference`'s client-side validation, the status-actions transition table against the real backend table, publish/unpublish gating against the real backend logic, reuse of shared helpers, failure isolation, the terminal-state edit-route guard, and test coverage. **0 findings.** |
 | 6   | Security review              | Skipped, per the standing rule — this diff touches nothing security-relevant                                                                                                                                                                                                                                                                                                                                                                      |
-| 7   | Live end-to-end verified     | Not yet — verification will happen after merge, matching every prior UI slice's own pattern (no local `dashboard-api` in this environment)                                                                                                                                                                                                                                                                                                        |
+| 7   | Live end-to-end verified     | ✅ `dashboard-api`'s `/health` returned `build.commitShaShort == 3e2e7c4`, confirming the exact merged commit is what's serving; `dashboard-web`'s `/brand-library` and `/brand-library/new` both correctly redirect (307) an unauthenticated visitor to sign-in — a transient stale-edge-cache `404` on the first two checks was ruled out via repeated, cache-busted checks, not a real defect                                                  |
 | 8   | Documentation updated        | ✅ `docs/implementation/module-brand-library.md`'s "As-built addendum" section                                                                                                                                                                                                                                                                                                                                                                    |
-| 9   | Exact branch/commit verified | Branch `dashboard-web-brand-library`, commit `75b0252` — not yet pushed to `origin`                                                                                                                                                                                                                                                                                                                                                               |
+| 9   | Exact branch/commit verified | Branch `dashboard-web-brand-library`, commits `75b0252` → `e0ea072` → `f3ecc15` — pushed to `origin`, opened as [PR #71](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/71), all 14 CI checks green, merged as `3e2e7c486c3f839056fbcf67221228c68f5437b1`                                                                                                                                                            |
 
 ## Forbidden-actions check
 
