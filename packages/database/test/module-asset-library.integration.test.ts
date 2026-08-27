@@ -148,9 +148,12 @@ describe("Asset Library module (real disposable database)", () => {
 
     it("lets only ONE of two genuinely concurrent status transitions win", async () => {
       const created = await newAsset();
+      // `updatedBy` is null, not a label: the column is a real UUID with a foreign key into
+      // `users`, so an arbitrary string is rejected by the database. The CAS guard is on
+      // `(id, approvalStatus)` anyway — actor identity plays no part in which caller wins.
       const [a, b] = await Promise.all([
-        assets.updateApprovalStatus(created.id, "draft", "submitted", "actor-a"),
-        assets.updateApprovalStatus(created.id, "draft", "submitted", "actor-b"),
+        assets.updateApprovalStatus(created.id, "draft", "submitted", null),
+        assets.updateApprovalStatus(created.id, "draft", "submitted", null),
       ]);
       const outcomes = [a.outcome, b.outcome].sort();
       expect(outcomes).toEqual(["conflict", "updated"]);
@@ -216,9 +219,10 @@ describe("Asset Library module (real disposable database)", () => {
       await assets.updateApprovalStatus(created.id, "submitted", "under_review", null);
       await assets.updateApprovalStatus(created.id, "under_review", "approved", null);
 
+      // `updatedBy` is null for the same reason as the status-transition race above.
       const [a, b] = await Promise.all([
-        assets.updatePublishState(created.id, false, true, "actor-a", "approved"),
-        assets.updatePublishState(created.id, false, true, "actor-b", "approved"),
+        assets.updatePublishState(created.id, false, true, null, "approved"),
+        assets.updatePublishState(created.id, false, true, null, "approved"),
       ]);
       const outcomes = [a.outcome, b.outcome].sort();
       expect(outcomes).toEqual(["conflict", "updated"]);

@@ -152,3 +152,65 @@ per-client-website; an asset catalogue is not.
 **Full pipeline**, per `CLAUDE.md`'s 2026-08-27 right-sizing rule: this is a new backend module
 introducing a new endpoint class, a new confidential-field enforcement surface, and a new
 polymorphic cross-module reference — squarely in the "genuinely risky" bucket, not the light tier.
+
+## As-built
+
+Built on branch `module-asset-library`, off `main` at `c85dba3`. Backend only — `apps/dashboard-web`
+is untouched, matching every prior module's own backend-first precedent.
+
+### What exists
+
+- **Migrations `00072`/`00073`** — `assets` + `asset_related_records`, then the registry's
+  `implementation_status` flip to `in_development`.
+- **`packages/database/src/asset-library/`** — entities, models, `AssetRepository`,
+  `AssetRelatedRecordRepository`. Exported from **both** barrels (`index.ts` AND `index.cjs.ts`) —
+  the separately-maintained CommonJS entrypoint Vercel's bundler actually `require()`s in
+  production, per this project's own documented outage.
+- **`apps/dashboard-api/src/asset-library/`** — DTOs, `AssetsService`, `AssetRelatedRecordsService`,
+  `AssetsController`, `AssetRelatedRecordsController`, DI providers, module. Wired into
+  `app.module.ts`.
+- **Routes** — `GET/POST /asset-library/assets`, `GET|POST /asset-library/assets/:id`,
+  `POST .../:id/{update,status,publish,unpublish}`, and the nested
+  `GET|POST /asset-library/assets/:assetId/related-records` plus `POST .../:id/{update,delete}`.
+
+Every `@RequirePermission` is method-level, never class-level — `PermissionGuard` reads only
+`context.getHandler()`, so a class-level decorator silently fails closed (the exact bug Service
+Library's dimensions controller shipped with once).
+
+### Verification
+
+All run against a real, disposable local PostgreSQL 17 database (`webdesk_asset_test`), not mocked:
+
+| Check                                                           | Result                                                         |
+| --------------------------------------------------------------- | -------------------------------------------------------------- |
+| `dashboard-api` unit tests                                      | **1044/1044** (74 new: 34 service, 12 related-records, 28 DTO) |
+| `packages/database` integration                                 | **440/440**, 25/25 files (24 new)                              |
+| `dashboard-api` e2e                                             | **442/442**, 25/25 files (33 new)                              |
+| Migration up/down round-trip                                    | clean — 73 applied, `00073` reverted                           |
+| `validate:module-registry`                                      | 43 modules, 21 permission groups                               |
+| typecheck / lint (`--max-warnings=0`) / `nest build` / prettier | clean                                                          |
+| `boundaries:check`                                              | 0 errors (8 pre-existing `dashboard-web` warnings)             |
+| `pnpm audit`                                                    | 0 vulnerabilities                                              |
+
+### Two real test-writing lessons
+
+**1. `updated_by` is a UUID foreign key, not a label.** Two integration race tests initially passed
+`"actor-a"`/`"actor-b"` as `updatedBy`, which Postgres rejected outright
+(`invalid input syntax for type uuid`). The sibling Brand Library suite passes `null` for exactly
+this reason, and the CAS guard is on `(id, approvalStatus)` anyway — actor identity plays no part
+in which concurrent caller wins. Test bug, not a code bug.
+
+**2. A failing suite corrupts the shared database for every other suite.** Those same two failures
+also broke an unrelated, pre-existing suite
+(`phase1e-audit-migration-00019-regression`, which does `migrator.up({ to: "00018-..." })` and fails
+if the database is already migrated past that point). This was diagnosed rather than assumed:
+that suite passes alone on a clean database; the full run passes 24/24 with this module's file
+excluded; and it returned to green once the two real bugs above were fixed. Every integration file
+shares one database with `fileParallelism: false`, so a broken `afterAll` teardown is felt
+downstream. The same hazard is already on record from Page Workspace's own test-execution pass.
+
+### Not verified
+
+Nothing outstanding for this module. The one caveat is environmental, not code: this was validated
+against local PostgreSQL 17, not against production — the production migration is, as always, a
+separate step the project owner runs themselves.
