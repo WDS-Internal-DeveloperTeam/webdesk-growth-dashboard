@@ -826,6 +826,20 @@
       "approved_commit": "61edbe3",
       "record": "docs/project-state/dashboard-web-design-reference-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-design-token-library",
+      "type": "qa-security-gate",
+      "scope": "design-token-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-27T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Design Token Library module backend -- module #14 on the Recommended Module Roadmap. Real multi-row version history (design_tokens + design_token_versions, recordId groups every version, partial unique index on public_id WHERE is_current, automatic supersede-on-approve) mirroring Website Strategy Center's already-reviewed pattern, plus the standard ArtifactApprovalStatus workflow. Reuses the seeded creative_design RBAC group verbatim -- no new RBAC migration. Three design decisions confirmed directly with the user via AskUserQuestion before building: real version history over a simpler single-mutable-row table, reuse of the standard approval workflow, and usageReferences stored as a plain unvalidated string array. Built by a background agent, then every claim independently re-verified against real command output by the orchestrating session before proceeding to review, not trusted from the agent's own report: 1057/1057 dashboard-api unit tests (42 new), 465/465 packages/database integration tests (23 new), 457/457 dashboard-api e2e tests (22 new), a real migration up/down/up round-trip (75 migrations), module-registry validation unaffected (43 modules, 21 permission groups), pnpm audit 0 vulnerabilities, typecheck/lint/prettier all clean. Independent code review (high effort, 8-angle finder pass, 1-vote verification) then ran -- 7 candidates kept after dedup (5 CONFIRMED, 2 REFUTED). 3 CONFIRMED findings fixed: usageReferences used .optional() instead of .nullish(), unlike every other nullable field in the same DTO, regressing a bug shape already fixed once in Persona Library -- widening the DTO alone would have exposed a worse crash in the repository's updateInPlace() on a raw null spread, so all three layers (DTO, service, repository) were fixed together with 4 new regression tests; two hand-rolled SequelizeUniqueConstraintError checks reintroduced the pattern the shared isSequelizeUniqueConstraintError() helper was extracted to stop, already correctly used by the two most recently built sibling modules -- replaced both call sites; create()/createNewVersion()'s duplicate ~13-field row builders were consolidated into one shared buildVersionRow() helper. 2 CONFIRMED findings left as accepted, tracked debt: the group field's invented 15-value enum collapses the canonical spec's own unfixed taxonomy and was never separately confirmed with the user the way the other three decisions were -- surfaced directly post-review via AskUserQuestion, and the user chose to keep the enum as-is; and list()'s missing supporting sort index is inherited byte-for-byte from Website Strategy Center's own already-reviewed migration, where a prior review's EXPLAIN ANALYZE against a 53,770-row dataset found real-world impact modest. 2 candidates were REFUTED (a redundant pre-create SELECT and a repository-filter/DTO-query-type duplication both matched already-accepted repo-wide conventions). A separate security-review skill run then found 0 findings above threshold -- confirmed method-level RBAC decorator placement throughout, real (not bypassable) dynamic enforcement inside changeApprovalStatus(), correct escapeLikePattern() usage on the search filter, no string-built SQL, and correct omission of project scoping/confidentiality redaction matching the module registry's own seeded confidentialityLevel: null. Re-validated after fixes: 1059/1059 dashboard-api unit tests, 467/467 packages/database integration tests, 457/457 dashboard-api e2e tests, migration round-trip clean, module registry validation unaffected, typecheck/lint/prettier clean, pnpm audit 0 vulnerabilities. A review packet (published as a Claude artifact -- code review + security review findings, fixes, and validation evidence, with a decision section) was prepared for the required second-role human review, since the implementing agent cannot also be its own reviewer (ADR-0010). Jitesh D reviewed it and returned 'Approved as-is,' accepting the 2 open findings as tracked debt. Recorded as CONFIRM, not an override, since that review was already complete before this gate was requested.",
+      "approved_commit": "6e655fb",
+      "record": "docs/project-state/module-design-token-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2587,7 +2601,16 @@
       "details": "Gate G4-dashboard-web-design-reference-library approved for the dashboard-web Design Reference Library UI, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved' -- was already complete before the gate was requested). Approved commit 61edbe3 on branch dashboard-web-design-reference-library. See docs/project-state/dashboard-web-design-reference-library-approval-checklist.md's Sign-off section for the full record.",
       "project_version_before": 82,
       "project_version_after": 83
+    },
+    {
+      "timestamp": "2026-08-27T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-design-token-library approved for the Design Token Library module backend, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved as-is' -- was already complete before the gate was requested). Approved commit 6e655fb on branch module-design-token-library. See docs/project-state/module-design-token-library-approval-checklist.md's Sign-off section for the full record.",
+      "project_version_before": 83,
+      "project_version_after": 84
     }
   ],
-  "current_gate": "G4-dashboard-web-design-reference-library"
+  "current_gate": "G4-design-token-library"
 }

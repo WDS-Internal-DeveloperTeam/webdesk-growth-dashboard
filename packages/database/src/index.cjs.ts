@@ -35,3 +35,4 @@ export * from "./review-and-approval-center/index.js";
 export * from "./page-workspace/index.js";
 export * from "./brand-library/index.js";
 export * from "./design-reference-library/index.js";
+export * from "./design-token-library/index.js";
