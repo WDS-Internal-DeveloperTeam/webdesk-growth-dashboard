@@ -5,8 +5,18 @@
 > built, what is verified, and what remains.
 > Task package: `docs/task-packages/dashboard-web-page-workspace.md`.
 
-Branch: `dashboard-web-page-workspace` (off `main` at `e1953c6`). Not pushed, not reviewed, not
-gated, not merged.
+Branch: `dashboard-web-page-workspace` (off `main` at `e1953c6`). Code-reviewed (9 findings, all
+fixed), security-reviewed (0 findings above threshold), required second-role human reviewed
+(Jitesh D, "Approved"), gated (`G4-dashboard-web-page-workspace`, WebDesk Solution, CONFIRM),
+merged as [PR #68](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/68)
+(merge commit `6a7f4889139e54883364c9c3bce833734d45abe3`), and verified live in production
+2026-08-27 — `dashboard-api`'s `/health` returned `build.commitShaShort == 6a7f488`, confirming the
+exact merged commit is what's serving, and `dashboard-web`'s `/page-workspace` resolves (307) to
+`/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
+Page Workspace UI is now genuinely live in production**, closing out this slice's full
+build-to-production arc — backend and now the full UI (project picker, artifact panel across all
+15 tabs, lifecycle actions, version history, an "Open workspace" link from Page Inventory) are
+both live.
 
 ## Built
 
