@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { DesignReferenceApprovalStatus } from "@webdesk/shared-types";
 import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { useSyncedState } from "@/lib/use-synced-state";
 import styles from "./design-reference-library-publish-actions.module.css";
 
 export interface DesignReferenceLibraryPublishActionsProps {
@@ -34,13 +35,13 @@ export interface DesignReferenceLibraryPublishActionsProps {
  * Renders alongside, not merged into, `DesignReferenceLibraryStatusActions` — a separate island
  * because `publish`/`unpublish` are independently-governed RBAC actions from `submit`/`review`/
  * `approve`, not another `approvalStatus` transition. `isPublished` is re-synced from the
- * server-passed prop via `useEffect` whenever it changes — without this, a transition made via the
- * sibling `DesignReferenceLibraryStatusActions` component, or a second tab/operator's own publish/
- * unpublish, would go unreflected here even after the surrounding Server Component tree re-fetches
- * via `router.refresh()`, since React never resets `useState` from new props on its own — a stale
- * click would still be safely rejected by the backend's own gate, but only after a needless failed
- * round trip. `approvalStatus` needs no such effect — it's read directly from the live prop on
- * every render, never copied into local state.
+ * server-passed prop via the shared `useSyncedState()` hook whenever it changes — without this, a
+ * transition made via the sibling `DesignReferenceLibraryStatusActions` component, or a second
+ * tab/operator's own publish/unpublish, would go unreflected here even after the surrounding
+ * Server Component tree re-fetches via `router.refresh()`, since React never resets `useState`
+ * from new props on its own — a stale click would still be safely rejected by the backend's own
+ * gate, but only after a needless failed round trip. `approvalStatus` needs no such syncing — it's
+ * read directly from the live prop on every render, never copied into local state.
  *
  * Submits via a direct browser `fetch()` with `credentials: "include"` — required for
  * `dashboard-api`'s `OriginCheckGuard` to see a real browser `Origin` header, same pattern every
@@ -52,16 +53,12 @@ export function DesignReferenceLibraryPublishActions({
   isPublished: initialIsPublished,
 }: DesignReferenceLibraryPublishActionsProps): ReactNode {
   const router = useRouter();
-  const [isPublished, setIsPublished] = useState(initialIsPublished);
+  // useSyncedState re-syncs from the server-passed prop whenever it changes — see the doc comment
+  // above. Does not fire on this component's own optimistic setIsPublished() call below, since
+  // that already matches the prop's next value once router.refresh() resolves.
+  const [isPublished, setIsPublished] = useSyncedState(initialIsPublished);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"publish" | "unpublish" | null>(null);
-
-  // Re-sync from the server-passed prop whenever it changes — see the doc comment above. Does not
-  // fire on this component's own optimistic setIsPublished() call below, since that already
-  // matches the prop's next value once router.refresh() resolves.
-  useEffect(() => {
-    setIsPublished(initialIsPublished);
-  }, [initialIsPublished]);
 
   const canPublish = approvalStatus === "approved" && !isPublished;
   const canUnpublish = isPublished;

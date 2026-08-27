@@ -12,9 +12,12 @@ import { useEffect, useState } from "react";
  * Extracted here, matching this project's own established precedent for extracting a repeated
  * small stateful pattern once it recurs (`usePendingIds`, `useRelationshipSection`).
  *
- * Only the two new call sites in this branch (`ReviewDecisionActions`/`ReviewProcessActions`) were
- * migrated to it — retrofitting the two pre-existing `ContentTemplate*Actions` call sites is out of
- * scope for a branch that doesn't otherwise touch that module.
+ * The two `ReviewDecisionActions`/`ReviewProcessActions` call sites were migrated to it when it was
+ * extracted; the two pre-existing `ContentTemplate*Actions` call sites were left as-is at the time
+ * (retrofitting them was out of scope for a branch that didn't otherwise touch that module), but
+ * every module built afterward — starting with `DesignReferenceLibraryStatusActions`/
+ * `DesignReferenceLibraryPublishActions` — uses this hook from the start rather than hand-copying
+ * the pattern again.
  */
 export function useSyncedState<T>(value: T): [T, (next: T) => void] {
   const [state, setState] = useState(value);

@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { DesignReferenceApprovalStatus } from "@webdesk/shared-types";
 import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { useSyncedState } from "@/lib/use-synced-state";
 import styles from "./design-reference-library-status-actions.module.css";
 
 export interface DesignReferenceLibraryStatusActionsProps {
@@ -89,19 +90,15 @@ export function DesignReferenceLibraryStatusActions({
   approvalStatus: initialStatus,
 }: DesignReferenceLibraryStatusActionsProps): ReactNode {
   const router = useRouter();
-  const [approvalStatus, setApprovalStatus] = useState(initialStatus);
+  // useSyncedState re-syncs from the server-passed prop whenever it changes — without this, a
+  // transition made via a second tab/operator, or a status-independent change on the same page
+  // (e.g. the sibling DesignReferenceLibraryPublishActions component's own router.refresh()),
+  // would go unreflected here until this component's own next successful transition. Does not
+  // fire on this component's own optimistic setApprovalStatus() call below, since that already
+  // matches the prop's next value once router.refresh() resolves.
+  const [approvalStatus, setApprovalStatus] = useSyncedState(initialStatus);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<DesignReferenceApprovalStatus | null>(null);
-
-  // Re-sync from the server-passed prop whenever it changes — without this, a transition made via
-  // a second tab/operator, or a status-independent change on the same page (e.g. the sibling
-  // DesignReferenceLibraryPublishActions component's own router.refresh()), would go unreflected
-  // here until this component's own next successful transition. Does not fire on this component's
-  // own optimistic setApprovalStatus() call below, since that already matches the prop's next
-  // value once router.refresh() resolves.
-  useEffect(() => {
-    setApprovalStatus(initialStatus);
-  }, [initialStatus]);
 
   const targets = ALLOWED_TRANSITIONS[approvalStatus] ?? [];
   if (targets.length === 0) {
