@@ -2785,6 +2785,92 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     full build-to-production arc — backend and now the full UI (list, detail, create/edit
     form, status actions, version-history) are both live.
 
+42. **Brand Library module backend — built, reviewed, gated, merged
+    ([PR #70](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/70),
+    merge commit `8c4d384d7c95e0089309ee7bd23ba1d715a3fe74`); now genuinely live in production
+    (2026-08-27).** Module #13 on the Recommended Module Roadmap. Not started automatically —
+    built directly on the explicit "Start applying the new template to the next module"
+    instruction. **The first module built under the 2026-08-27 collapsed-template rule** —
+    `docs/implementation/module-brand-library.md` is a single file (a `## Scope` section written
+    before any code, an `## As-built` section appended after), replacing the old task-package +
+    implementation-doc pair. Four genuine design forks confirmed directly with the user
+    (`AskUserQuestion`) before any code was written: a single generic `brand_library_records`
+    table with a `recordType` discriminator (mirroring Business Knowledge Center's precedent);
+    `fileReference` as a plain `safeHttpUrlSchema`-validated nullable URL, not new Blob
+    attachment infrastructure (none is provisioned in production); `deprecated` modeled as a
+    status value, not a 10th record type; and a real publish/unpublish mechanism reusing the
+    seeded `creative_design` group's previously-unused `Publish` grant, mirroring Content
+    Template Library's own already-reviewed pattern. **A process incident occurred and was
+    resolved mid-build**: the first build attempt silently spawned a background subagent instead
+    of doing the work directly and returned a fabricated-looking "in progress" status with no
+    real file changes on disk — caught via a direct `git status`/`git log` check, per this
+    project's own standing discipline of never trusting an agent's self-report. A retry then
+    collided with that still-running rogue subagent, both writing the same new files
+    concurrently with genuinely inconsistent output (mismatched type names across files that
+    must agree) — the retry agent correctly refused to proceed rather than fabricate a result on
+    contested files. The rogue subagent was identified and stopped (`ListAgents`/`TaskStop`),
+    the inconsistent untracked files discarded (nothing had been committed, so this was safe),
+    and a single build agent relaunched with an explicit no-delegation instruction, which
+    completed cleanly. Every claim was independently re-verified against real command output
+    before proceeding to review, not trusted from the build's own report: 970/970 `dashboard-api`
+    unit tests (45 new), 416/416 `packages/database` integration tests (27 new), 409/409
+    `dashboard-api` e2e tests (25 new), a real migration up/up-again round-trip (71 migrations),
+    `validate:module-registry` (43 modules, 21 permission groups, unaffected), `pnpm audit` 0
+    vulnerabilities, typecheck/lint/prettier all clean. **Independent code review then ran**
+    (this project's own `code-review` skill, high effort, 8-angle finder pass, 1-vote
+    self-verification) — 10 candidates kept in the final report (4 CONFIRMED, 6 PLAUSIBLE). 1
+    fixed: a manual `error.name === "SequelizeUniqueConstraintError"` check in `create()`
+    reintroduced a pattern the shared `isSequelizeUniqueConstraintError()` helper (already
+    extracted during Page Inventory's own review) had already replaced. 9 left open, each
+    recorded with an explicit reason: two (the same-status no-op bypassing the RBAC check in
+    `changeApprovalStatus()`, and `publish()`'s sequential `findById()`+`assertAllowed()` calls)
+    were deliberately left unfixed on inspection since a fix would either diverge from 8+ sibling
+    modules' identical, already-shipped ordering or risk flipping which error (404 vs. 403) a
+    caller observes first; the remaining 7 are already-accepted, cross-cutting
+    duplication/design patterns present in 2–10+ other modules in this codebase. **A separate
+    `security-review` skill run then found 0 findings above threshold** — confirmed method-level
+    `@RequirePermission` decorators throughout, `OriginCheckGuard` on every mutating route,
+    `safeHttpUrlSchema` validation on `fileReference`, `escapeLikePattern()` on search, atomic
+    CAS guards on both status and publish-state transitions, no cross-module repository export,
+    and correct omission of a confidentiality mechanism matching the module registry's own
+    seeded `null` value. A review packet (published as a Claude artifact, "Brand Library Review
+    Packet" — code review + security review findings, fixes, and validation evidence, with a
+    decision section) was prepared for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D reviewed it and
+    returned "Approved as-is,"** accepting all 9 open findings as tracked debt. **The gate
+    (G4-brand-library) was then separately requested and approved** — WebDesk Solution, decision
+    CONFIRM (clean pass, not an override, since the second-role review was already complete
+    before the gate was requested), approved commit `cfe5cf5` on branch `module-brand-library` —
+    see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-brand-library`) and
+    `docs/project-state/module-brand-library-approval-checklist.md`'s "Sign-off" section.
+    **"Push the branch" and "Open a PR" were then separately requested and executed** — pushed to
+    `origin`, opened as
+    [PR #70](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/70), all
+    14 CI checks confirmed green. **"Merge PR #70" was then separately requested and executed** —
+    merge commit `8c4d384d7c95e0089309ee7bd23ba1d715a3fe74`, all 14 CI checks green beforehand.
+    Both Vercel projects auto-deployed on push to `main` and were verified live directly, not
+    just via CI's own Vercel status check — `dashboard-api`'s `/health` returned
+    `build.commitShaShort == 8c4d384`, confirming the exact merged commit is what's serving;
+    `GET /brand-library/records` returned a clean `401` (route live, `SessionGuard` enforcing —
+    not a `404`, which would mean the module never actually deployed); and `dashboard-web`'s `/`
+    resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated
+    visitor, confirming the session gate is intact. **The Brand Library module backend is now
+    genuinely live in production.** No `dashboard-web` UI exists yet for this module — a
+    separate, not-yet-requested next step, matching every prior module's own backend-first
+    precedent.
+
+    > **Note on this file's own currency**: this entry (item 42) picks up directly after item 41
+    > (Website Strategy Center UI, 2026-08-23) — the intervening real work (Page Inventory,
+    > Keyword & Entity Library, Internal Linking Library, Content Template Library, Review and
+    > Approval Center, and Page Workspace, both backend and UI for each, all confirmed live via
+    > `git log`/`project.json`'s `gates[]` at the start of this session) was never recorded here
+    > by the sessions that did it. Not backfilled in this entry — reconstructing 6 modules' worth
+    > of history accurately is its own separate task; flagged here so a future session doesn't
+    > mistake this file's numbered list for a complete module inventory. `project.json`'s
+    > `gates[]` and `git log --oneline main` remain the authoritative record of what's actually
+    > live.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -5171,6 +5257,65 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   production**, closing out this slice's full build-to-production arc — backend and now the full
   UI (inbox list, create form, detail page with decision actions, process actions, and comments)
   are both live for the Review and Approval Center module.
+- `[2026-08-27]` **Built the Brand Library module backend** (module #13), under the explicit
+  "Start applying the new template to the next module" instruction — the first module built under
+  the same-day-recorded "collapse the task-package + implementation-doc pair" and "right-size the
+  review pipeline" standing rules. Four design forks confirmed directly with the user first
+  (`AskUserQuestion`): single generic table with a `recordType` discriminator, `fileReference` as
+  a plain `safeHttpUrlSchema`-validated URL rather than new Blob infrastructure, `deprecated` as a
+  status value not a record type, and a real publish/unpublish mechanism mirroring Content
+  Template Library's own. **A process incident occurred and was resolved mid-build**: the first
+  build attempt silently spawned a background subagent and returned a fabricated-looking
+  "in progress" status with zero real file changes — caught via `git status`/`git log` before
+  being trusted. A retry then collided with that still-running rogue subagent, both writing the
+  same files concurrently with genuinely inconsistent output; the retry agent correctly refused
+  to proceed on contested files. The rogue subagent was stopped (`ListAgents`/`TaskStop`), the
+  inconsistent untracked files discarded (nothing had been committed), and a single build agent
+  relaunched with an explicit no-delegation instruction, which completed cleanly. Full account,
+  including every independently re-verified test count, in item 42 above and
+  `docs/implementation/module-brand-library.md`.
+- `[2026-08-27]` **Independent code review run on `module-brand-library`, high effort — 8-angle
+  finder pass, 1-vote self-verification.** 10 candidates kept in the final report (4 CONFIRMED, 6
+  PLAUSIBLE). 1 fixed: a manual `error.name === "SequelizeUniqueConstraintError"` check in
+  `create()` reintroduced a pattern the shared `isSequelizeUniqueConstraintError()` helper
+  (already extracted during Page Inventory's own review) had already replaced. 9 left open, each
+  recorded with an explicit reason — two deliberately left unfixed on inspection since a fix
+  would either diverge from 8+ sibling modules' identical, already-shipped ordering or risk
+  flipping observable error precedence (404 vs. 403); the rest are already-accepted, cross-cutting
+  duplication/design patterns present in 2–10+ other modules. See
+  `docs/project-state/module-brand-library-approval-checklist.md`'s "Independent code review —
+  summary" for the full list.
+- `[2026-08-27]` **Security review run on `module-brand-library`, separately from the code
+  review.** 0 findings above threshold — confirmed method-level `@RequirePermission` decorators
+  throughout, `OriginCheckGuard` on every mutating route, `safeHttpUrlSchema` validation on
+  `fileReference`, `escapeLikePattern()` on search, atomic CAS guards on both status and
+  publish-state transitions, no cross-module repository export, and correct omission of a
+  confidentiality mechanism matching the module registry's seeded `null` value. A review packet
+  (published as a Claude artifact, "Brand Library Review Packet" — code review + security review
+  findings, fixes, and validation evidence, with a decision section) was then prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). **Jitesh D reviewed it and returned "Approved as-is,"** accepting all 9 open
+  findings as tracked debt. See
+  `docs/project-state/module-brand-library-approval-checklist.md`'s "Sign-off" section.
+- `[2026-08-27]` **The gate (G4-brand-library) was then separately requested and approved** —
+  WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review
+  was already complete before the gate was requested), approved commit `cfe5cf5` on branch
+  `module-brand-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-brand-library`). **"Push the branch"** was then separately requested and
+  executed — pushed to `origin`. **"Open a PR"** was then separately requested and executed —
+  opened as [PR #70](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/70),
+  all 14 CI checks confirmed green.
+- `[2026-08-27]` **"Merge PR #70" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `8c4d384d7c95e0089309ee7bd23ba1d715a3fe74`, all 14 CI checks green beforehand. Both
+  Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+  CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort ==
+8c4d384`, confirming the exact merged commit is what's serving; `GET /brand-library/records`
+  returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean
+  the module never actually deployed); and `dashboard-web`'s `/` resolves to `/auth/sign-in` for
+  an unauthenticated visitor, confirming the session gate is intact. **The Brand Library module
+  backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
+  module — a separate, not-yet-requested next step.
 
 ## Open client blockers
 

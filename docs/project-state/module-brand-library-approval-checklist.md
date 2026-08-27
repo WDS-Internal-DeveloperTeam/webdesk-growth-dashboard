@@ -5,7 +5,11 @@ correctness/efficiency level, 1 CONFIRMED at reuse level, 6 PLAUSIBLE; 1 fixed, 
 tracked debt or deliberately not fixed for cross-module consistency reasons). Security review
 complete (0 findings above threshold). Required second-role human review complete — Jitesh D,
 "Approved as-is," no disputes raised. Gate `G4-brand-library` approved (WebDesk Solution, CONFIRM).
-Not yet pushed to `origin`, opened as a PR, or merged.
+Pushed to `origin`, opened as
+[PR #70](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/70), all 14
+CI checks green, merged as `8c4d384d7c95e0089309ee7bd23ba1d715a3fe74`, and **verified live in
+production.** This slice's build-to-production arc is complete (backend only — no `dashboard-web`
+UI exists yet, matching every prior module's own backend-first precedent).
 
 ## Completion condition
 
@@ -23,7 +27,8 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ 9 findings left open, each recorded with an explicit reason (either an already-accepted, cross-cutting codebase pattern, or a fix that would create behavioral inconsistency with 8+ sibling modules using the identical pattern) — see below                                                                                                                                                                         |
 | 8   | Live end-to-end verified                   | ✅ Independently re-verified by the orchestrating session, not trusted from the build agent's own report: every high-risk file read directly (repository CAS logic, service RBAC placement, controller decorator placement, migration, both `packages/database` barrel exports), every test suite re-run fresh                                                                                                           |
 | 9   | Documentation updated                      | ✅ `docs/implementation/module-brand-library.md` — the first module built under the 2026-08-27 collapsed-template rule (single file, `## Scope` written before code, `## As-built` appended after)                                                                                                                                                                                                                       |
-| 10  | Exact branch/commit verified and recorded  | Branch `module-brand-library`, commits `0698dc9` (scope doc) → `330dd51` (build) → `25117e9` (code-review fix) — not yet pushed to `origin`                                                                                                                                                                                                                                                                              |
+| 10  | Exact branch/commit verified and recorded  | Branch `module-brand-library`, commits `0698dc9` → `330dd51` → `25117e9` → `cfe5cf5` → `f4a071f` — pushed to `origin`, opened as [PR #70](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/70), all 14 CI checks green, merged as `8c4d384d7c95e0089309ee7bd23ba1d715a3fe74`                                                                                                                  |
+| 11  | Live in production, independently verified | ✅ `dashboard-api`'s `/health` returned `build.commitShaShort == 8c4d384`, confirming the exact merged commit is what's serving; `GET /brand-library/records` returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`); `dashboard-web`'s `/` still resolves (307) to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact                                           |
 
 ## A process incident during this build, recorded for transparency
 
