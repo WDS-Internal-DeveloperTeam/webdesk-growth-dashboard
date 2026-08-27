@@ -6,7 +6,7 @@ import { buildMigrator } from "../src/migrate.js";
 import { withTransaction } from "../src/transaction.js";
 
 /**
- * Exercises the Design Token Library schema (migration `00074`) against a REAL, disposable
+ * Exercises the Design Token Library schema (migration `00076`) against a REAL, disposable
  * PostgreSQL database. Mirrors ../test/module-website-strategy-center.integration.test.ts's own
  * structure, plus real coverage for this module's own genuinely new mechanism among the business
  * modules built so far: real multi-row version history — the partial-unique-index-on-`is_current`

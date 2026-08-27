@@ -1,6 +1,6 @@
 /**
  * The Design Token Library module foundation — persistence-layer shapes for `design_tokens`
- * (migration `00074`). Organization-wide, not project-scoped — a catalog of literal design-token
+ * (migration `00076`). Organization-wide, not project-scoped — a catalog of literal design-token
  * values for the **WordPress website** deliverable, deliberately isolated from this dashboard's
  * own `packages/ui` design tokens (an unrelated system) — see this module's own scope doc
  * (`docs/implementation/module-design-token-library.md`).
@@ -10,7 +10,7 @@
  * sharing the same `recordId` (the stable logical-record identity — NOT the same as `id`, which
  * is unique per physical row/version). `publicId` is also stable across every version of the same
  * record. Uniqueness for both `recordId`'s "current version" and `publicId` is enforced via a
- * partial unique index `WHERE is_current = true` (migration `00074`), not a bare column
+ * partial unique index `WHERE is_current = true` (migration `00076`), not a bare column
  * constraint — see that migration's own doc comment for why.
  */
 

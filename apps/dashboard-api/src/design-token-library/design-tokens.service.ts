@@ -281,7 +281,7 @@ export class DesignTokensService {
       // Two concurrent edits of the same approved record can both read the identical
       // current.versionNumber before either transaction commits, so both compute the same
       // nextVersionNumber — the second createNewVersion() INSERT then collides on the
-      // (record_id, version_number) unique index (migration 00074). Mirrors create()'s own
+      // (record_id, version_number) unique index (migration 00076). Mirrors create()'s own
       // handling of the analogous publicId race a few methods above, but surfaces as a 409 (a
       // real concurrent-edit conflict), not a 400 (an input-validation error) — uses the shared
       // `isSequelizeUniqueConstraintError()` helper (code-review fix).
