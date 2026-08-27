@@ -15,17 +15,17 @@ authorization remains a separate, not-yet-requested next step.
 Every item below must be genuinely true, verified against real evidence, before a gate decision
 for this slice can be requested.
 
-| #   | Item                                       | Status                                                                                                                                                                                                                                                                       |
-| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Authorization to build                     | ✅ Explicit "start Design Token Library" instruction — module #14 on the Recommended Module Roadmap                                                                                                                                                                        |
-| 2   | Genuine scoping decisions surfaced         | ✅ Three questions confirmed directly with the user via `AskUserQuestion` before building: real multi-row version history (mirroring Website Strategy Center), the standard `ArtifactApprovalStatus` workflow, `usageReferences` as a plain unvalidated array           |
+| #   | Item                                       | Status                                                                                                                                                                                                                                                                                                                                     |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Authorization to build                     | ✅ Explicit "start Design Token Library" instruction — module #14 on the Recommended Module Roadmap                                                                                                                                                                                                                                        |
+| 2   | Genuine scoping decisions surfaced         | ✅ Three questions confirmed directly with the user via `AskUserQuestion` before building: real multi-row version history (mirroring Website Strategy Center), the standard `ArtifactApprovalStatus` workflow, `usageReferences` as a plain unvalidated array                                                                              |
 | 3   | Required tests pass                        | ✅ 1059/1059 `dashboard-api` unit tests (44 new for this module), 467/467 `packages/database` integration tests (25 new), 457/457 `dashboard-api` e2e/integration tests (22 new) — all independently re-run by the orchestrating session against a real disposable PostgreSQL database, not just trusted from the build agent's own report |
-| 4   | Full validation clean                      | ✅ typecheck/lint (`--max-warnings=0`)/prettier clean across `packages/database` and `apps/dashboard-api`; migration up/down/up round-trip clean (75 migrations); `pnpm validate:module-registry` unaffected (43 modules, 21 permission groups); `pnpm audit` 0 vulnerabilities |
-| 5   | Independent code review complete           | ✅ High-effort 8-angle finder pass — 12 candidates after dedup, 7 kept for verification (5 CONFIRMED, 2 REFUTED), 3 CONFIRMED findings fixed and re-validated with new unit + real-database integration regression tests; 2 CONFIRMED findings left as accepted, tracked debt, one of which was separately confirmed with the user |
-| 6   | Security review complete                   | ✅ `security-review` skill run separately — 0 findings above threshold                                                                                                                                                                                                    |
-| 7   | Known out-of-scope gaps flagged, not fixed | ✅ The `group` field's invented 15-value taxonomy (confirmed with the user directly, kept as-is) and `list()`'s missing supporting sort index (inherited from Website Strategy Center's own already-reviewed migration) are both recorded as accepted, tracked debt      |
-| 8   | Documentation updated                      | ✅ `docs/implementation/module-design-token-library.md` (Scope + As-built, collapsed single-file format per the 2026-08-27 standing rule)                                                                                                                                 |
-| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-design-token-library`, latest commit `4f5647c` — pushed to `origin`, [PR #75](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/75) opened                                                                                    |
+| 4   | Full validation clean                      | ✅ typecheck/lint (`--max-warnings=0`)/prettier clean across `packages/database` and `apps/dashboard-api`; migration up/down/up round-trip clean (75 migrations); `pnpm validate:module-registry` unaffected (43 modules, 21 permission groups); `pnpm audit` 0 vulnerabilities                                                            |
+| 5   | Independent code review complete           | ✅ High-effort 8-angle finder pass — 12 candidates after dedup, 7 kept for verification (5 CONFIRMED, 2 REFUTED), 3 CONFIRMED findings fixed and re-validated with new unit + real-database integration regression tests; 2 CONFIRMED findings left as accepted, tracked debt, one of which was separately confirmed with the user         |
+| 6   | Security review complete                   | ✅ `security-review` skill run separately — 0 findings above threshold                                                                                                                                                                                                                                                                     |
+| 7   | Known out-of-scope gaps flagged, not fixed | ✅ The `group` field's invented 15-value taxonomy (confirmed with the user directly, kept as-is) and `list()`'s missing supporting sort index (inherited from Website Strategy Center's own already-reviewed migration) are both recorded as accepted, tracked debt                                                                        |
+| 8   | Documentation updated                      | ✅ `docs/implementation/module-design-token-library.md` (Scope + As-built, collapsed single-file format per the 2026-08-27 standing rule)                                                                                                                                                                                                  |
+| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-design-token-library`, latest commit `4f5647c` — pushed to `origin`, [PR #75](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/75) opened                                                                                                                                                     |
 
 ## Forbidden-actions check
 
@@ -118,13 +118,13 @@ findings (the invented `group` taxonomy, already separately confirmed with the u
 the inherited `list()` missing-index gap) were accepted as tracked debt rather than sent back for
 a fix.
 
-| Field                          | Value                                                                                                                                          |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reviewer (second-role review)   | Jitesh D                                                                                                                                       |
-| Review date                     | 2026-08-27                                                                                                                                     |
-| Decision                        | Approved as-is                                                                                                                                 |
-| Scope reviewed                  | Full code-review disposition (7 findings, 3 fixed, 2 accepted as tracked debt, 2 REFUTED) and full security-review disposition (0 findings above threshold), per the published review packet |
-| Disputes raised                 | None recorded                                                                                                                                  |
+| Field                         | Value                                                                                                                                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                                                                                                     |
+| Review date                   | 2026-08-27                                                                                                                                                                                   |
+| Decision                      | Approved as-is                                                                                                                                                                               |
+| Scope reviewed                | Full code-review disposition (7 findings, 3 fixed, 2 accepted as tracked debt, 2 REFUTED) and full security-review disposition (0 findings above threshold), per the published review packet |
+| Disputes raised               | None recorded                                                                                                                                                                                |
 
 **The gate (G4-design-token-library) was then separately requested and approved** — WebDesk
 Solution, decision CONFIRM (clean pass, not an override, since the second-role review was already
@@ -132,14 +132,14 @@ complete before the gate was requested), approved commit `6e655fb` on branch
 `module-design-token-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
 (`current_gate` now `G4-design-token-library`).
 
-| Field                     | Value                                                                                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Gate                       | G4-design-token-library                                                                                                                      |
-| Approver (gate decision)   | WebDesk Solution                                                                                                                              |
-| Gate date                  | 2026-08-27                                                                                                                                    |
-| Decision                   | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                            |
-| Approved commit            | `6e655fb` on branch `module-design-token-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`                          |
-| Scope                      | Design Token Library module backend only. Push/PR/merge authorization is a separate, not-yet-requested next step.                            |
+| Field                    | Value                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Gate                     | G4-design-token-library                                                                                             |
+| Approver (gate decision) | WebDesk Solution                                                                                                    |
+| Gate date                | 2026-08-27                                                                                                          |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)   |
+| Approved commit          | `6e655fb` on branch `module-design-token-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` |
+| Scope                    | Design Token Library module backend only. Push/PR/merge authorization is a separate, not-yet-requested next step.   |
 
 This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
 remains its own separate, not-yet-requested authorization, per this project's standing "no
