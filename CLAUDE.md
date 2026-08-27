@@ -2785,7 +2785,246 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     full build-to-production arc — backend and now the full UI (list, detail, create/edit
     form, status actions, version-history) are both live.
 
-42. **Brand Library module backend — built, reviewed, gated, merged
+42. **Page Inventory module backend — built, reviewed, gated, merged
+    ([PR #57](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/57),
+    merge commit `51be3cc76a3facf779b7e2be638301f5db0cc695`); now genuinely live in production
+    (2026-08-23).** Module #7 on the Recommended Module Roadmap, built directly on the explicit
+    "Start the Page Inventory module" instruction. Three genuine architectural forks confirmed
+    directly with the user first (`AskUserQuestion`): table scope (`pages`+`page_urls` only, not
+    the fuller 7-table "Pages and artifacts" cluster — the rest belongs to the separate,
+    not-yet-built Page Workspace module), project scoping (`pages` carries a real `project_id` —
+    the first content-library module in this codebase to deviate from every prior module's
+    organization-wide shape), and Scan Website/Import deferral (no WordPress adapter exists yet).
+    **Independent code review** (high effort, 8-angle finder pass) — 6 candidates, 2 CONFIRMED, 4
+    PLAUSIBLE, 2 REFUTED. Most severe: project-scoped RBAC grants were silently ignored on every
+    route — `PermissionGuard` derives project scope exclusively from `request.params.projectId`,
+    but no Page Inventory route exposed it (query/body only), so a caller holding only a
+    project-scoped `page_inventory` grant was denied everywhere — fixed by restructuring every
+    route to carry `:projectId` in the path (closing an IDOR gap as a side effect) and widening
+    `AuthorizationService.assertAllowed()` with an optional trailing `projectId` parameter. Also
+    fixed: a `SequelizeUniqueConstraintError` check hand-copied a 3rd time, closed by extracting
+    `isSequelizeUniqueConstraintError()` into `@webdesk/validation` — the helper Brand Library's
+    own code review later confirmed this module had newly made available. **Security review**
+    found 0 findings above threshold. Final numbers: 656/656 `dashboard-api` unit, 253/253
+    `packages/database` integration, 246/246 e2e/integration, migration round-trip clean (59
+    migrations). **Jitesh D reviewed and returned "Approves,"** no disputes. Gate
+    `G4-page-inventory` approved (WebDesk Solution, CONFIRM). Verified live: `dashboard-api`'s
+    `/health` matched the merged commit; `GET /page-inventory/projects/:projectId/pages` returned
+    a clean `401`. See `docs/project-state/module-page-inventory-approval-checklist.md`.
+
+43. **`dashboard-web` Page Inventory UI — built, reviewed, gated, merged
+    ([PR #58](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/58),
+    merge commit `c08f47c74371b5fa70e5eb2b3a4b18b1c37b783e`); now genuinely live in production
+    (2026-08-23).** Closes this module's last named gap. Page Inventory is the first
+    content-library module whose backend is project-scoped; the user chose a URL-driven
+    `?projectId=` query param with an in-module project picker over promoting the header
+    switcher's advisory cookie to authoritative. **Independent code review** — 9 candidates, 8
+    CONFIRMED and fixed (most severe: `PagesService.update()` had no terminal-state guard at all,
+    unlike every sibling module). **Security review** found 0 above the formal threshold but
+    surfaced one sub-threshold (6/10) finding introduced by the fix round itself — fixed anyway:
+    a CAS guard (`expectedWorkflowStage`) closing a race the terminal-state check's own read/write
+    split had reopened. Final numbers: 524/524 `dashboard-web` unit, 661/661 `dashboard-api` unit.
+    **Jitesh D reviewed and returned "Approved,"** no disputes. Gate
+    `G4-dashboard-web-page-inventory` approved (WebDesk Solution, CONFIRM). Verified live: the
+    merged commit served, `dashboard-web`'s `/page-inventory` correctly redirected. See
+    `docs/project-state/dashboard-web-page-inventory-approval-checklist.md`.
+
+44. **Keyword & Entity Library module backend — built, reviewed, gated, merged
+    ([PR #59](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/59),
+    merge commit `ea53364653e8ee1f14cbdf74cf701865fd9d96be`); now genuinely live in production
+    (2026-08-24).** Module #8, built on the explicit "Start Keyword & Entity Library" instruction
+    — Wave 3, depending on `website_strategy_center`/`page_inventory`, both already live. Two
+    genuine forks confirmed with the user first: the full 4-table relational model
+    (`keywords`/`entities`/`keyword_entity_relationships`/`page_keyword_assignments`) over a
+    simplified single table, and project-scoping both `keywords`/`entities`. **Independent code
+    review** — 5 candidates, 4 CONFIRMED and fixed (most severe: a DTO length limit of 255
+    characters on 5 fields whose actual columns are `VARCHAR(100)`, crashing the real INSERT with
+    an unhandled 500), 1 REFUTED. **Security review** found 0 findings above threshold. Final
+    numbers: 734/734 `dashboard-api` unit, 292/292 `packages/database` integration, 283/283
+    e2e/integration, migration round-trip clean (61 migrations). **Jitesh D reviewed and returned
+    "Approves,"** no disputes. Gate `G4-keyword-and-entity-library` approved (WebDesk Solution,
+    CONFIRM). Verified live: the merged commit served, `GET
+/keyword-and-entity-library/projects/:projectId/keywords` returned a clean `401`. See
+    `docs/project-state/module-keyword-and-entity-library-approval-checklist.md`.
+
+45. **`dashboard-web` Keyword & Entity Library UI — built, reviewed, gated, merged
+    ([PR #60](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/60),
+    merge commit `b54fc51b437da4f7df6d84db36d0c035ecb41059`); now genuinely live in production
+    (2026-08-24).** Keywords are the primary record with a full approval workflow; entities are a
+    secondary, independently-browsable resource with a real hard-delete route — the first
+    top-level hard-delete UI in this app. Two sub-resource sections manage the two join tables via
+    `@webdesk/ui`'s `RelationshipPicker`. **Independent code review** — 5 candidates, all 5
+    CONFIRMED and fixed (most severe: the keywords list page's filter inputs silently truncated a
+    typed value to 100 characters with zero feedback). One fix extracted a shared
+    `useRelationshipSection()` hook after the two sub-resource sections were found independently
+    reimplementing ~150 near-identical lines each. **Security review** found 0 findings above
+    threshold. Final numbers: 615/615 `dashboard-web` unit, 745/745 `dashboard-api` unit. **Jitesh
+    D reviewed and returned "Approves,"** no disputes. Gate
+    `G4-dashboard-web-keyword-and-entity-library` approved (WebDesk Solution, CONFIRM). Verified
+    live: the merged commit served, `dashboard-web`'s `/keyword-and-entity-library` correctly
+    redirected. See
+    `docs/project-state/dashboard-web-keyword-and-entity-library-approval-checklist.md`.
+
+46. **Internal Linking Library module backend — built, reviewed, gated, merged
+    ([PR #61](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/61),
+    merge commit `b78ef2b9765f5f1cd1d0eecb3cb2a3e0ffcf9e1d`); now genuinely live in production
+    (2026-08-24).** Module #9, presented as "what's next." One genuine fork confirmed with the
+    user first: a bespoke 4-state workflow (`proposed → approved → implemented → verified`) over
+    the standard 8-value generic lifecycle every prior module reuses — the first bespoke workflow
+    vocabulary in this codebase. Migration `00062` creates a single project-scoped
+    `internal_links` table with existence-validated FKs into Page Inventory's `pages`.
+    **Independent code review** — 10 candidates, 9 CONFIRMED (8 fixed, 1 left as accepted, tracked
+    debt), 1 REFUTED. Most severe: self-link rejection used case-sensitive `===` on UUID strings,
+    so two differently-cased representations of the identical page id bypassed the guard. **Security
+    review** found 0 findings above threshold. Final numbers: 787/787 `dashboard-api` unit overall,
+    312/312 e2e overall, a 63-migration round-trip clean. **Jitesh D reviewed and returned
+    "Approves,"** no disputes. Gate `G4-internal-linking-library` approved (WebDesk Solution,
+    CONFIRM). Verified live: the merged commit served, `GET
+/internal-linking-library/projects/:projectId/links` returned a clean `401`. See
+    `docs/project-state/module-internal-linking-library-approval-checklist.md`.
+
+47. **`dashboard-web` Internal Linking Library UI — built, reviewed, gated, merged
+    ([PR #62](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/62),
+    merge commit `e439ca5be99d62a01944d9062926c470139e672b`); now genuinely live in production
+    (2026-08-24).** Introduced `SinglePagePicker`, the first single-value wrapper around
+    `@webdesk/ui`'s `RelationshipPicker` in this codebase (every prior use is many-to-many).
+    **Independent code review** — 8 candidates, all 8 CONFIRMED and fixed (most severe: unguarded
+    `getUser()`/`getPage()` calls inside a `Promise.all` crashed the detail/edit pages for any
+    role lacking cross-module RBAC grants — fixed by extracting a `resolveLinkRelationships()`
+    helper that guards each lookup independently). **Security review** found 0 findings above
+    threshold. Final numbers: 667/667 `dashboard-web` unit, 791/791 `dashboard-api` unit. **Jitesh
+    D reviewed and returned "Approves,"** no disputes. Gate
+    `G4-dashboard-web-internal-linking-library` approved (WebDesk Solution, CONFIRM). Verified
+    live: the merged commit served, `dashboard-web`'s `/internal-linking-library` correctly
+    redirected. See
+    `docs/project-state/dashboard-web-internal-linking-library-approval-checklist.md`.
+
+48. **Content Template Library module backend — built, reviewed, gated, merged
+    ([PR #63](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/63),
+    merge commit `e76ee0609510c9c37b206515e9427cff5e16f820`); now genuinely live in production
+    (2026-08-24).** Module #10, Wave 1 — no dependencies. One genuine fork confirmed with the user
+    first: the seeded `page_content` RBAC group's previously-unused `publish`/`unpublish` action
+    pair got a real mechanism built for it, orthogonal to the standard approval workflow — the
+    precedent Brand Library later reused verbatim. **Independent code review** — 9 candidates, 4
+    CONFIRMED and 5 PLAUSIBLE, 6 fixed. Most severe: `publish()` had a real TOCTOU race — a
+    concurrent `changeApprovalStatus()` transition landing between the approval-status read and
+    the publish write could leave a row `archived` **and** `isPublished: true` — fixed with an
+    `expectedApprovalStatus` CAS guard on `updatePublishState()`, the same mechanism this bug
+    class had already needed 4 times elsewhere. **Security review** found 0 findings above
+    threshold. Final numbers: 833/833 `dashboard-api` unit, 342/342 `packages/database`
+    integration, 336/336 e2e. **Jitesh D reviewed and returned "Approves,"** no disputes. Gate
+    `G4-content-template-library` approved (WebDesk Solution, CONFIRM). Verified live: the merged
+    commit served, `GET /content-template-library/templates` returned a clean `401`. See
+    `docs/project-state/module-content-template-library-approval-checklist.md`.
+
+49. **`dashboard-web` Content Template Library UI — built, reviewed, gated, merged
+    ([PR #64](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/64),
+    merge commit `befd1de3f583c4bcf271a1bd70a44fd392df7a29`); now genuinely live in production
+    (2026-08-24).** `ContentTemplatePublishActions` is this app's first real publish/unpublish UI
+    — no sibling precedent existed yet. **Independent code review** — 8 candidates, 6 CONFIRMED
+    and fixed, 2 PLAUSIBLE accepted as tracked debt. Most severe: both new status/publish-actions
+    components independently froze their own governing state into `useState` at mount and never
+    re-synced from fresh props — a transition made via one wasn't reflected in the other even
+    after `router.refresh()`. **Security review** found 0 findings above threshold. Final numbers:
+    727/727 `dashboard-web` unit (60 new), 837/837 `dashboard-api` unit. **Jitesh D reviewed and
+    returned "Approves,"** no disputes. Gate `G4-dashboard-web-content-template-library` approved
+    (WebDesk Solution, CONFIRM). Verified live: the merged commit served, `dashboard-web`'s
+    `/content-template-library` correctly redirected. See
+    `docs/project-state/dashboard-web-content-template-library-approval-checklist.md`.
+
+50. **Review and Approval Center module backend — built, reviewed, gated, merged
+    ([PR #65](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/65),
+    merge commit `ff9352ceaf04a5fe4c087bcb0c1133830390ad49`); now genuinely live in production
+    (2026-08-25).** Module #11 — the first module in this codebase that is a cross-cutting
+    **engine** attaching to records in OTHER modules via a polymorphic `(targetModuleKey,
+targetId)` reference with no foreign key, built directly on the explicit "Build a minimal,
+    real approval system now" instruction. A genuine conflict was surfaced and resolved with the
+    user first: the roadmap places this module before Page Workspace/Case Study Studio/Ready for
+    Claude Queue/Design Review Center, none of which exist yet — resolved by building the generic
+    mechanism the roadmap's own instruction calls for, against what exists today. A full task
+    package was authored directly (10 design decisions), including the first real consumer of
+    `SeparationOfDutiesService.assertDistinctActors()` outside `RoleAssignmentService`/
+    `RecoveryService`. **Independent code review** — 8 candidates, **all 8 CONFIRMED and all 8
+    fixed** (no accepted debt). Most severe: `updateStatus()` had no terminal-status CAS guard,
+    letting a caller replay an already-`approved`/`rejected` review's status as `expectedStatus`
+    and reverse a supposedly-permanent decision. **Security review** found 0 findings above
+    threshold. Final numbers: 875/875 `dashboard-api` unit, 371/371 `packages/database`
+    integration, 362/362 e2e. **Jitesh D reviewed and returned "Approved,"** no disputes. Gate
+    `G4-review-and-approval-center` approved (WebDesk Solution, CONFIRM). Verified live: the
+    merged commit served, `GET /reviews` returned a clean `401`. See
+    `docs/project-state/module-review-and-approval-center-approval-checklist.md`.
+
+51. **`dashboard-web` Review and Approval Center UI — built, reviewed, gated, merged
+    ([PR #66](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/66),
+    merge commit `1a99ffc640acc9dc836912e2c0a2a37c0144975b`); now genuinely live in production
+    (2026-08-25).** A genuinely novel UI shape unlike every sibling module — a polymorphic review
+    engine attaching to records in other modules, not a single content-record library.
+    **Independent code review** — 9 candidates, 7 CONFIRMED and 2 PLAUSIBLE, **all 9 fixed**.
+    Most severe: the `targetModuleKey` picker was sourced from an endpoint gated on
+    `users_roles:view`, held by only 2 of 7 seeded roles — silently empty for the rest — fixed by
+    switching to `getServerSession()`'s already-fetched navigation data, held by every
+    authenticated session. **Security review** found 0 findings above threshold. Final numbers:
+    878/878 `dashboard-api` unit, 800/800 `dashboard-web` unit. **Jitesh D reviewed and returned
+    "Approved,"** no disputes. Gate `G4-dashboard-web-review-and-approval-center` approved
+    (WebDesk Solution, CONFIRM). Verified live: the merged commit served, `dashboard-web`'s
+    `/review-and-approval-center` correctly redirected. See
+    `docs/project-state/dashboard-web-review-and-approval-center-approval-checklist.md`.
+
+52. **Page Workspace module backend — built, reviewed, gated, merged
+    ([PR #67](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/67),
+    merge commit `86fe299b63830e94719ac2c68c09c28be372e396`); now genuinely live in production (2026-08-26).** Module #12 —
+    the first module in this project built against genuinely sourced spec material
+    (`03_Detailed_Module_Specifications.md §6`, `05_Workflow_State_Machines.md §1/§2/§3/§12`,
+    `04_Data_Model_and_Ownership.md §5/§12`) rather than a flat field list: two tables
+    (`page_artifacts`, `page_artifact_versions`) plus two additive `pages` columns for a 22-state
+    delivery lifecycle, 15 artifact types, 7 routes. Three scoping forks confirmed with the
+    project owner first: each artifact type resolves its own RBAC permission group dynamically
+    (gating everything on `page_content` would have left developers unable to edit
+    Implementation, designers unable to edit UI Specification); a new `pages.lifecycle_stage`
+    column rather than reusing the generic `workflow_stage`; and deliberately NOT routing through
+    Review and Approval Center despite the roadmap's own positioning, since `review_center` grants
+    `create` to only `super_admin`/`owner_growth_approver` while `marketing_editor` holds
+    `submit` on `page_content` — routing through it would 403 exactly the role the matrix intends
+    to let submit. **Independent code review** — 7 findings, 6 CONFIRMED and fixed, 1 PLAUSIBLE
+    accepted as tracked debt. Most severe: `createArtifact()` inserted the artifact row OUTSIDE
+    the transaction, so a failed version insert left an orphaned artifact the unique index then
+    made permanently impossible to recreate. **Security review** found 0 findings above
+    threshold. **This is the first gate in this project's history approved without real-database
+    validation** — the integration (356 lines) and e2e (554 lines) suites were written and
+    typechecked but had never been executed at gate time, disclosed explicitly rather than
+    absorbed silently; 925/925 unit tests, build, lint, prettier, and `pnpm audit` were clean.
+    **Jitesh D reviewed and returned "Approved"** (a plain approval, not the narrower
+    "Approved, pending test execution" the implementer had recommended), accepting the gap.
+    Gate `G4-page-workspace` approved (WebDesk Solution, CONFIRM). **The gap was closed the next
+    day** (2026-08-26/27): both suites were run for real (22/22 module e2e, 384/384
+    `dashboard-api` e2e, 389/389 `packages/database` integration), surfacing and fixing three real
+    defects no earlier check could have caught — two genuine e2e-test bugs (not module bugs), a
+    syntax error that had silently skipped all 22 tests and corrupted the shared database for
+    every other suite, and a pre-existing, repo-wide Windows bug in `packages/database/src/migrate.ts`
+    (`path.join` producing a broken glob on Windows, making `migrate up` a silent no-op) — unrelated
+    to this module, found only while chasing the CI failure. See
+    `docs/project-state/module-page-workspace-approval-checklist.md`.
+
+53. **`dashboard-web` Page Workspace UI — built, reviewed, gated, merged
+    ([PR #68](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/68),
+    merge commit `6a7f4889139e54883364c9c3bce833734d45abe3`); now genuinely live in production
+    (2026-08-27).** A generic 16-tab client for the Page Workspace backend — project picker,
+    artifact panel across all 15 tabs, lifecycle actions, version history, an "Open workspace"
+    link from Page Inventory. Built on a branch started 2026-08-26 and paused mid-slice for
+    handoff to another machine; resumed 2026-08-27, where the stale verification the handoff doc
+    had flagged was re-run and confirmed current. **Independent code review** — 9 candidates, 8
+    CONFIRMED and 1 PLAUSIBLE, all 9 fixed. Most severe, a genuine showstopper: every mutation in
+    the module fetched a bare relative path instead of prefixing it with `getApiBaseUrl()` — the
+    only two mutating components in the entire app that didn't — so every create/edit/status-
+    transition/reopen/lifecycle action would have 404'd in production, since `dashboard-web` and
+    `dashboard-api` are separate origins. **Security review** found 0 findings above threshold.
+    Final numbers: 831/831 tests after the fix round, typecheck/lint/format/build all clean.
+    **Jitesh D reviewed and returned "Approved,"** no disputes. Gate
+    `G4-dashboard-web-page-workspace` approved (WebDesk Solution, CONFIRM). Verified live: the
+    merged commit served, `dashboard-web`'s `/page-workspace` correctly redirected. See
+    `docs/project-state/dashboard-web-page-workspace-approval-checklist.md`.
+
+54. **Brand Library module backend — built, reviewed, gated, merged
     ([PR #70](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/70),
     merge commit `8c4d384d7c95e0089309ee7bd23ba1d715a3fe74`); now genuinely live in production
     (2026-08-27).** Module #13 on the Recommended Module Roadmap. Not started automatically —
@@ -2859,17 +3098,6 @@ b205a32d03da906f6f2f68f9a8308f7772a8eb03`, confirming the exact merged commit is
     genuinely live in production.** No `dashboard-web` UI exists yet for this module — a
     separate, not-yet-requested next step, matching every prior module's own backend-first
     precedent.
-
-    > **Note on this file's own currency**: this entry (item 42) picks up directly after item 41
-    > (Website Strategy Center UI, 2026-08-23) — the intervening real work (Page Inventory,
-    > Keyword & Entity Library, Internal Linking Library, Content Template Library, Review and
-    > Approval Center, and Page Workspace, both backend and UI for each, all confirmed live via
-    > `git log`/`project.json`'s `gates[]` at the start of this session) was never recorded here
-    > by the sessions that did it. Not backfilled in this entry — reconstructing 6 modules' worth
-    > of history accurately is its own separate task; flagged here so a future session doesn't
-    > mistake this file's numbered list for a complete module inventory. `project.json`'s
-    > `gates[]` and `git log --oneline main` remain the authoritative record of what's actually
-    > live.
 
 ## Recent decisions
 
