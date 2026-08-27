@@ -8,15 +8,15 @@
 
 ### Pre-implementation verification
 
-| Check                                | Result                                                                             |
-| ------------------------------------- | ----------------------------------------------------------------------------------- |
-| Recommended roadmap position          | Row 13, Wave 4 — `canonical-inputs/Recommended_Module_Roadmap.md`                  |
-| Dependency-computed roadmap position  | Wave 1, no dependencies — `docs/phase-plans/module-implementation-roadmap.md`      |
-| Registry dependency                   | `null` — no prerequisite module                                                    |
-| RBAC permission group                 | `creative_design`, already seeded (migration `00013`) — **no new RBAC migration**  |
-| Confidentiality level (seeded)        | `null` — organization-wide, no confidential-field mechanism needed                 |
-| Open Critical/High security finding   | None                                                                                |
-| Blocking credential                   | None                                                                                |
+| Check                                | Result                                                                            |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| Recommended roadmap position         | Row 13, Wave 4 — `canonical-inputs/Recommended_Module_Roadmap.md`                 |
+| Dependency-computed roadmap position | Wave 1, no dependencies — `docs/phase-plans/module-implementation-roadmap.md`     |
+| Registry dependency                  | `null` — no prerequisite module                                                   |
+| RBAC permission group                | `creative_design`, already seeded (migration `00013`) — **no new RBAC migration** |
+| Confidentiality level (seeded)       | `null` — organization-wide, no confidential-field mechanism needed                |
+| Open Critical/High security finding  | None                                                                              |
+| Blocking credential                  | None                                                                              |
 
 Source material: `03_Detailed_Module_Specifications.md §10` (flat field list: logos, colors,
 typography, photography, illustration, icon rules, tone, visual personality, dos/don'ts,
@@ -84,4 +84,80 @@ No `dashboard-web` UI — backend only, matching every prior module's own backen
 
 ## As-built
 
-_(Appended once built and verified.)_
+Built directly, mirroring Content Template Library's backend structure exactly (schema, DTOs,
+service, controller, module wiring, RBAC placement, CAS-guard patterns). One organization-wide
+table, `brand_library_records` (migration `00070`), plus `00071` marking the module
+`in_development` in `module_registry`.
+
+`packages/database/src/brand-library/`: `entities.ts` (`BrandLibraryRecordType`,
+`BrandLibraryApprovalStatus`, `BrandLibraryRecordEntity`), `models.ts`, `entity-mapping.ts`,
+`brand-library-record.repository.ts` (`BrandLibraryRecordRepository` — `create`/`findById`/
+`findByPublicId`/`list`/`update`/`updateApprovalStatus`/`updatePublishState`, the last two as
+atomic compare-and-swap methods mirroring `ContentTemplateRepository`'s own), `index.ts`. Exported
+from both `packages/database/src/index.ts` and `index.cjs.ts` (the separate, manually-maintained
+CommonJS barrel Vercel's Function bundler uses in production).
+
+`apps/dashboard-api/src/brand-library/`: `brand-library.constants.ts` (`BRAND_LIBRARY_MODULE_KEY =
+"creative_design"`, distinct from the `module_registry.key = "brand_library"`),
+`brand-library.dto.ts` (Zod schemas; `fileReference` validated via `safeHttpUrlSchema` from
+`@webdesk/validation`, not a bare string — closing the same stored-XSS class Projects'
+`environment.url` once shipped with unguarded), `database.providers.ts`, `brand-library.service.ts`
+(`BrandLibraryService` — reuses `ContentTemplatesService`'s exact `TRANSITIONS` table and
+terminal-state/CAS-guard patterns for `update()`/`changeApprovalStatus()`/`publish()`/
+`unpublish()`; `description`/`usageNotes` sanitized via `sanitizeNullableRichText()`/
+`sanitizeNullableRichTextIfChanged()` per the 2026-08-22 standing rich-text rule — no
+`dashboard-web` UI exists yet, but the backend is built sanitize-ready from day one rather than
+needing a follow-up pass), `brand-library.controller.ts` (routes under
+`brand-library/records`: `GET /`, `GET /:id`, `POST /`, `POST /:id/update`, `POST /:id/status`,
+`POST /:id/publish`, `POST /:id/unpublish` — all mutating routes gated on
+`OriginCheckGuard`+`PermissionGuard`, `SessionGuard` at controller level), `brand-library.module.ts`
+(imports `AuthModule`/`AuthzModule`/`AuditModule` only, no cross-module import per D7). Wired into
+`apps/dashboard-api/src/app.module.ts` alphabetically after `AuthzModule`/before
+`BusinessKnowledgeModule`.
+
+The real seeded `creative_design` RBAC matrix (`00013-seed-rbac-matrix.ts:136-144`) differs from
+`page_content`'s own shape in a way that mattered for the e2e suite: `designer_creative_reviewer`
+holds `VCERAS` (view/create/edit/review/approve/**submit**) — a single role that can drive the
+entire draft→approved lifecycle alone, unlike Content Template Library's split
+`marketing_editor`(submit)/`owner_growth_approver`(approve) roles. Only `super_admin`/
+`owner_growth_approver` hold `P` (publish/unpublish).
+
+### Validation (all run directly by this session against a real local disposable PostgreSQL 17
+
+database, `webdesk_brand_library_dev`)
+
+- `packages/database` build (`tsc` ESM + CJS + cjs package.json writer): clean.
+- Migration round-trip: `up` (71 total, including `00070`/`00071`) → `down` ×2 → `up` → clean;
+  `migrate:status` confirms 71 executed, 0 pending.
+- `packages/database` unit tests: 28/28 passing (unchanged — no unit tests touch this module,
+  matching Content Template Library's own precedent of integration-only repository coverage).
+- `packages/database` integration tests: 416/416 passing overall (389 pre-existing + 27 new, all
+  in `test/module-brand-library.integration.test.ts` — CRUD, array/null handling, search
+  (`escapeLikePattern`), pagination clamp, the `update()` CAS guard, and both atomic
+  compare-and-swap methods under genuine concurrent races plus the TOCTOU publish-guard
+  regression test).
+- `dashboard-api` unit tests: 970/970 passing overall (925 pre-existing + 45 new in
+  `brand-library.service.spec.ts` — create/findById/list/update/changeApprovalStatus/publish/
+  unpublish, including sanitization, CAS-guard wiring, and audit-failure-is-logged-not-thrown
+  coverage).
+- `dashboard-api` e2e tests: 409/409 passing overall (384 pre-existing + 25 new in
+  `brand-library.e2e-spec.ts` — 401/403/404/400/409 outcomes, the real
+  `designer_creative_reviewer`/`owner_growth_approver`/`marketing_editor`/`read_only` RBAC split,
+  the full lifecycle happy path, the unsafe-URL-scheme rejection, and publish/unpublish
+  concurrency). Confirmed individually (25/25) and in the full suite; the full 24-file sequential
+  suite showed pre-existing, environment-level flakiness unrelated to this module — on 2 of 5 full
+  runs a single test failed, each time in a DIFFERENT, already-existing e2e file
+  (`business-knowledge.e2e-spec.ts` once, this module's own `brand-library.e2e-spec.ts` once) —
+  never the same test twice, consistent with the shared-disposable-database/low-connection-pool
+  flakiness this project's own `CLAUDE.md` already documents for its CI Integration-tests job. Not
+  a defect in this module's code.
+- `dashboard-api` build (`nest build`): clean.
+- Lint (`eslint --max-warnings=0`) on both `packages/database` and `dashboard-api`: clean.
+- Prettier (`--check`) on every touched file: clean (after one `--write` pass on 4 files
+  auto-formatted by this session's own initial draft).
+- `pnpm audit`: 0 vulnerabilities (unaffected).
+- `validate:module-registry`: 43 modules, 21 permission groups, all references resolve
+  (unaffected).
+
+No `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+matching every prior module's own backend-first precedent.
