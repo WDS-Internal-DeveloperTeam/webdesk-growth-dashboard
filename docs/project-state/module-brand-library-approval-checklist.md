@@ -3,7 +3,9 @@
 **Status:** Built, code review complete (10 candidates surfaced after dedup — 3 CONFIRMED at
 correctness/efficiency level, 1 CONFIRMED at reuse level, 6 PLAUSIBLE; 1 fixed, 9 accepted as
 tracked debt or deliberately not fixed for cross-module consistency reasons). Security review
-complete (0 findings above threshold). Awaiting required second-role human review.
+complete (0 findings above threshold). Required second-role human review complete — Jitesh D,
+"Approved as-is," no disputes raised. Gate `G4-brand-library` approved (WebDesk Solution, CONFIRM).
+Not yet pushed to `origin`, opened as a PR, or merged.
 
 ## Completion condition
 
@@ -121,4 +123,15 @@ Published as a Claude artifact for the required second-role human review:
 
 ## Sign-off
 
-_Awaiting the required second-role human review._
+**Jitesh D reviewed the packet and returned "Approved as-is,"** no disputes raised — accepting all
+9 open findings (the 2 CONFIRMED items left unfixed on inspection, and the 7 PLAUSIBLE
+cross-cutting duplication/design-pattern findings) as tracked debt rather than requesting changes.
+
+**The gate (G4-brand-library) was then separately requested and approved** — WebDesk Solution,
+decision CONFIRM (clean pass, not an override, since the second-role review was already complete
+before the gate was requested), approved commit `cfe5cf5` on branch `module-brand-library` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-brand-library`).
+
+**This gate approval does not itself authorize opening a PR or merging** — each remains its own
+separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
