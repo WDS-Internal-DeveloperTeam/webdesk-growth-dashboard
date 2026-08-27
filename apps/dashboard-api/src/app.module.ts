@@ -9,6 +9,7 @@ import { LoggerModule } from "nestjs-pino";
 import { AuthModule } from "./auth/auth.module.js";
 import { AuthzModule } from "./authz/authz.module.js";
 import { BrandLibraryModule } from "./brand-library/brand-library.module.js";
+import { AssetLibraryModule } from "./asset-library/asset-library.module.js";
 import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
@@ -67,6 +68,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     AuthModule,
     AuthzModule,
     BrandLibraryModule,
+    AssetLibraryModule,
     BusinessKnowledgeModule,
     ContentTemplateLibraryModule,
     DesignReferenceLibraryModule,
