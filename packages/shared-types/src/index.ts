@@ -985,6 +985,68 @@ export interface ContentTemplate {
   readonly updatedAt: string;
 }
 
+// Structurally identical to ContentTemplateApprovalStatus/PersonaApprovalStatus/
+// ServiceApprovalStatus/ProofClaimApprovalStatus/WebsiteStrategyApprovalStatus/KeywordApprovalStatus
+// (the shared 8-value artifact-approval workflow) — reused verbatim (D4,
+// `docs/implementation/module-brand-library.md`) as its own named type rather than an alias so this
+// module's own `-query.ts` file can still narrow to it directly without a cast, matching every
+// sibling module's own precedent.
+export type BrandLibraryApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/** Mirrors `packages/database/src/brand-library/entities.ts`'s own discriminator-column shape (D1)
+ *  — one table, 9 real asset/guidance kinds named by `03_Detailed_Module_Specifications.md §10`.
+ *  `deprecated` is modeled as an `approvalStatus` value, not a member here (D3). */
+export type BrandLibraryRecordType =
+  | "logo"
+  | "color"
+  | "typography"
+  | "photography"
+  | "illustration"
+  | "icon_rule"
+  | "tone"
+  | "visual_personality"
+  | "dos_dont";
+
+/**
+ * The Brand Library module's single primary entity (module #13) — organization-wide, not
+ * project-scoped (D1), single table, no sub-resources. `fileReference` is a plain nullable URL
+ * string, validated as a safe http(s) URL at the DTO layer only (D2) — rendered as a real link only
+ * when `isSafeHttpUrl()` confirms it client-side too, mirroring `ProjectEnvironment.url`'s own
+ * guard. `description`/`usageNotes` are rich text (`RichTextEditor`), per the 2026-08-22 standing
+ * rule — sanitized server-side before storage (`BrandLibraryService.create()`/`update()`) and again
+ * at render time via `SanitizedRichText`. `isPublished`/`publishedAt` mirror Content Template
+ * Library's own publish/unpublish mechanism exactly (D5) — orthogonal to `approvalStatus`:
+ * `publish()` requires `approvalStatus === "approved"`, but `isPublished` is NOT cleared by a later
+ * status transition — a record that was `approved` and published when it moved to
+ * `archived`/`superseded` stays `isPublished: true` indefinitely. `publishedAt` is server-stamped
+ * once on the first successful publish and never cleared by `unpublish()`.
+ */
+export interface BrandLibraryRecord {
+  readonly id: string;
+  readonly publicId: string;
+  readonly recordType: BrandLibraryRecordType;
+  readonly title: string;
+  readonly description: string | null;
+  readonly fileReference: string | null;
+  readonly usageNotes: string | null;
+  readonly approvalStatus: BrandLibraryApprovalStatus;
+  readonly version: number;
+  readonly isPublished: boolean;
+  readonly publishedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 /**
  * The Review and Approval Center module (module #11) — a cross-cutting engine that attaches to
  * records owned by OTHER modules via a polymorphic `(targetModuleKey, targetId)` reference (task

@@ -161,3 +161,40 @@ database, `webdesk_brand_library_dev`)
 
 No `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
 matching every prior module's own backend-first precedent.
+
+## As-built addendum: `dashboard-web` UI (2026-08-27)
+
+Built on branch `dashboard-web-brand-library`, mirroring Content Template Library's own
+`dashboard-web` UI file-for-file (both are single organization-wide tables with the standard
+8-value `ArtifactApprovalStatus` workflow plus a real publish/unpublish mechanism). New
+`packages/shared-types` (`BrandLibraryRecordType`/`BrandLibraryApprovalStatus`/`BrandLibraryRecord`,
+mirroring `ContentTemplate`'s own field-by-field doc-comment style);
+`lib/brand-library-query.ts`/`lib/brand-library.ts` (the same zero-non-type-import-file split
+`content-template-library-query.ts`/`content-template-library.ts` establish); `BrandLibraryForm`
+(publicId/recordType both create-only and read-only on edit, matching
+`updateBrandLibraryRecordSchema`'s own `.omit()` contract; `fileReference` a plain `type="url"`
+input validated client-side via the existing `isSafeHttpUrl()` guard before submit;
+`description`/`usageNotes` via the existing `RichTextEditor`, per the 2026-08-22 standing rule —
+no backend sanitization change was needed, since `BrandLibraryService.create()`/`update()` already
+wired `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()` in from day one, confirmed
+by reading the service directly before writing any UI code); `BrandLibraryStatusActions` (the 6th
+independent hand-copy of the shared `TRANSITIONS`-mirroring pattern, byte-identical to Content
+Template Library's own `ALLOWED_TRANSITIONS`, confirmed against `brand-library.service.ts`'s real
+table rather than assumed); `BrandLibraryPublishActions` (identical publish/unpublish gate and
+irreversible-unpublish confirmation logic to `ContentTemplatePublishActions`, confirmed against
+`BrandLibraryService.publish()`/`unpublish()` directly). Four routes under
+`app/(shell)/brand-library/` (list, detail, create, edit) at the module registry's own seeded
+`route: "/brand-library"` field. The detail page renders `fileReference` as a real clickable link
+only when `isSafeHttpUrl()` confirms it, otherwise as inert text — mirroring
+`ProjectEnvironment.url`'s own established guard.
+
+55 new `dashboard-web` unit tests (4 new test files: `brand-library.test.tsx`,
+`brand-library-form.test.tsx`, `brand-library-status-actions.test.tsx`,
+`brand-library-publish-actions.test.tsx`) — 886/886 `dashboard-web` unit tests overall (up from
+831), all passing. `@webdesk/shared-types` typecheck clean; `dashboard-web` typecheck clean;
+`dashboard-api`/`dashboard-worker` typecheck clean (unaffected, confirming the additive
+shared-types change breaks no other consumer). `eslint --max-warnings=0` and the CSS-token check
+both clean on every new file. `next build` clean, with all 4 new `/brand-library` routes present in
+the build output. `prettier --check` clean on every touched file. Not yet reviewed, gated, pushed,
+or merged — each remains its own separate, not-yet-requested next step, matching every prior
+module's own precedent.
