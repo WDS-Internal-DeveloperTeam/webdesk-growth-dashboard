@@ -812,6 +812,20 @@
       "approved_commit": "b0c72aa",
       "record": "docs/project-state/module-design-reference-library-approval-checklist.md",
       "scope_excludes": "No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module's own backend-first precedent. This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-design-reference-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-design-reference-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-27T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Design Reference Library module -- list, detail, create, and edit routes plus status/publish-actions components, closing module #14's last named gap, following the backend's own build-to-production arc (PR #72, live). Built file-for-file against Brand Library's own already-reviewed dashboard-web UI, with three real field-set differences confirmed against the actual backend DTO/entity rather than guessed: no recordType discriminator (this module has none); two safeHttpUrlSchema-validated URL fields (sourceUrl/screenshotUrl) instead of Brand Library's one (fileReference), including a genuinely new UI pattern -- an inline screenshot <img> preview on the detail page, gated behind the same isSafeHttpUrl() guard used for the link-out, built as a one-off since no image-rendering component exists anywhere in this codebase yet; and five rich-text fields (likes/dislikes/motionNotes/accessibilityConcerns/performanceConcerns) via RichTextEditor/SanitizedRichText per the 2026-08-22 standing rule, with desktopBehavior/mobileBehavior deliberately kept plain since the backend stores them unsanitized. New packages/shared-types additions (DesignReferenceApprovalStatus/DesignReferenceRecord). Built directly (no subagent delegation), then every claim independently re-verified against real command output by the orchestrating session before proceeding to review: 943/943 dashboard-web unit tests (57 new), typecheck clean across @webdesk/shared-types/dashboard-web/dashboard-api/dashboard-worker, eslint --max-warnings=0 and check-css-tokens.mjs clean (48 CSS Module files), next build clean with all 4 new /design-reference-library routes present, prettier clean. Independent code review (high effort, 8-angle finder pass, 1-vote verification) then ran -- 2 CONFIRMED findings kept after dedup: DesignReferenceLibraryStatusActions and DesignReferenceLibraryPublishActions each hand-rolled a useState+useEffect prop-resync pattern instead of the existing useSyncedState() hook, extracted specifically to eliminate this exact duplication after it recurred 5 times across 4 sibling files -- since this is a from-scratch build, not a retrofit, there was no scope reason to skip the shared hook. Both fixed. 0 open findings -- every other finder angle (line-by-line scan, template fidelity against Brand Library, cross-file tracer verifying the hand-copied TRANSITIONS table and publish-gating logic against the real backend, simplification/efficiency, altitude/conventions) returned nothing. A separate security-review skill run then found 0 findings above threshold -- confirmed the new screenshot preview is genuinely gated behind isSafeHttpUrl() with no bypass path, both rich-text render sites route through the unmodified, already-sanitizing SanitizedRichText component, every new fetch targets a fixed API base plus a UUID-validated record id (no SSRF/open-redirect surface), and client-side visibility checks are UI convenience only with the backend's unmodified RBAC/state-machine logic remaining the real enforcement point. Required second-role human review complete -- Jitesh D, decision 'Approved,' no disputes raised -- 0 open findings of any kind on this branch. Recorded as CONFIRM, not an override, since that review was already complete before this gate was requested.",
+      "approved_commit": "61edbe3",
+      "record": "docs/project-state/dashboard-web-design-reference-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2564,7 +2578,16 @@
       "details": "Gate G4-design-reference-library approved for the Design Reference Library module backend, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved' -- was already complete before the gate was requested). Approved commit b0c72aa on branch module-design-reference-library. See docs/project-state/module-design-reference-library-approval-checklist.md's Sign-off section for the full record.",
       "project_version_before": 81,
       "project_version_after": 82
+    },
+    {
+      "timestamp": "2026-08-27T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-dashboard-web-design-reference-library approved for the dashboard-web Design Reference Library UI, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved' -- was already complete before the gate was requested). Approved commit 61edbe3 on branch dashboard-web-design-reference-library. See docs/project-state/dashboard-web-design-reference-library-approval-checklist.md's Sign-off section for the full record.",
+      "project_version_before": 82,
+      "project_version_after": 83
     }
   ],
-  "current_gate": "G4-design-reference-library"
+  "current_gate": "G4-dashboard-web-design-reference-library"
 }
