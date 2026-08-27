@@ -132,6 +132,21 @@ the URL-prefix fix, the stale-button-race fix, the reopen-status fix, and the in
 interrupt fix), typecheck/lint/`prettier --check`/`next build` all clean, and both new routes
 re-confirmed live-rendering with a clean unauthenticated redirect and zero console/server errors.
 
+## Security review — 2026-08-27
+
+A separate `security-review` skill run then found **0 findings above threshold**. Checked and
+ruled out: no `dangerouslySetInnerHTML` anywhere in this diff (`PageArtifactPanel` receives
+`readView` as an opaque, server-rendered `ReactNode`, matching the established `SanitizedRichText`
+boundary convention exactly); the one `redirect()` call targets a fixed literal, not user input (no
+open redirect); every mutating `fetch()` URL is built from `workspaceApiPath()` plus fixed
+suffixes, with `projectId`/`pageId` sourced from route/query params and `artifact.id`/
+`currentVersion.id` from already-fetched backend data — nothing attacker-controlled reaches a URL
+segment unexpectedly, and `content`/`notes`/`reason` are sent only as JSON body values, never
+interpolated into a URL; `getArtifactVersions()`'s new `isUuid()` guard is a hardening, not a
+regression; `postMutation()`'s new `method` parameter is a compile-time-only union, not
+attacker-influenceable; and all real authorization enforcement stays server-side in
+`dashboard-api` — the client-side transition mirrors are explicitly documented as advisory only.
+
 ## Deliberately not built
 
 - **Compare Version** (D3). The wireframe names it and `packages/ui` has a real `DiffViewer`, so
@@ -142,5 +157,5 @@ re-confirmed live-rendering with a clean unauthenticated redirect and zero conso
 
 ## Not started
 
-Security review, second-role human review, the gate decision, push/PR, and merge — each its own
-separate, not-yet-requested step, per this project's standing discipline.
+Second-role human review, the gate decision, push/PR, and merge — each its own separate,
+not-yet-requested step, per this project's standing discipline.
