@@ -5269,6 +5269,32 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   encodes, rather than mechanically copying structure and letting review catch the gaps
   afterward. This does not mean skip the review process — it stays in place; the ask is to
   reduce how much it has to find, not to remove it.
+- **Standing rule, effective 2026-08-27: right-size the review pipeline to the change's actual
+  risk, instead of running the full pipeline on everything.** Given directly by the user after
+  this project's own review discipline had settled into one fixed shape (independent code review
+  at high effort — 8 parallel finder angles — + a separate `security-review` skill run + a
+  published review-packet artifact for the required second-role human review) regardless of how
+  small or low-risk the change actually was.
+  - **Full pipeline** (8-angle code review + a separate security-review run + a published review
+    packet): reserve for genuinely risky changes — new or changed authentication/session logic,
+    RBAC/permission/authorization changes, and anything opening a new attack surface (a new
+    endpoint class, new user input reaching a new sink, a new external integration, a new
+    HTML-storage/rendering surface). When a change's risk is genuinely ambiguous, default to the
+    full pipeline rather than guessing light — this project's own security-review history shows
+    real findings surface even on changes that looked safe going in.
+  - **Light, single-pass review**: use for small UI slices (a form, a status-actions component, a
+    list/detail page reusing an already-reviewed backend), docs-only changes (like this rule
+    itself), and fix-rounds that only apply already-identified findings. A single direct read-
+    through pass (still catching real bugs and reuse/consistency gaps) replaces the 8-parallel-
+    finder-angle fan-out, and a separate `security-review` skill run is skipped unless the change
+    turns out to touch something security-relevant after all. The required second-role human
+    review and gate decision (ADR-0010) still apply regardless of tier — this rule is about how
+    much automated review depth precedes that human review, not about skipping the human sign-off
+    itself; for a light-tier change, a plain summary in the approval checklist doc is enough,
+    without necessarily publishing a separate artifact packet.
+  - This is a review-process rule, not a security-standards rule — nothing about which findings
+    count as real or how they're verified changes; only how much automated scanning runs before a
+    human looks at the result.
 - When adding a new export to `packages/database/src/index.ts` (the ESM barrel), you MUST also add
   it to `packages/database/src/index.cjs.ts` — a **separate, manually-maintained** CommonJS
   entrypoint that Vercel's Function bundler actually `require()`s in production. Missing this
