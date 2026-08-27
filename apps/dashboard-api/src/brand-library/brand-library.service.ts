@@ -11,7 +11,11 @@ import type {
   BrandLibraryRecordListFilter,
   BrandLibraryRecordRepository,
 } from "@webdesk/database";
-import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
+import {
+  isSequelizeUniqueConstraintError,
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+} from "@webdesk/validation";
 import {
   BRAND_LIBRARY_MODULE_KEY,
   BRAND_LIBRARY_RECORD_REPOSITORY,
@@ -89,11 +93,12 @@ export class BrandLibraryService {
       // The publicId uniqueness check above is TOCTOU (two concurrent creates with the same
       // publicId can both pass it before either INSERT commits) — the real unique index catches
       // the race loser, but without this catch it would otherwise surface as a raw 500 instead of
-      // the same clean 400 the check above already gives the non-racing caller. Checked by
-      // `.name`, not `instanceof`, since `dashboard-api` never imports `sequelize` directly
-      // (ADR-0006/`only-database-package-touches-sequelize`) — `SequelizeUniqueConstraintError` is
-      // the fixed, documented name Sequelize's own `UniqueConstraintError` class always carries.
-      if (error instanceof Error && error.name === "SequelizeUniqueConstraintError") {
+      // the same clean 400 the check above already gives the non-racing caller. Uses the shared
+      // `isSequelizeUniqueConstraintError()` helper (`@webdesk/validation`, already used by
+      // Page Inventory/Keyword & Entity Library/Internal Linking Library), not a hand-rolled
+      // `error.name === "SequelizeUniqueConstraintError"` check (code-review finding — that manual
+      // form predates the helper's extraction and this module had no reason to reintroduce it).
+      if (isSequelizeUniqueConstraintError(error)) {
         throw new BadRequestException(`publicId already in use: ${input.publicId}`);
       }
       throw error;
