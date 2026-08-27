@@ -12,6 +12,7 @@ import { BrandLibraryModule } from "./brand-library/brand-library.module.js";
 import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
+import { DesignReferenceLibraryModule } from "./design-reference-library/design-reference-library.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { InternalLinkingLibraryModule } from "./internal-linking-library/internal-linking-library.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
@@ -67,6 +68,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     BrandLibraryModule,
     BusinessKnowledgeModule,
     ContentTemplateLibraryModule,
+    DesignReferenceLibraryModule,
     InternalLinkingLibraryModule,
     JobsModule,
     KeywordAndEntityLibraryModule,
