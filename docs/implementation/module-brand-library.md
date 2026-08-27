@@ -195,6 +195,19 @@ only when `isSafeHttpUrl()` confirms it, otherwise as inert text — mirroring
 `dashboard-api`/`dashboard-worker` typecheck clean (unaffected, confirming the additive
 shared-types change breaks no other consumer). `eslint --max-warnings=0` and the CSS-token check
 both clean on every new file. `next build` clean, with all 4 new `/brand-library` routes present in
-the build output. `prettier --check` clean on every touched file. Not yet reviewed, gated, pushed,
-or merged — each remains its own separate, not-yet-requested next step, matching every prior
-module's own precedent.
+the build output. `prettier --check` clean on every touched file. Independently re-verified by the orchestrating
+session against real command output before review — not trusted from the build's own report.
+
+**Review — light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule: a
+small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new
+endpoint and no new RBAC/auth logic. A single direct read-through pass (not the 8-angle fan-out)
+checked the `recordType`/`publicId` create-only contract against the backend's real `.omit()`
+schema, `fileReference`'s client-side `isSafeHttpUrl()` validation, the status-actions
+`ALLOWED_TRANSITIONS` table against the backend's real `TRANSITIONS` table, the publish/unpublish
+gating against the backend's real `publish()`/`unpublish()` logic, reuse of established shared
+helpers, failure isolation, the terminal-state edit-route guard, and test coverage of all of the
+above. **0 findings.** A separate `security-review` pass was skipped per the same standing rule —
+this diff touches nothing security-relevant (no new endpoint, no new input-validation surface
+beyond the already-reviewed backend, no new auth/RBAC logic). Not yet gated, pushed, or merged —
+each remains its own separate, not-yet-requested next step, matching every prior module's own
+precedent.
