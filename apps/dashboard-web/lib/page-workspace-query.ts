@@ -177,7 +177,13 @@ export const VERSION_REASON_REQUIRED: readonly PageArtifactVersionStatus[] = [
 /** Only an approved or archived version can be reopened (backend `REOPENABLE_STATUSES`). */
 export const REOPENABLE_STATUSES: readonly PageArtifactVersionStatus[] = ["approved", "archived"];
 
-const INTERRUPT_STAGES: readonly PageLifecycleStage[] = [
+/**
+ * Exported so `PageLifecycleActions` can tell whether the stage it's *leaving* was itself an
+ * interrupt (needed to compute `lifecyclePreviousStage` locally, matching the backend's
+ * `nextPreviousStage()`: an interrupt-to-interrupt move carries the ORIGINAL resume point forward
+ * rather than overwriting it — code-review finding, `dashboard-web-page-workspace`).
+ */
+export const INTERRUPT_STAGES: readonly PageLifecycleStage[] = [
   "revision_requested",
   "blocked",
   "paused",
@@ -195,8 +201,17 @@ const INTERRUPT_TARGETS: readonly PageLifecycleStage[] = [
 
 /**
  * Which lifecycle stages the page may move to next. Mirrors the backend's `LIFECYCLE_TRANSITIONS`
- * plus its dynamic resume edge: leaving an interrupt stage is only legal back to whatever
- * `lifecyclePreviousStage` recorded, or to `archived`.
+ * plus its dynamic resume edge.
+ *
+ * Leaving an interrupt stage offers the resume edge (back to `lifecyclePreviousStage`, if any)
+ * PLUS every other interrupt target the backend's own `RESUME_OR_ARCHIVE` table allows directly —
+ * a paused page really can become blocked in one step, per that table's own doc comment. An
+ * earlier version of this function only offered `[previousStage, "archived"]`, under-restricting
+ * nothing (the backend re-validates regardless) but under-*offering* a real, backend-supported
+ * transition (code-review finding, `dashboard-web-page-workspace`) — the resume-only restriction a
+ * sibling test comment argues for applies to the RESUME edge itself (which must go back to
+ * `previousStage`, never an arbitrary main-path stage), not to the separate interrupt-to-interrupt
+ * edges, which the backend allows unconditionally.
  */
 export function allowedLifecycleTargets(
   stage: PageLifecycleStage,
@@ -204,7 +219,8 @@ export function allowedLifecycleTargets(
 ): readonly PageLifecycleStage[] {
   if (stage === "archived") return [];
   if (INTERRUPT_STAGES.includes(stage)) {
-    return previousStage ? [previousStage, "archived"] : ["archived"];
+    const lateral = INTERRUPT_TARGETS.filter((target) => target !== stage);
+    return previousStage ? [previousStage, ...lateral] : lateral;
   }
   if (stage === "verified") return ["archived"];
 
@@ -218,4 +234,16 @@ export function allowedLifecycleTargets(
 export function buildWorkspaceHref(pageId: string, projectId: string, tabKey: string): string {
   const params = new URLSearchParams({ projectId, tab: tabKey });
   return `/page-workspace/${pageId}?${params.toString()}`;
+}
+
+/**
+ * The `dashboard-api` path shared by every Page Workspace route (artifacts and lifecycle alike) —
+ * one place instead of three independently hardcoded copies (`lib/page-workspace.ts`'s own
+ * `workspaceBase()`, plus each client component's mutation URLs), so a route-segment rename needs
+ * one edit, not three kept in sync by hand (code-review finding, `dashboard-web-page-workspace`).
+ * Callers still prefix it with `getApiBaseUrl()` themselves — this file stays free of that
+ * server/client-conditional import.
+ */
+export function workspaceApiPath(projectId: string, pageId: string): string {
+  return `/page-workspace/projects/${projectId}/pages/${pageId}`;
 }

@@ -6,6 +6,7 @@ import type {
   PageArtifactVersion,
 } from "@webdesk/shared-types";
 import { getApiBaseUrl } from "./auth";
+import { workspaceApiPath } from "./page-workspace-query";
 import { isUuid } from "./uuid";
 
 /**
@@ -21,7 +22,7 @@ async function cookieHeader(): Promise<string> {
 }
 
 function workspaceBase(projectId: string, pageId: string): string {
-  return `${getApiBaseUrl()}/page-workspace/projects/${projectId}/pages/${pageId}`;
+  return `${getApiBaseUrl()}${workspaceApiPath(projectId, pageId)}`;
 }
 
 /**
@@ -53,16 +54,28 @@ export async function getArtifacts(
   return body.data;
 }
 
-/** One artifact's version history, newest first. */
+/**
+ * One artifact's version history, newest first. An empty array is a real, valid answer (no
+ * versions yet, or a malformed id) — never thrown for that case, matching `getArtifacts()`'s and
+ * `getPageLifecycle()`'s own guard/404 handling in this file, which this function previously
+ * lacked (code-review finding, `dashboard-web-page-workspace`): it had no `isUuid()` guard and
+ * threw on a 404 rather than degrading, the only one of this file's three fetches to do so.
+ */
 export async function getArtifactVersions(
   projectId: string,
   pageId: string,
   artifactId: string,
 ): Promise<readonly PageArtifactVersion[]> {
+  if (!isUuid(projectId) || !isUuid(pageId) || !isUuid(artifactId)) {
+    return [];
+  }
   const response = await fetch(
     `${workspaceBase(projectId, pageId)}/artifacts/${artifactId}/versions`,
     { headers: { cookie: await cookieHeader() }, cache: "no-store" },
   );
+  if (response.status === 404) {
+    return [];
+  }
   if (!response.ok) {
     throw new Error(`Failed to load artifact versions (status ${response.status})`);
   }
@@ -71,10 +84,7 @@ export async function getArtifactVersions(
 }
 
 /** The page's own record, carrying `lifecycleStage`/`lifecyclePreviousStage`. */
-export async function getPageLifecycle(
-  projectId: string,
-  pageId: string,
-): Promise<Page | null> {
+export async function getPageLifecycle(projectId: string, pageId: string): Promise<Page | null> {
   if (!isUuid(projectId) || !isUuid(pageId)) {
     return null;
   }

@@ -56,13 +56,18 @@ export type PostMutationResult<T> =
  * `ContentTemplatePublishActions`/`ContentTemplateLibraryForm`. Only covers the network call
  * itself; each caller still owns its own local-state update and `router.refresh()` timing, since
  * those differ per component (a status transition vs. a create/edit redirect).
+ *
+ * `method` defaults to `"POST"` (every existing caller) — added rather than hand-duplicated a
+ * 4th time for Page Workspace's one real `PATCH` route (code-review finding, `dashboard-web-page-
+ * workspace`).
  */
 export async function postMutation<T = unknown>(
   url: string,
   body?: unknown,
+  options?: { readonly method?: "POST" | "PATCH" },
 ): Promise<PostMutationResult<T>> {
   const response = await fetch(url, {
-    method: "POST",
+    method: options?.method ?? "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: body !== undefined ? JSON.stringify(body) : undefined,

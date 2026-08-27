@@ -8,13 +8,16 @@ import type {
   PageArtifactVersion,
   PageArtifactVersionStatus,
 } from "@webdesk/shared-types";
-import { postMutation, parseApiErrorMessage } from "../lib/api-errors";
+import { getApiBaseUrl } from "../lib/auth";
+import { postMutation } from "../lib/api-errors";
 import {
   REOPENABLE_STATUSES,
   VERSION_REASON_REQUIRED,
   VERSION_STATUS_LABEL,
   VERSION_TRANSITIONS,
+  workspaceApiPath,
 } from "../lib/page-workspace-query";
+import { useSyncedState } from "../lib/use-synced-state";
 import type { ReactNode } from "react";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./page-artifact-panel.module.css";
@@ -61,15 +64,23 @@ export function PageArtifactPanel({
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(currentVersion?.content ?? "");
   const [notes, setNotes] = useState(currentVersion?.notes ?? "");
+  // Local mirror of the version's status, so the action buttons re-render from the freshly-known
+  // value in the same batch that re-enables them, rather than the still-stale `currentVersion`
+  // prop until router.refresh() lands — the same race `PageLifecycleActions` already guards
+  // against, missing here until now (code-review finding, `dashboard-web-page-workspace`).
+  const [currentStatus, setCurrentStatus] = useSyncedState(currentVersion?.status ?? null);
 
-  const base = `/page-workspace/projects/${projectId}/pages/${pageId}/artifacts`;
-  const isDraft = currentVersion?.status === "draft";
-  const canReopen = currentVersion !== null && REOPENABLE_STATUSES.includes(currentVersion.status);
-  const nextStatuses: readonly PageArtifactVersionStatus[] = currentVersion
-    ? (VERSION_TRANSITIONS[currentVersion.status] ?? [])
+  const base = `${getApiBaseUrl()}${workspaceApiPath(projectId, pageId)}/artifacts`;
+  const isDraft = currentStatus === "draft";
+  const canReopen = currentStatus !== null && REOPENABLE_STATUSES.includes(currentStatus);
+  const nextStatuses: readonly PageArtifactVersionStatus[] = currentStatus
+    ? (VERSION_TRANSITIONS[currentStatus] ?? [])
     : [];
 
-  async function run(action: () => Promise<{ ok: boolean; message?: string }>) {
+  async function run(
+    action: () => Promise<{ ok: boolean; message?: string }>,
+    onSuccess?: () => void,
+  ) {
     setBusy(true);
     setError(null);
     const result = await action();
@@ -78,6 +89,7 @@ export function PageArtifactPanel({
       setBusy(false);
       return;
     }
+    onSuccess?.();
     setEditing(false);
     router.refresh();
     setBusy(false);
@@ -88,17 +100,13 @@ export function PageArtifactPanel({
   }
 
   async function saveEdit() {
-    await run(async () => {
-      const response = await fetch(`${base}/${artifact!.id}/versions/${currentVersion!.id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: content || null, notes: notes || null }),
-      });
-      return response.ok
-        ? { ok: true }
-        : { ok: false, message: await parseApiErrorMessage(response) };
-    });
+    await run(() =>
+      postMutation(
+        `${base}/${artifact!.id}/versions/${currentVersion!.id}`,
+        { content: content || null, notes: notes || null },
+        { method: "PATCH" },
+      ),
+    );
   }
 
   async function changeStatus(next: PageArtifactVersionStatus) {
@@ -109,19 +117,24 @@ export function PageArtifactPanel({
       reason = window.prompt(`Reason for "${VERSION_STATUS_LABEL[next]}"?`);
       if (!reason || !reason.trim()) return;
     }
-    await run(() =>
-      postMutation(`${base}/${artifact!.id}/versions/${currentVersion!.id}/status`, {
-        status: next,
-        ...(reason ? { reason } : {}),
-      }),
+    await run(
+      () =>
+        postMutation(`${base}/${artifact!.id}/versions/${currentVersion!.id}/status`, {
+          status: next,
+          ...(reason ? { reason } : {}),
+        }),
+      () => setCurrentStatus(next),
     );
   }
 
   async function reopen() {
     const reason = window.prompt("Why is this artifact being reopened?");
     if (!reason || !reason.trim()) return;
-    await run(() =>
-      postMutation(`${base}/${artifact!.id}/versions/${currentVersion!.id}/reopen`, { reason }),
+    await run(
+      () =>
+        postMutation(`${base}/${artifact!.id}/versions/${currentVersion!.id}/reopen`, { reason }),
+      // reopen() always forks a fresh draft version (backend REOPENABLE_STATUSES contract).
+      () => setCurrentStatus("draft"),
     );
   }
 

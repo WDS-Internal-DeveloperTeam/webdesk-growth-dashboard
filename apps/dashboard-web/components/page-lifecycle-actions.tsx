@@ -1,14 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { PageLifecycleStage } from "@webdesk/shared-types";
+import { getApiBaseUrl } from "../lib/auth";
 import { postMutation } from "../lib/api-errors";
 import {
   allowedLifecycleTargets,
+  INTERRUPT_STAGES,
   LIFECYCLE_REASON_REQUIRED,
   LIFECYCLE_STAGE_LABEL,
+  workspaceApiPath,
 } from "../lib/page-workspace-query";
+import { useSyncedState } from "../lib/use-synced-state";
 import styles from "./page-artifact-panel.module.css";
 
 export interface PageLifecycleActionsProps {
@@ -37,14 +41,11 @@ export function PageLifecycleActions({
   const [error, setError] = useState<string | null>(null);
   // Local mirror so the button set re-renders in the same batch that re-enables it, rather than
   // waiting on router.refresh() to land — the race a Projects code review caught once already.
-  const [currentStage, setCurrentStage] = useState(stage);
-  const [currentPrevious, setCurrentPrevious] = useState(previousStage);
-
-  // Resync when the server sends a newer value (e.g. after another action's refresh).
-  useEffect(() => {
-    setCurrentStage(stage);
-    setCurrentPrevious(previousStage);
-  }, [stage, previousStage]);
+  // useSyncedState() resyncs each from its own prop whenever the server sends a newer value (e.g.
+  // after another action's refresh) — reused rather than hand-rolled a 6th/7th time (code-review
+  // finding, `dashboard-web-page-workspace`).
+  const [currentStage, setCurrentStage] = useSyncedState(stage);
+  const [currentPrevious, setCurrentPrevious] = useSyncedState(previousStage);
 
   const targets = allowedLifecycleTargets(currentStage, currentPrevious);
   if (targets.length === 0) {
@@ -61,7 +62,7 @@ export function PageLifecycleActions({
     setBusy(true);
     setError(null);
     const result = await postMutation(
-      `/page-workspace/projects/${projectId}/pages/${pageId}/lifecycle`,
+      `${getApiBaseUrl()}${workspaceApiPath(projectId, pageId)}/lifecycle`,
       { stage: next, ...(reason ? { reason } : {}) },
     );
     if (!result.ok) {
@@ -69,8 +70,22 @@ export function PageLifecycleActions({
       setBusy(false);
       return;
     }
+    // Mirrors the backend's own nextPreviousStage(): entering an interrupt stage records where the
+    // page is resuming FROM — carrying the existing currentPrevious forward if it was already
+    // interrupted (so a chain of interrupts never loses the original resume point), or capturing
+    // the stage just left otherwise. Leaving the interrupt set entirely clears it. The prior
+    // `next === currentStage` check was dead code (no legal transition ever targets the stage
+    // being left), so currentPrevious was unconditionally cleared here — code-review finding,
+    // `dashboard-web-page-workspace`.
+    const leavingStage = currentStage;
     setCurrentStage(next);
-    setCurrentPrevious(next === currentStage ? currentPrevious : null);
+    setCurrentPrevious(
+      INTERRUPT_STAGES.includes(next)
+        ? INTERRUPT_STAGES.includes(leavingStage)
+          ? currentPrevious
+          : leavingStage
+        : null,
+    );
     setBusy(false);
     router.refresh();
   }

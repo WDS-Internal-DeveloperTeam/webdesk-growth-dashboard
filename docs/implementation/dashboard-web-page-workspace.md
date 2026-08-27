@@ -1,7 +1,8 @@
 # `dashboard-web` Page Workspace UI — as-built status
 
-> **Handoff record, 2026-08-26.** Work paused mid-slice to continue on another machine. This
-> records exactly what is built, what is verified, and what the next session should do first.
+> **Handoff record, 2026-08-26**, work paused mid-slice to continue on another machine, **updated
+> 2026-08-27** once verification was completed on the new machine. This records exactly what is
+> built, what is verified, and what remains.
 > Task package: `docs/task-packages/dashboard-web-page-workspace.md`.
 
 Branch: `dashboard-web-page-workspace` (off `main` at `e1953c6`). Not pushed, not reviewed, not
@@ -42,20 +43,23 @@ gated, not merged.
 **Tests** — 16 query tests, 10 component tests. Cover the transition mirrors, the resume edge,
 approved-version immutability, terminal states, and that the read view arrives pre-rendered.
 
-## Verification status — read this before continuing
+## Verification status
 
-| Check                      | State                                                              |
-| -------------------------- | ------------------------------------------------------------------ |
-| Typecheck (both apps)      | Clean                                                              |
-| `pnpm build`               | 9/9, with `/page-workspace` and `/page-workspace/[pageId]` emitted |
-| `dashboard-web` unit tests | **STALE** — 826/826 passed, but BEFORE the final CSS change        |
-| Lint                       | **STALE** — clean, but likewise before that change                 |
-| Live browser render        | Not done                                                           |
+**Fully re-verified 2026-08-27**, not trusted from the pre-CSS-fix numbers the branch was paused
+with — every check below was re-run fresh on this machine.
 
-**First action next session:** re-run `pnpm --filter @webdesk/dashboard-web test` and `pnpm lint`.
-The last CSS fix changed both components (see below), and while `pnpm build` did pass afterwards —
-which compiles them — the test and lint runs were interrupted before they finished. Do not treat
-the 826/826 figure as current.
+| Check                      | State                                                                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typecheck (both apps)      | Clean                                                                                                                                         |
+| `pnpm build`               | 9/9, with `/page-workspace` and `/page-workspace/[pageId]` emitted                                                                            |
+| `dashboard-web` unit tests | 826/826 passed (831/831 after the code-review fix round below)                                                                                |
+| Lint                       | Clean                                                                                                                                         |
+| `prettier --check`         | 1 file fixed (`lib/page-workspace.ts`, whitespace-only — never checked on this branch before)                                                 |
+| Live browser render        | `/page-workspace` and `/page-workspace/[pageId]` both redirect an unauthenticated visitor to `/auth/sign-in` cleanly, 0 console/server errors |
+
+No local `dashboard-api` exists in this environment, so the authenticated success-path rendering
+(the artifact panel, the stepper) was not visually confirmed — the same limitation several prior
+slices in this codebase have already noted for themselves.
 
 ## Two environment gotchas worth knowing
 
@@ -69,6 +73,65 @@ Both cost real time here and neither is caught by typecheck:
    Lint does not catch it, and neither does `check-css-tokens.mjs`; only `next build` does. Fixed by
    giving the buttons their own `.actionButton` class and applying it in the components.
 
+## Independent code review — 2026-08-27
+
+This project's own `code-review` skill ran at high effort (8 finder angles, 1-vote verification)
+against the full branch diff. 9 candidates survived dedup and verification — 8 CONFIRMED, 1
+PLAUSIBLE — and **all 9 were fixed** the same session.
+
+Most severe, and a genuine showstopper: every mutation in the module (`page-artifact-panel.tsx`,
+`page-lifecycle-actions.tsx`) fetched a bare relative path instead of prefixing it with
+`getApiBaseUrl()` — the only two mutating components in the entire app that didn't. Since
+`dashboard-web` and `dashboard-api` are separate origins in production, every create/edit/status-
+transition/reopen/lifecycle action would have 404'd against `dashboard-web`'s own deployment.
+Fixed, alongside promoting the module's base-path template (previously hardcoded independently in
+three places) into a single shared `workspaceApiPath()` export in `lib/page-workspace-query.ts`.
+
+Also fixed:
+
+- **No `key` prop on `<PageArtifactPanel>`** — switching tabs didn't remount the client component,
+  so `editing`/`content`/`notes` state from the previously-open tab survived into the newly-
+  selected one; saving could silently overwrite the wrong artifact/version with stale text.
+- **`getArtifactVersions()` had no `isUuid()` guard and threw unconditionally on any non-OK
+  response**, unlike its two sibling functions in the same file — a transient 500 crashed the
+  entire workspace route. Now guards and degrades to `[]` on a malformed id or 404, and the call
+  site in `[pageId]/page.tsx` wraps the remaining throw path in a try/catch, logging and degrading
+  to an empty version list instead of crashing.
+- **Stale-button race in `PageArtifactPanel`'s `run()`** — busy cleared and editing reset
+  synchronously, before the un-awaited `router.refresh()` delivered fresh data, while the button
+  set was derived from the still-stale `currentVersion` prop. `PageLifecycleActions` (the sibling
+  component in the same PR) already avoided this via a local mirror; `PageArtifactPanel` now does
+  too, via a `currentStatus` mirror updated from the known target value on a successful
+  `changeStatus()`/`reopen()`.
+- **`moveTo()`'s `setCurrentPrevious` ternary was dead code** — it compared the transition target
+  against the stale pre-transition `currentStage`, which no legal transition ever equals, so
+  `currentPrevious` was unconditionally cleared to `null` after every move. Fixed to mirror the
+  backend's own `nextPreviousStage()`: carry the existing resume point forward across an interrupt-
+  to-interrupt chain, or capture the stage just left when entering an interrupt from the main path.
+- **Missing `projectId` called `notFound()`** (a dead end) instead of redirecting to
+  `/page-workspace`'s own project picker, unlike the identical case in the sibling Page Inventory
+  module. Fixed to match.
+- **`allowedLifecycleTargets()` never offered a direct move between two interrupt stages**
+  (e.g. `blocked` → `paused`), even though the backend's own `LIFECYCLE_TRANSITIONS`/
+  `RESUME_OR_ARCHIVE` explicitly supports it ("a paused page that then becomes blocked is a real
+  situation"). The existing frontend test asserted the narrower behavior with a comment about not
+  letting a resume "skip every approval gate" — traced that rationale and confirmed it only
+  justifies restricting the RESUME edge itself (must go back to `previousStage`, never an arbitrary
+  main-path stage), not omitting the separate lateral interrupt-to-interrupt edges. Fixed to offer
+  every other interrupt target directly, matching the backend exactly; both affected tests updated.
+- **`useSyncedState()` not reused** — `page-lifecycle-actions.tsx` hand-rolled the identical
+  `useState`+`useEffect` resync pattern the hook (`lib/use-synced-state.ts`, already on `main`
+  before this branch started) exists specifically to stop being copied a 6th/7th time. Now uses it.
+- **`saveEdit()` duplicated `postMutation()`'s fetch/error-handling shape** (PLAUSIBLE — real but
+  smaller than initially reported, since it did already reuse `parseApiErrorMessage()`) because
+  `postMutation()` hardcoded `method: "POST"` and this is the app's only `PATCH` call site. Fixed
+  by giving `postMutation()` an optional `method` parameter instead.
+
+Re-validated after every fix: 831/831 `dashboard-web` unit tests (5 new regression tests covering
+the URL-prefix fix, the stale-button-race fix, the reopen-status fix, and the interrupt-to-
+interrupt fix), typecheck/lint/`prettier --check`/`next build` all clean, and both new routes
+re-confirmed live-rendering with a clean unauthenticated redirect and zero console/server errors.
+
 ## Deliberately not built
 
 - **Compare Version** (D3). The wireframe names it and `packages/ui` has a real `DiffViewer`, so
@@ -79,5 +142,5 @@ Both cost real time here and neither is caught by typecheck:
 
 ## Not started
 
-Code review, security review, second-role human review, the gate decision, push/PR, and merge —
-each its own separate, not-yet-requested step, per this project's standing discipline.
+Security review, second-role human review, the gate decision, push/PR, and merge — each its own
+separate, not-yet-requested step, per this project's standing discipline.

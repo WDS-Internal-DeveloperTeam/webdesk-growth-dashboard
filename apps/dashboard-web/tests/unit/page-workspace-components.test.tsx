@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PageArtifact, PageArtifactVersion } from "@webdesk/shared-types";
 
@@ -80,8 +80,58 @@ describe("PageArtifactPanel", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.example.com";
     refreshMock.mockReset();
+    // Every mutation now real-fetches (fixed to prefix getApiBaseUrl() — code-review finding,
+    // `dashboard-web-page-workspace`), so a successful response is stubbed for these tests; the
+    // URL itself is asserted on directly in the dedicated "hits dashboard-api" test below.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: {} }),
+      }),
+    );
   });
   afterEach(() => vi.restoreAllMocks());
+
+  it("fetches against dashboard-api's own origin, not a bare relative path", async () => {
+    // Regression test: every mutation previously fetched a relative path, which resolves against
+    // dashboard-web's own origin in production and 404s (code-review finding).
+    panel(version({ status: "draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submitted" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    const [url] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(url).toBe(
+      "https://api.example.com/page-workspace/projects/" +
+        `${PROJECT_ID}/pages/${PAGE_ID}/artifacts/${artifact().id}/versions/${version().id}/status`,
+    );
+  });
+
+  it("re-renders the next legal actions immediately after a status change, without waiting for router.refresh()", async () => {
+    // Regression test: the action buttons previously stayed derived from the stale `currentVersion`
+    // prop until router.refresh() resolved — since refresh() is mocked as a no-op here, a real
+    // production render would never update at all without this local mirror.
+    panel(version({ status: "draft" }));
+    expect(screen.getByRole("button", { name: "Submitted" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Submitted" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Submitted" })).not.toBeInTheDocument(),
+    );
+    // draft -> submitted; submitted's own legal next stages include "Under Review".
+    expect(screen.getByRole("button", { name: "Under Review" })).toBeInTheDocument();
+  });
+
+  it("re-renders Reopen as unavailable and Edit as available immediately after reopening", async () => {
+    panel(version({ status: "approved" }));
+    expect(screen.getByRole("button", { name: "Reopen" })).toBeInTheDocument();
+    // reopen() prompts for a reason.
+    vi.spyOn(window, "prompt").mockReturnValue("needs a fix");
+    fireEvent.click(screen.getByRole("button", { name: "Reopen" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Reopen" })).not.toBeInTheDocument(),
+    );
+    // reopen() always forks a fresh draft version, so Edit should now be offered.
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
 
   it("offers creation when the tab has no artifact yet", () => {
     panel(null, null);
@@ -128,7 +178,18 @@ describe("PageArtifactPanel", () => {
 });
 
 describe("PageLifecycleActions", () => {
-  beforeEach(() => refreshMock.mockReset());
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.example.com";
+    refreshMock.mockReset();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: {} }),
+      }),
+    );
+  });
+  afterEach(() => vi.restoreAllMocks());
 
   it("offers the next main-path stage and the interrupt states", () => {
     render(
@@ -143,7 +204,7 @@ describe("PageLifecycleActions", () => {
     expect(screen.getByRole("button", { name: "Paused" })).toBeInTheDocument();
   });
 
-  it("offers only the recorded resume point and archival from an interrupted stage", () => {
+  it("offers the recorded resume point, the other interrupt stages, and archival — never an arbitrary main-path stage", () => {
     render(
       <PageLifecycleActions
         projectId={PROJECT_ID}
@@ -154,8 +215,39 @@ describe("PageLifecycleActions", () => {
     );
     expect(screen.getByRole("button", { name: "In development" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Archived" })).toBeInTheDocument();
-    // Resuming anywhere else would turn a pause into a way to skip every gate in between.
+    // Regression test: previously only the resume point and Archived were offered here — a real,
+    // backend-supported interrupt-to-interrupt move (code-review finding).
+    expect(screen.getByRole("button", { name: "Blocked" })).toBeInTheDocument();
+    // Resuming to an arbitrary main-path stage would turn a pause into a way to skip every gate.
     expect(screen.queryByRole("button", { name: "Production approved" })).not.toBeInTheDocument();
+  });
+
+  it("hits dashboard-api's own origin, not a bare relative path, and re-renders the button set immediately after entering an interrupt stage", async () => {
+    // Regression test for two fixes together: the missing getApiBaseUrl() prefix, and
+    // setCurrentPrevious's dead-code ternary that unconditionally cleared the resume point instead
+    // of capturing the stage just left (code-review findings).
+    render(
+      <PageLifecycleActions
+        projectId={PROJECT_ID}
+        pageId={PAGE_ID}
+        stage="in_development"
+        previousStage={null}
+      />,
+    );
+    // "blocked" is one of the reasons LIFECYCLE_REASON_REQUIRED demands a reason for.
+    vi.spyOn(window, "prompt").mockReturnValue("a real blocker");
+    fireEvent.click(screen.getByRole("button", { name: "Blocked" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Code review" })).not.toBeInTheDocument(),
+    );
+    const [url] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(url).toBe(
+      `https://api.example.com/page-workspace/projects/${PROJECT_ID}/pages/${PAGE_ID}/lifecycle`,
+    );
+    // Without router.refresh() actually landing (it's mocked as a no-op), the button set should
+    // already reflect that the page just entered "blocked" from "in_development" — offering resume
+    // back to it, not requiring a second click to discover.
+    expect(screen.getByRole("button", { name: "In development" })).toBeInTheDocument();
   });
 
   it("renders nothing at all once the page is archived", () => {

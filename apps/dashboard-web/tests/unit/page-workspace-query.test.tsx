@@ -87,16 +87,41 @@ describe("allowedLifecycleTargets", () => {
     expect(allowedLifecycleTargets("archived", null)).toEqual([]);
   });
 
-  it("lets an interrupted page resume only to where it actually came from", () => {
+  it("resumes only to where the page actually came from, never an arbitrary main-path stage", () => {
     // The whole point of lifecyclePreviousStage: without it, pausing would become a way to skip
-    // every approval gate between here and anywhere else.
+    // every approval gate between here and anywhere else. This restriction is about the RESUME
+    // edge specifically — it does not extend to the lateral interrupt-to-interrupt edges below,
+    // which the backend allows directly (a paused page really can become blocked in one step).
     const targets = allowedLifecycleTargets("paused", "in_development");
-    expect(targets).toEqual(["in_development", "archived"]);
+    expect(targets[0]).toBe("in_development");
     expect(targets).not.toContain("production_approved");
   });
 
-  it("offers only archival when an interrupted page has no recorded resume point", () => {
-    expect(allowedLifecycleTargets("blocked", null)).toEqual(["archived"]);
+  it("offers every other interrupt stage directly, matching the backend's RESUME_OR_ARCHIVE table", () => {
+    // Regression test: an earlier version of allowedLifecycleTargets only offered
+    // [previousStage, "archived"] from an interrupt stage, silently under-offering transitions the
+    // backend's own LIFECYCLE_TRANSITIONS explicitly supports (its own comment: "a paused page
+    // that then becomes blocked is a real situation").
+    const targets = allowedLifecycleTargets("paused", "in_development");
+    expect(targets).toEqual(
+      expect.arrayContaining([
+        "in_development",
+        "revision_requested",
+        "blocked",
+        "failed",
+        "archived",
+      ]),
+    );
+    // Never offers itself as its own target.
+    expect(targets).not.toContain("paused");
+  });
+
+  it("offers every other interrupt stage plus archival when an interrupted page has no recorded resume point", () => {
+    const targets = allowedLifecycleTargets("blocked", null);
+    expect(targets).toEqual(
+      expect.arrayContaining(["revision_requested", "paused", "failed", "archived"]),
+    );
+    expect(targets).not.toContain("blocked");
   });
 
   it("never offers a stage that is not a legal successor", () => {

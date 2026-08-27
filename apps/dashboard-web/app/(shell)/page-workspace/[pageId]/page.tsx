@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import type { PageArtifactVersion } from "@webdesk/shared-types";
 import { ContentContainer, Fact, PageHeader, StatusBadge, Stepper } from "@webdesk/ui";
 import { PageArtifactPanel } from "@/components/page-artifact-panel";
 import { PageLifecycleActions } from "@/components/page-lifecycle-actions";
@@ -50,8 +51,11 @@ export default async function PageWorkspacePage({ params, searchParams }: PageWo
   const projectId = firstValue(rawParams.projectId);
   const tab = findTab(firstValue(rawParams.tab));
 
+  // A missing/unresolvable projectId redirects to the list page's own project-picker prompt
+  // instead of a dead-end notFound() — same pattern as page-inventory/[pageId]/page.tsx (code-
+  // review finding, `dashboard-web-page-workspace`).
   if (!projectId) {
-    notFound();
+    redirect("/page-workspace");
   }
 
   const [page, artifacts] = await Promise.all([
@@ -68,8 +72,18 @@ export default async function PageWorkspacePage({ params, searchParams }: PageWo
     : null;
 
   // Only the selected tab's versions are fetched — the other 14 artifacts are not opened, so this
-  // stays one extra request regardless of how many tabs exist.
-  const versions = artifact ? await getArtifactVersions(projectId, pageId, artifact.id) : [];
+  // stays one extra request regardless of how many tabs exist. Isolated from the rest of the page
+  // (code-review finding, `dashboard-web-page-workspace`): getArtifactVersions() still throws on a
+  // genuine backend failure (a transient 500), and this was previously awaited with nothing
+  // catching it, crashing the whole workspace instead of degrading just this one tab's history.
+  let versions: readonly PageArtifactVersion[] = [];
+  if (artifact) {
+    try {
+      versions = await getArtifactVersions(projectId, pageId, artifact.id);
+    } catch (error) {
+      console.error(`Failed to load versions for artifact ${artifact.id}:`, error);
+    }
+  }
   const currentVersion =
     versions.find((version) => version.id === artifact?.currentVersionId) ?? versions[0] ?? null;
 
@@ -152,6 +166,11 @@ export default async function PageWorkspacePage({ params, searchParams }: PageWo
         <h2>{tab.label}</h2>
         {tab.artifactType ? (
           <PageArtifactPanel
+            // Forces a remount on every tab switch (code-review finding, `dashboard-web-page-
+            // workspace`): without a key tied to the tab, this client component's own editing/
+            // content/notes state survived a tab change, letting a save land against the wrong
+            // artifact/version.
+            key={tab.key}
             projectId={projectId}
             pageId={page.id}
             artifactType={tab.artifactType}
