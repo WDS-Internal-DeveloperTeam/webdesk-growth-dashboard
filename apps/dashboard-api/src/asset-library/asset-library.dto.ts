@@ -56,11 +56,23 @@ export type ListAssetsQueryDto = z.infer<typeof listAssetsQuerySchema>;
  * value exactly. Validated as a non-negative integer literal so a malformed value is a clean 400
  * rather than a raw 500 from Postgres on INSERT.
  */
+const MAX_BIGINT = 9223372036854775807n;
 const fileSizeBytesField = z
   .string()
   .regex(/^\d+$/, "fileSizeBytes must be a non-negative integer string")
-  .max(20)
+  // Bounds the VALUE, not the digit count. A `.max(20)` length cap alone still admits
+  // "99999999999999999999", which is a well-formed digit string that overflows BIGINT and 500s on
+  // INSERT — the exact failure this field's own comment claims to prevent (code-review finding).
+  .refine((value) => BigInt(value) <= MAX_BIGINT, {
+    message: `fileSizeBytes must not exceed ${MAX_BIGINT}`,
+  })
   .nullish();
+
+/** Postgres `INTEGER` ceiling. `widthPx`/`heightPx`/`durationSeconds` are all INTEGER columns, so
+ *  an unbounded `z.number().int()` admits values that pass validation and then 500 on the real
+ *  INSERT/UPDATE (code-review finding). */
+const MAX_PG_INTEGER = 2147483647;
+const nonNegativeIntegerField = z.number().int().min(0).max(MAX_PG_INTEGER).nullish();
 
 export const createAssetSchema = z.object({
   publicId: z.string().min(1).max(64),
@@ -78,9 +90,9 @@ export const createAssetSchema = z.object({
   mimeType: shortTextField,
   fileSizeBytes: fileSizeBytesField,
   checksum: z.string().max(128).nullish(),
-  widthPx: z.number().int().min(0).nullish(),
-  heightPx: z.number().int().min(0).nullish(),
-  durationSeconds: z.number().int().min(0).nullish(),
+  widthPx: nonNegativeIntegerField,
+  heightPx: nonNegativeIntegerField,
+  durationSeconds: nonNegativeIntegerField,
   licence: longTextField,
   licenceHolder: shortTextField,
   consentReference: longTextField,
@@ -134,7 +146,15 @@ export type CreateAssetRelatedRecordDto = z.infer<typeof createAssetRelatedRecor
 
 /** Only `note` is patchable — `moduleKey`/`recordId` together ARE the relationship's identity;
  *  repointing one at a different target is a delete plus a create, not an edit. */
-export const updateAssetRelatedRecordSchema = z.object({
-  note: z.string().max(500).nullish(),
-});
+export const updateAssetRelatedRecordSchema = z
+  .object({
+    note: z.string().max(500).nullish(),
+  })
+  // Rejects a genuinely empty patch (`{}`), which would otherwise return 200 and write a
+  // `data_change` audit event recording no actual change — matching `updateAssetSchema`'s own
+  // guard immediately above, which this previously contradicted (code-review finding). An
+  // explicit `{ note: null }` is still a real edit (clearing the note) and stays valid.
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided",
+  });
 export type UpdateAssetRelatedRecordDto = z.infer<typeof updateAssetRelatedRecordSchema>;

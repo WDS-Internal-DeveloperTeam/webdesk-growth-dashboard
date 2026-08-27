@@ -3,6 +3,7 @@ import {
   createAssetRelatedRecordSchema,
   createAssetSchema,
   listAssetsQuerySchema,
+  updateAssetRelatedRecordSchema,
   updateAssetSchema,
 } from "./asset-library.dto.js";
 
@@ -62,6 +63,38 @@ describe("createAssetSchema", () => {
     (fileSizeBytes) => {
       // A clean 400 rather than a raw 500 from Postgres on INSERT.
       expect(() => createAssetSchema.parse({ ...MINIMAL, fileSizeBytes })).toThrow();
+    },
+  );
+
+  it("accepts fileSizeBytes exactly at the BIGINT ceiling", () => {
+    const parsed = createAssetSchema.parse({ ...MINIMAL, fileSizeBytes: "9223372036854775807" });
+    expect(parsed.fileSizeBytes).toBe("9223372036854775807");
+  });
+
+  it.each(["9223372036854775808", "99999999999999999999"])(
+    "rejects the BIGINT-overflowing fileSizeBytes value %s by VALUE, not digit count",
+    (fileSizeBytes) => {
+      // A digit-count cap alone admits these — they are well-formed integer strings that overflow
+      // the column and 500 on INSERT (code-review finding).
+      expect(() => createAssetSchema.parse({ ...MINIMAL, fileSizeBytes })).toThrow();
+    },
+  );
+
+  it.each(["widthPx", "heightPx", "durationSeconds"] as const)(
+    "accepts %s exactly at the Postgres INTEGER ceiling",
+    (field) => {
+      const parsed = createAssetSchema.parse({ ...MINIMAL, [field]: 2147483647 }) as Record<
+        string,
+        unknown
+      >;
+      expect(parsed[field]).toBe(2147483647);
+    },
+  );
+
+  it.each(["widthPx", "heightPx", "durationSeconds"] as const)(
+    "rejects %s above the Postgres INTEGER ceiling rather than 500ing on INSERT",
+    (field) => {
+      expect(() => createAssetSchema.parse({ ...MINIMAL, [field]: 3000000000 })).toThrow();
     },
   );
 
@@ -135,6 +168,16 @@ describe("createAssetRelatedRecordSchema", () => {
     expect(() =>
       createAssetRelatedRecordSchema.parse({ moduleKey: "page_inventory", recordId: "not-a-uuid" }),
     ).toThrow();
+  });
+
+  it("rejects an empty patch, matching updateAssetSchema's own guard", () => {
+    // Previously returned 200 and wrote a `data_change` audit event recording no change
+    // (code-review finding).
+    expect(() => updateAssetRelatedRecordSchema.parse({})).toThrow();
+  });
+
+  it("still accepts an explicit null note — clearing the note is a real edit", () => {
+    expect(updateAssetRelatedRecordSchema.parse({ note: null }).note).toBeNull();
   });
 
   it("accepts any non-empty moduleKey — the REAL check is the registry lookup in the service", () => {
