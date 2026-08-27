@@ -6,7 +6,9 @@ Required second-role human review complete — Jitesh D, "Approved as-is", accep
 CONFIRMED code-review findings (the invented `group` taxonomy, already separately confirmed with
 the user, and the inherited missing `list()` index) as tracked debt. Gate (G4-design-token-library)
 approved — WebDesk Solution, decision CONFIRM, approved commit `6e655fb` on branch
-`module-design-token-library`.
+`module-design-token-library`. **Pushed to `origin` and opened as
+[PR #75](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/75).** Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -23,7 +25,7 @@ for this slice can be requested.
 | 6   | Security review complete                   | ✅ `security-review` skill run separately — 0 findings above threshold                                                                                                                                                                                                    |
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ The `group` field's invented 15-value taxonomy (confirmed with the user directly, kept as-is) and `list()`'s missing supporting sort index (inherited from Website Strategy Center's own already-reviewed migration) are both recorded as accepted, tracked debt      |
 | 8   | Documentation updated                      | ✅ `docs/implementation/module-design-token-library.md` (Scope + As-built, collapsed single-file format per the 2026-08-27 standing rule)                                                                                                                                 |
-| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-design-token-library`, latest commit `31b7c18` — not yet pushed to `origin`                                                                                                                                                                              |
+| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-design-token-library`, latest commit `4f5647c` — pushed to `origin`, [PR #75](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/75) opened                                                                                    |
 
 ## Forbidden-actions check
 
