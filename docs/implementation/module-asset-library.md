@@ -160,7 +160,7 @@ is untouched, matching every prior module's own backend-first precedent.
 
 ### What exists
 
-- **Migrations `00072`/`00073`** — `assets` + `asset_related_records`, then the registry's
+- **Migrations `00074`/`00075`** — `assets` + `asset_related_records`, then the registry's
   `implementation_status` flip to `in_development`.
 - **`packages/database/src/asset-library/`** — entities, models, `AssetRepository`,
   `AssetRelatedRecordRepository`. Exported from **both** barrels (`index.ts` AND `index.cjs.ts`) —
@@ -186,7 +186,7 @@ All run against a real, disposable local PostgreSQL 17 database (`webdesk_asset_
 | `dashboard-api` unit tests                                      | **1044/1044** (74 new: 34 service, 12 related-records, 28 DTO) |
 | `packages/database` integration                                 | **440/440**, 25/25 files (24 new)                              |
 | `dashboard-api` e2e                                             | **442/442**, 25/25 files (33 new)                              |
-| Migration up/down round-trip                                    | clean — 73 applied, `00073` reverted                           |
+| Migration up/down round-trip                                    | clean — 75 applied, `00075` reverted                           |
 | `validate:module-registry`                                      | 43 modules, 21 permission groups                               |
 | typecheck / lint (`--max-warnings=0`) / `nest build` / prettier | clean                                                          |
 | `boundaries:check`                                              | 0 errors (8 pre-existing `dashboard-web` warnings)             |
