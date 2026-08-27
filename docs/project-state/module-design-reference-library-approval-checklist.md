@@ -1,9 +1,9 @@
 # Design Reference Library Backend — Approval Checklist
 
 **Status:** Built, independently re-verified, code review complete (1 CONFIRMED finding, fixed;
-0 open), security review complete (0 findings above threshold). Awaiting required second-role
-human review, then a gate decision, then push/PR/merge — each its own separate authorization per
-this project's standing "no auto-merge" rule.
+0 open), security review complete (0 findings above threshold). Required second-role human review
+complete — Jitesh D, "Approved," no disputes raised. Awaiting a gate decision, then push/PR/merge
+— each its own separate authorization per this project's standing "no auto-merge" rule.
 
 ## Completion condition
 
@@ -60,4 +60,8 @@ updated together.
 
 ## Sign-off
 
-_(pending)_
+**Required second-role human review** — Jitesh D reviewed the published review packet
+(code review + security review findings, fixes, and validation evidence) and returned
+**"Approved,"** no disputes raised. 0 open findings of any kind on this branch.
+
+A gate decision, push/PR, and merge authorization remain separate, not-yet-requested next steps.
