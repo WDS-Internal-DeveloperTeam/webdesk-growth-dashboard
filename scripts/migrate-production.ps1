@@ -34,14 +34,46 @@
 [CmdletBinding()]
 param(
     [switch]$StatusOnly,
-    [string]$EnvFile = "prod-db.env"
+    [string]$EnvFile = "prod-db.env",
+    [string]$LogFile
 )
 
 $ErrorActionPreference = "Stop"
 
+# Log internally rather than relying on the caller to pipe. In Windows PowerShell 5.1,
+# `*>&1` or `2>&1` on a NATIVE command wraps every stderr line in a NativeCommandError,
+# which combines with ErrorActionPreference="Stop" to abort the script on output that is
+# not an error at all -- pnpm writes its "$ cmd" banner to stderr. Start-Transcript
+# captures everything without touching the streams.
+if (-not $LogFile) {
+    $LogFile = Join-Path $env:TEMP ("prod-migrate-{0}.log" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
+}
+try { Start-Transcript -Path $LogFile -Force | Out-Null; $transcribing = $true }
+catch { $transcribing = $false; Write-Warning "Could not start a transcript; continuing without a log file." }
+
 function Write-Step  ([string]$m) { Write-Host "`n$m" -ForegroundColor Cyan }
 function Write-Ok    ([string]$m) { Write-Host $m -ForegroundColor Green }
 function Write-Warn  ([string]$m) { Write-Host $m -ForegroundColor Yellow }
+
+<#
+Runs a pnpm script through cmd.exe and returns its exit code.
+
+Not cosmetic. In Windows PowerShell 5.1, if this script's own output is redirected or
+piped, every stderr line from a native command becomes a NativeCommandError record --
+and pnpm writes its "$ <command>" banner to stderr on a perfectly successful run. With
+ErrorActionPreference="Stop" that aborts mid-migration on output that is not an error.
+Going through cmd.exe keeps native stderr out of PowerShell's error stream entirely, so
+this script behaves identically whether it is run plainly or piped.
+#>
+function Invoke-PnpmScript ([string]$FilterAndScript) {
+    # Out-Host, not a bare call: a PowerShell function returns EVERYTHING it emits, so
+    # letting the command's output reach the pipeline would make the caller's `$code`
+    # an array of every output line with the exit code appended -- and every numeric
+    # comparison against it then misfires. Out-Host sends the output to the console
+    # (where Start-Transcript still records it) and keeps the return value scalar.
+    cmd /c "pnpm $FilterAndScript 2>&1" | Out-Host
+    return $LASTEXITCODE
+}
 
 # --- Locate the repo root -----------------------------------------------------------
 $repoRoot = (& git rev-parse --show-toplevel 2>$null)
@@ -95,10 +127,25 @@ if ($targetHost -match '^(localhost|127\.0\.0\.1|::1)$') {
 }
 
 try {
+    # --- 0. Clear stale build output --------------------------------------------------
+    # `pnpm build` runs tsc, which COMPILES sources but never DELETES outputs whose source
+    # file was renamed or removed. A migration renamed on disk therefore leaves its old
+    # compiled .js behind in dist/, and the migrator -- which reads dist/, not src/ -- runs
+    # BOTH copies. On 2026-08-28 that applied the Asset Library migrations to production
+    # twice under two different names: the first pass succeeded, the second failed on
+    # "relation assets_public_id_unique already exists", and the ledger was left recording
+    # names that no longer existed in the source tree. Removing dist/ first makes the build
+    # authoritative.
+    Write-Step "0/3  Clearing stale build output"
+    foreach ($dir in @("packages\database\dist", "packages\database\dist-cjs")) {
+        if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
+    }
+    Write-Host "  dist/ and dist-cjs/ cleared -- the next build is authoritative."
+
     # --- 1. Read-only status ---------------------------------------------------------
     Write-Step "1/3  Pending migrations (read-only)"
-    pnpm --filter @webdesk/database run migrate:status
-    if ($LASTEXITCODE -ne 0) { throw "migrate:status failed (exit $LASTEXITCODE). Nothing was changed." }
+    $code = Invoke-PnpmScript "--filter @webdesk/database run migrate:status"
+    if ($code -ne 0) { throw "migrate:status failed (exit $code). Nothing was changed." }
 
     if ($StatusOnly) {
         Write-Ok "`nStatus-only run. Nothing was changed."
@@ -120,12 +167,12 @@ try {
 
     # --- 3. Apply, then independently re-verify --------------------------------------
     Write-Step "3/3  Applying"
-    pnpm --filter @webdesk/database run migrate
-    if ($LASTEXITCODE -ne 0) { throw "migrate FAILED (exit $LASTEXITCODE). Re-run with -StatusOnly to see the current state." }
+    $code = Invoke-PnpmScript "--filter @webdesk/database run migrate"
+    if ($code -ne 0) { throw "migrate FAILED (exit $code). Re-run with -StatusOnly to see the current state." }
 
     Write-Step "Verifying (a separate read, not the migrate command's own claim)"
-    pnpm --filter @webdesk/database run migrate:status
-    if ($LASTEXITCODE -ne 0) { throw "Post-migration status check failed (exit $LASTEXITCODE)." }
+    $code = Invoke-PnpmScript "--filter @webdesk/database run migrate:status"
+    if ($code -ne 0) { throw "Post-migration status check failed (exit $code)." }
 
     Write-Ok "`nDone. Confirm the verification above reports 0 pending."
 }
@@ -134,4 +181,8 @@ finally {
     # shell is how a later local command ends up pointed at production by accident.
     foreach ($key in $loaded.Keys) { Remove-Item -Path "env:$key" -ErrorAction SilentlyContinue }
     Write-Host "`n(Environment variables from $EnvFile cleared from this shell.)" -ForegroundColor DarkGray
+    if ($transcribing) {
+        try { Stop-Transcript | Out-Null } catch { }
+        Write-Host "Full output logged to: $LogFile" -ForegroundColor DarkGray
+    }
 }
