@@ -6,7 +6,8 @@ at once the code-review fix round touched real confidential-field redaction logi
 `CLAUDE.md`'s 2026-08-27 right-sizing rule (a change becomes "genuinely risky," not light-tier,
 the moment it touches authorization/confidentiality logic, even if the branch started as a small
 UI slice). **Required second-role human review complete — Jitesh D, "Approved," no disputes
-raised.** Not yet gated, pushed, or merged.
+raised.** **Gate `G4-dashboard-web-asset-library` approved — WebDesk Solution, decision CONFIRM.**
+Not yet pushed or merged.
 
 Closes the Asset Library module's last named gap, following the backend's own build arc
 (`module-asset-library`, gate `G4-asset-library`, merged to `main` via PR #74, 2026-08-28).
@@ -26,7 +27,7 @@ Closes the Asset Library module's last named gap, following the backend's own bu
 | 9   | Live end-to-end verified         | ⚠️ Not verified in a live browser — port 3000 was occupied by an unrelated, non-matching process in this environment (confirmed via a 404 on a known-existing route, `/brand-library`), so live-rendering wasn't possible. Verified instead via a clean `next build` with all 4 routes present, and the full unit test suite               |
 | 10  | Documentation updated            | ✅ This file                                                                                                                                                                                                                                                                                                                               |
 | 11  | Exact branch/commit verified     | Branch `dashboard-web-asset-library`, commits `ee04e37` (build) → `080f54a` (fix round), off `main` at the PR #74 merge commit (`1a1d2e9`)                                                                                                                                                                                                 |
-| 12  | Live in production               | ⛔ Not yet — a gate decision, push/PR, and merge each remain their own separate, not-yet-requested authorization                                                                                                                                                                                                                           |
+| 12  | Live in production               | ⛔ Not yet — gate approved; push/PR and merge each remain their own separate, not-yet-requested authorization                                                                                                                                                                                                                              |
 
 ## Self-review at build time — the one finding, later superseded
 
@@ -129,8 +130,16 @@ validation evidence.
 | Review artifact | [Asset Library Review Packet](https://claude.ai/code/artifact/f8a87c8c-bc92-453e-83e5-c5d79d22b58e)                                                                 |
 | Disputes raised | None — all 6 code-review findings were already fixed, and the security review found 0 findings above threshold, so there was no open item to accept as tracked debt |
 
-## Sign-off
+## Sign-off — `G4-dashboard-web-asset-library` gate
 
-Required second-role human review is complete. A gate decision, push/PR, and merge each remain
-their own separate, not-yet-requested authorization per this project's standing "no auto-merge"
-rule.
+| Field           | Value                                                                                                                             |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Decision        | **CONFIRM** — a clean pass, not an override, since the required second-role review was already complete beforehand                |
+| Approver        | WebDesk Solution                                                                                                                  |
+| Date            | 2026-08-29                                                                                                                        |
+| Approved commit | `080f54a` on branch `dashboard-web-asset-library`                                                                                 |
+| Recorded in     | `outputs/webdesk-growth-dashboard/project.json` — `gates[]` (`current_gate` now `G4-dashboard-web-asset-library`) and `audit_log` |
+
+A gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
+remains its own separate, not-yet-requested authorization, per this project's standing
+"no auto-merge" rule.
