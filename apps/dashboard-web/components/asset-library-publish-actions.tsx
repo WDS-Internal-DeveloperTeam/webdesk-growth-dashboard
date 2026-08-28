@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { AssetApprovalStatus } from "@webdesk/shared-types";
 import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { useSyncedState } from "@/lib/use-synced-state";
 import styles from "./asset-library-publish-actions.module.css";
 
 export interface AssetLibraryPublishActionsProps {
@@ -52,16 +53,12 @@ export function AssetLibraryPublishActions({
   isPublished: initialIsPublished,
 }: AssetLibraryPublishActionsProps): ReactNode {
   const router = useRouter();
-  const [isPublished, setIsPublished] = useState(initialIsPublished);
+  // useSyncedState re-syncs from the server-passed prop whenever it changes — see the doc comment
+  // above. Does not fire on this component's own optimistic setIsPublished() call below, since
+  // that already matches the prop's next value once router.refresh() resolves.
+  const [isPublished, setIsPublished] = useSyncedState(initialIsPublished);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"publish" | "unpublish" | null>(null);
-
-  // Re-sync from the server-passed prop whenever it changes — see the doc comment above. Does not
-  // fire on this component's own optimistic setIsPublished() call below, since that already
-  // matches the prop's next value once router.refresh() resolves.
-  useEffect(() => {
-    setIsPublished(initialIsPublished);
-  }, [initialIsPublished]);
 
   const canPublish = approvalStatus === "approved" && !isPublished;
   const canUnpublish = isPublished;

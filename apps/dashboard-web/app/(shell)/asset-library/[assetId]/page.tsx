@@ -40,13 +40,13 @@ interface AssetDetailPageProps {
  * Governance, Related records, Status), rendered as sections rather than client-side tabs, the same
  * simplification every sibling library module's detail page already establishes.
  *
- * On a `restricted` asset, `fileReference`/`consentReference` come back `null` from the backend for
- * a caller lacking `view_confidential` (D2) — the SAME shape as a genuinely-unset value, since the
- * backend redacts by nulling rather than omitting the key (unlike `Service.internalDescription`'s
- * `undefined`-signals-redaction convention). This page therefore can't distinguish "redacted" from
- * "never set" with certainty; it shows an honest, deliberately hedged notice for either field
- * whenever `visibility === "restricted"` and the value is `null`, rather than falsely implying
- * either "definitely hidden" or "definitely never set."
+ * On a `restricted` asset, `fileReference`/`consentReference` are genuinely OMITTED from the
+ * response for a caller lacking `view_confidential` (D2) — `undefined`, not `null` — the same
+ * `undefined`-signals-redaction convention `Service.internalDescription`/
+ * `BusinessKnowledgeRecord.content` already establish (code-review finding, `dashboard-web-
+asset-library` — an earlier revision of this page checked `=== null` for both fields, which is
+ * always false for a genuinely redacted value and so never actually rendered the notice). `null`
+ * means a real, visible, genuinely-unset value; `undefined` means redacted.
  */
 export default async function AssetDetailPage({ params }: AssetDetailPageProps) {
   const session = await getServerSession();
@@ -67,8 +67,9 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
   const publishBadge = assetPublishBadge(asset.isPublished);
   const visibilityBadge = assetVisibilityBadge(asset.visibility);
   const scanBadge = assetScanStatusBadge(asset.scanStatus);
-  const hasSafeFileReference = asset.fileReference !== null && isSafeHttpUrl(asset.fileReference);
-  const maybeRedacted = asset.visibility === "restricted";
+  const isFileReferenceRedacted = asset.fileReference === undefined;
+  const isConsentReferenceRedacted = asset.consentReference === undefined;
+  const hasSafeFileReference = asset.fileReference != null && isSafeHttpUrl(asset.fileReference);
   const modules = sortModulesForPicker(session.navigation);
 
   return (
@@ -113,7 +114,11 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
         <h2 style={h2Style}>File</h2>
         <div style={subsectionStyle}>
           <h3 style={h3Style}>File reference</h3>
-          {asset.fileReference ? (
+          {isFileReferenceRedacted ? (
+            <p style={redactedStyle}>
+              This asset is restricted — its file reference isn&apos;t visible to your account.
+            </p>
+          ) : asset.fileReference ? (
             hasSafeFileReference ? (
               <a href={asset.fileReference} target="_blank" rel="noopener noreferrer">
                 {asset.fileReference}
@@ -121,11 +126,6 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
             ) : (
               <p style={mutedStyle}>{asset.fileReference}</p>
             )
-          ) : maybeRedacted ? (
-            <p style={redactedStyle}>
-              This asset is restricted — its file reference may be hidden from your account, or may
-              simply not be set.
-            </p>
           ) : (
             <p style={mutedStyle}>Not set.</p>
           )}
@@ -154,16 +154,15 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
             {asset.licenceHolder ?? "Not set."}
           </p>
         </div>
-        {asset.consentReference === null && maybeRedacted ? (
+        {isConsentReferenceRedacted ? (
           <div style={subsectionStyle}>
             <h3 style={h3Style}>Consent reference</h3>
             <p style={redactedStyle}>
-              This asset is restricted — its consent reference may be hidden from your account, or
-              may simply not be set.
+              This asset is restricted — its consent reference isn&apos;t visible to your account.
             </p>
           </div>
         ) : (
-          <TextBlock label="Consent reference" value={asset.consentReference} />
+          <TextBlock label="Consent reference" value={asset.consentReference ?? null} />
         )}
         <TextBlock label="Alt text guidance" value={asset.altTextGuidance} />
       </section>

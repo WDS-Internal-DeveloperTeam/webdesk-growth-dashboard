@@ -1316,21 +1316,25 @@ export type AssetApprovalStatus =
  * `mimeType`/`fileSizeBytes`/`checksum`/`widthPx`/`heightPx`/`durationSeconds` are caller-supplied
  * metadata in this pass, not values derived from a file this system actually holds. `visibility`
  * is a REAL confidentiality axis (D2) — on a `restricted` asset, `fileReference` and
- * `consentReference` come back `null` (redacted) for a caller lacking `view_confidential`, exactly
- * like `undefined`-vs-`null` signals redaction on other modules' confidential fields elsewhere in
- * this app; here the backend redacts by nulling, so a genuinely-unset field and a redacted field
- * aren't distinguishable from this shape alone — the edit form must never resubmit a `null`
- * `fileReference`/`consentReference` on a `restricted` record as if it were an intentional clear
- * (see `AssetLibraryForm`'s own redaction handling). `isPublished`/`publishedAt` mirror Brand
- * Library's/Content Template Library's own publish/unpublish mechanism exactly (D6) — orthogonal
- * to `approvalStatus`.
+ * `consentReference` are genuinely OMITTED (not nulled) from the response for a caller lacking
+ * `view_confidential`: `AuthorizationService`'s shared redaction primitive
+ * (`confidential-field.util.ts#redactConfidentialFields()`) does `delete redacted[field]`, the
+ * same `undefined`-signals-redaction convention `BusinessKnowledgeRecord.content`/`.notes` already
+ * establish (code-review finding, `dashboard-web-asset-library` — an earlier revision of this
+ * doc comment incorrectly claimed the backend "redacts by nulling," which the code-review pass
+ * that added the `?:` below traced back to the real redaction primitive and corrected). `undefined`
+ * — the key absent — means redacted; `null` means a real, visible, genuinely-unset value. The edit
+ * form must never resubmit an `undefined`-read field as an explicit `null` clear (see
+ * `AssetLibraryForm`'s own redaction handling). `isPublished`/`publishedAt` mirror Brand Library's/
+ * Content Template Library's own publish/unpublish mechanism exactly (D6) — orthogonal to
+ * `approvalStatus`.
  */
 export interface Asset {
   readonly id: string;
   readonly publicId: string;
   readonly title: string;
   readonly description: string | null;
-  readonly fileReference: string | null;
+  readonly fileReference?: string | null;
   readonly mimeType: string | null;
   readonly fileSizeBytes: string | null;
   readonly checksum: string | null;
@@ -1339,7 +1343,7 @@ export interface Asset {
   readonly durationSeconds: number | null;
   readonly licence: string | null;
   readonly licenceHolder: string | null;
-  readonly consentReference: string | null;
+  readonly consentReference?: string | null;
   readonly altTextGuidance: string | null;
   readonly visibility: AssetVisibility;
   readonly retentionNote: string | null;

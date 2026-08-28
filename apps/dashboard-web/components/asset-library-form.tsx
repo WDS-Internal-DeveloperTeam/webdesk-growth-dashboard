@@ -54,13 +54,21 @@ export type AssetLibraryFormProps =
  * stored and again at render time via `SanitizedRichText`, the same double-sanitization pattern
  * every sibling module's own rich-text fields already establish.
  *
- * `visibility`/`consentReference` need one further piece of care this form's siblings don't: on a
- * `restricted` asset, the backend redacts `fileReference`/`consentReference` to `null` for any
- * caller lacking `view_confidential` (D2) — which is every role today (zero-seeded). A redacted
- * `null` and a genuinely-unset `null` are indistinguishable from `Asset`'s own shape, so this form
- * shows an inert notice instead of a blank, editable field whenever the initial record is
- * `restricted`, and — critically — never resubmits an empty value for either field in that case,
- * so a save can never silently overwrite real confidential content the caller simply couldn't see.
+ * `visibility`/`fileReference`/`consentReference` need one further piece of care this form's
+ * siblings don't: on a `restricted` asset, the backend genuinely OMITS `fileReference`/
+ * `consentReference` from the response for any caller lacking `view_confidential` (D2) — which is
+ * every role today (zero-seeded) — via `AuthorizationService`'s shared `redactConfidentialFields()`
+ * primitive, which `delete`s the key rather than nulling it (the same `undefined`-signals-redaction
+ * convention `BusinessKnowledgeRecord.content`/`.notes` already establish). This form checks
+ * `=== undefined`, not `=== null`, for exactly that reason (code-review finding, `dashboard-web-
+asset-library` — an earlier revision checked `=== null`, which is always false for a genuinely
+ * redacted field and so never actually engaged, silently letting a save clear the real confidential
+ * value). Each field's redaction is tracked independently, since one may be redacted while the
+ * other is genuinely visible (e.g. a caller who holds `view_confidential` sees both as real,
+ * non-`undefined` values; a caller who doesn't sees both as `undefined`, key omitted). Wherever a
+ * field is redacted, this form shows an inert notice instead of a blank, editable field, and —
+ * critically — never resubmits a value for it, so a save can never silently overwrite real
+ * confidential content the caller simply couldn't see.
  *
  * Submits via a direct browser `fetch()` with `credentials: "include"` — required for
  * `dashboard-api`'s `OriginCheckGuard` to see a real browser `Origin` header, the same pattern
@@ -69,17 +77,19 @@ export type AssetLibraryFormProps =
 export function AssetLibraryForm(props: AssetLibraryFormProps): ReactNode {
   const router = useRouter();
   const initial = props.mode === "edit" ? props.initial : null;
-  // A restricted record whose consentReference came back null — either genuinely redacted for a
-  // caller lacking view_confidential, or genuinely never set. Deliberately requires BOTH
-  // conditions, not just `visibility === "restricted"` alone: a caller who genuinely holds
-  // view_confidential sees the real, non-null value here (the backend only redacts, never omits,
-  // for a caller with the grant), and must still be able to edit it normally — keying this off
-  // visibility alone would have permanently hidden and un-editable-via-this-form a field that
-  // caller can legitimately see and change. Computed once from the initial load; visibility itself
-  // is not editable in this pass (there is no dedicated visibility-transition route, so it stays a
-  // plain field below, but this specific "was I shown a redacted record" fact should not change
-  // mid-edit).
-  const isRedacted = initial?.visibility === "restricted" && initial?.consentReference === null;
+  // `undefined` (the key genuinely absent from the fetched Asset) is the real redaction signal —
+  // see the doc comment above. Tracked independently per field: a caller who holds
+  // view_confidential sees BOTH as real, non-undefined values and must still be able to edit them
+  // normally, so this can never be reduced to a single visibility-derived flag. Computed once from
+  // the initial load; visibility itself is not editable in this pass (there is no dedicated
+  // visibility-transition route, so it stays a plain field below, but this specific "was I shown a
+  // redacted field" fact should not change mid-edit).
+  // `initial !== null` (not optional chaining) is deliberate: in create mode `initial` is `null`
+  // and `initial?.fileReference` would ALSO evaluate to `undefined`, which is indistinguishable
+  // from a real redaction signal via optional chaining alone — this guard keeps create mode from
+  // ever being misread as "redacted."
+  const isFileReferenceRedacted = initial !== null && initial.fileReference === undefined;
+  const isConsentReferenceRedacted = initial !== null && initial.consentReference === undefined;
 
   const [publicId, setPublicId] = useState(initial?.publicId ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -126,25 +136,32 @@ export function AssetLibraryForm(props: AssetLibraryFormProps): ReactNode {
         return;
       }
 
-      function integerField(value: string): number | null | undefined {
-        if (value === "") return props.mode === "create" ? undefined : null;
+      // A discriminated result rather than an `NaN`-as-sentinel: `Number.isNaN(null)`/
+      // `Number.isNaN(undefined)` are always `false`, so a NaN sentinel needed an unchecked
+      // `as number` cast at every call site to type-check — this makes an invalid value
+      // impossible to silently miss (code-review finding).
+      type IntegerFieldResult =
+        { readonly ok: true; readonly value: number | null | undefined } | { readonly ok: false };
+      function integerField(value: string): IntegerFieldResult {
+        if (value === "") {
+          return { ok: true, value: props.mode === "create" ? undefined : null };
+        }
         const parsed = Number.parseInt(value, 10);
         if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_PG_INTEGER) {
-          return NaN; // caught below as a validation error
+          return { ok: false };
         }
-        return parsed;
+        return { ok: true, value: parsed };
       }
-      const parsedWidthPx = integerField(trimmedWidthPx);
-      const parsedHeightPx = integerField(trimmedHeightPx);
-      const parsedDurationSeconds = integerField(trimmedDurationSeconds);
-      if (
-        Number.isNaN(parsedWidthPx as number) ||
-        Number.isNaN(parsedHeightPx as number) ||
-        Number.isNaN(parsedDurationSeconds as number)
-      ) {
+      const widthPxResult = integerField(trimmedWidthPx);
+      const heightPxResult = integerField(trimmedHeightPx);
+      const durationSecondsResult = integerField(trimmedDurationSeconds);
+      if (!widthPxResult.ok || !heightPxResult.ok || !durationSecondsResult.ok) {
         setError(`Width, height, and duration must be whole numbers up to ${MAX_PG_INTEGER}.`);
         return;
       }
+      const parsedWidthPx = widthPxResult.value;
+      const parsedHeightPx = heightPxResult.value;
+      const parsedDurationSeconds = durationSecondsResult.value;
 
       // Omitted entirely (create) or sent as an explicit null (edit) when empty — an omitted key
       // leaves the field unchanged on update, matching updateAssetSchema's own nullish contract;
@@ -176,7 +193,10 @@ export function AssetLibraryForm(props: AssetLibraryFormProps): ReactNode {
 
       const sharedFields = {
         title: trimmedTitle,
-        fileReference: plainField(trimmedFileReference),
+        // Never resubmits a redacted field as a real clear — an empty value here means
+        // "unchanged," not "clear," whenever the caller couldn't actually see the real stored
+        // value. Each field guarded independently (see the isXRedacted doc comment above).
+        fileReference: isFileReferenceRedacted ? undefined : plainField(trimmedFileReference),
         mimeType: plainField(mimeType.trim()),
         fileSizeBytes: plainField(trimmedFileSizeBytes),
         checksum: plainField(checksum.trim()),
@@ -186,10 +206,7 @@ export function AssetLibraryForm(props: AssetLibraryFormProps): ReactNode {
         description: richTextField(description),
         licence: richTextField(licence),
         licenceHolder: plainField(licenceHolder.trim()),
-        // Never resubmits a redacted-null confidential field as a real clear — an empty value here
-        // means "unchanged," not "clear," whenever the record is restricted and the caller can't
-        // actually see the real stored value.
-        consentReference: isRedacted ? undefined : richTextField(consentReference),
+        consentReference: isConsentReferenceRedacted ? undefined : richTextField(consentReference),
         altTextGuidance: richTextField(altTextGuidance),
         visibility,
         retentionNote: richTextField(retentionNote),
@@ -276,17 +293,27 @@ export function AssetLibraryForm(props: AssetLibraryFormProps): ReactNode {
           <label htmlFor="fileReference" className={styles.label}>
             File reference
           </label>
-          <input
-            id="fileReference"
-            type="url"
-            maxLength={FILE_REFERENCE_MAX_LENGTH}
-            value={fileReference}
-            onChange={(event) => setFileReference(event.target.value)}
-            className={styles.input}
-          />
-          <span className={styles.helperText}>
-            A link to the asset itself — only http:// or https:// URLs are accepted.
-          </span>
+          {isFileReferenceRedacted ? (
+            <p className={styles.redactedNotice}>
+              This asset is restricted, and its stored file reference is confidential — you
+              don&apos;t have permission to view or change it. Saving this form will leave it
+              exactly as it is.
+            </p>
+          ) : (
+            <>
+              <input
+                id="fileReference"
+                type="url"
+                maxLength={FILE_REFERENCE_MAX_LENGTH}
+                value={fileReference}
+                onChange={(event) => setFileReference(event.target.value)}
+                className={styles.input}
+              />
+              <span className={styles.helperText}>
+                A link to the asset itself — only http:// or https:// URLs are accepted.
+              </span>
+            </>
+          )}
         </div>
 
         <div className={styles.field}>
@@ -332,50 +359,33 @@ export function AssetLibraryForm(props: AssetLibraryFormProps): ReactNode {
           />
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="widthPx" className={styles.label}>
-            Width (px)
-          </label>
-          <input
-            id="widthPx"
-            type="number"
-            min={0}
-            max={MAX_PG_INTEGER}
-            value={widthPx}
-            onChange={(event) => setWidthPx(event.target.value)}
-            className={styles.input}
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="heightPx" className={styles.label}>
-            Height (px)
-          </label>
-          <input
-            id="heightPx"
-            type="number"
-            min={0}
-            max={MAX_PG_INTEGER}
-            value={heightPx}
-            onChange={(event) => setHeightPx(event.target.value)}
-            className={styles.input}
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="durationSeconds" className={styles.label}>
-            Duration (seconds)
-          </label>
-          <input
-            id="durationSeconds"
-            type="number"
-            min={0}
-            max={MAX_PG_INTEGER}
-            value={durationSeconds}
-            onChange={(event) => setDurationSeconds(event.target.value)}
-            className={styles.input}
-          />
-        </div>
+        {(
+          [
+            { id: "widthPx", label: "Width (px)", value: widthPx, onChange: setWidthPx },
+            { id: "heightPx", label: "Height (px)", value: heightPx, onChange: setHeightPx },
+            {
+              id: "durationSeconds",
+              label: "Duration (seconds)",
+              value: durationSeconds,
+              onChange: setDurationSeconds,
+            },
+          ] as const
+        ).map(({ id, label, value, onChange }) => (
+          <div key={id} className={styles.field}>
+            <label htmlFor={id} className={styles.label}>
+              {label}
+            </label>
+            <input
+              id={id}
+              type="number"
+              min={0}
+              max={MAX_PG_INTEGER}
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              className={styles.input}
+            />
+          </div>
+        ))}
       </fieldset>
 
       <fieldset className={styles.fieldset}>
@@ -413,9 +423,9 @@ export function AssetLibraryForm(props: AssetLibraryFormProps): ReactNode {
           <label htmlFor="consentReference" className={styles.label}>
             Consent reference
           </label>
-          {isRedacted ? (
+          {isConsentReferenceRedacted ? (
             <p className={styles.redactedNotice}>
-              This record is restricted, and its stored consent reference is confidential — you
+              This asset is restricted, and its stored consent reference is confidential — you
               don&apos;t have permission to view or change it. Saving this form will leave it
               exactly as it is.
             </p>

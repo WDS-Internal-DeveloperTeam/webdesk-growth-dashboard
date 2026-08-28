@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 /**
  * `useState` seeded from a server-passed prop, re-synced via `useEffect` whenever that prop
@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
  * `DesignReferenceLibraryPublishActions` — uses this hook from the start rather than hand-copying
  * the pattern again.
  */
-export function useSyncedState<T>(value: T): [T, (next: T) => void] {
+export function useSyncedState<T>(value: T): [T, Dispatch<SetStateAction<T>>] {
   const [state, setState] = useState(value);
 
   useEffect(() => {

@@ -227,15 +227,19 @@ describe("AssetLibraryForm", () => {
     expect(screen.getByText("ASSET-READONLY")).toBeInTheDocument();
   });
 
-  it("edit mode: a restricted record with a redacted consent reference shows an inert notice instead of an editable field, and omits it from the submit payload", async () => {
+  it("edit mode: a restricted record with a redacted (omitted-key, i.e. undefined) consent reference shows an inert notice instead of an editable field, and omits it from the submit payload", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(ASSET_ID));
     global.fetch = fetchMock as typeof fetch;
 
+    // The real backend redacts by DELETING the key (AuthorizationService's
+    // redactConfidentialFields()), so a genuinely redacted field reads back as `undefined`, not
+    // `null` — this fixture mirrors that exactly, not a plain `null` (a null value would mean a
+    // real, visible, genuinely-empty field instead).
     render(
       <AssetLibraryForm
         mode="edit"
         assetId={ASSET_ID}
-        initial={assetFixture({ visibility: "restricted", consentReference: null })}
+        initial={assetFixture({ visibility: "restricted", consentReference: undefined })}
       />,
     );
     expect(screen.queryByLabelText("Consent reference")).not.toBeInTheDocument();
@@ -250,7 +254,51 @@ describe("AssetLibraryForm", () => {
     expect(body).not.toHaveProperty("consentReference");
   });
 
-  it("edit mode: a restricted record whose consent reference is NOT null (the caller genuinely holds view_confidential) shows the field as normally editable, not the redacted notice", async () => {
+  it("edit mode: a restricted record with a redacted (undefined) file reference shows an inert notice instead of an editable field, and omits it from the submit payload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(ASSET_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <AssetLibraryForm
+        mode="edit"
+        assetId={ASSET_ID}
+        initial={assetFixture({ visibility: "restricted", fileReference: undefined })}
+      />,
+    );
+    expect(screen.queryByLabelText("File reference")).not.toBeInTheDocument();
+    expect(screen.getByText(/don.t have permission to view or change it/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body).not.toHaveProperty("fileReference");
+  });
+
+  it("edit mode: a restricted record with a genuinely-null (real, visible, never-set) consent reference is normally editable, not treated as redacted", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(successResponse(ASSET_ID));
+    global.fetch = fetchMock as typeof fetch;
+
+    render(
+      <AssetLibraryForm
+        mode="edit"
+        assetId={ASSET_ID}
+        initial={assetFixture({ visibility: "restricted", consentReference: null })}
+      />,
+    );
+    expect(
+      screen.queryByText(/don.t have permission to view or change it/i),
+    ).not.toBeInTheDocument();
+    // RichTextEditor is a contenteditable div, not a real form control with a native
+    // label/for association — checking for the editor id directly, matching this codebase's own
+    // established testing convention for rich-text fields (see the "renders a rich-text editor"
+    // test above, which counts contenteditable elements rather than using getByLabelText).
+    expect(document.getElementById("consentReference")).toBeInTheDocument();
+  });
+
+  it("edit mode: a restricted record whose consent reference is a real value (the caller genuinely holds view_confidential) shows the field as normally editable, not the redacted notice", async () => {
     const fetchMock = vi.fn().mockResolvedValue(successResponse(ASSET_ID));
     global.fetch = fetchMock as typeof fetch;
 

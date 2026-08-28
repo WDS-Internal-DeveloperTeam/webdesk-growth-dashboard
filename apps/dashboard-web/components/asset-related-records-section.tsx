@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type {
   ApiSuccessResponse,
   AssetRelatedRecord,
@@ -11,6 +11,7 @@ import { getApiBaseUrl } from "@/lib/auth";
 import { moduleDisplayName, sortModulesForPicker } from "@/lib/review-and-approval-center-query";
 import { isUuid } from "@/lib/uuid";
 import { usePendingIds } from "@/lib/use-pending-ids";
+import { useSyncedState } from "@/lib/use-synced-state";
 import styles from "./asset-related-records-section.module.css";
 
 const NOTE_MAX_LENGTH = 500;
@@ -57,21 +58,21 @@ export function AssetRelatedRecordsSection({
   initialRecords,
   modules,
 }: AssetRelatedRecordsSectionProps): ReactNode {
-  const [records, setRecords] = useState(initialRecords);
+  const [records, setRecords] = useSyncedState(initialRecords);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const { pendingIds, markPending } = usePendingIds();
-  const sortedModules = sortModulesForPicker(modules);
+  // modules is a stable prop already sorted once, server-side, by the caller
+  // (app/(shell)/asset-library/[assetId]/page.tsx's own sortModulesForPicker(session.navigation)
+  // call) — memoized rather than re-sorted on every render/keystroke (code-review finding), the
+  // same "trust the already-sorted prop" precedent ReviewForm's own modules prop establishes.
+  const sortedModules = useMemo(() => sortModulesForPicker(modules), [modules]);
   const [addValues, setAddValues] = useState<AddFormValues>({
     moduleKey: sortedModules[0]?.key ?? "",
     recordId: "",
     note: "",
   });
   const [adding, setAdding] = useState(false);
-
-  useEffect(() => {
-    setRecords(initialRecords);
-  }, [initialRecords]);
 
   function moduleLabel(moduleKey: string): string {
     const match = modules.find((module) => module.key === moduleKey);
