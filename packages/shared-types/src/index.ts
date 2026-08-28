@@ -1278,3 +1278,96 @@ export interface PageArtifactVersion {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/** Mirrors `packages/database/src/asset-library/entities.ts`'s `AssetVisibility` (module #15, D2)
+ *  — a REAL enforcement axis, not a decorative label: a `restricted` asset has
+ *  `fileReference`/`consentReference` redacted server-side for any caller lacking
+ *  `view_confidential`. Same 3-value vocabulary as `Service.confidentiality`. */
+export type AssetVisibility = "public" | "internal" | "restricted";
+
+/** Mirrors `AssetScanStatus` — `not_configured` is the default and, today, the ONLY value any
+ *  backend code path ever writes (D4); no malware scanner exists anywhere in this system, and
+ *  nothing may claim a file is `clean`. The remaining values exist for a future scanner
+ *  integration. Exposed here only because the list-page filter needs it. */
+export type AssetScanStatus = "not_configured" | "pending" | "clean" | "infected" | "failed";
+
+// Structurally identical to BrandLibraryApprovalStatus/ContentTemplateApprovalStatus/
+// PersonaApprovalStatus/ServiceApprovalStatus/ProofClaimApprovalStatus/
+// WebsiteStrategyApprovalStatus/KeywordApprovalStatus/DesignReferenceApprovalStatus (the shared
+// 8-value artifact-approval workflow, reused verbatim byte-for-byte per D5) — its own named type
+// rather than an alias, matching every sibling module's own precedent.
+export type AssetApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * The Asset Library module's single primary entity (module #15) — organization-wide, not
+ * project-scoped (D9). `fileReference` is a plain nullable URL string, validated as a safe
+ * http(s) URL at the DTO layer only (D1 — metadata-only in this pass, no Vercel Blob store is
+ * provisioned yet), rendered as a real link only when `isSafeHttpUrl()` confirms it client-side
+ * too, mirroring `BrandLibraryRecord.fileReference`'s own guard. `fileSizeBytes` is a Postgres
+ * BIGINT, returned as a string (JavaScript `number` cannot represent every BIGINT value exactly).
+ * `mimeType`/`fileSizeBytes`/`checksum`/`widthPx`/`heightPx`/`durationSeconds` are caller-supplied
+ * metadata in this pass, not values derived from a file this system actually holds. `visibility`
+ * is a REAL confidentiality axis (D2) — on a `restricted` asset, `fileReference` and
+ * `consentReference` come back `null` (redacted) for a caller lacking `view_confidential`, exactly
+ * like `undefined`-vs-`null` signals redaction on other modules' confidential fields elsewhere in
+ * this app; here the backend redacts by nulling, so a genuinely-unset field and a redacted field
+ * aren't distinguishable from this shape alone — the edit form must never resubmit a `null`
+ * `fileReference`/`consentReference` on a `restricted` record as if it were an intentional clear
+ * (see `AssetLibraryForm`'s own redaction handling). `isPublished`/`publishedAt` mirror Brand
+ * Library's/Content Template Library's own publish/unpublish mechanism exactly (D6) — orthogonal
+ * to `approvalStatus`.
+ */
+export interface Asset {
+  readonly id: string;
+  readonly publicId: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly fileReference: string | null;
+  readonly mimeType: string | null;
+  readonly fileSizeBytes: string | null;
+  readonly checksum: string | null;
+  readonly widthPx: number | null;
+  readonly heightPx: number | null;
+  readonly durationSeconds: number | null;
+  readonly licence: string | null;
+  readonly licenceHolder: string | null;
+  readonly consentReference: string | null;
+  readonly altTextGuidance: string | null;
+  readonly visibility: AssetVisibility;
+  readonly retentionNote: string | null;
+  readonly scanStatus: AssetScanStatus;
+  readonly approvalStatus: AssetApprovalStatus;
+  readonly version: number;
+  readonly isPublished: boolean;
+  readonly publishedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * Spec §12's "related records" (D3) — a real polymorphic reference to a record in any other
+ * module, mirroring `Review.targetModuleKey`/`targetId`'s own already-reviewed pattern. `moduleKey`
+ * is a `module_registry.key` value, validated against the real registry at the service layer;
+ * `recordId` carries no foreign key, deliberately, since the target may live in any of the 43
+ * registered modules, most of which have no table yet.
+ */
+export interface AssetRelatedRecord {
+  readonly id: string;
+  readonly assetId: string;
+  readonly moduleKey: string;
+  readonly recordId: string;
+  readonly note: string | null;
+  readonly createdBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
