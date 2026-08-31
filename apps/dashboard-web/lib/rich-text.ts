@@ -88,6 +88,22 @@ export function richTextFieldValue(
  * Checks each `[label, value]` pair against `maxLength` in order and returns the first offending
  * field's message, or `null` if none exceed it.
  */
+/**
+ * Shared nullish-contract logic behind every form's local `arrayField()` wrapper (code-review
+ * finding: hand-duplicated verbatim between `section-and-pattern-library-form.tsx` and
+ * `page-template-library-form.tsx` — the same duplication class `richTextFieldValue()` above was
+ * already extracted to fix, at the identical 2-occurrence threshold). An omitted key leaves an
+ * existing array value unchanged on update; an explicit `null` clears it back to "none"; a
+ * non-empty array is sent as-is.
+ */
+export function arrayFieldValue<T>(
+  values: readonly T[],
+  mode: "create" | "edit",
+): readonly T[] | null | undefined {
+  if (values.length > 0) return values;
+  return mode === "create" ? undefined : null;
+}
+
 export function findOverLongRichTextField(
   fields: ReadonlyArray<readonly [label: string, value: string]>,
   maxLength: number,

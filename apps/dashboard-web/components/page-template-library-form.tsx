@@ -11,7 +11,7 @@ import { RelationshipPicker, TagListField, type RelationshipOption } from "@webd
 import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { PAGE_TYPE_LABEL, PAGE_TYPE_VALUES } from "@/lib/page-template-library-query";
-import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
+import { arrayFieldValue, findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./page-template-library-form.module.css";
 
@@ -316,8 +316,7 @@ export function PageTemplateLibraryForm(props: PageTemplateLibraryFormProps): Re
       }
 
       function arrayField(values: readonly string[]): readonly string[] | null | undefined {
-        if (values.length > 0) return values;
-        return props.mode === "create" ? undefined : null;
+        return arrayFieldValue(values, props.mode);
       }
 
       const sharedFields = {

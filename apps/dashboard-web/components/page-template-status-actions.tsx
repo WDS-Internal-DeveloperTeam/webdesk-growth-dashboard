@@ -16,11 +16,13 @@ export interface PageTemplateStatusActionsProps {
 /**
  * Mirrors the `TRANSITIONS` table in
  * `apps/dashboard-api/src/page-template-library/page-templates.service.ts` — kept in sync by
- * hand, same approach `ComponentStatusActions`/`SectionPatternStatusActions`/
- * `DesignTokenStatusActions`/`WebsiteStrategyStatusActions`/`ServiceStatusActions`/
- * `PersonaStatusActions`/`ProofClaimStatusActions` already use. This is the 8th independent
- * hand-copy of the shared 8-value artifact-approval-status pattern — accepted, tracked debt, same
- * as the prior 7.
+ * hand, same approach every other `*StatusActions` component in this directory already uses
+ * (`grep -rl "ALLOWED_TRANSITIONS" apps/dashboard-web/components/` finds the full, current set —
+ * a hand-maintained ordinal here has repeatedly gone stale/inconsistent across sibling files, so
+ * this comment intentionally doesn't claim one). Accepted, tracked debt: extracting a shared,
+ * backend-computed-transitions mechanism would remove this duplication entirely, but doing so for
+ * a single new consumer is disproportionate — revisit once the grep count above gets large enough
+ * to justify it.
  *
  * DELIBERATE DIVERGENCE, identical to `ComponentStatusActions`'s/`SectionPatternStatusActions`'s
  * own: `approved`'s target list here is `["archived"]` ONLY, not `["superseded", "archived"]`.
