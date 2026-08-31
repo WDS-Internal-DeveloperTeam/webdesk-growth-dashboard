@@ -76,6 +76,7 @@ describe("SectionPatternsService", () => {
     updateInPlace: ReturnType<typeof vi.fn>;
     updateApprovalStatus: ReturnType<typeof vi.fn>;
     supersedeOtherApprovedVersion: ReturnType<typeof vi.fn>;
+    findByIds: ReturnType<typeof vi.fn>;
   };
   let authorizationService: { assertAllowed: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
@@ -92,6 +93,7 @@ describe("SectionPatternsService", () => {
       updateInPlace: vi.fn(),
       updateApprovalStatus: vi.fn(),
       supersedeOtherApprovedVersion: vi.fn(),
+      findByIds: vi.fn(),
     };
     authorizationService = { assertAllowed: vi.fn() };
     auditService = { record: vi.fn() };
@@ -100,6 +102,20 @@ describe("SectionPatternsService", () => {
       authorizationService as unknown as AuthorizationService,
       auditService as unknown as AuditService,
     );
+  });
+
+  describe("existingRecordIds", () => {
+    it("returns the recordIds that resolve to a real, current section/pattern record", async () => {
+      records.findByIds.mockResolvedValue([
+        record({ recordId: "section-1" }),
+        record({ recordId: "section-2" }),
+      ]);
+
+      const result = await svc.existingRecordIds(["section-1", "section-2", "missing"]);
+
+      expect(records.findByIds).toHaveBeenCalledWith(["section-1", "section-2", "missing"]);
+      expect(result).toEqual(new Set(["section-1", "section-2"]));
+    });
   });
 
   describe("create", () => {

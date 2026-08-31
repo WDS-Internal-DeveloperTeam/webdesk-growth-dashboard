@@ -23,6 +23,7 @@ import { KeywordAndEntityLibraryModule } from "./keyword-and-entity-library/keyw
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { PageInventoryModule } from "./page-inventory/page-inventory.module.js";
+import { PageTemplateLibraryModule } from "./page-template-library/page-template-library.module.js";
 import { PageWorkspaceModule } from "./page-workspace/page-workspace.module.js";
 import { PersonaLibraryModule } from "./persona-library/persona-library.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
@@ -82,6 +83,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     NotificationsModule,
     OperationalContactsModule,
     PageInventoryModule,
+    PageTemplateLibraryModule,
     PageWorkspaceModule,
     PersonaLibraryModule,
     ProjectsModule,

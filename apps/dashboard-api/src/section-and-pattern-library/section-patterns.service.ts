@@ -154,6 +154,16 @@ export class SectionPatternsService {
     return created;
   }
 
+  /** A narrow, read-only delegating method — mirrors `DesignTokensService.existingTokenIds()`'s
+   *  own already-reviewed pattern, needed for Page Template Library's own
+   *  `requiredSectionIds`/`optionalSectionIds` existence validation (design decision D2 of
+   *  `docs/implementation/module-page-template-library.md`). Returns only the subset of `ids` that
+   *  resolve to a real, current section/pattern record. */
+  async existingRecordIds(ids: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.records.findByIds(ids);
+    return new Set(found.map((row) => row.recordId));
+  }
+
   /** The CURRENT version of a record, by its stable `recordId` — not a row `id`. */
   async findCurrent(recordId: string): Promise<SectionPatternRecordEntity> {
     const current = await this.records.findCurrentByRecordId(recordId);
