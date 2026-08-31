@@ -404,5 +404,80 @@ several prior modules' own as-built records already note for themselves) — all
 `/component-library/11111111-1111-1111-1111-111111111111`, and its own `/edit`) returned a clean
 307 to `/auth/sign-in` (200), zero server-log errors.
 
-**Not yet reviewed, gated, pushed, or merged** — each remains its own separate, not-yet-requested
-next step, matching every prior module's own precedent.
+### Independent code review
+
+4-angle finder pass (correctness, cross-file/picker-pattern trace, reuse/simplification/efficiency,
+altitude/conventions) run against the correctly-scoped diff (`origin/main` at the time, which
+already included the concurrently-merged Section and Pattern Library backend and Design Token
+Library `dashboard-web` UI). The cross-file/picker-pattern trace angle returned 0 candidates —
+confirmed `SingleComponentPicker`'s `excludeRecordId` is correctly wired, `tokenIds`' picker
+correctly fetches real Design Token Library records, the "editing an approved record forks a new
+version" behavior matches the backend exactly, the frontend `ALLOWED_TRANSITIONS` table matches the
+backend's `TRANSITIONS` table exactly, every mutating `fetch()` uses `getApiBaseUrl()`, and
+`figmaReference` is validated via `isSafeHttpUrl()` before submit. The other 3 angles surfaced 9
+candidates, all CONFIRMED — 8 fixed, 1 accepted as tracked debt:
+
+1. **Unguarded `response.json()` cast on the create path** — a malformed 200 response would throw
+   inside the `try`, get swallowed by the `catch`, and show a generic error despite a real record
+   existing. **Fixed**, alongside finding 4 below, by adopting the shared `postMutation()` helper
+   (tolerant of a missing/malformed success body by design), with an explicit guard on
+   `result.data?.recordId` for the create path.
+2. **Silent no-op when the `tokenIds` selection cap (100) is hit.** **Fixed** — a visible error
+   message plus a dynamic picker hint now surface the cap instead of nothing happening.
+3. **`figmaReference` missing a client-side `maxLength`**, unlike every other text field in the
+   form. **Fixed** — added, matching the backend's own `safeHttpUrlSchema.max(500)` cap.
+4. **`handleSubmit` hand-rolled `fetch()`+`response.ok`+`parseApiErrorMessage` instead of the
+   shared `postMutation()` helper**, matching `component-status-actions.tsx`'s identical miss.
+   **Fixed** in both files.
+5. **`component-status-actions.tsx` used plain `useState(initialStatus)` with no resync effect**,
+   instead of the shared `useSyncedState()` hook. **Fixed.**
+6. **`initialReplacement` was computed via an un-memoized IIFE re-scanning up to 100 components on
+   every render**, then fed into `useState` (not lazily). **Fixed** — converted to a lazy `useState`
+   initializer, which only runs once.
+7. **A dead `.select` CSS rule** — this form has no `<select>` element. **Fixed** — removed.
+8. **`SingleComponentPicker` is structurally near-identical to `InternalLinkForm`'s
+   `SinglePagePicker`**, hand-rolled a 2nd time rather than promoting a shared generic single-value
+   picker to `packages/ui`. **Left as accepted, tracked debt, self-flagged in the component's own
+   doc comment** — promoting it here would mean also migrating `InternalLinkForm`'s own copy in the
+   same pass, out of scope for a Component Library-only branch.
+9. **The version-card `<li>` inline style was byte-identical to the same block already duplicated
+   in Design Token Library's and Website Strategy Center's own `VersionEntry` components.**
+   **Fixed** — extracted a new `versionCardStyle` export in `lib/detail-section-styles.ts` and
+   retrofitted it onto all three detail pages (matching this project's own established
+   extract-and-retrofit convention for this file).
+
+Re-validated after fixes: typecheck clean (`dashboard-web`/`dashboard-api`/`dashboard-worker`),
+1120/1120 `dashboard-web` unit tests (unchanged — the fixes were mechanical: helper adoption, a
+lazy-init conversion, a dead-CSS removal, a style extraction — no new test-relevant behavior
+branch was introduced beyond what the existing 58 Component Library tests and the two retrofitted
+sibling detail pages' own 24+24 tests already exercise, all confirmed still green), lint
+(`--max-warnings=0`) and the CSS-token check (56 files) both clean, `next build` clean with all 4
+routes still present, `prettier --check` clean.
+
+### Independent security review
+
+Separate finder pass focused on `dangerouslySetInnerHTML` usage, `figmaReference` validation
+consistency (write and every render site), mutating-`fetch()` credential/origin handling,
+query-param injection surface, confidentiality/RBAC-boundary leakage, and XSS via
+`RelationshipPicker` option labels. **0 findings above threshold.** Confirmed: zero
+`dangerouslySetInnerHTML` occurrences anywhere in the diff — all 11 plain-text fields render as
+plain JSX text, honestly matching the backend's own unsanitized-plain-text storage; `figmaReference`
+is guarded by `isSafeHttpUrl()` on both the write path (before submit) and the one render site (the
+detail page falls back to plain text when the guard fails, never rendering an unguarded `<a href>`);
+every mutating `fetch()` goes through the shared `postMutation()` helper (`credentials: "include"`)
+prefixed with `getApiBaseUrl()`; all query-param values are length-capped/enum-validated and only
+ever interpolated via `URLSearchParams`, never raw string concatenation; `ComponentRecord` has no
+confidentiality field and none was invented, matching the module registry's own seeded
+`confidentialityLevel: null` for `component_library`; and `RelationshipPicker` option labels render
+as plain text via the shared, already-reviewed `packages/ui` component, with zero
+`dangerouslySetInnerHTML` in its own render internals. One non-security observation was noted, not
+a finding: the edit route has no redundant terminal-state redirect guard of its own — but this
+matches Website Strategy Center's own identical, already-accepted precedent (the detail page
+already hides the "Edit" link for `archived`/`superseded` records, and the backend's own update
+route independently rejects the mutation as the real enforcement point) — not a regression this
+branch introduces.
+
+### Review, gate, and production deployment
+
+Not yet reviewed by a second role, gated, pushed, or merged — each remains its own separate,
+not-yet-requested next step.
