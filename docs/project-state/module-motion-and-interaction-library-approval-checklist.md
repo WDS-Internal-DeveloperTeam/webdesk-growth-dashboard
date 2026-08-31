@@ -8,13 +8,21 @@ review complete (0 findings above threshold). Migration numbers renumbered `0008
 Pushed to `origin`, opened as
 [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86); a
 Formatting-validation CI failure (a duplicate `CLAUDE.md` item number introduced by `main` moving
-forward again mid-review) was found and fixed, all 14 CI checks now green. **Required second-role
+forward again mid-review) was found and fixed, all 14 CI checks green. **Required second-role
 human review complete — Jitesh D reviewed it and returned "Approved."** **The gate
-(G4-motion-and-interaction-library) has been approved** — WebDesk Solution, decision CONFIRM
-(clean pass, not an override, since the second-role review was already complete before the gate
-was requested), approved commit `fddbe85` on branch `module-motion-and-interaction-library`. This
-gate approval does not itself authorize merging PR #86 — merge remains its own separate,
-not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+(G4-motion-and-interaction-library) was approved** — WebDesk Solution, decision CONFIRM, approved
+commit `fddbe85` on branch `module-motion-and-interaction-library`. **"Merge PR #86" was then
+separately requested and executed** — merge commit
+`b59fba740266236fa1aacef02a95cbe1f9948b7e`, all 14 CI checks green beforehand. `dashboard-api`
+auto-deployed on push to `main` and was verified live directly, not just via CI's own Vercel
+status check — `/health` returned `build.commitSha ==
+b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is what's serving;
+`GET /motion-and-interaction-library/records` returned a clean `401` (route live, `SessionGuard`
+enforcing — not a `404`, which would mean the module never actually deployed); and
+`dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor. **The Motion and
+Interaction Library module backend is now genuinely live in production.** No `dashboard-web` UI
+exists yet for this module — a separate, not-yet-requested next step, matching every prior
+module's own backend-first precedent.
 
 ## Sign-off
 

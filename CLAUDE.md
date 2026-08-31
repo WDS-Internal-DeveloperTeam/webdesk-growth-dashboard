@@ -3462,8 +3462,10 @@ build` (all 4 routes present)/prettier all clean — independently re-run by the
     backend and now the full UI (list, detail with version history, create/edit form, status
     actions) are both live for the Wireframe Library module.
 
-61. **Motion and Interaction Library module backend — built, fully validated, code-reviewed,
-    security-reviewed, second-role human reviewed; awaiting gate decision (2026-08-31).** Not
+61. **Motion and Interaction Library module backend — built, reviewed, gated, merged
+    ([PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86),
+    merge commit `b59fba740266236fa1aacef02a95cbe1f9948b7e`); now genuinely live in production
+    (2026-08-31).** Not
     started automatically — built directly on the explicit "start Motion &
     Interaction Library" instruction. The canonical spec (§18) gives no field list, only a bare
     ~26-category taxonomy — the same spec-gap situation Section and Pattern Library hit. Two
@@ -3511,9 +3513,17 @@ build` (all 4 routes present)/prettier all clean — independently re-run by the
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-motion-and-interaction-library`) and
     `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
-    section. **This gate approval does not itself authorize merging PR #86** — merge remains its
-    own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
-    rule.
+    section. **"Merge PR #86" was then separately requested and executed** — merge commit
+    `b59fba740266236fa1aacef02a95cbe1f9948b7e`, all 14 CI checks green beforehand.
+    `dashboard-api` auto-deployed on push to `main` and was verified live directly, not just via
+    CI's own Vercel status check — `/health` returned `build.commitSha ==
+b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is what's serving;
+    `GET /motion-and-interaction-library/records` returned a clean `401` (route live,
+    `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+    and `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor. **The
+    Motion and Interaction Library module backend is now genuinely live in production.** No
+    `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+    matching every prior module's own backend-first precedent.
 
 ## Recent decisions
 
@@ -6216,6 +6226,19 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-temp
   section. **This gate approval does not itself authorize merging PR #86** — merge remains its
   own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
   rule.
+- `[2026-08-31]` **"Merge PR #86" was separately requested and executed.** All 14 CI checks
+  confirmed green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `b59fba740266236fa1aacef02a95cbe1f9948b7e`. `dashboard-api` auto-deployed on push to `main`
+  and was verified live directly, not just via CI's own Vercel status check — `/health` returned
+  `build.commitSha ==
+b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is what's serving;
+  `GET /motion-and-interaction-library/records` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+  and `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor. **The
+  Motion and Interaction Library module backend is now genuinely live in production.** No
+  `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+  matching every prior module's own backend-first precedent.
 
 ## Open client blockers
 
