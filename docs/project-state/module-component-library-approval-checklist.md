@@ -4,7 +4,9 @@
 accepted as tracked debt). Security review complete (0 findings above threshold). Required
 second-role human review complete — Jitesh D, "Approve as-is", accepting the 1 open tracked-debt
 finding. Gate (G4-component-library) approved — WebDesk Solution, decision CONFIRM, approved
-commit `b3fe561` on branch `module-component-library`.
+commit `b3fe561` on branch `module-component-library`. **Pushed to `origin` and opened as
+[PR #79](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/79).** Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -21,7 +23,7 @@ for this slice can be requested.
 | 6   | Security review complete                   | ✅ `security-review` skill run separately — 0 findings above threshold                                                                                                                                                                                                                                                                                                                         |
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ The `under_review -> rejected` transition requiring the `approve` action (not `review`) is recorded as accepted, tracked debt — copied verbatim from Design Token Library, fixing only here would diverge from the sibling module                                                                                                                                                           |
 | 8   | Documentation updated                      | ✅ `docs/implementation/module-component-library.md` (Scope + As-built + code review + security review, collapsed single-file format per the 2026-08-27 standing rule)                                                                                                                                                                                                                         |
-| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-component-library`, latest commit `b3fe561` — not yet pushed to `origin`, no PR opened yet                                                                                                                                                                                                                                                                                   |
+| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-component-library`, latest commit `20b1d71` — pushed to `origin`, [PR #79](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/79) opened                                                                                                                                                                                                            |
 
 ## Forbidden-actions check
 
