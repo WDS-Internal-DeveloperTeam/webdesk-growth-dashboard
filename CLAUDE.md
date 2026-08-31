@@ -3393,7 +3393,74 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, confirming the exact merged commit is
     confirming the session gate is intact. **The Wireframe Library module backend is now
     genuinely live in production.** No `dashboard-web` UI exists yet for this module — a
     separate, not-yet-requested next step, matching every prior module's own backend-first
-    precedent.
+    precedent. **Update (2026-08-31): the `dashboard-web` UI has since been built — see item 60
+    below.**
+
+60. **`dashboard-web` Wireframe Library UI — built, reviewed, gated, merged
+    ([PR #85](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/85),
+    merge commit `8b76ff109b33ef091b4806ed74307565ae859a84`); now genuinely live in production
+    (2026-08-31).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #84). Built directly on the explicit "Start the dashboard-web UI
+    for it Wireframe Library" instruction. File-for-file mirrors Section and Pattern Library's
+    already-reviewed UI structure — the closest sibling (both have real multi-row version
+    history, both reuse the `creative_design` RBAC group). Four routes under
+    `app/(shell)/wireframe-library/` at the module registry's own seeded `route` field
+    (`/wireframe-library`, confirmed against migration `00035`): list, detail (with a
+    `<details>`/`<summary>` version-history disclosure list using each row's own `isCurrent`
+    field, not a cross-request id comparison), create, edit. `publicId`/`pageOrModule` are
+    create-only; `viewport` a select; `fileReference` a client-validated (`isSafeHttpUrl()`) URL
+    input; `annotations`/`interactionNotes` use the existing `RichTextEditor` per the 2026-08-22
+    standing rule — the backend already sanitized both fields at write time from this module's
+    original backend-only pass, so the only backend change needed was raising
+    `RICH_TEXT_MAX_LENGTH` 20,000 → 40,000 to match; `relatedTemplateId` stays a plain free-text
+    field, labeled clearly as unvalidated (the real `page_template_library` dependency cycle);
+    `reviewerUserId` uses the reusable `UserPicker`. `WireframeStatusActions` mirrors the
+    backend's `TRANSITIONS` table exactly, including the deliberate `approved -> archived`-only
+    divergence (no `superseded` edge — supersede is automatic). **Reviewed at light tier**, per
+    this project's 2026-08-27 "right-size the review pipeline" standing rule — a small,
+    frontend-only UI slice consuming an already-reviewed, already-gated backend with only a
+    validation-bound length-cap raise as the sole backend change. A direct read-through pass
+    verified the create-only field contract against the real backend DTO, the transition table
+    against the real backend `TRANSITIONS` table, reuse of every established shared helper
+    (`artifact-approval-status.ts`, `detail-section-styles.ts`, `list-filter-styles.ts`,
+    `list-table-styles.ts`, `pagination.ts`, `rich-text.ts`, `safe-http-url.ts`, `uuid.ts`,
+    `SanitizedRichText`), the module-registry `route` value, failure isolation on the secondary
+    reviewer-resolution fetch on both the detail and edit pages, and the edit page's
+    terminal-state handling (matches the already-accepted `SectionAndPatternLibraryEdit`
+    precedent — no server-side redirect on direct navigation to `/edit`, only the detail page
+    hides the Edit link). **0 findings.** A separate security review was skipped per the same
+    standing rule — no new endpoint, no new sink; both rich-text fields route exclusively through
+    the existing, already-audited `SanitizedRichText` component. 1232/1232 `dashboard-web` unit
+    tests (25 new), 46/46 `dashboard-api` unit tests for this module (unaffected by the
+    length-cap change), typecheck/lint (`--max-warnings=0`)/CSS-token-check (62 files)/`next
+build` (all 4 routes present)/prettier all clean — independently re-run by the orchestrating
+    session, not trusted from the build agent's own report. See
+    `docs/implementation/module-wireframe-library.md`'s "As-built — `dashboard-web` UI" section
+    and `docs/project-state/dashboard-web-wireframe-library-approval-checklist.md`. **Required
+    second-role human review complete via the direct "gate it and push the branch" instruction**
+    — light tier, so the approval checklist's own findings table served as the review artifact
+    rather than a separately published packet, since there were no open findings of any kind on
+    this branch. **The gate (G4-dashboard-web-wireframe-library) was then separately requested
+    and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override), approved
+    commit `8f8d952` on branch `dashboard-web-wireframe-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-wireframe-library`). **"Push the branch" and "Open a PR" were then
+    separately requested and executed** — pushed to `origin`, opened as
+    [PR #85](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/85), all
+    14 CI checks confirmed green. **"Merge PR #85" was then separately requested and executed** —
+    merge commit `8b76ff109b33ef091b4806ed74307565ae859a84`, all 14 CI checks green beforehand.
+    Both Vercel projects auto-deployed on push to `main` and were verified live directly, not
+    just via CI's own Vercel status check — `dashboard-api`'s `/health` returned
+    `build.commitSha ==
+8b76ff109b33ef091b4806ed74307565ae859a84`, confirming the exact merged commit is what's serving;
+    `GET /wireframe-library/records` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/wireframe-library` correctly redirects (307) an unauthenticated visitor to
+    `/auth/sign-in` (a transient stale-edge-cache `404` on the first two checks was ruled out via
+    repeated, cache-busted checks, not a real defect). **The `dashboard-web` Wireframe Library UI
+    is now genuinely live in production**, closing out this slice's full build-to-production arc —
+    backend and now the full UI (list, detail with version history, create/edit form, status
+    actions) are both live for the Wireframe Library module.
 
 60. **Motion and Interaction Library module backend — built, fully validated, code-reviewed,
     security-reviewed; awaiting required second-role human review and gate decision

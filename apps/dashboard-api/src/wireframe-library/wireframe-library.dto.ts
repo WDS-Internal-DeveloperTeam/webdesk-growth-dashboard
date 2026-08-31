@@ -20,12 +20,14 @@ const APPROVAL_STATUS_VALUES = [
 
 export const wireframeApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
-// `annotations`/`interactionNotes` are rich-text-sanitized at write time (scope doc) even though
-// no `dashboard-web` RichTextEditor UI exists yet for this module (backend-only pass, matching
-// every prior module's own backend-first precedent) — a plain-text length cap here, not the
-// doubled rich-text-markup-overhead cap sibling modules raise to only once their own UI actually
-// wires RichTextEditor in (mirrors Section and Pattern Library's own identical reasoning/value).
-const RICH_TEXT_MAX_LENGTH = 20_000;
+// `annotations`/`interactionNotes` are rich-text-sanitized at write time (scope doc). The
+// `dashboard-web` RichTextEditor UI now wires both fields in (see
+// `docs/implementation/module-wireframe-library.md`'s "dashboard-web UI" section) — raised from
+// this module's own original backend-only-pass plain-text cap (20,000) to the doubled
+// rich-text-markup-overhead cap every sibling module's own UI raises to once it wires
+// RichTextEditor in (mirrors Section and Pattern Library's/Persona Library's/Service Library's own
+// identical raise ratio).
+const RICH_TEXT_MAX_LENGTH = 40_000;
 const richTextField = z.string().max(RICH_TEXT_MAX_LENGTH).nullish();
 
 const UUID_FIELD = z.string().uuid();
