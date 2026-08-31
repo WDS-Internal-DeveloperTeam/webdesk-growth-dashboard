@@ -138,6 +138,28 @@ describe("PageTemplatesService", () => {
       expect(writtenInput.wireframeReferences).toEqual([]);
     });
 
+    it("sanitizes rich-text fields (contentRequirements/searchRequirements/conversionGoal) before writing", async () => {
+      pageTemplates.findCurrentByPublicId.mockResolvedValue(null);
+      pageTemplates.create.mockResolvedValue(pageTemplate());
+
+      await svc.create(
+        {
+          publicId: "PGT-X",
+          pageType: "service",
+          name: "Service",
+          contentRequirements: "<p>Safe</p><script>alert(1)</script>",
+          searchRequirements: "<p>Target queries here</p>",
+          conversionGoal: "<p>Book a call</p>",
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = pageTemplates.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.contentRequirements).not.toContain("<script>");
+      expect(writtenInput.searchRequirements).toContain("Target queries here");
+      expect(writtenInput.conversionGoal).toContain("Book a call");
+    });
+
     it("validates requiredSectionIds against real Section and Pattern Library records before creating", async () => {
       pageTemplates.findCurrentByPublicId.mockResolvedValue(null);
       sectionPatternsService.existingRecordIds.mockResolvedValue(new Set(["section-1"]));
@@ -575,6 +597,42 @@ describe("PageTemplatesService", () => {
           conversionGoal: "Existing conversion goal",
           phpTemplateRelationship: "existing/path.php",
         }),
+        expect.anything(),
+      );
+    });
+
+    it("sanitizes a genuinely new rich-text patch value on fork, and inherits the current (already-sanitized) value when omitted", async () => {
+      const approved = pageTemplate({
+        approvalStatus: "approved",
+        contentRequirements: "Existing content requirements",
+      });
+      pageTemplates.findCurrentByRecordId.mockResolvedValue(approved);
+      pageTemplates.updateInPlace.mockResolvedValue(
+        pageTemplate({ ...approved, isCurrent: false }),
+      );
+      pageTemplates.createNewVersion.mockResolvedValue(pageTemplate());
+
+      await svc.update(
+        "record-1",
+        { contentRequirements: "<p>New</p><script>alert(1)</script>" },
+        "actor-1",
+      );
+
+      const [writtenInput] = pageTemplates.createNewVersion.mock.calls[0] as [
+        Record<string, unknown>,
+      ];
+      expect(writtenInput.contentRequirements).not.toContain("<script>");
+
+      pageTemplates.createNewVersion.mockClear();
+      pageTemplates.findCurrentByRecordId.mockResolvedValue(approved);
+      pageTemplates.updateInPlace.mockResolvedValue(
+        pageTemplate({ ...approved, isCurrent: false }),
+      );
+      pageTemplates.createNewVersion.mockResolvedValue(pageTemplate());
+
+      await svc.update("record-1", { name: "Only name" }, "actor-1");
+      expect(pageTemplates.createNewVersion).toHaveBeenCalledWith(
+        expect.objectContaining({ contentRequirements: "Existing content requirements" }),
         expect.anything(),
       );
     });

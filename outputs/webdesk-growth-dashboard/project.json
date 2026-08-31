@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-wireframe-library",
+    "current_gate": "G4-dashboard-web-page-template-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -966,6 +966,20 @@
       "approved_commit": "ec96265",
       "record": "docs/project-state/module-wireframe-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-page-template-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-page-template-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-31T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Page Template Library module -- closes this module's last named gap following the backend's own build-to-production arc (PR #82, live). Mirrors Component Library's UI structure file-for-file: list/detail/create/edit routes, RelationshipPicker for requiredSectionIds/optionalSectionIds (Section and Pattern Library) and supportedComponentIds (Component Library), TagListField for the unvalidated wireframeReferences, a self-referential SinglePageTemplatePicker (3rd hand-copy of that wrapper shape, already self-documented as accepted debt) for replacementRecordId, and a real multi-row Version history section. Per the 2026-08-22 standing rule, contentRequirements/searchRequirements/conversionGoal convert to RichTextEditor with a paired backend change: PageTemplatesService.create()/update() (both in-place and fork branches) now sanitize via sanitizeNullableRichText()/sanitizeNullableRichTextIfChanged()/sanitizeOrInherit(), and the DTO cap raised 4,000->40,000 to match the converged ceiling every sibling rich-text conversion lands on. Independent code review (high effort, 8-angle finder pass via parallel subagents, 1-vote self-verification) surfaced 10 findings kept in the final report -- 4 CONFIRMED and fixed: arrayField() extracted into a new arrayFieldValue() export in lib/rich-text.ts (a 2nd byte-identical copy, past this codebase's own 2-occurrence extraction threshold), retrofitted onto section-and-pattern-library-form.tsx too; the status-actions component's self-declared duplication ordinal corrected to point at a grep command instead of an unverifiable number (sibling files' own claimed ordinals had already drifted out of sync); the RICH_TEXT_MAX_LENGTH doc comment's inaccurate '10x ratio' claim corrected to describe the real convergence-on-40,000 pattern; and, discovered while verifying that fix, a real, live bug in a DIFFERENT already-merged module (Section and Pattern Library's own UI wires RichTextEditor but its backend cap was never raised to match) was flagged as a separate follow-up task, not fixed in this branch. 6 PLAUSIBLE findings left as accepted, tracked debt, each matching an already-established duplication class elsewhere in this codebase (the audit trail logging raw pre-sanitization HTML, three near-identical option-filtering useMemo blocks, selected-chip resolution duplicated 3x, a useState-instead-of-useMemo lookup, the empty-value sentinel ternary re-derived 4 times, and plainField() as an 8th independent hand-copy). A separate security-review skill run then found 0 findings above threshold -- confirmed all 3 write paths sanitize with no gap, every render site for the 3 rich-text fields routes exclusively through the shared SanitizedRichText component, no IDOR (relationship ids surface only records already returned by the caller's own permission-filtered list endpoints), and no SSRF/credential-leakage surface in the picker-fetch functions. 1207/1207 dashboard-web unit tests (62 new), 1299/1299 dashboard-api unit tests, typecheck/lint/CSS-token-check/next build (all 4 routes present)/nest build/prettier all clean. Required second-role human review complete -- the project owner reviewed the published review packet and returned 'Approved as-is,' accepting the 6 open PLAUSIBLE findings as tracked debt, no disputes raised. Recorded as CONFIRM, not an override, since that review was already complete before this gate was requested.",
+      "approved_commit": "39e8deb",
+      "record": "docs/project-state/dashboard-web-page-template-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging -- that remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. The branch was already pushed and PR #83 already opened before this gate was requested."
     }
   ],
   "budget": {
@@ -2815,7 +2829,16 @@
       "details": "Gate G4-wireframe-library approved for the Wireframe Library module backend (module #16), decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved', no disputes raised -- was already complete before the gate was requested). Approved commit ec96265 on branch module-wireframe-library. Full-pipeline review tier: independent code review (0 findings) plus a separate security review (0 findings above threshold). Built concurrently with, and cleanly merged against, the Page Template Library module backend -- the other half of the same real dependency cycle (page_template_library <-> wireframe_library) named in the seeded module registry; migrations explicitly renumbered to 00084/00085 to avoid colliding with Page Template Library's 00082/00083. 594/594 database integration, 28/28 database unit, 1343/1343 dashboard-api unit, 598/598 e2e/integration tests against a real disposable database, re-verified independently both before and after the merge. See docs/project-state/module-wireframe-library-approval-checklist.md's Sign-off section for the full record. This gate does not authorize pushing, opening a PR, or merging -- each is its own separate authorization.",
       "project_version_before": 91,
       "project_version_after": 92
+    },
+    {
+      "timestamp": "2026-08-31T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-dashboard-web-page-template-library approved for the dashboard-web Page Template Library UI, decision CONFIRM (clean pass, not an override, since the required second-role human review -- the project owner, 'Approved as-is', no disputes raised -- was already complete before the gate was requested). Approved commit 39e8deb on branch dashboard-web-page-template-library. Full-pipeline review tier: independent code review (10 findings kept, 4 CONFIRMED and fixed, 6 PLAUSIBLE accepted as tracked debt -- including a real, live bug found in a different already-merged module, Section and Pattern Library, whose own backend rich-text cap was never raised to match its already-shipped UI, flagged as a separate follow-up task) plus a separate security review (0 findings above threshold). 1207/1207 dashboard-web unit, 1299/1299 dashboard-api unit tests against a real disposable database. See docs/project-state/dashboard-web-page-template-library-approval-checklist.md's Sign-off section for the full record. This gate does not authorize merging -- that is its own separate authorization. The branch was already pushed and PR #83 already opened before this gate was requested.",
+      "project_version_before": 92,
+      "project_version_after": 93
     }
   ],
-  "current_gate": "G4-wireframe-library"
+  "current_gate": "G4-dashboard-web-page-template-library"
 }

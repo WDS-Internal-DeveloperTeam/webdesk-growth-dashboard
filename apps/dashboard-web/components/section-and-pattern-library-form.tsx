@@ -6,7 +6,7 @@ import type { SectionPatternRecord } from "@webdesk/shared-types";
 import { TagListField } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
-import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
+import { arrayFieldValue, findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { isSafeHttpUrl } from "@/lib/safe-http-url";
 import { PATTERN_TYPE_LABEL, PATTERN_TYPE_VALUES } from "@/lib/section-and-pattern-library-query";
 import { RichTextEditor } from "./rich-text-editor";
@@ -152,8 +152,7 @@ export function SectionAndPatternLibraryForm(props: SectionAndPatternLibraryForm
       }
 
       function arrayField(values: readonly string[]): readonly string[] | null | undefined {
-        if (values.length > 0) return values;
-        return props.mode === "create" ? undefined : null;
+        return arrayFieldValue(values, props.mode);
       }
 
       const sharedFields = {
