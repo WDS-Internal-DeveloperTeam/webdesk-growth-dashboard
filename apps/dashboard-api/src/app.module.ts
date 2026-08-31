@@ -11,6 +11,7 @@ import { AuthzModule } from "./authz/authz.module.js";
 import { BrandLibraryModule } from "./brand-library/brand-library.module.js";
 import { AssetLibraryModule } from "./asset-library/asset-library.module.js";
 import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
+import { ComponentLibraryModule } from "./component-library/component-library.module.js";
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { DesignReferenceLibraryModule } from "./design-reference-library/design-reference-library.module.js";
@@ -70,6 +71,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     BrandLibraryModule,
     AssetLibraryModule,
     BusinessKnowledgeModule,
+    ComponentLibraryModule,
     ContentTemplateLibraryModule,
     DesignReferenceLibraryModule,
     DesignTokenLibraryModule,

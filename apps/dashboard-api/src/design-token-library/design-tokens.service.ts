@@ -121,6 +121,20 @@ export class DesignTokensService {
     return created;
   }
 
+  /**
+   * A narrow, read-only delegating method for other modules validating a `tokenIds`-style field
+   * against real design tokens (Component Library) — returns only the subset of `ids` that
+   * resolve to a real, current token, never a full `DesignTokenEntity`. Exists so
+   * `DesignTokenLibraryModule` can export just `DesignTokensService`, not the write-capable
+   * `DESIGN_TOKEN_REPOSITORY` token directly (mirrors `ServicesService.existingServiceIds()`'s
+   * own already-reviewed pattern — the exact "surface grows" condition Persona Library's own
+   * security review flagged once already, applied here from the start rather than reactively).
+   */
+  async existingTokenIds(ids: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.tokens.findByIds(ids);
+    return new Set(found.map((row) => row.recordId));
+  }
+
   /** The CURRENT version of a record, by its stable `recordId` — not a row `id`. */
   async findCurrent(recordId: string): Promise<DesignTokenEntity> {
     const current = await this.tokens.findCurrentByRecordId(recordId);
