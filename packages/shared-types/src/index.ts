@@ -1375,3 +1375,77 @@ export interface AssetRelatedRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/** The spec's own token-group taxonomy (`03_Detailed_Module_Specifications.md §13`), collapsed
+ *  into one flat enum — mirrors
+ *  `packages/database/src/design-token-library/entities.ts`'s `DesignTokenGroup` exactly.
+ *  Immutable across a record's own version chain (set once at creation; a real group change is a
+ *  different record, not a new version of this one), mirroring `WebsiteStrategyRecordType`'s own
+ *  immutability discipline. */
+export type DesignTokenGroup =
+  | "colors"
+  | "semantic_statuses"
+  | "theme"
+  | "typography"
+  | "spacing"
+  | "grids"
+  | "breakpoints"
+  | "borders"
+  | "shadows"
+  | "opacity_and_z_index"
+  | "icon_sizes"
+  | "media_ratios"
+  | "component_sizes"
+  | "motion"
+  | "interactive_states";
+
+/** Which theme(s) a token's value applies to — the spec's own "theme variation" field. `null`
+ *  means the token is theme-independent (most tokens). */
+export type DesignTokenThemeVariation = "light" | "dark" | "both";
+
+// Structurally identical to ArtifactApprovalStatus/WebsiteStrategyApprovalStatus/
+// ServiceApprovalStatus/PersonaApprovalStatus/ProofClaimApprovalStatus (the shared 8-value
+// artifact-approval workflow) — reused as its own named type rather than an alias so this module's
+// own `-query.ts` file can still narrow to it directly without a cast, matching every sibling
+// module's own precedent.
+export type DesignTokenApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * One row per VERSION, not one row per record — structurally identical to
+ * `WebsiteStrategyRecord`'s own real version-history shape
+ * (`packages/database/src/design-token-library/entities.ts`'s own doc comment). `id` is unique per
+ * physical row/version; `recordId` is the stable logical-record identity shared by every version of
+ * the same record (the history/comparison key, and the identifier every `dashboard-web` route/link
+ * uses — never `id`, which changes across a fork). `publicId` is likewise stable across every
+ * version. `isCurrent` is true for exactly one row per `recordId` at any time.
+ * `usageReferences` is a plain, unvalidated string array — no `component_library`/`page_workspace`
+ * module exists yet to link it to for real.
+ */
+export interface DesignTokenRecord {
+  readonly id: string;
+  readonly recordId: string;
+  readonly publicId: string;
+  readonly group: DesignTokenGroup;
+  readonly versionNumber: number;
+  readonly isCurrent: boolean;
+  readonly name: string;
+  readonly value: string;
+  readonly unit: string | null;
+  readonly semanticPurpose: string | null;
+  readonly responsiveVariation: string | null;
+  readonly themeVariation: DesignTokenThemeVariation | null;
+  readonly usageReferences: readonly string[];
+  readonly approvalStatus: DesignTokenApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
