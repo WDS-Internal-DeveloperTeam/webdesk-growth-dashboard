@@ -231,6 +231,24 @@ export class SectionPatternRecordRepository {
   }
 
   /**
+   * Every CURRENT-version row whose `recordId` is in `recordIds`. Added for Page Template
+   * Library's own `requiredSectionIds`/`optionalSectionIds` existence validation (design decision
+   * D2 of `docs/implementation/module-page-template-library.md`), mirroring
+   * `ComponentRepository.findByIds()`'s/`DesignTokenRepository.findByIds()`'s own shape and
+   * purpose. Returns only the subset of `recordIds` that resolve to a real, current section/
+   * pattern record.
+   */
+  async findByIds(recordIds: readonly string[]): Promise<readonly SectionPatternRecordEntity[]> {
+    if (recordIds.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({
+      where: { recordId: { [Op.in]: [...recordIds] }, isCurrent: true },
+    });
+    return rows.map((row) => toEntityWithIsoDates<SectionPatternRecordEntity>(row));
+  }
+
+  /**
    * A plain, generic `UPDATE ... WHERE id = ... RETURNING`, scoped to one physical row (a single
    * version). Used two ways by the service layer: (1) content edits on a non-approved current
    * row, and (2) flipping the OLD current row's `isCurrent` to `false` when a new version is

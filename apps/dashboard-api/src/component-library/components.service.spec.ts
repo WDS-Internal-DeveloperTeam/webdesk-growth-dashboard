@@ -82,6 +82,7 @@ describe("ComponentsService", () => {
     updateInPlace: ReturnType<typeof vi.fn>;
     updateApprovalStatus: ReturnType<typeof vi.fn>;
     supersedeOtherApprovedVersion: ReturnType<typeof vi.fn>;
+    findByIds: ReturnType<typeof vi.fn>;
   };
   let authorizationService: { assertAllowed: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
@@ -99,6 +100,7 @@ describe("ComponentsService", () => {
       updateInPlace: vi.fn(),
       updateApprovalStatus: vi.fn(),
       supersedeOtherApprovedVersion: vi.fn(),
+      findByIds: vi.fn(),
     };
     authorizationService = { assertAllowed: vi.fn() };
     auditService = { record: vi.fn() };
@@ -230,6 +232,20 @@ describe("ComponentsService", () => {
       await expect(
         svc.create({ publicId: "CMP-X", category: "buttons", name: "X" }, "actor-1"),
       ).rejects.toBe(dbError);
+    });
+  });
+
+  describe("existingComponentIds", () => {
+    it("returns the recordIds that resolve to a real, current component", async () => {
+      components.findByIds.mockResolvedValue([
+        component({ recordId: "component-1" }),
+        component({ recordId: "component-2" }),
+      ]);
+
+      const result = await svc.existingComponentIds(["component-1", "component-2", "missing"]);
+
+      expect(components.findByIds).toHaveBeenCalledWith(["component-1", "component-2", "missing"]);
+      expect(result).toEqual(new Set(["component-1", "component-2"]));
     });
   });
 
