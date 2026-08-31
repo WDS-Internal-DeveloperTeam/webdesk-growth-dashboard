@@ -1662,3 +1662,55 @@ export interface PageTemplateRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/** The spec's own §17 viewport field — 3 values. Not immutable across a record's own version
+ *  chain (unlike `pageOrModule`) — a later version may legitimately re-plan the same page/module
+ *  wireframe at a different viewport. Mirrors
+ *  `packages/database/src/wireframe-library/entities.ts`'s own `WireframeViewport`. */
+export type WireframeViewport = "mobile" | "tablet" | "desktop";
+
+/** Structurally identical to `PageTemplateApprovalStatus`/`SectionPatternApprovalStatus`/
+ *  `ArtifactApprovalStatus` (the shared 8-value artifact-approval workflow) — reused as its own
+ *  named type rather than an alias so this module's own `-query.ts` file can still narrow to it
+ *  directly without a cast, matching every sibling module's own precedent. */
+export type WireframeApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * One row per VERSION, not one row per record — structurally identical to `PageTemplateRecord`'s/
+ * `SectionPatternRecord`'s own real version-history shape
+ * (`packages/database/src/wireframe-library/entities.ts`'s own doc comment). `id` is unique per
+ * physical row/version; `recordId` is the stable logical-record identity shared by every version
+ * of the same record (the history/comparison key, and the identifier every `dashboard-web`
+ * route/link uses — never `id`, which changes across a fork). `publicId` is likewise stable
+ * across every version. `isCurrent` is true for exactly one row per `recordId` at any time.
+ * `pageOrModule` is immutable across a record's own version chain. `relatedTemplateId` is a
+ * plain, unvalidated string — no `page_template_library` FK exists yet (real dependency cycle,
+ * see migration `00084`'s own doc comment).
+ */
+export interface WireframeRecord {
+  readonly id: string;
+  readonly recordId: string;
+  readonly publicId: string;
+  readonly pageOrModule: string;
+  readonly versionNumber: number;
+  readonly isCurrent: boolean;
+  readonly viewport: WireframeViewport;
+  readonly fileReference: string | null;
+  readonly annotations: string | null;
+  readonly interactionNotes: string | null;
+  readonly relatedTemplateId: string | null;
+  readonly reviewerUserId: string | null;
+  readonly approvalStatus: WireframeApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
