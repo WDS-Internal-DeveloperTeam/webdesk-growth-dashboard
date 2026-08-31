@@ -3526,8 +3526,10 @@ b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is
     matching every prior module's own backend-first precedent. **Update (2026-08-31): the
     `dashboard-web` UI has since been built and gated — see item 62 below.**
 
-62. **`dashboard-web` Motion and Interaction Library UI — built, reviewed, gated (2026-08-31),
-    not yet pushed or merged.** Closes this module's last named gap, following the backend's own
+62. **`dashboard-web` Motion and Interaction Library UI — built, reviewed, gated, merged
+    ([PR #87](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/87),
+    merge commit `c6d19fe552404169bfb43399d170a38786e93617`); now genuinely live in production
+    (2026-08-31).** Closes this module's last named gap, following the backend's own
     build-to-production arc (PR #86). Not started automatically — built directly on the explicit
     "Start the dashboard-web UI for it" instruction. File-for-file mirrors Section and Pattern
     Library's already-reviewed UI structure, the closest sibling (both have real multi-row
@@ -3576,8 +3578,28 @@ b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is
     opening a PR, or merging** — each remains its own separate, not-yet-requested authorization,
     per this project's standing "no auto-merge" rule. **"Push the branch" and "Open a PR" were
     then separately requested and executed** — pushed to `origin`, opened as
-    [PR #87](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/87).
-    Merge authorization remains a separate, not-yet-requested next step.
+    [PR #87](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/87), all
+    14 CI checks confirmed green. **"Merge PR #87" was then separately requested and executed** —
+    merge commit `c6d19fe552404169bfb43399d170a38786e93617`, all 14 CI checks green beforehand.
+    Both Vercel projects auto-deployed on push to `main` and were verified live directly, not
+    just via CI's own Vercel status check — `dashboard-api`'s `/health` returned
+    `build.commitSha ==
+c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is what's serving;
+    `GET /motion-and-interaction-library/records` returned a clean `401` (route live,
+    `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+    and `dashboard-web`'s `/motion-and-interaction-library` correctly redirects (307) an
+    unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Motion and Interaction
+    Library UI is now genuinely live in production**, closing out this slice's full
+    build-to-production arc — backend and now the full UI (list, detail with version history,
+    create/edit form, status actions) are both live for the Motion and Interaction Library
+    module. **Next candidate module: `design_review_center` — both the advisory
+    `Recommended_Module_Roadmap.md` (order #22, right after Motion & Interaction Library) and the
+    dependency-computed `docs/phase-plans/module-implementation-roadmap.md` (Wave 4) now agree —
+    every one of its six real dependencies (`component_library`, `design_token_library`,
+    `section_and_pattern_library`, `page_template_library`, `wireframe_library`,
+    `motion_and_interaction_library`) is now genuinely live, closing this module out as the last
+    unbuilt member of Wave 4. Not started or authorized — a separate, not-yet-requested next
+    step.**
 
 ## Recent decisions
 
@@ -6335,6 +6357,30 @@ b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is
   `dashboard-web-motion-and-interaction-library` — pushed to `origin`, opened as
   [PR #87](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/87). Merge
   authorization remains a separate, not-yet-requested next step.
+- `[2026-08-31]` **"Merge PR #87" was separately requested and executed.** All 14 CI checks
+  confirmed green first. Merged with a real merge commit (not squash/rebase), matching every
+  prior merge in this project's history — merge commit
+  `c6d19fe552404169bfb43399d170a38786e93617`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is what's serving;
+  `GET /motion-and-interaction-library/records` returned a clean `401` (route live,
+  `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+  and `dashboard-web`'s `/motion-and-interaction-library` correctly redirects (307) an
+  unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Motion and Interaction
+  Library UI is now genuinely live in production**, closing out this slice's full
+  build-to-production arc — backend and now the full UI are both live for the Motion and
+  Interaction Library module.
+- `[2026-08-31]` **Identified the module roadmap's next candidate: `design_review_center`.**
+  Checked both roadmap sources directly rather than guessing — the advisory
+  `canonical-inputs/Recommended_Module_Roadmap.md` names it order #22, immediately after Motion &
+  Interaction Library (#21), and the dependency-computed
+  `docs/phase-plans/module-implementation-roadmap.md` places it in Wave 4, depending on
+  `component_library`, `design_token_library`, `section_and_pattern_library`,
+  `page_template_library`, `wireframe_library`, and `motion_and_interaction_library` — every one
+  of which is now genuinely live in production, closing Design Review Center out as the last
+  unbuilt member of Wave 4. Not started or authorized — recorded for reference, a separate
+  next-step decision remains the user's to make.
 
 ## Open client blockers
 
