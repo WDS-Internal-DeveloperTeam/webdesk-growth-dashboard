@@ -3462,6 +3462,59 @@ build` (all 4 routes present)/prettier all clean — independently re-run by the
     backend and now the full UI (list, detail with version history, create/edit form, status
     actions) are both live for the Wireframe Library module.
 
+61. **Motion and Interaction Library module backend — built, fully validated, code-reviewed,
+    security-reviewed, second-role human reviewed; awaiting gate decision (2026-08-31).** Not
+    started automatically — built directly on the explicit "start Motion &
+    Interaction Library" instruction. The canonical spec (§18) gives no field list, only a bare
+    ~26-category taxonomy — the same spec-gap situation Section and Pattern Library hit. Two
+    design forks confirmed directly with the project owner first (`AskUserQuestion`): the field
+    set (a 26-value `category` enum plus 8 content fields, mirroring the taxonomy) and
+    `relatedComponentIds` as a REAL, existence-validated relationship into Component Library
+    (`ComponentsService.existingComponentIds()`) rather than an unvalidated array — a genuine
+    improvement over the Design Token/Section and Pattern Library precedent, since Component
+    Library already exists. Single table (`motion_interaction_records`), real multi-row version
+    history mirroring Section and Pattern Library structurally, the standard 8-value approval
+    workflow, no confidentiality mechanism, no publish/unpublish action, reuses the seeded
+    `creative_design` RBAC group verbatim. Built by a background agent, independently re-verified
+    in full by the orchestrating session (every high-risk file read directly, every test suite
+    re-run against a real disposable database). **Independent code review** (high effort,
+    8-angle finder pass) surfaced 3 candidates after dedup — 1 CONFIRMED and fixed (the seeded
+    `module_registry.dependencies` omitted the real Component Library coupling this build
+    introduces, inconsistent with `module-implementation-roadmap.md`'s own dependency-derived
+    wave computation; fixed via an additive migration and the roadmap doc updated to move this
+    module from Wave 1 to Wave 2), 1 PLAUSIBLE left as accepted debt (the update DTO schema
+    hand-duplicated instead of derived via `.omit()`/`.partial()` — matches 6 of 8 sibling
+    modules' own convention), 1 REFUTED (an "unused speculative existence-check method" claim,
+    raised independently by 3 finder angles, refuted on verification since it mirrors an
+    established, already-consumed convention, not Page Template Library's genuinely-removed dead
+    method). **Security review found 0 findings above threshold.** Mid-build, Wireframe Library
+    (module #16) merged to `main` claiming migrations `00084`/`00085` — this branch's own
+    migrations were renumbered to `00086`–`00088` after merging `main`, every internal reference
+    updated, and everything independently re-verified against a fresh database (1386/1386
+    `dashboard-api` unit, 620/620 `packages/database` integration, 625/625 `dashboard-api`
+    e2e/integration, all clean; 88-migration round-trip clean). A review packet (published as a
+    Claude artifact, "Motion and Interaction Library Review Packet" — code review + security
+    review findings, fixes, and validation evidence, with a decision section) was prepared for
+    the required second-role human review, since the implementing agent cannot also be its own
+    reviewer (ADR-0010). See `docs/implementation/module-motion-and-interaction-library.md` and
+    `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`. **"Push the
+    branch and open a PR" was then separately requested and executed** — pushed to `origin`,
+    opened as
+    [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86),
+    then a Formatting-validation CI failure (a duplicate `CLAUDE.md` item number, introduced when
+    `main` moved forward again mid-review) was found and fixed, all 14 CI checks green.
+    **Required second-role human review complete** — Jitesh D reviewed it and returned
+    "Approved," no disputes raised. **The gate (G4-motion-and-interaction-library) was then
+    separately requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an
+    override, since the second-role review was already complete before the gate was requested),
+    approved commit `fddbe85` on branch `module-motion-and-interaction-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-motion-and-interaction-library`) and
+    `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
+    section. **This gate approval does not itself authorize merging PR #86** — merge remains its
+    own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
+    rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -6100,6 +6153,69 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-temp
   enforcing — not a `404`, which would mean the module never actually deployed); and
   `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
   **The Wireframe Library module backend is now genuinely live in production.**
+- `[2026-08-31]` **Built the Motion and Interaction Library module backend**, under the explicit
+  "start Motion & Interaction Library" instruction. See item 60 under "Active tasks" above for the
+  full account — two design forks confirmed with the user first (the field set modeled on §18's
+  bare taxonomy, and `relatedComponentIds` as a real existence-validated relationship into
+  Component Library rather than an unvalidated array).
+- `[2026-08-31]` **Independent code review run on `module-motion-and-interaction-library`, high
+  effort — 8-angle finder pass, then the 1 CONFIRMED finding fixed.** 3 candidates survived dedup
+  (1 CONFIRMED, 1 PLAUSIBLE, 1 REFUTED). The CONFIRMED finding — the seeded
+  `module_registry.dependencies` omitting the real Component Library coupling this build
+  introduces — was fixed with an additive migration and the roadmap doc updated to move this
+  module from Wave 1 to Wave 2. The PLAUSIBLE finding (the update DTO schema hand-duplicated
+  instead of derived via `.omit()`/`.partial()`) was left as accepted, tracked debt — matches 6 of
+  8 sibling modules' own convention. The REFUTED finding (an "unused speculative existence-check
+  method" claim, raised independently by 3 finder angles) was ruled out on verification: unlike
+  Page Template Library's own genuinely-removed dead method, this one mirrors an established,
+  already-consumed convention with a real doc-comment rationale and real test coverage.
+- `[2026-08-31]` **Security review run on `module-motion-and-interaction-library`, separately from
+  the code review.** 0 findings above threshold — confirmed method-level `@RequirePermission`
+  throughout, `ComponentsService.existingComponentIds()` exposing only a bare id set, fully
+  parameterized queries with `escapeLikePattern()` on search, `safeHttpUrlSchema` reuse for
+  `designReference`, static migration SQL, and an explicit field allowlist on every write path.
+- `[2026-08-31]` **Migration numbers renumbered from `00084`/`00085`/`00086` to
+  `00086`/`00087`/`00088`** — Wireframe Library (module #16) merged to `main` claiming the same
+  numbers while this branch was in progress. Merged `main` (no conflicts), renumbered, updated
+  every internal reference, and independently re-verified everything against a fresh disposable
+  database (1386/1386 `dashboard-api` unit, 620/620 `packages/database` integration, 625/625
+  `dashboard-api` e2e/integration tests, an 88-migration round-trip, all clean).
+- `[2026-08-31]` **A review packet for the required second-role human review was prepared and
+  published** — see
+  [Motion and Interaction Library Review Packet](https://claude.ai/code/artifact/6518fdac-e55f-441a-a2aa-3a7e0759c5c0)
+  and `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`.
+- `[2026-08-31]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-motion-and-interaction-library` — pushed to `origin`, opened as
+  [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86). A
+  required second-role human review, a gate decision, and merge authorization each remain
+  separate, not-yet-requested next steps.
+- `[2026-08-31]` **A CI "Formatting validation" failure on PR #86 diagnosed and fixed.** `main`
+  had moved forward again mid-review (`dashboard-web` Wireframe Library UI, PR #85) — GitHub's
+  `pull_request` checkout tests a synthetic merge of the branch against CURRENT `main`, not the
+  branch's own last local merge, so the failure only ever surfaced in CI, never in any local
+  prettier run. Merged `main` again for real (no conflicts) and let prettier's ordered-list
+  renumbering resolve a duplicate `CLAUDE.md` item number (`60` claimed by both the incoming
+  Wireframe Library UI entry and this branch's own Motion and Interaction Library entry, now
+  `61`) — the same bug class Wireframe Library's own merge into `main` had already hit once.
+  Re-verified independently after the merge: 1386/1386 `dashboard-api` unit, 620/620
+  `packages/database` integration, 625/625 `dashboard-api` e2e/integration tests, all clean. All
+  14 CI checks on PR #86 now green.
+- `[2026-08-31]` **Required second-role human review complete for
+  `module-motion-and-interaction-library` (PR #86).** The review packet (code review + security
+  review findings, fixes, and the 1 accepted-debt item, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved,"** no disputes raised. See
+  `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-31]` **The gate (G4-motion-and-interaction-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `fddbe85` on branch `module-motion-and-interaction-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-motion-and-interaction-library`) and
+  `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #86** — merge remains its
+  own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
+  rule.
 
 ## Open client blockers
 

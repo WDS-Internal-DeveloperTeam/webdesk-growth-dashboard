@@ -994,6 +994,20 @@
       "approved_commit": "8f8d952",
       "record": "docs/project-state/dashboard-web-wireframe-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-motion-and-interaction-library",
+      "type": "qa-security-gate",
+      "scope": "module-motion-and-interaction-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-31T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Motion and Interaction Library module backend -- module #20 on the Recommended Module Roadmap. The canonical spec (Section 18) gives no field list, only a bare ~26-category taxonomy -- the same spec-gap situation Section and Pattern Library hit. Two design forks confirmed directly with the project owner first (AskUserQuestion): the field set (a 26-value category enum plus 8 content fields, modeled on the taxonomy) and relatedComponentIds as a REAL, existence-validated relationship into Component Library (ComponentsService.existingComponentIds()) rather than an unvalidated array -- a genuine improvement over the Design Token/Section and Pattern Library precedent, since Component Library already exists. Single table (motion_interaction_records), real multi-row version history mirroring Section and Pattern Library structurally, the standard 8-value approval workflow, no confidentiality mechanism, no publish/unpublish action, reuses the seeded creative_design RBAC group verbatim -- no new RBAC migration. Backend-only pass -- dashboard-web UI is a separate, not-yet-requested next step. Independent code review (high effort, 8-angle finder pass) surfaced 3 candidates after dedup -- 1 CONFIRMED and fixed (the seeded module_registry.dependencies for this module was null, inconsistent with the real, hard runtime dependency this build introduces on Component Library; fixed via an additive migration and the roadmap doc updated to move this module from Wave 1 to Wave 2), 1 PLAUSIBLE left as accepted debt (the update DTO schema hand-duplicated instead of derived via .omit()/.partial() -- matches 6 of 8 sibling modules' own convention), 1 REFUTED (an 'unused speculative existence-check method' claim, raised independently by 3 finder angles, refuted on verification since it mirrors an established, already-consumed convention, not Page Template Library's genuinely-removed dead method). Security review found 0 findings above threshold. Mid-review, main moved forward twice (Wireframe Library module backend taking migrations 00084/00085, then its dashboard-web UI landing and claiming CLAUDE.md item 60) -- both were caught and fixed: migrations renumbered to 00086-00088 with every internal reference updated, and a duplicate CLAUDE.md item number resolved by merging main again and letting prettier's ordered-list renumbering apply. 1386/1386 dashboard-api unit tests, 620/620 packages/database integration tests, 625/625 dashboard-api e2e/integration tests, all independently re-run against a real disposable PostgreSQL 17 database after every fix round; a clean 88-migration round-trip; validate:module-registry unaffected (43 modules, 21 permission groups); typecheck/lint (--max-warnings=0)/prettier clean; pnpm audit 0 vulnerabilities. A review packet (published as a Claude artifact -- code review + security review findings, fixes, and validation evidence, with a decision section) was prepared for the required second-role human review, since the implementing agent cannot also be its own reviewer (ADR-0010). Jitesh D reviewed it and returned 'Approved,' no disputes raised.",
+      "approved_commit": "fddbe85",
+      "record": "docs/project-state/module-motion-and-interaction-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #86 -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2879,7 +2893,16 @@
       "details": "PR #85 (dashboard-web-wireframe-library) merged with a real merge commit 8b76ff109b33ef091b4806ed74307565ae859a84, all 14 CI checks green beforehand. Both Vercel projects auto-deployed on push to main and were verified live directly, not just via CI's own Vercel status check -- dashboard-api's /health returned build.commitSha == 8b76ff109b33ef091b4806ed74307565ae859a84, confirming the exact merged commit is what's serving; GET /wireframe-library/records returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed); and dashboard-web's /wireframe-library resolves (307) to /auth/sign-in for an unauthenticated visitor (a transient stale-edge-cache 404 on the first two checks was ruled out via repeated, cache-busted checks, not a real defect). The dashboard-web Wireframe Library UI is now genuinely live in production, closing out this slice's full build-to-production arc -- backend and now the full UI (list, detail with version history, create/edit form, status actions) are both live for the Wireframe Library module.",
       "project_version_before": 95,
       "project_version_after": 96
+    },
+    {
+      "timestamp": "2026-08-31T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-motion-and-interaction-library approved (WebDesk Solution, CONFIRM) for the Motion and Interaction Library module backend, approved commit fddbe85 on branch module-motion-and-interaction-library. Required second-role human review (Jitesh D, 'Approved') was already complete before the gate was requested -- a clean pass, not an override.",
+      "project_version_before": 96,
+      "project_version_after": 97
     }
   ],
-  "current_gate": "G4-dashboard-web-wireframe-library"
+  "current_gate": "G4-motion-and-interaction-library"
 }

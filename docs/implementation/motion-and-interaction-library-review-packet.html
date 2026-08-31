@@ -1,0 +1,630 @@
+<title>Motion and Interaction Library Review Packet</title>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+  :root {
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --surface-alt: #eeecf7;
+    --ink: #1c1a2b;
+    --ink-muted: #5a5670;
+    --ink-faint: #918dab;
+    --border: #e1ddf0;
+    --accent: #5b3df0;
+    --accent-strong: #3f2ab8;
+    --accent-soft: #ece7fd;
+    --good: #147a4a;
+    --good-soft: #e2f5ea;
+    --warn: #a15b00;
+    --warn-soft: #fbeed9;
+    --refute: #7a5716;
+    --refute-soft: #f6efdd;
+    --shadow: 0 1px 2px rgba(28, 26, 43, 0.04), 0 10px 28px -14px rgba(28, 26, 43, 0.16);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131220;
+      --surface: #191830;
+      --surface-alt: #201f3a;
+      --ink: #efeef8;
+      --ink-muted: #ada9c8;
+      --ink-faint: #726d94;
+      --border: #302d4d;
+      --accent: #9a86ff;
+      --accent-strong: #c3b6ff;
+      --accent-soft: #26224a;
+      --good: #4fd393;
+      --good-soft: #142b23;
+      --warn: #f2b25a;
+      --warn-soft: #382a0f;
+      --refute: #e0c069;
+      --refute-soft: #332c14;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #131220;
+    --surface: #191830;
+    --surface-alt: #201f3a;
+    --ink: #efeef8;
+    --ink-muted: #ada9c8;
+    --ink-faint: #726d94;
+    --border: #302d4d;
+    --accent: #9a86ff;
+    --accent-strong: #c3b6ff;
+    --accent-soft: #26224a;
+    --good: #4fd393;
+    --good-soft: #142b23;
+    --warn: #f2b25a;
+    --warn-soft: #382a0f;
+    --refute: #e0c069;
+    --refute-soft: #332c14;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: var(--accent-strong);
+  }
+
+  .mono {
+    font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 0.88em;
+  }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 0.87em;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    color: var(--accent-strong);
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: clamp(28px, 5vw, 64px) 24px 96px;
+  }
+
+  header.top {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent-strong);
+  }
+
+  h1 {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.6rem, 3.4vw, 2.15rem);
+    line-height: 1.15;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .subhead {
+    color: var(--ink-muted);
+    font-size: 1.02rem;
+    max-width: 62ch;
+  }
+
+  .status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px 5px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .pill.good {
+    background: var(--good-soft);
+    color: var(--good);
+    border-color: color-mix(in srgb, var(--good) 30%, transparent);
+  }
+
+  .pill.warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+  }
+
+  .pill.pending {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  .pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  section {
+    margin-top: 44px;
+  }
+
+  h2 {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 1.18rem;
+    margin: 0 0 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  h2 .num {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+  }
+
+  .grid-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .stat .n {
+    font-family: "Space Grotesk", ui-sans-serif, sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-strong);
+  }
+
+  .stat .l {
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+
+  ul.plain {
+    margin: 0;
+    padding-left: 1.1em;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  ul.plain li::marker {
+    color: var(--accent);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.94rem;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  th {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .finding {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .finding + .finding {
+    margin-top: 14px;
+  }
+
+  .finding-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .finding-title {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 3px 9px;
+    border-radius: 6px;
+  }
+
+  .badge.confirmed {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .badge.plausible {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .badge.refuted {
+    background: var(--refute-soft);
+    color: var(--refute);
+  }
+
+  .badge.fixed {
+    background: var(--good-soft);
+    color: var(--good);
+  }
+
+  .badge.debt {
+    background: var(--surface-alt);
+    color: var(--ink-muted);
+  }
+
+  .finding p {
+    margin: 0;
+    color: var(--ink-muted);
+  }
+
+  .finding .loc {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+  }
+
+  .kicker {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--accent-strong);
+    margin-bottom: 4px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 40px 0;
+    border: none;
+  }
+
+  .decision-box {
+    background: var(--surface);
+    border: 1.5px dashed var(--accent);
+    border-radius: 12px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .decision-box h2 {
+    margin-bottom: 4px;
+  }
+
+  .decision-box p {
+    margin: 0;
+    color: var(--ink-muted);
+  }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--ink-faint);
+    font-size: 0.82rem;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 560px) {
+    th,
+    td {
+      padding: 7px 6px;
+      font-size: 0.86rem;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Review packet · Module #20</span>
+    <h1>Motion and Interaction Library</h1>
+    <p class="subhead">
+      Backend build for the canonical spec's §18 taxonomy — page transitions, states, form feedback,
+      modals, loaders, screen-reader announcements, and 21 other interaction categories. Prepared
+      for the required second-role human review, since the implementing agent cannot also be its own
+      reviewer (ADR-0010).
+    </p>
+    <div class="status-row">
+      <span class="pill good">Code review complete</span>
+      <span class="pill good">Security review: 0 findings</span>
+      <span class="pill good">All tests re-verified</span>
+      <span class="pill pending">Awaiting second-role review</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="num">01</span> What this branch builds</h2>
+    <div class="card">
+      <p style="margin: 0 0 12px">
+        A single table with real multi-row version history
+        (<code>motion_interaction_records</code>), mirroring Section and Pattern Library's
+        structural pattern and Page Template Library's cross-module relationship pattern. Two design
+        forks were confirmed directly with the project owner before any code was written, since the
+        canonical spec (§18) gives no field list — only a bare taxonomy.
+      </p>
+      <ul class="plain">
+        <li>
+          <strong>Field set</strong> — a 26-value <code>category</code> enum covering the spec's own
+          taxonomy, plus 8 content fields (3 rich-text-sanitized, 3 plain code/spec values,
+          <code>designReference</code>, <code>relatedComponentIds</code>), the standard 8-value
+          approval workflow, and real version history.
+        </li>
+        <li>
+          <strong>Relationship validation</strong> — <code>relatedComponentIds</code> is a real,
+          existence-validated relationship into Component Library
+          (<code>ComponentsService.existingComponentIds()</code>), not an unvalidated array — a
+          genuine improvement over the precedent set when Component Library didn't exist yet.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span> Validation, independently re-run</h2>
+    <p class="subhead" style="margin: -8px 0 16px">
+      Every number below was independently re-run by the orchestrating session against a fresh local
+      disposable database — not trusted from the build agent's own report.
+    </p>
+    <div class="grid-stats">
+      <div class="stat">
+        <div class="n">1386/1386</div>
+        <div class="l">dashboard-api unit tests</div>
+      </div>
+      <div class="stat">
+        <div class="n">620/620</div>
+        <div class="l">database integration tests</div>
+      </div>
+      <div class="stat">
+        <div class="n">625/625</div>
+        <div class="l">dashboard-api e2e/integration</div>
+      </div>
+      <div class="stat">
+        <div class="n">88</div>
+        <div class="l">migrations, clean round-trip</div>
+      </div>
+      <div class="stat">
+        <div class="n">43 / 21</div>
+        <div class="l">modules / permission groups</div>
+      </div>
+      <div class="stat">
+        <div class="n">0</div>
+        <div class="l">pnpm audit vulnerabilities</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span> Independent code review</h2>
+    <p class="subhead" style="margin: -8px 0 16px">
+      High effort — 8 parallel finder angles against <span class="mono">git diff main...HEAD</span>.
+      5 angles (line-by-line, cross-file tracer, reuse, efficiency, conventions) returned 0
+      candidates. 3 angles converged on the same candidate independently; deduped to two distinct
+      findings plus one refuted duplicate.
+    </p>
+
+    <div class="finding">
+      <div class="finding-head">
+        <span class="finding-title"
+          >Registry <code>dependencies</code> omitted a real coupling</span
+        >
+        <span class="badge confirmed">CONFIRMED</span>
+        <span class="badge fixed">FIXED</span>
+      </div>
+      <div class="loc">
+        packages/database/src/migrations/00035-populate-module-registry-fields.ts
+      </div>
+      <p>
+        The seeded <code>module_registry.dependencies</code> for this module was <code>null</code>,
+        but the branch's own build calls <code>ComponentsService.existingComponentIds()</code> on
+        every create/update — a real, hard runtime dependency on Component Library, the same class
+        of coupling <code>page_template_library</code>'s own row already records. The roadmap doc
+        computes build-order "waves" by transcribing this exact field, so a future maintainer
+        sequencing work off it could deprioritize Component Library without seeing the real
+        coupling. Fixed with an additive migration (<code>00035</code> already ran in production)
+        and the roadmap doc moved this module from Wave 1 to Wave 2.
+      </p>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head">
+        <span class="finding-title">Update DTO schema hand-duplicated, not derived</span>
+        <span class="badge plausible">PLAUSIBLE</span>
+        <span class="badge debt">ACCEPTED DEBT</span>
+      </div>
+      <div class="loc">
+        apps/dashboard-api/src/motion-and-interaction-library/motion-and-interaction-library.dto.ts
+      </div>
+      <p>
+        <code>updateMotionInteractionRecordSchema</code> hand-retypes 8 fields from the create
+        schema instead of deriving via <code>.omit()</code>/<code>.partial()</code>. Content
+        Template Library and Brand Library already fixed this exact shape — but verification found 6
+        of 8 other sibling modules checked still hand-duplicate the same way, including modules
+        built after that fix landed. A real but inconsistently-applied convention in this codebase,
+        not a rule this module uniquely broke — left as tracked debt rather than fixed in isolation.
+      </p>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head">
+        <span class="finding-title">"Unused speculative" existence-check method</span>
+        <span class="badge refuted">REFUTED</span>
+      </div>
+      <div class="loc">
+        apps/dashboard-api/src/motion-and-interaction-library/motion-interactions.service.ts
+      </div>
+      <p>
+        3 independent finder angles flagged <code>existingRecordIds()</code>/<code
+          >findByIds()</code
+        >
+        as zero-caller dead code, citing Page Template Library's own removed
+        <code>findByIds()</code> as precedent. On verification this doesn't hold: unlike that
+        removed method (no doc-comment rationale, orphaned tests), this one mirrors an established,
+        already-realized convention — Section and Pattern Library's identical method, consumed by
+        Page Template Library once it needed it — ships with an explicit doc-comment rationale, and
+        has real, intentional test coverage.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span> Security review</h2>
+    <div class="card">
+      <p style="margin: 0 0 10px">
+        Run separately from the code review, focused on RBAC decorator placement, whether the
+        Component Library existence check could leak metadata to an unauthorized caller, SQL
+        injection surface in the repository's search/filter logic, <code>designReference</code>
+        URL-scheme validation, migration raw-SQL safety, and mass-assignment risk.
+      </p>
+      <p style="margin: 0; font-weight: 600; color: var(--good)">0 findings above threshold.</p>
+      <p style="margin-top: 10px">
+        Every area traced to the already-reviewed sibling pattern it mirrors: method-level
+        <code>@RequirePermission</code> throughout, <code>existingComponentIds()</code> exposing
+        only a bare id set, fully parameterized queries with <code>escapeLikePattern()</code> on
+        search, the shared <code>safeHttpUrlSchema</code> for <code>designReference</code> (built
+        specifically to close a prior stored-XSS finding in this codebase), static migration SQL,
+        and an explicit field allowlist on every write path.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">05</span> Housekeeping caught mid-review</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Issue</th>
+            <th>Cause</th>
+            <th>Resolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Migration number collision (<code>00084</code>/<code>00085</code>)</td>
+            <td>
+              Wireframe Library (module #16) merged to <code>main</code> as the same numbers while
+              this branch was in progress
+            </td>
+            <td>
+              Merged <code>main</code>, renumbered to <code>00086</code>–<code>00088</code>, updated
+              every internal reference, re-verified against a fresh database
+            </td>
+          </tr>
+          <tr>
+            <td>Stale <code>dist/</code> false migration failure</td>
+            <td><code>tsc</code> doesn't clean removed source files after a migration rename</td>
+            <td>
+              Cleaned <code>dist/</code>/<code>dist-cjs/</code> and rebuilt before re-testing — a
+              known, previously-documented issue in this codebase
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <div class="decision-box">
+    <h2 style="margin-bottom: 0"><span class="num">06</span> Required decision</h2>
+    <p>
+      This packet needs a second-role human reviewer's decision before a gate can be requested, per
+      ADR-0010 (the implementing agent cannot review its own work). Options:
+      <strong>Approve as-is</strong> (accepting the 1 open PLAUSIBLE finding as tracked debt),
+      <strong>Approve with changes requested</strong>, or <strong>Reject</strong>.
+    </p>
+  </div>
+
+  <footer>
+    <span>Branch <span class="mono">module-motion-and-interaction-library</span></span>
+    <span>Prepared 2026-08-31</span>
+  </footer>
+</div>
