@@ -262,3 +262,52 @@ staging/production) — `packages/database/.env.local` (gitignored) points at it
   **517/517 passing, 0 failures** — confirming no cross-module regression from either the new
   `ComponentLibraryModule` registration in `app.module.ts` or the `DesignTokensService`/
   `DesignTokenRepository` additions.
+
+### Independent code review
+
+High effort, 4 finder angles (correctness×2, reuse/simplification/efficiency, altitude/
+conventions) run via parallel subagents against `git diff main...module-component-library`, then
+each candidate independently verified against the actual code. 4 candidates survived (2 of the 4
+finder angles returned 0 candidates — cross-file/RBAC trace, altitude/conventions), all 4
+CONFIRMED:
+
+1. **`assertReplacementExists()` never blocked `replacementRecordId` from equaling the record's own
+   `recordId`** — a component could be saved as its own replacement, self-flagged in the original
+   code's own comment as a deliberate, unenforced gap. **Fixed**: `assertReplacementExists()` now
+   takes an `ownRecordId` (passed only from `update()`, since `create()` has no prior `recordId` to
+   collide with) and rejects a self-match with a clean 400. New regression test added.
+2. **`shortTextField`/`longTextField` were byte-for-byte identical function bodies**
+   (`z.string().max(max).nullish()`) with no distinguishing behavior despite implying a real
+   difference. **Fixed**: collapsed into one `textField` helper.
+3. **`ComponentRepository.findByIds()` is dead in production code** (only `findCurrentByRecordId()`
+   is actually called by `assertReplacementExists()`) and its doc comment was a leftover, unedited
+   train-of-thought fragment ("used by `DesignTokensService`... no, used cross-module the OTHER
+   direction is not applicable here"). **Fixed**: corrected the comment to explain its actual
+   status (kept as the batch-existence-check counterpart for a future cross-module consumer,
+   mirroring `DesignTokenRepository.findByIds()`'s shape — that one IS wired to a real consumer).
+4. **The `TRANSITIONS` table gates `under_review -> rejected` behind the `approve` action**, so a
+   role holding only `review` (`marketing_editor`, `qa_security_reviewer`) can never reject a
+   submission. **Left unfixed, accepted as tracked debt** — copied verbatim from Design Token
+   Library's own already-shipped, already-accepted pattern; fixing only here would diverge from its
+   sibling module rather than close a real regression this diff introduced.
+
+Re-validated after fixes: 1192/1192 `dashboard-api` unit tests (1 new), 519/519 `packages/database`
+integration tests (unchanged), 517/517 `dashboard-api` e2e tests (unchanged), typecheck/lint/
+prettier clean, migration round-trip re-confirmed clean.
+
+### Independent security review
+
+Separate finder pass focused on SQL injection, authorization bypass, IDOR, input validation, mass
+assignment, and sensitive logging. **0 findings above threshold.** Confirmed: every
+`@RequirePermission` decorator is method-level; `figmaReference` is correctly routed through the
+shared `safeHttpUrlSchema` (http/https only) on both create and update; all queries are
+parameterized Sequelize calls with `escapeLikePattern()` correctly applied to the one `Op.iLike`
+search; the `tokenIds`/`replacementRecordId` cross-module and in-module existence checks leak no
+confidential data (neither `design_tokens` nor `components` has a confidentiality mechanism —
+matches the module registry's own seeded `confidentialityLevel: null` for both); and
+`updateComponentSchema` correctly excludes `approvalStatus`/`category`/`publicId` from mass
+assignment (both DTO-level and structurally at the repository's `updateInPlace()` patch type). Two
+low-confidence (2/10) observations were noted but are pre-existing (the `creative_design` RBAC
+matrix's own `super_admin` lacking `submit`, unmodified by this diff) or cosmetic (a DB column
+width wider than the DTO's own validation cap ever allows through) — neither exploitable, neither
+introduced by this diff.
