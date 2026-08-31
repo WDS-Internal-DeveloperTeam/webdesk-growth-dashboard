@@ -2,8 +2,9 @@
 
 **Status:** Code review complete (high-effort 8-angle finder pass — 0 findings). Security review
 complete (0 findings above threshold). Required second-role human review complete — Jitesh D,
-"Approved," no disputes raised. Gate decision, push to `origin`, opening a PR, and merging are
-each still separate, not-yet-requested next steps.
+"Approved," no disputes raised. Gate (G4-wireframe-library) approved — WebDesk Solution, decision
+CONFIRM, approved commit `ec96265` on branch `module-wireframe-library`. Opening a PR and merging
+remain separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -69,5 +70,10 @@ handling, and validation evidence, with a decision section) was reviewed. **Jite
 and returned "Approved,"** no disputes raised — there were no open findings of any kind on this
 branch to accept as tracked debt.
 
-Gate decision, push to `origin`, opening a PR, and merging each remain their own separate,
-not-yet-requested authorizations, per this project's standing "no auto-merge" rule.
+Gate decision: **G4-wireframe-library approved** — WebDesk Solution, decision CONFIRM (clean pass,
+not an override, since the second-role review was already complete before the gate was
+requested), approved commit `ec96265` on branch `module-wireframe-library`. See
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-wireframe-library`). This gate approval does not itself authorize opening a PR or merging —
+each remains its own separate, not-yet-requested authorization, per this project's standing
+"no auto-merge" rule.
