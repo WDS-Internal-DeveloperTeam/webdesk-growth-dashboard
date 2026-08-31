@@ -150,5 +150,33 @@ the new Design Review Center test files themselves passed cleanly and repeatably
 `postgres:16` service container is this project's authoritative validation path for these suites,
 not this local machine's improvised standalone Postgres instance.
 
-Not yet reviewed, gated, pushed, or merged — each remains its own separate, not-yet-requested next
-step.
+**Independent code review run** (this project's own `code-review` skill, high effort, 8-angle
+finder pass, 1-vote verification) — 5 candidates kept after dedup (2 CONFIRMED, 3 PLAUSIBLE), **3
+fixed**: most severe, a real race condition — two concurrent `decide(approve)` calls on two
+different pre-existing reviews sharing the same `(targetModuleKey, targetId, reviewType)` tuple
+could both commit `"approved"` under Postgres's default READ COMMITTED isolation, since
+`supersedeOtherApproved()`'s scan only sees data committed before its own statement started (and
+the sibling `WebsiteStrategyRecordRepository.supersedeOtherApprovedVersion()` this pattern was
+explicitly modeled on has the identical structural gap, confirmed by the verifier — not a
+regression unique to this module, but a real, previously-unclosed bug class). Fixed with a new
+`DesignReviewRepository.lockTupleForApproval()` — a `SELECT ... FOR UPDATE` lock on the whole
+tuple, acquired before the CAS update whenever `decide()` would produce `"approved"` — serializing
+concurrent approvers so the second transaction's own supersede scan is guaranteed to see the
+first's already-committed approval. A new regression test (racing two reviews for the same tuple
+via `Promise.all`) proves exactly one ends up `approved`/the other `superseded`, never both. Also
+fixed: a missing index for `DesignReviewRepository.list()`'s standalone `?reviewType=` filter (the
+only index touching `review_type` was a 3-column composite led by `target_module_key`/`target_id`,
+unusable for a `review_type`-only lookup), and the now-redundant 2-column
+`(target_module_key, target_id)` index, a strict prefix of the 3-column composite added right
+after it, dropped since nothing used it standalone. **2 PLAUSIBLE findings left as accepted,
+tracked debt**: `supersedeOtherApproved()` returning full mapped entities when the service layer
+only ever reads `.id`; and `unwrapCasResult()`/`casUpdate()` being a 2nd hand-copied instance of
+the identical CAS-conflict-resolution helper already in the sibling `review-and-approval-center`
+module, with no shared extraction — both match this project's own already-accepted duplication/
+efficiency debt class for this pattern. Re-validated: 1372/1372 `dashboard-api` unit tests, 26/26
+module integration tests (2 new, solo run against a freshly recreated database), 24/24 e2e tests
+(solo), migration round-trip clean (87/87, 0 pending), `validate:module-registry` clean,
+typecheck/lint/prettier/`pnpm audit` all clean. Committed as `43c272d`.
+
+Not yet security-reviewed, gated, pushed, or merged — each remains its own separate,
+not-yet-requested next step.
