@@ -126,6 +126,21 @@ describe("Section and Pattern Library module (real disposable database)", () => 
       expect(result.length).toBeLessThanOrEqual(200);
     });
 
+    it("findByIds() returns only CURRENT rows matching the given recordIds (added for Page Template Library's own requiredSectionIds/optionalSectionIds existence validation)", async () => {
+      const created = await patterns.create({
+        publicId: uniqueId("SPL-FINDBYIDS"),
+        patternType: "download",
+        name: "Find By Ids Fixture",
+      });
+      const found = await patterns.findByIds([created.recordId, randomUUID()]);
+      expect(found).toHaveLength(1);
+      expect(found[0]?.id).toBe(created.id);
+    });
+
+    it("findByIds() returns an empty array for an empty input, without querying", async () => {
+      expect(await patterns.findByIds([])).toEqual([]);
+    });
+
     it("updateInPlace() changes fields and never touches approvalStatus/patternType", async () => {
       const created = await patterns.create({
         publicId: uniqueId("SPL-DOWNLOAD"),
