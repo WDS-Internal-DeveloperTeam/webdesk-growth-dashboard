@@ -17,6 +17,7 @@ import {
 import {
   CATEGORY_LABEL,
   formatTimestamp,
+  getComponentsForMotionInteractionPicker,
   getMotionInteractionRecord,
   getMotionInteractionRecordVersions,
   motionInteractionApprovalStatusBadge,
@@ -57,6 +58,17 @@ interface MotionAndInteractionLibraryDetailPageProps {
  * (`whiteSpace: pre-wrap`), NOT through `SanitizedRichText` — the backend stores all three fields
  * unsanitized as plain spec/code text, matching `MotionInteractionLibraryForm`'s own identical
  * reasoning for keeping them plain `<textarea>`s.
+ *
+ * `relatedComponentIds` is resolved to real display names by cross-referencing the same
+ * `getComponentsForMotionInteractionPicker()` fetch the create/edit form uses — matching
+ * `PageTemplateLibraryDetailPage`'s own `supportedComponentIds` resolution pattern. Unlike Section
+ * and Pattern Library's own unvalidated `relatedComponentIds` (reasonably shown as raw ids there,
+ * since nothing guarantees they resolve to anything), this module's backend
+ * (`assertComponentIdsExist()`) genuinely enforces every id here, so showing only the bare id would
+ * be a real, avoidable regression from that precedent. An id outside the picker's 100-row fetch
+ * window falls back to showing the raw id itself, still real and honest, just unresolved — the
+ * same accepted over-fetch/pagination-bound debt `ComponentLibraryDetailPage`'s/
+ * `PageTemplateLibraryDetailPage`'s own resolution already carries.
  */
 export default async function MotionAndInteractionLibraryDetailPage({
   params,
@@ -67,9 +79,10 @@ export default async function MotionAndInteractionLibraryDetailPage({
   }
 
   const { recordId } = await params;
-  const [record, versions] = await Promise.all([
+  const [record, versions, components] = await Promise.all([
     getMotionInteractionRecord(recordId),
     getMotionInteractionRecordVersions(recordId),
+    getComponentsForMotionInteractionPicker(),
   ]);
   if (!record) {
     notFound();
@@ -78,6 +91,13 @@ export default async function MotionAndInteractionLibraryDetailPage({
   const approvalBadge = motionInteractionApprovalStatusBadge(record.approvalStatus);
   // Newest first for display — the backend returns oldest first (its own natural insertion order).
   const versionsNewestFirst = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
+
+  const componentNameById = new Map(
+    components.map((component) => [component.recordId, component.name]),
+  );
+  const relatedComponentNames = record.relatedComponentIds.map(
+    (id) => componentNameById.get(id) ?? id,
+  );
 
   return (
     <ContentContainer>
@@ -177,9 +197,9 @@ export default async function MotionAndInteractionLibraryDetailPage({
       <section style={sectionStyle}>
         <h2 style={h2Style}>Relationships</h2>
         <div style={subsectionStyle}>
-          <h3 style={h3Style}>Related component IDs</h3>
-          {record.relatedComponentIds.length > 0 ? (
-            <p style={richContentStyle}>{record.relatedComponentIds.join(", ")}</p>
+          <h3 style={h3Style}>Related components</h3>
+          {relatedComponentNames.length > 0 ? (
+            <p style={richContentStyle}>{relatedComponentNames.join(", ")}</p>
           ) : (
             <p style={mutedStyle}>Not set.</p>
           )}
@@ -202,7 +222,11 @@ export default async function MotionAndInteractionLibraryDetailPage({
         ) : (
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {versionsNewestFirst.map((version) => (
-              <VersionEntry key={version.id} version={version} />
+              <VersionEntry
+                key={version.id}
+                version={version}
+                componentNameById={componentNameById}
+              />
             ))}
           </ul>
         )}
@@ -230,8 +254,17 @@ function PlainTextBlock({
   );
 }
 
-function VersionEntry({ version }: { readonly version: MotionInteractionRecord }) {
+function VersionEntry({
+  version,
+  componentNameById,
+}: {
+  readonly version: MotionInteractionRecord;
+  readonly componentNameById: ReadonlyMap<string, string>;
+}) {
   const badge = motionInteractionApprovalStatusBadge(version.approvalStatus);
+  const relatedComponentNames = version.relatedComponentIds.map(
+    (id) => componentNameById.get(id) ?? id,
+  );
   // Uses the version row's own isCurrent field (populated by the same GET .../:recordId/versions
   // response every entry here already comes from) rather than comparing this row's id against a
   // SEPARATE, independently-timed getMotionInteractionRecord() fetch — the two requests aren't
@@ -280,9 +313,9 @@ function VersionEntry({ version }: { readonly version: MotionInteractionRecord }
           </div>
           <PlainTextBlock label="Timing and easing" value={version.timingAndEasing} />
           <div style={subsectionStyle}>
-            <h3 style={h3Style}>Related component IDs</h3>
-            {version.relatedComponentIds.length > 0 ? (
-              <p style={richContentStyle}>{version.relatedComponentIds.join(", ")}</p>
+            <h3 style={h3Style}>Related components</h3>
+            {relatedComponentNames.length > 0 ? (
+              <p style={richContentStyle}>{relatedComponentNames.join(", ")}</p>
             ) : (
               <p style={mutedStyle}>Not set.</p>
             )}
