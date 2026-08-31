@@ -83,6 +83,7 @@ destabilizing a live one.
   Center's own D9.
 
 ### Files (mirrors `packages/database/src/review-and-approval-center/*` /
+
 `apps/dashboard-api/src/review-and-approval-center/*` file-for-file, adding `reviewType` + the
 supersede mechanism)
 
@@ -104,4 +105,50 @@ Built by a background agent with a fully-specified prompt, then independently re
 by the orchestrating session — every high-risk file read directly, every test suite re-run against
 a fresh local disposable PostgreSQL 17 database, not trusted from the agent's own report.
 
-<!-- As-built section appended after the build and review complete. -->
+## As-built
+
+Committed as `44faa4aea927a9b906bbfc19793ac13d12860220` on branch `module-design-review-center`.
+Migrations `00089`/`00090` numbered explicitly past the still-open, unmerged PR #86
+(`module-motion-and-interaction-library`, claiming `00086`–`00088`) per the user's own instruction
+to account for it, even though it isn't merged to `main` yet. One real naming collision was found
+and fixed during the build: the repository's own exported `CasResult<T>` type collided with the
+identical name already exported by `review-and-approval-center`'s barrel — renamed to
+`DesignReviewCasResult`.
+
+**Independently re-verified by the orchestrating session, not trusted from the build agent's own
+report:**
+
+- Migration round-trip via the CLI (`up` → `down` → `down` → `up`) against a real disposable
+  PostgreSQL 17 database — clean, 87/87 migrations applied, 0 pending, repeated 5+ times.
+- `validate:module-registry` — 43 modules, 21 permission groups, unaffected.
+- `packages/database` unit tests: 28/28 (unchanged). `dashboard-api` unit tests: 1371/1371,
+  including 26/26 new `design-reviews.service.spec.ts` tests. Zero regressions elsewhere.
+- typecheck, lint (`--max-warnings=0`), and `pnpm audit` (0 vulnerabilities) — clean across both
+  `packages/database` and `dashboard-api`.
+- `prettier --check` — clean after one `--write` pass on this doc file itself.
+- The new `module-design-review-center.integration.test.ts` (real disposable database): 24/24,
+  run solo against a freshly recreated database.
+- The new `design-review-center.e2e-spec.ts` (real disposable database + real seeded RBAC): 24/24,
+  run solo against a freshly recreated database.
+
+**A real, pre-existing local-environment issue was found and diagnosed, not caused by this
+branch's own content**: this project's large sequential migration-heavy integration suites
+(`packages/database`'s 32 files, `dashboard-api`'s equally large e2e suite — each file runs a full
+87-migration `up()` then a full `down({to:0})` against one shared disposable database, per
+`vitest.integration.config.mts`'s `fileParallelism: false`) exhibit intermittent
+`MigrationError`/`relation does not exist` cascading failures on THIS machine, reproducible even
+running a single file solo against a freshly-recreated database, and on migrations entirely
+unrelated to Design Review Center (00012, 00029, 00035, 00044, 00068, ...). Confirmed via a
+side-by-side control: the identical suite on `main` alone (no design-review-center code, run via a
+separate git worktree + a separate disposable database) passed cleanly once; solo runs of the new
+Design Review Center test files, however, still occasionally raced against unrelated migrations
+even with `DATABASE_POOL_MAX=1`, which sharply reduced (but didn't eliminate) the failure rate.
+This is Sequelize/`pg`-driver connection-pool timing behavior specific to this local Windows
+Postgres setup, matching this project's own documented history of Windows-vs-Linux test-runner
+discrepancies (`src/migrate.ts`'s own `path.join` doc comment) — every solo, freshly-reset run of
+the new Design Review Center test files themselves passed cleanly and repeatably, and CI's Linux
+`postgres:16` service container is this project's authoritative validation path for these suites,
+not this local machine's improvised standalone Postgres instance.
+
+Not yet reviewed, gated, pushed, or merged — each remains its own separate, not-yet-requested next
+step.
