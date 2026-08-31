@@ -2,7 +2,10 @@
 
 **Status:** Code review complete (8-angle finder pass, 3 candidates kept after dedup — 2 CONFIRMED
 fixed, 1 PLAUSIBLE accepted as tracked debt). Security review complete (0 findings above
-threshold). Awaiting required second-role human review.
+threshold). Required second-role human review complete — "Approve as-is," accepting the 1 open
+tracked-debt finding, no disputes raised. Gate (G4-page-template-library) approved — WebDesk
+Solution, decision CONFIRM, approved commit `bd376be` on branch `module-page-template-library`.
+Not yet pushed to `origin`, opened as a PR, or merged.
 
 ## Completion condition
 
@@ -69,6 +72,16 @@ finding).
 
 ## Sign-off
 
-Required second-role human review: **pending.**
+Required second-role human review: **complete.** The review packet (published as a Claude
+artifact — code review + security review findings, fixes, and validation evidence, with a
+decision section) was reviewed and returned **"Approve as-is,"** accepting the 1 open tracked-debt
+finding (the terminal-state-guard ordering) as recorded rather than requesting a fix. No disputes
+raised.
 
-Gate decision: **not yet requested.**
+Gate decision: **G4-page-template-library approved** — WebDesk Solution, decision CONFIRM (clean
+pass, not an override, since the second-role review was already complete before the gate was
+requested), approved commit `bd376be` on branch `module-page-template-library`. See
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-page-template-library`). This gate approval does not itself authorize pushing the branch,
+opening a PR, or merging — each remains its own separate, not-yet-requested authorization, per
+this project's standing "no auto-merge" rule.
