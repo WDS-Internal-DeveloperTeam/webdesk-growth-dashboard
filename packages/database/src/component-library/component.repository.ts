@@ -265,12 +265,14 @@ export class ComponentRepository {
   }
 
   /**
-   * Every CURRENT-version row whose `recordId` is in `recordIds` — used by
-   * `DesignTokensService`... no, used cross-module the OTHER direction is not applicable here;
-   * this is Component Library's OWN existence check for `replacementRecordId` (in-module, so this
-   * method also doubles as the general "does this recordId exist" lookup a future cross-module
-   * consumer could use, mirroring `ServiceRepository.findByIds()`'s shape). Returns only the
-   * subset of `recordIds` that resolve to a real, current component.
+   * Every CURRENT-version row whose `recordId` is in `recordIds`. Not called by
+   * `ComponentsService` today — `assertReplacementExists()` uses the single-id
+   * `findCurrentByRecordId()` instead, since `replacementRecordId` is a single field, not a list.
+   * Kept here (not deleted) as the batch-existence-check counterpart a future cross-module
+   * consumer could use, mirroring `DesignTokenRepository.findByIds()`'s own shape and purpose —
+   * that method IS wired to a real consumer (`DesignTokensService.existingTokenIds()`); this one
+   * is currently only exercised by its own integration test. Returns only the subset of
+   * `recordIds` that resolve to a real, current component.
    */
   async findByIds(recordIds: readonly string[]): Promise<readonly ComponentEntity[]> {
     if (recordIds.length === 0) {

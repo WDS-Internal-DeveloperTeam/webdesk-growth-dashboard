@@ -92,13 +92,20 @@ export class ComponentsService {
   }
 
   /** `replacementRecordId` must resolve to a real, current component of THIS module (an
-   *  in-module self-reference, unlike `tokenIds`) — deliberately not checked against the record
-   *  being created/updated itself (a component replacing itself is nonsensical but not actively
-   *  dangerous; left unenforced rather than adding a self-reference guard no caller has asked
-   *  for). */
-  private async assertReplacementExists(id: string | null | undefined): Promise<void> {
+   *  in-module self-reference, unlike `tokenIds`), and must not be the record's own `recordId` —
+   *  a component cannot declare itself as its own replacement (would otherwise render as a
+   *  self-referential loop in any future "replaced by" UI). `ownRecordId` is only ever set from
+   *  `update()`; `create()` has no prior `recordId` to collide with, so the check is a no-op
+   *  there. */
+  private async assertReplacementExists(
+    id: string | null | undefined,
+    ownRecordId?: string,
+  ): Promise<void> {
     if (!id) {
       return;
+    }
+    if (ownRecordId && id === ownRecordId) {
+      throw new BadRequestException("replacementRecordId cannot reference the record itself");
     }
     const found = await this.components.findCurrentByRecordId(id);
     if (!found) {
@@ -214,7 +221,7 @@ export class ComponentsService {
     const [current] = await Promise.all([
       this.findCurrent(recordId),
       this.assertTokenIdsExist(patch.tokenIds),
-      this.assertReplacementExists(patch.replacementRecordId),
+      this.assertReplacementExists(patch.replacementRecordId, recordId),
     ]);
 
     // archived/superseded are both terminal — content on a terminal row must never change, in

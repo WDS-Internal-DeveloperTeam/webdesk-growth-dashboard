@@ -23,11 +23,12 @@ const MAX_TOKEN_IDS = 100;
 // design-token-library.dto.ts's own usageReferencesField fix.
 const tokenIdsField = z.array(z.string().uuid()).max(MAX_TOKEN_IDS).nullish();
 
-// Short factual strings/paths/lists (design decision 4) — not prose-sized.
-const shortTextField = (max: number) => z.string().max(max).nullish();
-// Prose/checklist-shaped fields (design decisions 3, other-fields notes) — sized generously so a
-// future RichTextEditor conversion needs no migration.
-const longTextField = (max: number) => z.string().max(max).nullish();
+// One shared shape for every optional text field below — short factual strings/paths (design
+// decision 4) and prose/checklist-shaped fields (design decisions 3, other-fields notes) both
+// reduce to the identical `z.string().max(max).nullish()`, so a single helper (parameterized by
+// cap) replaces what were two identically-bodied functions. Longer caps are still sized
+// generously so a future RichTextEditor conversion needs no migration.
+const textField = (max: number) => z.string().max(max).nullish();
 
 export const listComponentsQuerySchema = z.object({
   category: z.string().max(100).optional(),
@@ -47,17 +48,17 @@ export const createComponentSchema = z.object({
   // Projects' own `environment.url` shipped with once (design decision, other-fields notes).
   figmaReference: safeHttpUrlSchema.nullish(),
   tokenIds: tokenIdsField,
-  htmlStructure: longTextField(4_000),
-  phpPath: shortTextField(2_000),
-  scssClassesPath: longTextField(2_000),
-  jsDependencies: longTextField(2_000),
-  states: longTextField(4_000),
-  responsiveBehavior: longTextField(2_000),
-  browserSupport: longTextField(2_000),
-  accessibility: longTextField(2_000),
-  schema: longTextField(2_000),
-  analytics: longTextField(2_000),
-  tests: longTextField(2_000),
+  htmlStructure: textField(4_000),
+  phpPath: textField(2_000),
+  scssClassesPath: textField(2_000),
+  jsDependencies: textField(2_000),
+  states: textField(4_000),
+  responsiveBehavior: textField(2_000),
+  browserSupport: textField(2_000),
+  accessibility: textField(2_000),
+  schema: textField(2_000),
+  analytics: textField(2_000),
+  tests: textField(2_000),
   // Existence-checked in-module (ComponentsService.assertReplacementExists()) against this same
   // table's own recordId — never immutable across a version chain, unlike category (design
   // decision, other-fields notes).
@@ -73,17 +74,17 @@ export const updateComponentSchema = z
     name: z.string().min(1).max(255).optional(),
     figmaReference: safeHttpUrlSchema.nullish(),
     tokenIds: tokenIdsField,
-    htmlStructure: longTextField(4_000),
-    phpPath: shortTextField(2_000),
-    scssClassesPath: longTextField(2_000),
-    jsDependencies: longTextField(2_000),
-    states: longTextField(4_000),
-    responsiveBehavior: longTextField(2_000),
-    browserSupport: longTextField(2_000),
-    accessibility: longTextField(2_000),
-    schema: longTextField(2_000),
-    analytics: longTextField(2_000),
-    tests: longTextField(2_000),
+    htmlStructure: textField(4_000),
+    phpPath: textField(2_000),
+    scssClassesPath: textField(2_000),
+    jsDependencies: textField(2_000),
+    states: textField(4_000),
+    responsiveBehavior: textField(2_000),
+    browserSupport: textField(2_000),
+    accessibility: textField(2_000),
+    schema: textField(2_000),
+    analytics: textField(2_000),
+    tests: textField(2_000),
     replacementRecordId: z.string().uuid().nullish(),
   })
   // Rejects a genuinely empty patch (`{}`) with a clean 400 instead of silently succeeding as a

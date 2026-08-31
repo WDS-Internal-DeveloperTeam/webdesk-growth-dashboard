@@ -313,6 +313,15 @@ describe("ComponentsService", () => {
       expect(components.updateInPlace).toHaveBeenCalled();
     });
 
+    it("rejects an update whose replacementRecordId is the record's own recordId", async () => {
+      components.findCurrentByRecordId.mockResolvedValue(component({ approvalStatus: "draft" }));
+
+      await expect(
+        svc.update("record-1", { replacementRecordId: "record-1" }, "actor-1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(components.updateInPlace).not.toHaveBeenCalled();
+    });
+
     it("rejects an update when a patched tokenId does not resolve to a real design token", async () => {
       components.findCurrentByRecordId.mockResolvedValue(component({ approvalStatus: "draft" }));
       designTokensService.existingTokenIds.mockResolvedValue(new Set());
