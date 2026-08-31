@@ -2,22 +2,24 @@
 
 **Status:** Built, independently re-verified, light-tier review complete (1 finding, fixed; 0
 open). No separate security review, per the 2026-08-27 "right-size the review pipeline" standing
-rule — this diff touches nothing security-relevant. Not yet second-role human reviewed, gated,
-pushed, or merged — each remains its own separate, not-yet-requested next step.
+rule — this diff touches nothing security-relevant. Required second-role human review complete —
+Jitesh D, "Approved as-is." Gate `G4-dashboard-web-design-token-library` approved (WebDesk
+Solution, CONFIRM). Not yet pushed or merged — each remains its own separate, not-yet-requested
+next step.
 
 ## Completion condition
 
-| #   | Item                         | Status                                                                                                                                                                                                                                        |
-| --- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Authorization to build       | ✅ Explicit "Start the Design Token Library UI" instruction — closes the module's last named gap (backend merged via PR #75)                                                                                                                 |
-| 2   | Right pipeline tier chosen   | ✅ Light tier — a frontend-only UI slice consuming an already-reviewed, already-gated backend (PR #75, live), no new endpoint, no new RBAC/auth logic, mirrors the already-reviewed Website Strategy Center UI file-for-file                 |
-| 3   | Required tests pass          | ✅ 1062/1062 `dashboard-web` unit tests (47 new for this module), independently re-run by the orchestrating session, not trusted from the build agent's own report                                                                          |
-| 4   | Full validation clean        | ✅ `dashboard-web`/`dashboard-api`/`dashboard-worker` typecheck all clean (independently re-run); `eslint --max-warnings=0` clean; CSS-token check clean (54 files); `next build` clean, all 4 new routes present; `prettier --check` clean |
+| #   | Item                         | Status                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Authorization to build       | ✅ Explicit "Start the Design Token Library UI" instruction — closes the module's last named gap (backend merged via PR #75)                                                                                                                                                                                                                                                                                            |
+| 2   | Right pipeline tier chosen   | ✅ Light tier — a frontend-only UI slice consuming an already-reviewed, already-gated backend (PR #75, live), no new endpoint, no new RBAC/auth logic, mirrors the already-reviewed Website Strategy Center UI file-for-file                                                                                                                                                                                            |
+| 3   | Required tests pass          | ✅ 1062/1062 `dashboard-web` unit tests (47 new for this module), independently re-run by the orchestrating session, not trusted from the build agent's own report                                                                                                                                                                                                                                                      |
+| 4   | Full validation clean        | ✅ `dashboard-web`/`dashboard-api`/`dashboard-worker` typecheck all clean (independently re-run); `eslint --max-warnings=0` clean; CSS-token check clean (54 files); `next build` clean, all 4 new routes present; `prettier --check` clean                                                                                                                                                                             |
 | 5   | Light-tier review complete   | ✅ Single direct read-through pass — verified the `group`/`publicId` create-only contract against the real backend DTO, the `TRANSITIONS` table against the real backend table, the plain-text-vs-rich-text field decision against the real backend (no sanitization call for `semanticPurpose`/`responsiveVariation`), the `isCurrent`-from-version-row convention, and reuse of shared helpers. **1 finding, fixed.** |
-| 6   | Security review              | Skipped, per the standing rule — pure frontend UI, no new sink, no new auth logic                                                                                                                                                            |
-| 7   | Live end-to-end verified     | Not yet — pending push/merge                                                                                                                                                                                                                 |
-| 8   | Documentation updated        | This checklist; `docs/implementation/module-design-token-library.md` still shows its pre-merge "As-built" snapshot from the backend build (predates the actual security-review/gate/merge) — not amended by this slice                    |
-| 9   | Exact branch/commit verified | Branch `dashboard-web-design-token-library`, commits `1c3180c` (build) → `6a51f75` (dedup fix) — not yet pushed                                                                                                                              |
+| 6   | Security review              | Skipped, per the standing rule — pure frontend UI, no new sink, no new auth logic                                                                                                                                                                                                                                                                                                                                       |
+| 7   | Live end-to-end verified     | Not yet — pending push/merge                                                                                                                                                                                                                                                                                                                                                                                            |
+| 8   | Documentation updated        | This checklist; `docs/implementation/module-design-token-library.md` still shows its pre-merge "As-built" snapshot from the backend build (predates the actual security-review/gate/merge) — not amended by this slice                                                                                                                                                                                                  |
+| 9   | Exact branch/commit verified | Branch `dashboard-web-design-token-library`, commits `1c3180c` (build) → `6a51f75` (dedup fix) → `63e7205` (checklist) — approved commit `63e7205`                                                                                                                                                                                                                                                                      |
 
 ## Forbidden-actions check
 
@@ -62,6 +64,18 @@ CSS-token-check clean, 1062/1062 unit tests passing, `next build` clean, prettie
 
 ## Sign-off
 
-**Awaiting the required second-role human review** — since the implementing agent cannot also be
-its own reviewer (ADR-0010), even under the light tier. A gate decision, push/PR, and merge
-authorization each remain their own separate, not-yet-requested next steps.
+**Jitesh D reviewed and returned "Approved as-is,"** via the direct "Approved as-is, gate it and
+push the branch" instruction — light tier, so this checklist's own findings table (1 finding,
+fixed) served as the review artifact itself rather than a separately published packet, per the
+standing rule that a light-tier change still needs the required second-role human review, just not
+a separate packet.
+
+**The gate (G4-dashboard-web-design-token-library) was then separately requested and approved** —
+WebDesk Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+already complete before the gate was requested), approved commit `63e7205` on branch
+`dashboard-web-design-token-library` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-design-token-library`).
+
+**This gate approval does not itself authorize opening a PR or merging** — each remains its own
+separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.

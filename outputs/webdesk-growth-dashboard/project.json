@@ -868,6 +868,20 @@
       "approved_commit": "080f54a",
       "record": "docs/project-state/dashboard-web-asset-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. Live end-to-end verification in a browser was not performed -- port 3000 was occupied by an unrelated process in this environment; verified instead via a clean next build and the full unit test suite."
+    },
+    {
+      "id": "G4-dashboard-web-design-token-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-design-token-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-31T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Design Token Library module -- closes the module's last named gap following the backend's own build-to-production arc (PR #75, live). File-for-file mirrors Website Strategy Center's own already-reviewed real-version-history pattern (recordId as the stable logical-record identity, isCurrent, editing an approved record forks a new version instead of mutating in place, the identical TRANSITIONS table with no approved -> superseded edge since supersede is only an automatic side effect of a different version's own approval). New packages/shared-types DesignTokenGroup/DesignTokenThemeVariation/DesignTokenApprovalStatus/DesignTokenRecord. semanticPurpose/responsiveVariation stay plain <textarea>s, not RichTextEditor -- verified directly against design-tokens.service.ts that neither field is ever sanitized as HTML, matching design-reference-library-form.tsx's own already-established reasoning for its own plain-text fields. value/unit are plain single-line inputs; usageReferences is a free-text TagListField mirroring PersonaLibraryForm's roles/industries fields. Four routes (list, new, [recordId] detail, [recordId]/edit). Built directly, then self-reviewed at build time (light tier, per the 2026-08-27 right-sizing rule for a small UI slice on an already-reviewed backend) -- a single direct read-through pass found and fixed one duplication (THEME_VARIATION_LABEL independently declared twice, extracted into the shared query lib). No separate security review needed -- this diff touches nothing security-relevant. Two build attempts were lost to dropped connections mid-task; the on-disk state was verified directly via git status before each resume, per this project's own standing discipline against trusting a prior self-report. Final numbers: 1062/1062 dashboard-web unit tests (47 new), typecheck (dashboard-web/dashboard-api/dashboard-worker) clean, eslint --max-warnings=0 clean, CSS-token-check clean (54 files), next build clean (all 4 routes present), prettier clean. Required second-role human review complete -- Jitesh D, decision 'Approved as-is', 2026-08-31, no disputes raised. Recorded as CONFIRM, not an override, since that review was already complete before this gate was requested.",
+      "approved_commit": "63e7205",
+      "record": "docs/project-state/dashboard-web-design-token-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2654,7 +2668,16 @@
       "details": "Gate G4-dashboard-web-asset-library approved for the dashboard-web Asset Library UI, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved', no disputes raised -- was already complete before the gate was requested). Approved commit 080f54a on branch dashboard-web-asset-library. Escalated from the light tier this slice started at once the code-review fix round touched real confidential-field redaction logic: independent code review (6 findings, all 6 fixed -- most severe, the redaction-detection signal checked === null but the backend's real mechanism omits the key entirely, so the check never engaged) plus a separate security review (0 findings above threshold). 1015/1015 dashboard-web unit tests, typecheck/lint/CSS-token-check/next build/prettier all clean. See docs/project-state/dashboard-web-asset-library-approval-checklist.md's Sign-off section for the full record. This gate does not authorize pushing, opening a PR, or merging -- each is its own separate authorization.",
       "project_version_before": 84,
       "project_version_after": 85
+    },
+    {
+      "timestamp": "2026-08-31T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-dashboard-web-design-token-library approved for the dashboard-web Design Token Library UI, decision CONFIRM (clean pass, not an override, since the required second-role human review -- Jitesh D, 'Approved as-is', no disputes raised -- was already complete before the gate was requested). Approved commit 63e7205 on branch dashboard-web-design-token-library. Light-tier review (1 finding, fixed -- a duplicated THEME_VARIATION_LABEL map), no separate security review needed. 1062/1062 dashboard-web unit tests, typecheck/lint/CSS-token-check/next build/prettier all clean. See docs/project-state/dashboard-web-design-token-library-approval-checklist.md's Sign-off section for the full record. This gate does not authorize pushing, opening a PR, or merging -- each is its own separate authorization.",
+      "project_version_before": 85,
+      "project_version_after": 86
     }
   ],
-  "current_gate": "G4-dashboard-web-asset-library"
+  "current_gate": "G4-dashboard-web-design-token-library"
 }
