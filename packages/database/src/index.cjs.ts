@@ -39,5 +39,6 @@ export * from "./design-token-library/index.js";
 export * from "./section-and-pattern-library/index.js";
 export * from "./asset-library/index.js";
 export * from "./component-library/index.js";
+export * from "./wireframe-library/index.js";
 export * from "./page-template-library/index.js";
 export * from "./motion-and-interaction-library/index.js";
