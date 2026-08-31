@@ -268,5 +268,15 @@ gate (`G4-dashboard-web-page-template-library`) was then separately requested an
 WebDesk Solution, decision CONFIRM, approved commit `39e8deb` on branch
 `dashboard-web-page-template-library`. Pushed to `origin`, opened as
 [PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83), all 14
-CI checks green. Not yet merged — merge remains its own separate, not-yet-requested
-authorization, per this project's standing "no auto-merge" rule.
+CI checks green. **"Merge PR #83" was then separately requested and executed** — merge commit
+`6c7688c45ba65753e1858b61a06f9bb471340c05`, all 14 CI checks green beforehand. Both Vercel
+projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+6c7688c45ba65753e1858b61a06f9bb471340c05`, confirming the exact merged commit is what's serving;
+`GET /page-template-library/page-templates` returned a clean `401` (route live, `SessionGuard`
+enforcing — not a `404`, which would mean the module never actually deployed); and
+`dashboard-web`'s `/page-template-library` correctly redirects (307) an unauthenticated visitor to
+`/auth/sign-in`. **The `dashboard-web` Page Template Library UI is now genuinely live in
+production**, closing out this slice's full build-to-production arc — backend and now the full UI
+(list, detail, create/edit form, status actions) are both live for the Page Template Library
+module.
