@@ -4,7 +4,14 @@
 accepted as tracked debt). Security review complete (0 findings above threshold). Required
 second-role human review complete — Jitesh D, "Approve as-is", accepting the 1 open tracked-debt
 finding. Gate (G4-dashboard-web-component-library) approved — WebDesk Solution, decision CONFIRM,
-approved commit `09bca85` on branch `dashboard-web-component-library`.
+approved commit `09bca85` on branch `dashboard-web-component-library`. Rebased onto the current
+`origin/main` before pushing (main had advanced twice mid-review — Section and Pattern Library's
+backend then its `dashboard-web` UI both merged concurrently); resolved conflicts in
+`packages/shared-types/src/index.ts` (two unrelated types both appended near end-of-file) and
+`outputs/webdesk-growth-dashboard/project.json` (kept both gate/audit_log entries in sequence),
+re-verified typecheck/tests/build clean. **Pushed to `origin` and opened as
+[PR #81](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/81).** Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -21,7 +28,7 @@ for this slice can be requested.
 | 6   | Security review complete                   | ✅ `security-review` skill run separately — 0 findings above threshold                                                                                                                                                                                                                                   |
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ `SingleComponentPicker` duplicating `InternalLinkForm`'s `SinglePagePicker` shape is recorded as accepted, tracked debt — promoting it would mean migrating a sibling module's own copy too, out of scope for this branch                                                                             |
 | 8   | Documentation updated                      | ✅ `docs/implementation/module-component-library.md` (new `## dashboard-web UI` addendum: as-built, code review, security review)                                                                                                                                                                        |
-| 9   | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-component-library`, latest commit `09bca85` — not yet pushed to `origin`, no PR opened yet. Rebased onto `origin/main` mid-build after Section and Pattern Library's backend merged concurrently (no migration/conflict — this branch touches no migrations)                    |
+| 9   | Exact branch/commit verified and recorded  | ✅ Branch `dashboard-web-component-library`, latest commit `47d5a3c` — pushed to `origin`, [PR #81](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/81) opened                                                                                                               |
 
 ## Forbidden-actions check
 
