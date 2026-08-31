@@ -1,26 +1,27 @@
 # `dashboard-web` Wireframe Library UI — Approval Checklist
 
 **Status:** Built, fully validated. Reviewed at light tier (0 findings) per this project's
-2026-08-27 "right-size the review pipeline" standing rule. Awaiting required second-role human
-review and a gate decision.
+2026-08-27 "right-size the review pipeline" standing rule. Required second-role human review
+complete. Gate `G4-dashboard-web-wireframe-library` approved (WebDesk Solution, CONFIRM). Branch
+pushed to `origin`.
 
 ## Completion condition
 
 Every item below must be genuinely true, verified against real evidence, before a gate decision
 for this slice can be requested.
 
-| #   | Item                                       | Status                                                                                                                                                                                                                                                                     |
-| --- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Authorization to build                     | ✅ Explicit "Start the dashboard-web UI for it Wireframe Library" instruction, following the backend's own build-to-production arc (PR #84)                                                                                                                              |
+| #   | Item                                       | Status                                                                                                                                                                                                                                                                                    |
+| --- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Authorization to build                     | ✅ Explicit "Start the dashboard-web UI for it Wireframe Library" instruction, following the backend's own build-to-production arc (PR #84)                                                                                                                                               |
 | 2   | Genuine scoping confirmed                  | ✅ File-for-file mirrors Section and Pattern Library's already-reviewed UI structure (closest sibling — real multi-row version history, same `creative_design` RBAC group); backend `annotations`/`interactionNotes` were already rich-text-sanitized, only the length cap needed raising |
-| 3   | Required tests pass                        | ✅ 1232/1232 `dashboard-web` unit tests (25 new), 46/46 `dashboard-api` unit tests for this module (unaffected by the length-cap change) — all independently re-run by the orchestrating session, not trusted from the build agent's own report                          |
-| 4   | Full validation clean                      | ✅ typecheck clean across `packages/shared-types`/`apps/dashboard-api`/`apps/dashboard-web`; `eslint --max-warnings=0` clean; CSS-token check clean (62 files); `next build` clean, all 4 new routes present; `prettier --check` clean on every touched file             |
-| 5   | Independent review complete (light tier)   | ✅ A direct read-through pass (not the 8-angle fan-out, per the 2026-08-27 standing rule for a small frontend-only slice) — 0 findings                                                                                                                                    |
-| 6   | Security review                            | Skipped per the same standing rule — diff touches nothing security-relevant (no new endpoint, no new sink; rich-text fields render exclusively through the existing, already-audited `SanitizedRichText` component)                                                     |
-| 7   | Known out-of-scope gaps flagged, not fixed | None found                                                                                                                                                                                                                                                                 |
-| 8   | Live-rendered / verified                   | ✅ `next build` confirms all 4 new `/wireframe-library` routes compile and are present in the route table; form/status-actions unit tests cover both mutation paths directly                                                                                             |
-| 9   | Documentation updated                      | ✅ `docs/implementation/module-wireframe-library.md`'s new "As-built — `dashboard-web` UI" section                                                                                                                                                                        |
-| 10  | Exact branch/commit verified               | Branch `dashboard-web-wireframe-library`, commit `6f0017d` — not yet pushed to `origin`                                                                                                                                                                                   |
+| 3   | Required tests pass                        | ✅ 1232/1232 `dashboard-web` unit tests (25 new), 46/46 `dashboard-api` unit tests for this module (unaffected by the length-cap change) — all independently re-run by the orchestrating session, not trusted from the build agent's own report                                           |
+| 4   | Full validation clean                      | ✅ typecheck clean across `packages/shared-types`/`apps/dashboard-api`/`apps/dashboard-web`; `eslint --max-warnings=0` clean; CSS-token check clean (62 files); `next build` clean, all 4 new routes present; `prettier --check` clean on every touched file                              |
+| 5   | Independent review complete (light tier)   | ✅ A direct read-through pass (not the 8-angle fan-out, per the 2026-08-27 standing rule for a small frontend-only slice) — 0 findings                                                                                                                                                    |
+| 6   | Security review                            | Skipped per the same standing rule — diff touches nothing security-relevant (no new endpoint, no new sink; rich-text fields render exclusively through the existing, already-audited `SanitizedRichText` component)                                                                       |
+| 7   | Known out-of-scope gaps flagged, not fixed | None found                                                                                                                                                                                                                                                                                |
+| 8   | Live-rendered / verified                   | ✅ `next build` confirms all 4 new `/wireframe-library` routes compile and are present in the route table; form/status-actions unit tests cover both mutation paths directly                                                                                                              |
+| 9   | Documentation updated                      | ✅ `docs/implementation/module-wireframe-library.md`'s new "As-built — `dashboard-web` UI" section                                                                                                                                                                                        |
+| 10  | Exact branch/commit verified               | Branch `dashboard-web-wireframe-library`, commits `6f0017d` (build) → `8f8d952` (docs) — pushed to `origin`                                                                                                                                                                               |
 
 ## Forbidden-actions check
 
@@ -56,6 +57,16 @@ sanitization logic.
 
 ## Sign-off
 
-**Required second-role human review:** _pending._
+**Required second-role human review:** Complete — via the direct "gate it and push the branch"
+instruction. Light tier, so the findings table above served as the review artifact rather than a
+separately published Claude artifact packet, matching the Brand Library/Page Template Library UI
+precedent for a light-tier slice. There were no open findings of any kind on this branch to accept
+as tracked debt.
 
-**Gate:** _pending._
+**Gate:** `G4-dashboard-web-wireframe-library` approved — WebDesk Solution, decision CONFIRM
+(clean pass, not an override), approved commit `8f8d952` on branch
+`dashboard-web-wireframe-library`. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+(`current_gate` now `G4-dashboard-web-wireframe-library`).
+
+**Branch pushed to `origin`.** Opening a PR and merging each remain their own separate,
+not-yet-requested next steps, per this project's standing "no auto-merge" rule.

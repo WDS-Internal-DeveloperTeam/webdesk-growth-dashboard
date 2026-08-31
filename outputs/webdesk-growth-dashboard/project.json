@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-page-template-library",
+    "current_gate": "G4-dashboard-web-wireframe-library",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -980,6 +980,20 @@
       "approved_commit": "39e8deb",
       "record": "docs/project-state/dashboard-web-page-template-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging -- that remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. The branch was already pushed and PR #83 already opened before this gate was requested."
+    },
+    {
+      "id": "G4-dashboard-web-wireframe-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-wireframe-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-31T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "dashboard-web UI for the Wireframe Library module -- closes this module's last named gap following the backend's own build-to-production arc (PR #84, live). File-for-file mirrors Section and Pattern Library's already-reviewed UI structure, the closest sibling (both have real multi-row version history, both reuse the creative_design RBAC group): four routes (list/detail/create/edit) under app/(shell)/wireframe-library/ at the module registry's own seeded route field (/wireframe-library, confirmed against migration 00035). publicId/pageOrModule create-only; viewport a select; fileReference a client-validated (isSafeHttpUrl()) URL input; annotations/interactionNotes via the existing RichTextEditor per the 2026-08-22 standing rule -- the backend already sanitized both fields at write time from this module's original backend-only pass, so only a length-cap raise (20,000 -> 40,000) was needed on wireframe-library.dto.ts, not new sanitization; relatedTemplateId a plain free-text field, labeled clearly as unvalidated (the real page_template_library dependency cycle); reviewerUserId via the reusable UserPicker. WireframeStatusActions mirrors the backend's TRANSITIONS table exactly, including the deliberate approved -> archived-only divergence (no superseded edge -- supersede is automatic). Reviewed at light tier per this project's own 2026-08-27 'right-size the review pipeline' standing rule -- a small, frontend-only UI slice consuming an already-reviewed, already-gated backend with only a validation-bound length-cap raise as the sole backend change. A direct read-through pass verified the create-only field contract against the real backend DTO, the status-actions transition table against the real backend TRANSITIONS table, reuse of every established shared helper (artifact-approval-status.ts, detail-section-styles.ts, list-filter-styles.ts, list-table-styles.ts, pagination.ts, rich-text.ts, safe-http-url.ts, uuid.ts, SanitizedRichText), the module-registry route value, failure isolation on the secondary reviewer-resolution fetch, and the edit page's terminal-state handling (matches the already-accepted SectionAndPatternLibraryEdit precedent). 0 findings. A separate security-review pass was skipped per the same standing rule -- no new endpoint, no new sink, both rich-text fields route exclusively through the existing, already-audited SanitizedRichText component. 1232/1232 dashboard-web unit tests (25 new), 46/46 dashboard-api unit tests for this module (unaffected by the length-cap change), typecheck/lint (--max-warnings=0)/CSS-token-check (62 files)/next build (all 4 routes present)/prettier all clean -- independently re-run by the orchestrating session, not trusted from the build agent's own report. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- light tier, so the approval checklist's own findings table served as the review artifact rather than a separately published packet. Recorded as CONFIRM, not an override, since there were no open findings of any kind on this branch.",
+      "approved_commit": "8f8d952",
+      "record": "docs/project-state/dashboard-web-wireframe-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2838,7 +2852,16 @@
       "details": "Gate G4-dashboard-web-page-template-library approved for the dashboard-web Page Template Library UI, decision CONFIRM (clean pass, not an override, since the required second-role human review -- the project owner, 'Approved as-is', no disputes raised -- was already complete before the gate was requested). Approved commit 39e8deb on branch dashboard-web-page-template-library. Full-pipeline review tier: independent code review (10 findings kept, 4 CONFIRMED and fixed, 6 PLAUSIBLE accepted as tracked debt -- including a real, live bug found in a different already-merged module, Section and Pattern Library, whose own backend rich-text cap was never raised to match its already-shipped UI, flagged as a separate follow-up task) plus a separate security review (0 findings above threshold). 1207/1207 dashboard-web unit, 1299/1299 dashboard-api unit tests against a real disposable database. See docs/project-state/dashboard-web-page-template-library-approval-checklist.md's Sign-off section for the full record. This gate does not authorize merging -- that is its own separate authorization. The branch was already pushed and PR #83 already opened before this gate was requested.",
       "project_version_before": 92,
       "project_version_after": 93
+    },
+    {
+      "timestamp": "2026-08-31T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-dashboard-web-wireframe-library approved for the dashboard-web Wireframe Library UI, decision CONFIRM (clean pass, not an override, since there were no open findings of any kind on this branch). Approved commit 8f8d952 on branch dashboard-web-wireframe-library. Light-tier review, per this project's 2026-08-27 'right-size the review pipeline' standing rule -- a small, frontend-only UI slice consuming an already-reviewed, already-gated backend (only backend touch: a length-cap raise on wireframe-library.dto.ts to match the UI now wiring RichTextEditor in). Direct read-through pass found 0 findings; a separate security review was skipped (no new endpoint, no new sink). Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact. 1232/1232 dashboard-web unit tests (25 new), 46/46 dashboard-api unit tests, typecheck/lint/CSS-token-check/next build/prettier all clean, independently re-run. See docs/project-state/dashboard-web-wireframe-library-approval-checklist.md's Sign-off section for the full record. This gate does not authorize merging -- opening the PR is being executed alongside this gate under the same 'gate it and push the branch' instruction, but merge remains its own separate, not-yet-requested authorization.",
+      "project_version_before": 93,
+      "project_version_after": 94
     }
   ],
-  "current_gate": "G4-dashboard-web-page-template-library"
+  "current_gate": "G4-dashboard-web-wireframe-library"
 }
