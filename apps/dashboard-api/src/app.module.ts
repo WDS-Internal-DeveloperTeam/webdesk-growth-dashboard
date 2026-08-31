@@ -31,6 +31,7 @@ import { ProofAndClaimsLibraryModule } from "./proof-and-claims-library/proof-an
 import { RetentionModule } from "./retention/retention.module.js";
 import { ReviewAndApprovalCenterModule } from "./review-and-approval-center/review-and-approval-center.module.js";
 import { SectionAndPatternLibraryModule } from "./section-and-pattern-library/section-and-pattern-library.module.js";
+import { WireframeLibraryModule } from "./wireframe-library/wireframe-library.module.js";
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
 import { UsersModule } from "./users/users.module.js";
@@ -91,6 +92,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     RetentionModule,
     ReviewAndApprovalCenterModule,
     SectionAndPatternLibraryModule,
+    WireframeLibraryModule,
     ServiceLibraryModule,
     SystemOperationsModule,
     UsersModule,
