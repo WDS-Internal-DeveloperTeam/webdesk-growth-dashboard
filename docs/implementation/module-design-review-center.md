@@ -178,5 +178,14 @@ module integration tests (2 new, solo run against a freshly recreated database),
 (solo), migration round-trip clean (87/87, 0 pending), `validate:module-registry` clean,
 typecheck/lint/prettier/`pnpm audit` all clean. Committed as `43c272d`.
 
-Not yet security-reviewed, gated, pushed, or merged — each remains its own separate,
-not-yet-requested next step.
+**A separate `security-review` skill run then found 0 findings above threshold.** Confirmed:
+every RBAC decorator is method-level, `decide()`'s dynamic action-to-permission mapping is
+exhaustive over the Zod-validated closed action enum (no path to a weaker-than-intended
+permission), `assertDistinctActors()` runs unconditionally before every approval-shaped write, the
+module's organization-wide scope matches its seeded `module_registry` entry (not a deviation),
+`sanitizeNullableRichText()` covers the only rich-text field on every write path, no raw SQL
+string interpolation exists anywhere (including the new `lockTupleForApproval()`, which uses
+parameterized Sequelize `where` clauses), and the concurrent-approval race the code review found
+is now closed by that same lock. No secrets present.
+
+Not yet gated, pushed, or merged — each remains its own separate, not-yet-requested next step.
