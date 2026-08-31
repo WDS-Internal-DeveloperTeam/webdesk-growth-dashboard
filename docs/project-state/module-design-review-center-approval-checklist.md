@@ -81,9 +81,10 @@ closed by that same lock. No secrets present.
 
 ## Sign-off
 
-Required second-role human review: **awaiting**. A review packet (published as a Claude artifact
-— scope, design decisions, code review + security review results, and validation evidence, with a
-decision section) is being prepared for the required second-role human review, since the
-implementing agent cannot also be its own reviewer (ADR-0010).
+Required second-role human review: **awaiting**. A review packet has been published as a Claude
+artifact — scope, design decisions, code review + security review results, and validation
+evidence, with a decision section — at
+https://claude.ai/code/artifact/6e881b3c-032f-4703-9e3f-b5a0d96b34ff, for the required second-role
+human review, since the implementing agent cannot also be its own reviewer (ADR-0010).
 
 Gate decision, push, and merge: each remains its own separate, not-yet-requested next step.
