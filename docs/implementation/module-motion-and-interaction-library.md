@@ -2,11 +2,15 @@
 
 ## Scope
 
-Module #? on the Recommended Module Roadmap (no explicit wave number — `dependencies: null` in
-the seeded module registry, so nothing blocks building it now). It is itself a listed dependency
-of Wave 4's `design_review_center`, alongside `component_library`, `design_token_library`,
-`section_and_pattern_library`, `page_template_library`, and `wireframe_library` — of that group,
-only `wireframe_library` remains unbuilt after this module lands.
+Module #? on the Recommended Module Roadmap. At the time this build started, the seeded module
+registry had `dependencies: null` for this module (Wave 1). A code-review finding (see "As-built"
+below) surfaced that the real build introduces a hard dependency on Component Library, and a
+follow-up migration corrected the registry — `motion_and_interaction_library` now sits in Wave 2,
+depending only on `component_library` (already live), so nothing blocked building it. It is
+itself a listed dependency of Wave 4's `design_review_center`, alongside `component_library`,
+`design_token_library`, `section_and_pattern_library`, `page_template_library`, and
+`wireframe_library` — of that group, only `wireframe_library` remains unbuilt after this module
+lands.
 
 Built directly on the explicit "start Motion & Interaction Library" instruction.
 
@@ -92,3 +96,33 @@ new — covering the full `creative_design` RBAC submit/review/approve matrix, t
 supersede-on-approval behavior), `validate:module-registry` (43 modules, 21 permission groups,
 unaffected), typecheck/lint (`--max-warnings=0`)/prettier all clean across every touched file,
 `pnpm audit` 0 vulnerabilities.
+
+**Independent code review then ran** (this project's own `code-review` skill, high effort,
+8-angle finder pass via parallel subagents, 1-vote self-verification) — every angle came back
+clean except two candidates that survived dedup and verification: **1 CONFIRMED, 1 PLAUSIBLE**.
+The CONFIRMED finding was fixed: the seeded `module_registry.dependencies` for
+`motion_and_interaction_library` was `null` (migration `00035`), inconsistent with the real, hard
+runtime dependency this build introduces on Component Library
+(`ComponentsService.existingComponentIds()`, called on every `create()`/`update()`) — the
+identical class of coupling `page_template_library`'s own seeded row already correctly records.
+Left unfixed, this would have silently diverged from `docs/phase-plans/module-implementation-
+roadmap.md`, which computes its build-order "waves" by mechanically transcribing this exact
+field. Fixed with a new, additive migration
+(`00086-add-motion-and-interaction-library-dependency.ts` — not an edit to `00035`, which had
+already run against production before this branch existed) and the roadmap doc updated to move
+this module from Wave 1 to Wave 2. The 1 PLAUSIBLE finding — `updateMotionInteractionRecordSchema`
+hand-retyping its 8 shared optional fields from `createMotionInteractionRecordSchema` instead of
+deriving via `.omit()`/`.partial()` — was left as accepted, tracked debt: the derived pattern
+(already used by Content Template Library, Brand Library) is real and safer against drift, but
+6 of 8 other sibling modules checked (including ones built after that fix landed) still
+hand-duplicate the same way this module does — a real but inconsistently-applied convention in
+this codebase, not a rule this module uniquely broke. A third candidate (an "unused speculative
+`findByIds()`/`existingRecordIds()`" claim, surfacing 3 separate finder angles) was REFUTED on
+verification — unlike Page Template Library's own removed dead method, this one mirrors an
+established, already-realized convention (Section and Pattern Library's identical
+`existingRecordIds()`, consumed by Page Template Library once it needed it), ships with an
+explicit doc-comment rationale, and has real, intentional test coverage, not orphaned artifacts.
+
+Re-validated after the fix: a fresh disposable-database migration round-trip (86 migrations),
+`motion_interaction_records.dependencies`-consuming code unaffected, `validate:module-registry`
+still 43/21 clean, typecheck/lint/prettier clean.

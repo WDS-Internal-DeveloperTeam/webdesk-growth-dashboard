@@ -36,7 +36,7 @@ between them and can be authorized/built in any order, or in parallel across ind
 happen at this exact moment." Wave 1 in particular is large (24 of 43 modules) precisely because
 most modules have no real prerequisite.
 
-### Wave 1 — no dependencies (24 modules)
+### Wave 1 — no dependencies (23 modules)
 
 | Module key                           | Display name                       | Nav group |
 | ------------------------------------ | ---------------------------------- | --------- |
@@ -53,7 +53,6 @@ most modules have no real prerequisite.
 | `import_and_export_center`           | Import and Export Center           | technical |
 | `integrations`                       | Integrations                       | settings  |
 | `knowledge_library`                  | Knowledge Library                  | libraries |
-| `motion_and_interaction_library`     | Motion and Interaction Library     | libraries |
 | `notification_center`                | Notification Center                | settings  |
 | `page_inventory`                     | Page Inventory                     | pages     |
 | `portfolio_library`                  | Portfolio Library                  | libraries |
@@ -65,22 +64,23 @@ most modules have no real prerequisite.
 | `users_roles_permissions`            | Users, Roles and Permissions       | settings  |
 | `workflow_and_task_template_library` | Workflow and Task Template Library | libraries |
 
-### Wave 2 — depends only on Wave 1 (12 modules, one co-dependent pair — see §4)
+### Wave 2 — depends only on Wave 1 (13 modules, one co-dependent pair — see §4)
 
-| Module key                   | Depends on                                                |
-| ---------------------------- | --------------------------------------------------------- |
-| `agent_directory`            | `agent_specification_library`, `knowledge_library`        |
-| `case_study_library`\*       | `case_study_studio`                                       |
-| `case_study_studio`\*        | `proof_and_claims_library`, `asset_library`               |
-| `change_center`              | `scan_center`                                             |
-| `component_library`          | `design_token_library`                                    |
-| `internal_linking_library`\* | `page_inventory`, `website_strategy_center`               |
-| `page_workspace`             | `page_inventory`                                          |
-| `persona_library`\*          | `service_library`                                         |
-| `proof_and_claims_library`\* | `case_study_studio`, `service_library`                    |
-| `ready_for_claude_queue`     | `workflow_and_task_template_library`                      |
-| `service_library`\*          | `persona_library`, `case_study_library`, `page_inventory` |
-| `website_strategy_center`\*  | `page_inventory`, `internal_linking_library`              |
+| Module key                       | Depends on                                                |
+| -------------------------------- | --------------------------------------------------------- |
+| `agent_directory`                | `agent_specification_library`, `knowledge_library`        |
+| `case_study_library`\*           | `case_study_studio`                                       |
+| `case_study_studio`\*            | `proof_and_claims_library`, `asset_library`               |
+| `change_center`                  | `scan_center`                                             |
+| `component_library`              | `design_token_library`                                    |
+| `internal_linking_library`\*     | `page_inventory`, `website_strategy_center`               |
+| `motion_and_interaction_library` | `component_library`                                       |
+| `page_workspace`                 | `page_inventory`                                          |
+| `persona_library`\*              | `service_library`                                         |
+| `proof_and_claims_library`\*     | `case_study_studio`, `service_library`                    |
+| `ready_for_claude_queue`         | `workflow_and_task_template_library`                      |
+| `service_library`\*              | `persona_library`, `case_study_library`, `page_inventory` |
+| `website_strategy_center`\*      | `page_inventory`, `internal_linking_library`              |
 
 \* — member of a co-dependent group; see §4.
 
@@ -157,3 +157,14 @@ list, then running Tarjan's SCC algorithm followed by a topological sort of the 
 No module or dependency edge was added, removed, or reinterpreted in that transcription — this
 document's wave/group structure is a direct, mechanical consequence of the already-approved
 registry data, not a new judgment call about module priority or business value.
+
+**Update (2026-08-31):** `motion_and_interaction_library` moved from Wave 1 to Wave 2 (depends
+on `component_library`) per migration `00086-add-motion-and-interaction-library-dependency.ts` —
+a code-review finding against `module-motion-and-interaction-library` (see
+`docs/implementation/module-motion-and-interaction-library.md`) surfaced that the module's real
+build (`MotionAndInteractionLibraryModule` calling `ComponentsService.existingComponentIds()` for
+`relatedComponentIds` existence validation) introduced exactly the class of coupling
+`page_template_library`'s own seeded row already records, but `00035` had originally seeded
+`motion_and_interaction_library.dependencies` as `null`. Corrected via an additive migration
+(rule 3 above) rather than editing `00035` in place, since `00035` had already run against
+production before this branch existed.
