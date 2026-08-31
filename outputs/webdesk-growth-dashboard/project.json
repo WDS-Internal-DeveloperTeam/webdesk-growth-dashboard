@@ -2861,6 +2861,15 @@
       "details": "Gate G4-dashboard-web-wireframe-library approved for the dashboard-web Wireframe Library UI, decision CONFIRM (clean pass, not an override, since there were no open findings of any kind on this branch). Approved commit 8f8d952 on branch dashboard-web-wireframe-library. Light-tier review, per this project's 2026-08-27 'right-size the review pipeline' standing rule -- a small, frontend-only UI slice consuming an already-reviewed, already-gated backend (only backend touch: a length-cap raise on wireframe-library.dto.ts to match the UI now wiring RichTextEditor in). Direct read-through pass found 0 findings; a separate security review was skipped (no new endpoint, no new sink). Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact. 1232/1232 dashboard-web unit tests (25 new), 46/46 dashboard-api unit tests, typecheck/lint/CSS-token-check/next build/prettier all clean, independently re-run. See docs/project-state/dashboard-web-wireframe-library-approval-checklist.md's Sign-off section for the full record. This gate does not authorize merging -- opening the PR is being executed alongside this gate under the same 'gate it and push the branch' instruction, but merge remains its own separate, not-yet-requested authorization.",
       "project_version_before": 93,
       "project_version_after": 94
+    },
+    {
+      "timestamp": "2026-08-31T00:00:00Z",
+      "actor": "Claude (implementer)",
+      "actor_type": "agent",
+      "action": "pr_opened",
+      "details": "Branch dashboard-web-wireframe-library pushed to origin and opened as PR #85 (https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/85), under explicit 'Open a PR' authorization. Gate G4-dashboard-web-wireframe-library and the required second-role human review were both already complete before this push (light-tier review, 0 findings). Merge remains its own separate, not-yet-requested step, per this project's standing no-auto-merge rule.",
+      "project_version_before": 94,
+      "project_version_after": 95
     }
   ],
   "current_gate": "G4-dashboard-web-wireframe-library"

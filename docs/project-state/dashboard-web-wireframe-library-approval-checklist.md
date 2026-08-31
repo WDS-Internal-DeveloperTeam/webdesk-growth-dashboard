@@ -68,5 +68,7 @@ as tracked debt.
 `dashboard-web-wireframe-library`. See `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
 (`current_gate` now `G4-dashboard-web-wireframe-library`).
 
-**Branch pushed to `origin`.** Opening a PR and merging each remain their own separate,
-not-yet-requested next steps, per this project's standing "no auto-merge" rule.
+**Branch pushed to `origin` and opened as
+[PR #85](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/85).**
+Merging remains its own separate, not-yet-requested next step, per this project's standing "no
+auto-merge" rule.
