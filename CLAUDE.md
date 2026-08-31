@@ -3574,7 +3574,10 @@ b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is
     `docs/project-state/dashboard-web-motion-and-interaction-library-approval-checklist.md`'s
     "Sign-off" section. **This gate approval does not itself authorize pushing the branch,
     opening a PR, or merging** — each remains its own separate, not-yet-requested authorization,
-    per this project's standing "no auto-merge" rule.
+    per this project's standing "no auto-merge" rule. **"Push the branch" and "Open a PR" were
+    then separately requested and executed** — pushed to `origin`, opened as
+    [PR #87](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/87).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -6328,6 +6331,10 @@ b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is
   `G4-dashboard-web-motion-and-interaction-library`). **This gate approval does not itself
   authorize pushing the branch, opening a PR, or merging** — each remains its own separate,
   not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+- `[2026-08-31]` **"Push the branch" and "Open a PR" were separately requested and executed** on
+  `dashboard-web-motion-and-interaction-library` — pushed to `origin`, opened as
+  [PR #87](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/87). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

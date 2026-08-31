@@ -4,7 +4,7 @@
 verification) — 3 findings confirmed/plausible, all 3 fixed and re-validated. Security review
 skipped per this project's 2026-08-27 "right-size the review pipeline" standing rule. Required
 second-role human review complete. Gate `G4-dashboard-web-motion-and-interaction-library`
-approved (WebDesk Solution, CONFIRM). Not yet pushed to `origin` or opened as a PR.
+approved (WebDesk Solution, CONFIRM). Pushed to `origin`, opened as [PR #87](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/87).
 
 ## Completion condition
 
@@ -22,7 +22,7 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | The two pre-existing sibling occurrences of the id→name resolution pattern (Component Library, Page Template Library detail pages) were deliberately left as inline hand-copies — retrofitting them was out of scope for a branch that didn't otherwise touch either module                                        |
 | 8   | Live-rendered / verified                   | ✅ `next build` confirms all 4 new `/motion-and-interaction-library` routes compile and are present in the route table; form/status-actions/lib unit tests cover every mutation path directly                                                                                                                      |
 | 9   | Documentation updated                      | This checklist; `CLAUDE.md` entry to follow                                                                                                                                                                                                                                                                        |
-| 10  | Exact branch/commit verified               | Branch `dashboard-web-motion-and-interaction-library`, commits `159730b` (build) → `e1a6ad4` (detail-page name-resolution fix) → `4f49b38` (code-review fixes) — not yet pushed                                                                                                                                    |
+| 10  | Exact branch/commit verified               | Branch `dashboard-web-motion-and-interaction-library`, commits `159730b` (build) → `e1a6ad4` (detail-page name-resolution fix) → `4f49b38` (code-review fixes) → `9b28256` (gate docs) — pushed to `origin`, opened as PR #87                                                                                      |
 
 ## Forbidden-actions check
 
