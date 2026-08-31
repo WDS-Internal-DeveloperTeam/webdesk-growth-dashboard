@@ -3208,6 +3208,83 @@ targetId)` reference with no foreign key, built directly on the explicit "Build 
     matching every prior module's own backend-first
     precedent.
 
+57. **Page Template Library module backend — built, reviewed, gated, merged
+    ([PR #82](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/82),
+    merge commit `f467be9ae3811167d40323daeeb97f84a8f6cf46`); now genuinely live in production
+    (2026-08-31).** Module #19, built directly on the explicit "start Page Template Library"
+    instruction. Two genuine design forks confirmed directly with the project owner first
+    (`AskUserQuestion`), given this module's own real dependencies include a not-yet-built
+    module: `requiredSectionIds`/`optionalSectionIds`/`supportedComponentIds` are real,
+    existence-validated relationships into the already-live Section and Pattern Library and
+    Component Library (new narrow, read-only `existingRecordIds()`/`existingComponentIds()`
+    delegating methods added to those modules' own services, mirroring
+    `DesignTokensService.existingTokenIds()`'s own already-reviewed pattern); `wireframeReferences`
+    stays a plain, unvalidated string array — `wireframe_library` doesn't exist yet, and it and
+    this module are a real co-dependent cycle in the seeded module registry
+    (`docs/phase-plans/module-implementation-roadmap.md` §4.2: "a template references its
+    wireframe and a wireframe references the template it implements"). Table `page_templates`,
+    a real multi-row version history mirroring Component Library's own already-reviewed pattern
+    file-for-file, reusing the seeded `creative_design` RBAC group verbatim — no new RBAC
+    migration. `pageType` is a 17-value closed enum taken directly from the canonical spec's own
+    §16 taxonomy. Built by a background agent with a fully-specified prompt mirroring
+    `components.service.ts` file-for-file, then independently re-verified in full by the
+    orchestrating session — every high-risk file read directly (the migration, both cross-module
+    relationship-validation wirings, RBAC decorator placement, the CAS-guard discipline), and
+    every test suite independently re-run against a fresh local disposable PostgreSQL 17
+    database, not trusted from the agent's own report: 1297/1297 `dashboard-api` unit tests,
+    570/570 `packages/database` integration tests, 572/572 `dashboard-api` e2e tests, a real
+    migration down/down/up round-trip (83 migrations), `validate:module-registry` (43 modules, 21
+    permission groups), `pnpm audit` 0 vulnerabilities, typecheck/lint
+    (`--max-warnings=0`)/prettier all clean. **Independent code review then ran** (high effort,
+    8-angle finder pass, 1-vote verification) — 3 candidates kept after dedup, **2 fixed**: an
+    unused, speculatively-added `PageTemplateRepository.findByIds()` with zero real callers
+    anywhere in the codebase (removed, along with its two now-orphaned integration tests and its
+    mention in the module's own file-list doc comment), and a missing overlap check between
+    `requiredSectionIds`/`optionalSectionIds` (nothing rejected the same section id appearing in
+    both arrays — closed with a shared `hasOverlappingSectionIds()` Zod `.refine()` on both
+    `create` and `update`, with 5 new regression tests). **1 left as accepted, tracked debt**:
+    `update()`'s terminal-state guard runs after the relationship-existence-check `Promise.all`,
+    so editing an archived/superseded record with an also-invalid relationship id returns the
+    wrong error message — byte-for-byte inherited from `ComponentsService.update()`'s identical
+    ordering, now present in a 5th sibling module; fixing only this one would diverge from the
+    established pattern. **A separate `security-review` skill run then found 0 findings above
+    threshold** — confirmed RBAC decorators are method-level throughout (never class-level, which
+    would silently fail open), the dynamic per-transition permission check in
+    `changeApprovalStatus()` is sound, the two new cross-module existence-check methods leak no
+    field/PII data (each returns only a bare `Set<string>` of ids), the search filter is fully
+    parameterized via the already-audited `escapeLikePattern()`, mass-assignment is closed
+    (`pageType`/`publicId`/`approvalStatus` all correctly excluded from the update route), and the
+    new unvalidated `wireframeReferences` field is never rendered as a link by this backend-only
+    module — no stored-XSS-enabling gap analogous to the historical Projects `environment.url`
+    finding. Re-validated after the fix round: 1297/1297 `dashboard-api` unit tests (57 new
+    overall), 570/570 `packages/database` integration tests, 572/572 e2e tests, typecheck/lint/
+    prettier all clean. A review packet (published as a Claude artifact, "Page Template Library
+    Review Packet" — code review + security review findings, fixes, and validation evidence, with
+    a decision section) was prepared for the required second-role human review, since the
+    implementing agent cannot also be its own reviewer (ADR-0010). **The project owner reviewed
+    it and returned "Approve as-is,"** accepting the 1 open tracked-debt finding, no disputes
+    raised. See `docs/project-state/module-page-template-library-approval-checklist.md`'s
+    "Sign-off" section. **The gate (G4-page-template-library) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `bd376be` on branch `module-page-template-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-page-template-library`). **"Push the branch" and "Open a PR" were then separately
+    requested and executed** — pushed to `origin`, opened as
+    [PR #82](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/82), all
+    14 CI checks green. **"Merge PR #82" was then separately requested and executed** — merge
+    commit `f467be9ae3811167d40323daeeb97f84a8f6cf46`, all 14 CI checks green beforehand. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+f467be9ae3811167d40323daeeb97f84a8f6cf46`, confirming the exact merged commit is what's serving;
+    `GET /page-template-library/page-templates` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+    unauthenticated visitor, confirming the session gate is intact. **The Page Template Library
+    module backend is now genuinely live in production.** No `dashboard-web` UI exists yet for
+    this module — a separate, not-yet-requested next step, matching every prior module's own
+    backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -5724,6 +5801,43 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   to `origin`. **"Open a PR" was then separately requested and executed** — opened as
   [PR #80](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/80). Merge
   authorization remains a separate, not-yet-requested next step.
+- `[2026-08-31]` **Built the Page Template Library module backend** (module #19), under the
+  explicit "start Page Template Library" instruction. Two design forks confirmed directly with
+  the project owner first: real, existence-validated relationships into the already-live Section
+  and Pattern Library / Component Library for `requiredSectionIds`/`optionalSectionIds`/
+  `supportedComponentIds`, and an unvalidated string array for `wireframeReferences` since
+  `wireframe_library` doesn't exist yet (a real co-dependent cycle with this module in the seeded
+  module registry). Full account in item 57 above.
+- `[2026-08-31]` **Independent code review run on `module-page-template-library`, high effort —
+  8-angle finder pass, then 2 of 3 candidates fixed.** Removed an unused, speculatively-added
+  `PageTemplateRepository.findByIds()` with zero real callers; added a missing overlap check
+  between `requiredSectionIds`/`optionalSectionIds` with 5 new regression tests. 1 candidate
+  (the terminal-state-guard ordering in `update()`) left as accepted, tracked debt — inherited
+  byte-for-byte from `ComponentsService.update()` across 5 sibling modules.
+- `[2026-08-31]` **Security review run on `module-page-template-library`, separately from the
+  code review.** 0 findings above threshold. A review packet (published as a Claude artifact,
+  "Page Template Library Review Packet") was prepared for the required second-role human review,
+  since the implementing agent cannot also be its own reviewer (ADR-0010).
+- `[2026-08-31]` **Required second-role human review complete for
+  `module-page-template-library`.** The project owner reviewed the packet and returned "Approve
+  as-is," accepting the 1 open tracked-debt finding, no disputes raised. See
+  `docs/project-state/module-page-template-library-approval-checklist.md`'s "Sign-off" section.
+- `[2026-08-31]` **The gate (G4-page-template-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM, approved commit `bd376be` on branch
+  `module-page-template-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` (`current_gate` now `G4-page-template-library`).
+- `[2026-08-31]` **"Push the branch" and "Open a PR" were then separately requested and
+  executed** — pushed to `origin`, opened as
+  [PR #82](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/82), all
+  14 CI checks green.
+- `[2026-08-31]` **"Merge PR #82" was then separately requested and executed.** Merge commit
+  `f467be9ae3811167d40323daeeb97f84a8f6cf46`, all 14 CI checks green beforehand. Both Vercel
+  projects auto-deployed on push to `main` and were verified live directly — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-templates` returned a
+  clean `401` (route live, `SessionGuard` enforcing — not a `404`), and `dashboard-web`'s `/`
+  resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an unauthenticated visitor.
+  **The Page Template Library module backend is now genuinely live in production.**
 
 ## Open client blockers
 
