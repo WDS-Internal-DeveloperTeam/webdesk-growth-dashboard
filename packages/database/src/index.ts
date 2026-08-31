@@ -29,5 +29,6 @@ export * from "./page-workspace/index.js";
 export * from "./brand-library/index.js";
 export * from "./design-reference-library/index.js";
 export * from "./design-token-library/index.js";
+export * from "./section-and-pattern-library/index.js";
 export * from "./asset-library/index.js";
 export * from "./component-library/index.js";
