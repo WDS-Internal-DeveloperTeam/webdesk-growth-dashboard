@@ -119,3 +119,13 @@ already complete before the gate was requested), approved commit `09bca85` on br
 This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
 remains its own separate, not-yet-requested authorization, per this project's standing "no
 auto-merge" rule.
+
+**"Merge PR #81" was then separately requested and executed** — all 14 CI checks confirmed green
+first. Merged with a real merge commit (not squash/rebase), matching every prior merge in this
+project's history — merge commit `4190bfbd69756ce6c65e298d47e6cff18c01540e`. Both Vercel projects
+auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+status check — `dashboard-api`'s `/health` returned `build.commitShaShort == 4190bfb`, confirming
+the exact merged commit is what's serving; `dashboard-web`'s `/component-library` resolves (307)
+to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
+`dashboard-web` Component Library UI is now genuinely live in production**, closing out module
+#17's full build-to-production arc — backend and now the full UI are both live.

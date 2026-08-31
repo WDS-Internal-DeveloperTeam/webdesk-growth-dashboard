@@ -479,5 +479,18 @@ branch introduces.
 
 ### Review, gate, and production deployment
 
-Not yet reviewed by a second role, gated, pushed, or merged — each remains its own separate,
-not-yet-requested next step.
+Required second-role human review complete — Jitesh D, "Approve as-is" (via a published review
+packet), accepting the one open tracked-debt finding. Gate `G4-dashboard-web-component-library`
+approved (WebDesk Solution, CONFIRM), approved commit `09bca85`. Pushed to `origin`, opened as
+[PR #81](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/81) — rebased
+onto `origin/main` first, since `main` had advanced twice mid-review (Section and Pattern
+Library's backend then its own `dashboard-web` UI both merged concurrently); resolved conflicts in
+`packages/shared-types/src/index.ts` (two unrelated types both appended near end-of-file) and
+`project.json` (kept both gate/audit_log entries in sequence), re-verified typecheck/tests/build
+clean. All 14 CI checks passed. Merged with a real merge commit —
+`4190bfbd69756ce6c65e298d47e6cff18c01540e`. Both Vercel projects auto-deployed and were verified
+live directly: `dashboard-api`'s `/health` returned `build.commitShaShort == 4190bfb`;
+`dashboard-web`'s `/component-library` resolves (307) to `/auth/sign-in` for an unauthenticated
+visitor. **The `dashboard-web` Component Library UI is now genuinely live in production**, closing
+out module #17's full build-to-production arc — backend and now the full UI (list, detail,
+create/edit form, status actions, version history) are both live.
