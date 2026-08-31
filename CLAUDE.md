@@ -3523,7 +3523,58 @@ b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is
     and `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor. **The
     Motion and Interaction Library module backend is now genuinely live in production.** No
     `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
-    matching every prior module's own backend-first precedent.
+    matching every prior module's own backend-first precedent. **Update (2026-08-31): the
+    `dashboard-web` UI has since been built and gated — see item 62 below.**
+
+62. **`dashboard-web` Motion and Interaction Library UI — built, reviewed, gated (2026-08-31),
+    not yet pushed or merged.** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #86). Not started automatically — built directly on the explicit
+    "Start the dashboard-web UI for it" instruction. File-for-file mirrors Section and Pattern
+    Library's already-reviewed UI structure, the closest sibling (both have real multi-row
+    version history, both reuse the `creative_design` RBAC group): four routes
+    (list/detail/create/edit) under `app/(shell)/motion-and-interaction-library/`. `category` is
+    create-only, immutable across a record's own version chain; `description`/
+    `triggerAndBehavior`/`accessibilityNotes` use `RichTextEditor` per the 2026-08-22 standing
+    rule — the backend already sanitized all three at write time, so only a length-cap raise
+    (20,000 → 40,000) was needed on `motion-and-interaction-library.dto.ts`, not new
+    sanitization; `timingAndEasing`/`implementationSpec`/`fallbackBehavior` stay plain
+    `<textarea>`s, matching the backend's own unsanitized plain-text schema for these three;
+    `designReference` a client-validated (`isSafeHttpUrl()`) URL input; `relatedComponentIds` a
+    REAL, existence-validated `RelationshipPicker` against Component Library.
+    `MotionInteractionStatusActions` mirrors the backend's `TRANSITIONS` table exactly, including
+    the deliberate `approved -> archived`-only divergence (no `superseded` edge — supersede is
+    automatic). **Independent code review then ran** (this project's own `code-review` skill,
+    medium effort, 8-angle finder pass, 1-vote verification) — 4 candidates survived dedup, 3
+    fixed: `MotionInteractionStatusActions` used plain `useState` instead of the shared
+    `useSyncedState()` hook every module built after 2026-08-27 adopts (its own named sibling
+    template, `page-template-status-actions.tsx`, was itself updated to use it the same day this
+    branch was built) — fixed; `arrayField()` reimplemented the shared `arrayFieldValue()` helper
+    instead of delegating to it, unlike both sibling forms — fixed; the detail page's
+    `relatedComponentIds` id-to-name resolution was a 3rd independent inline hand-copy of a
+    pattern already present in Component Library's and Page Template Library's own detail pages,
+    violating this project's own "extract after the 2nd occurrence" convention — fixed by
+    extracting a new `lib/resolve-ids-to-names.ts`, with the two pre-existing sibling occurrences
+    deliberately left untouched as an out-of-scope retrofit. 1 candidate (a triple-branch
+    `designReference` truthiness check) was refuted as inherited from an already-shipped Section
+    and Pattern Library precedent. Re-validated: 1283/1283 `dashboard-web` unit tests (48 new),
+    typecheck/lint (`--max-warnings=0`)/CSS-token-check (64 files)/`next build` (all 4 routes
+    present)/prettier all clean. **Security review skipped per the 2026-08-27 "right-size the
+    review pipeline" standing rule** — a small, frontend-only UI slice consuming an
+    already-reviewed, already-gated backend with only a length-cap raise as the sole backend
+    change; no new endpoint, no new sink. **Required second-role human review complete via the
+    direct "gate it and push the branch" instruction** — the approval checklist's own findings
+    table served as the review artifact rather than a separately published packet, since there
+    were no open findings of any kind on this branch after the fix round. **The gate
+    (G4-dashboard-web-motion-and-interaction-library) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `4f49b38` on branch `dashboard-web-motion-and-interaction-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-motion-and-interaction-library`) and
+    `docs/project-state/dashboard-web-motion-and-interaction-library-approval-checklist.md`'s
+    "Sign-off" section. **This gate approval does not itself authorize pushing the branch,
+    opening a PR, or merging** — each remains its own separate, not-yet-requested authorization,
+    per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -6239,6 +6290,44 @@ b59fba740266236fa1aacef02a95cbe1f9948b7e`, confirming the exact merged commit is
   Motion and Interaction Library module backend is now genuinely live in production.** No
   `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
   matching every prior module's own backend-first precedent.
+- `[2026-08-31]` **Built the `dashboard-web` UI for Motion and Interaction Library**, under the
+  explicit "Start the dashboard-web UI for it" instruction, closing this module's last named gap.
+  File-for-file mirrors Section and Pattern Library's already-reviewed UI structure. See item 62
+  above for the full account.
+- `[2026-08-31]` **Independent code review run on `dashboard-web-motion-and-interaction-library`,
+  then 3 of 4 candidates fixed.** Medium effort, 8-angle finder pass, 1-vote verification — 4
+  candidates survived dedup: `MotionInteractionStatusActions` used plain `useState` instead of
+  the shared `useSyncedState()` hook every module built after 2026-08-27 adopts (fixed);
+  `arrayField()` reimplemented the shared `arrayFieldValue()` helper instead of delegating to it
+  (fixed); the detail page's `relatedComponentIds` id-to-name resolution was a 3rd independent
+  inline hand-copy of a pattern already present in Component Library's and Page Template
+  Library's own detail pages, violating this project's own "extract after the 2nd occurrence"
+  convention (fixed by extracting `lib/resolve-ids-to-names.ts`, with the two pre-existing
+  sibling occurrences deliberately left untouched as an out-of-scope retrofit); and a 4th
+  candidate (a triple-branch `designReference` truthiness check) was refuted as inherited from an
+  already-shipped Section and Pattern Library precedent. Re-validated: 1283/1283 `dashboard-web`
+  unit tests, typecheck/lint/CSS-token-check/`next build`/prettier all clean.
+- `[2026-08-31]` **Security review skipped for
+  `dashboard-web-motion-and-interaction-library`, per the 2026-08-27 "right-size the review
+  pipeline" standing rule** — asked directly ("is there any need to run the security review?"),
+  answered no and explained why (no new backend endpoint, no new sink, only a length-cap raise on
+  already-sanitized fields, rich text renders exclusively through the existing, already-audited
+  `SanitizedRichText` component) — confirmed by the user ("Skip it").
+- `[2026-08-31]` **Required second-role human review complete for
+  `dashboard-web-motion-and-interaction-library`, via the direct "gate it and push the branch"
+  instruction.** The approval checklist's own findings table served as the review artifact rather
+  than a separately published packet, since there were no open findings of any kind on this
+  branch after the fix round. See
+  `docs/project-state/dashboard-web-motion-and-interaction-library-approval-checklist.md`'s
+  "Sign-off" section.
+- `[2026-08-31]` **The gate (G4-dashboard-web-motion-and-interaction-library) was then separately
+  requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override,
+  since the second-role review was already complete before the gate was requested), approved
+  commit `4f49b38` on branch `dashboard-web-motion-and-interaction-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-motion-and-interaction-library`). **This gate approval does not itself
+  authorize pushing the branch, opening a PR, or merging** — each remains its own separate,
+  not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Open client blockers
 
