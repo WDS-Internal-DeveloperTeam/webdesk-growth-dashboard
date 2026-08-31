@@ -5721,8 +5721,9 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   `G4-dashboard-web-section-and-pattern-library`) and
   `docs/project-state/dashboard-web-section-and-pattern-library-approval-checklist.md`'s
   "Sign-off" section. **"Push the branch" was then separately requested and executed** — pushed
-  to `origin`. Opening a PR and merge authorization each remain separate, not-yet-requested next
-  steps.
+  to `origin`. **"Open a PR" was then separately requested and executed** — opened as
+  [PR #80](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/80). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

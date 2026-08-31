@@ -6,8 +6,9 @@ no new endpoint or auth logic). **0 findings.** No separate security-review pass
 this diff is security-relevant. Required second-role human review complete — Jitesh D,
 "Approved," no disputes raised. Gate (G4-dashboard-web-section-and-pattern-library) approved —
 WebDesk Solution, decision CONFIRM, approved commit `c460b05` on branch
-`dashboard-web-section-and-pattern-library`. **Pushed to `origin`.** Opening a PR and merge
-authorization each remain separate, not-yet-requested next steps.
+`dashboard-web-section-and-pattern-library`. **Pushed to `origin` and opened as
+[PR #80](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/80).** Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
