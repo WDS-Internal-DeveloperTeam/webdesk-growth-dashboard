@@ -2,7 +2,9 @@
 
 **Status:** Built, fully validated. Independent code review complete (10 findings kept in the
 final report — 4 CONFIRMED and fixed, 6 PLAUSIBLE left as accepted, tracked debt). Security review
-complete (0 findings above threshold). Awaiting required second-role human review.
+complete (0 findings above threshold). Pushed to `origin`, opened as
+[PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83).
+Awaiting required second-role human review.
 
 ## Completion condition
 
@@ -20,7 +22,7 @@ for this slice can be requested.
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ A real, previously-undiscovered bug in the already-merged Section and Pattern Library UI (PR #80) — its form wires `RichTextEditor` but its own backend cap was never raised to match — was found while verifying this branch's own doc-comment fix; flagged as a separate follow-up task, not fixed here (different module, needs its own review cycle)                                                                  |
 | 8   | Live-rendered / verified                   | ✅ `next build` confirms all 4 new `/page-template-library` routes compile and are present in the route table; component/lib/form unit tests cover the RelationshipPicker/TagListField/RichTextEditor wiring and both mutation paths directly                                                                                                                                                                                |
 | 9   | Documentation updated                      | ✅ `docs/implementation/module-page-template-library.md`'s new "As-built — `dashboard-web` UI" section                                                                                                                                                                                                                                                                                                                       |
-| 10  | Exact branch/commit verified               | Branch `dashboard-web-page-template-library`, commits `685d4e3` (build) → `fdb4e3b` (code-review fix round) — not yet pushed to `origin` or opened as a PR                                                                                                                                                                                                                                                                   |
+| 10  | Exact branch/commit verified               | Branch `dashboard-web-page-template-library`, commits `685d4e3` (build) → `fdb4e3b` (code-review fix round) → `39e8deb` (docs) — pushed to `origin`, opened as [PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83)                                                                                                                                                                      |
 
 ## Forbidden-actions check
 

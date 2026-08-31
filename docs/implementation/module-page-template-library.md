@@ -262,4 +262,6 @@ permission-filtered list responses); and the picker-fetch functions target only 
 build-time API base URL plus hardcoded paths or a UUID-validated `recordId`, with no SSRF or
 credential-leakage surface.
 
-Not yet second-role human reviewed, gated, pushed, opened as a PR, or merged.
+Pushed to `origin`, opened as
+[PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83). Not yet
+second-role human reviewed, gated, or merged.
