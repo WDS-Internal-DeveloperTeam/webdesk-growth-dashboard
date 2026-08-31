@@ -222,6 +222,24 @@ export class DesignTokenRepository {
   }
 
   /**
+   * Every CURRENT-version row whose `recordId` is in `recordIds` — added so another module
+   * (Component Library, `tokenIds`) can existence-check a relationship against real design
+   * tokens, mirroring `ServiceRepository.findByIds()`'s own shape. Returns only the subset of
+   * `recordIds` that resolve to a real, current token; never a full row for a recordId with no
+   * current version (there is no such state under normal operation, but the query itself is
+   * `isCurrent = true`-scoped defensively, matching `findCurrentByRecordId()`'s own convention).
+   */
+  async findByIds(recordIds: readonly string[]): Promise<readonly DesignTokenEntity[]> {
+    if (recordIds.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({
+      where: { recordId: { [Op.in]: [...recordIds] }, isCurrent: true },
+    });
+    return rows.map((row) => toEntityWithIsoDates<DesignTokenEntity>(row));
+  }
+
+  /**
    * A plain, generic `UPDATE ... WHERE id = ... RETURNING`, scoped to one physical row (a single
    * version). Used two ways by the service layer: (1) content edits on a non-approved current
    * row, and (2) flipping the OLD current row's `isCurrent` to `false` when a new version is
