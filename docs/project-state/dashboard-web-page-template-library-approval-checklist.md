@@ -4,9 +4,9 @@
 final report — 4 CONFIRMED and fixed, 6 PLAUSIBLE left as accepted, tracked debt). Security review
 complete (0 findings above threshold). Required second-role human review complete — the project
 owner, "Approved as-is." Gate `G4-dashboard-web-page-template-library` approved (WebDesk Solution,
-CONFIRM). Pushed to `origin`, opened as
-[PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83), all 14
-CI checks green. Merge authorization remains a separate, not-yet-requested next step.
+CONFIRM). Merged
+([PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83), merge
+commit `6c7688c45ba65753e1858b61a06f9bb471340c05`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -128,7 +128,14 @@ was requested), approved commit `39e8deb` on branch `dashboard-web-page-template
 `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
 `G4-dashboard-web-page-template-library`).
 
-This gate approval does not itself authorize merging PR #83 — merge remains its own separate,
-not-yet-requested authorization, per this project's standing "no auto-merge" rule.
-
-_Second-role human review pending._
+**"Merge PR #83" was then separately requested and executed** — all 14 CI checks confirmed green
+beforehand, merged with a real merge commit (not squash/rebase), matching every prior merge in
+this project's history — merge commit `6c7688c45ba65753e1858b61a06f9bb471340c05`. Both Vercel
+projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+6c7688c45ba65753e1858b61a06f9bb471340c05`, confirming the exact merged commit is what's serving;
+`GET /page-template-library/page-templates` returned a clean `401` (route live, `SessionGuard`
+enforcing — not a `404`, which would mean the module never actually deployed); and
+`dashboard-web`'s `/page-template-library` correctly redirects (307) an unauthenticated visitor to
+`/auth/sign-in`. **The `dashboard-web` Page Template Library UI is now genuinely live in
+production**, closing out this slice's full build-to-production arc.

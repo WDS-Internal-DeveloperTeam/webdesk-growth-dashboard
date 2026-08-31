@@ -3283,9 +3283,86 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, confirming the exact merged commit is
     unauthenticated visitor, confirming the session gate is intact. **The Page Template Library
     module backend is now genuinely live in production.** No `dashboard-web` UI exists yet for
     this module — a separate, not-yet-requested next step, matching every prior module's own
-    backend-first precedent.
+    backend-first precedent. **Update (2026-08-31): the `dashboard-web` UI has since been
+    built — see item 58 below.**
 
-58. **Wireframe Library module backend — built, reviewed, gated, pushed, PR opened
+58. **`dashboard-web` Page Template Library UI — built, reviewed, gated, merged
+    ([PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83),
+    merge commit `6c7688c45ba65753e1858b61a06f9bb471340c05`); now genuinely live in production
+    (2026-08-31).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #82). Built directly on the explicit "Start the dashboard-web UI
+    for it Page Template Library" instruction. Mirrors Component Library's UI structure
+    file-for-file (the closest sibling — real FK-validated relationships via `@webdesk/ui`'s
+    `RelationshipPicker` plus real multi-row version history): list/detail/create/edit routes,
+    `RelationshipPicker` for `requiredSectionIds`/`optionalSectionIds`/`supportedComponentIds`,
+    `TagListField` for the unvalidated `wireframeReferences`, a self-referential
+    `SinglePageTemplatePicker` (3rd hand-copy of that wrapper shape, already self-documented as
+    accepted debt) for `replacementRecordId`, and a real Version history section. Per the
+    2026-08-22 standing rule, `contentRequirements`/`searchRequirements`/`conversionGoal` convert
+    to `RichTextEditor` with a paired backend change: `PageTemplatesService.create()`/`update()`
+    (both the in-place and fork branches) wire `sanitizeNullableRichText()`/
+    `sanitizeNullableRichTextIfChanged()`/`sanitizeOrInherit()`, and the DTO cap raised
+    4,000→40,000 to match the converged ceiling every sibling rich-text conversion lands on.
+    **Independent code review** (high effort, 8-angle finder pass via parallel subagents,
+    1-vote self-verification) surfaced 10 findings kept in the final report — **4 CONFIRMED,
+    fixed**: `arrayField()` extracted into a new `arrayFieldValue()` export in
+    `apps/dashboard-web/lib/rich-text.ts` (a 2nd byte-identical copy, past this codebase's own
+    2-occurrence extraction threshold already applied to `richTextFieldValue()`), retrofitted
+    onto `section-and-pattern-library-form.tsx` too, with 3 new regression tests; the
+    status-actions component's self-declared duplication ordinal was verified inaccurate (sibling
+    files' own claimed ordinals — 5th/6th/7th/7th — have already drifted out of sync with each
+    other and don't track a real count) — corrected to point at a grep command instead; the
+    `RICH_TEXT_MAX_LENGTH=40_000` doc comment's "10x ratio" claim was verified factually
+    inaccurate (every other conversion did a 2x raise from a 20,000 starting cap; the real pattern
+    is convergence on a 40,000-character ceiling regardless of starting point) — corrected; and,
+    discovered while verifying that fix, **a real, live bug in a DIFFERENT, already-merged
+    module** — Section and Pattern Library's own UI (PR #80) wires `RichTextEditor` but its
+    backend cap was never raised to match, so a user can currently type content the backend will
+    silently reject — flagged as a separate follow-up task, not fixed in this branch (different
+    module, needs its own review cycle). **6 PLAUSIBLE findings left as accepted, tracked debt**,
+    each matching an already-established duplication class elsewhere in this codebase: the audit
+    trail (`afterState`) logging raw pre-sanitization HTML for the 3 rich-text fields
+    (byte-identical to Website Strategy Center's/Section and Pattern Library's own already-shipped
+    audit calls); three near-identical option-filtering `useMemo` blocks; selected-chip
+    id-to-label resolution duplicated 3x; the `replacement` display value resolved via a one-off
+    `useState` initializer instead of a `useMemo`; the create/edit empty-value sentinel ternary
+    re-derived 4 times; and `plainField()`, an 8th independent hand-copy of the same closure shape
+    across 7 sibling forms. Re-validated: 1207/1207 `dashboard-web` unit tests (62 new), 1299/1299
+    `dashboard-api` unit tests, typecheck/lint/`check-css-tokens.mjs`/`next build`/`nest build`/
+    prettier all clean. **A separate `security-review` skill run then found 0 findings above
+    threshold** — confirmed all 3 write paths sanitize with no gap (new tests prove a `<script>`
+    payload is stripped on both create and fork), every render site for the 3 rich-text fields
+    routes exclusively through the shared `SanitizedRichText` component, no IDOR (relationship ids
+    surface only records already returned by the caller's own permission-filtered list endpoints),
+    and no SSRF/credential-leakage surface in the picker-fetch functions. A review packet
+    (published as a Claude artifact, "Page Template Library UI Review Packet" — code review +
+    security review findings, fixes, and validation evidence, with a decision section) was
+    prepared for the required second-role human review, since the implementing agent cannot also
+    be its own reviewer (ADR-0010). **The project owner reviewed it and returned "Approved
+    as-is,"** accepting the 6 open PLAUSIBLE findings as tracked debt, no disputes raised. See
+    `docs/project-state/dashboard-web-page-template-library-approval-checklist.md`'s "Sign-off"
+    section. **The gate (G4-dashboard-web-page-template-library) was then separately requested
+    and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+    second-role review was already complete before the gate was requested), approved commit
+    `39e8deb` on branch `dashboard-web-page-template-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-page-template-library`). **"Push the branch" and "Open a PR" were then
+    separately requested and executed** — pushed to `origin`, opened as
+    [PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83), all
+    14 CI checks green. **"Merge PR #83" was then separately requested and executed** — merge
+    commit `6c7688c45ba65753e1858b61a06f9bb471340c05`, all 14 CI checks green beforehand. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+6c7688c45ba65753e1858b61a06f9bb471340c05`, confirming the exact merged commit is what's serving;
+    `GET /page-template-library/page-templates` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/page-template-library` correctly redirects (307) an unauthenticated
+    visitor to `/auth/sign-in`. **The `dashboard-web` Page Template Library UI is now genuinely
+    live in production**, closing out this slice's full build-to-production arc — backend and now
+    the full UI (list, detail, create/edit form, status actions) are both live for the Page
+    Template Library module.
+
+59. **Wireframe Library module backend — built, reviewed, gated, pushed, PR opened
     ([PR #84](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/84))
     (2026-08-31).** Module #16. Real multi-row version history (`wireframe_records`), mirroring
     Section and Pattern Library file-for-file. `relatedTemplateId` stays unvalidated — a real
@@ -5876,6 +5953,58 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-temp
   executed** — pushed to `origin`, opened as
   [PR #84](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/84).
   Merge authorization remains a separate, not-yet-requested next step.
+- `[2026-08-31]` **Built the `dashboard-web` UI for Page Template Library**, under the explicit
+  "Start the dashboard-web UI for it Page Template Library" instruction, following the backend's
+  own build-to-production arc (PR #82). Mirrored Component Library's UI structure file-for-file
+  and converted the 3 narrative fields to `RichTextEditor` with a paired backend sanitization
+  change, per the 2026-08-22 standing rule. See item 58 above for the full account.
+- `[2026-08-31]` **Independent code review run on `dashboard-web-page-template-library`, then 4 of
+  10 kept findings fixed.** High effort, 8-angle finder pass — 10 findings kept in the final
+  report (4 CONFIRMED, 6 PLAUSIBLE). Most notable: `arrayField()` extracted into a new
+  `arrayFieldValue()` export in `lib/rich-text.ts` (a 2nd byte-identical copy, past this
+  codebase's own 2-occurrence extraction threshold), retrofitted onto
+  `section-and-pattern-library-form.tsx` too; two inaccurate doc comments corrected (the
+  status-actions duplication-count claim, and the `RICH_TEXT_MAX_LENGTH` "10x ratio" rationale);
+  and, discovered while verifying that fix, a real, live bug in a DIFFERENT already-merged module
+  (Section and Pattern Library's own UI wires `RichTextEditor` but its backend cap was never
+  raised to match) was flagged as a separate follow-up task, not fixed here. 6 PLAUSIBLE findings
+  left as accepted, tracked debt, each matching an already-established duplication class
+  elsewhere in this codebase. Re-validated: 1207/1207 `dashboard-web` unit tests, 1299/1299
+  `dashboard-api` unit tests, typecheck/lint/`next build`/prettier all clean.
+- `[2026-08-31]` **Security review run on `dashboard-web-page-template-library`, separately from
+  the code review.** 0 findings above threshold — confirmed all 3 sanitization write paths have
+  no gap, every rich-text render site routes through the shared `SanitizedRichText` component, no
+  IDOR, and no SSRF/credential-leakage surface in the picker-fetch functions. A review packet
+  (published as a Claude artifact, "Page Template Library UI Review Packet") was prepared for the
+  required second-role human review, since the implementing agent cannot also be its own reviewer
+  (ADR-0010). See `docs/project-state/dashboard-web-page-template-library-approval-checklist.md`.
+- `[2026-08-31]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-page-template-library` — pushed to `origin`, opened as
+  [PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83). All 14
+  CI checks confirmed green.
+- `[2026-08-31]` **Required second-role human review complete for
+  `dashboard-web-page-template-library`.** The review packet was reviewed. **The project owner
+  reviewed it and returned "Approved as-is,"** accepting the 6 open PLAUSIBLE findings as tracked
+  debt, no disputes raised. See
+  `docs/project-state/dashboard-web-page-template-library-approval-checklist.md`'s "Sign-off"
+  section.
+- `[2026-08-31]` **The gate (G4-dashboard-web-page-template-library) was then separately requested
+  and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `39e8deb` on branch `dashboard-web-page-template-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-page-template-library`).
+- `[2026-08-31]` **"Merge PR #83" was then separately requested and executed.** Merge commit
+  `6c7688c45ba65753e1858b61a06f9bb471340c05`, all 14 CI checks green beforehand. Both Vercel
+  projects auto-deployed on push to `main` and were verified live directly — `dashboard-api`'s
+  `/health` returned `build.commitSha ==
+6c7688c45ba65753e1858b61a06f9bb471340c05`, `GET /page-template-library/page-templates` returned a
+  clean `401` (route live, `SessionGuard` enforcing — not a `404`), and `dashboard-web`'s
+  `/page-template-library` correctly redirects (307) an unauthenticated visitor to
+  `/auth/sign-in`. **The `dashboard-web` Page Template Library UI is now genuinely live in
+  production**, closing out this slice's full build-to-production arc — backend and now the full
+  UI (list, detail, create/edit form, status actions) are both live for the Page Template Library
+  module.
 
 ## Open client blockers
 
