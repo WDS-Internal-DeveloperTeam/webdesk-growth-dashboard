@@ -3199,10 +3199,13 @@ targetId)` reference with no foreign key, built directly on the explicit "Build 
     commit `570d9a4` on branch `module-section-and-pattern-library` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-section-and-pattern-library`). **"Push the branch" was then separately requested and
-    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
-    or merging** — each remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this module —
-    a separate, not-yet-requested next step, matching every prior module's own backend-first
+    executed** — pushed to `origin`. **"Open a PR" was then separately requested and executed** —
+    opened as
+    [PR #78](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/78).
+    **This gate approval does not itself authorize merging** — merge remains its own separate,
+    not-yet-requested authorization, per this project's standing "no auto-merge" rule. No
+    `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+    matching every prior module's own backend-first
     precedent.
 
 ## Recent decisions
@@ -5679,8 +5682,10 @@ ff9352ceaf04a5fe4c087bcb0c1133830390ad49`, confirming the exact merged commit is
   `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
   `G4-section-and-pattern-library`).
 - `[2026-08-31]` **"Push the branch" was separately requested and executed** on
-  `module-section-and-pattern-library` — pushed to `origin`. Opening a PR and merge authorization
-  each remain separate, not-yet-requested next steps.
+  `module-section-and-pattern-library` — pushed to `origin`.
+- `[2026-08-31]` **"Open a PR" was separately requested and executed** — opened as
+  [PR #78](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/78). Merge
+  authorization remains a separate, not-yet-requested next step.
 
 ## Open client blockers
 

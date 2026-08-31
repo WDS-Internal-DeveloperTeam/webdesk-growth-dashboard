@@ -4,8 +4,9 @@
 fixed and 4 accepted as tracked debt). Security review complete (0 findings above threshold).
 Required second-role human review complete — Jitesh D, "Approved," no disputes raised. Gate
 (G4-section-and-pattern-library) approved — WebDesk Solution, decision CONFIRM, approved commit
-`570d9a4` on branch `module-section-and-pattern-library`. **Pushed to `origin`.** Opening a PR
-and merge authorization each remain separate, not-yet-requested next steps.
+`570d9a4` on branch `module-section-and-pattern-library`. **Pushed to `origin` and opened as
+[PR #78](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/78).** Merge
+authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
