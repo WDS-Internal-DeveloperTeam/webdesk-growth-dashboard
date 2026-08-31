@@ -248,6 +248,24 @@ describe("Design Token Library module (real disposable database)", () => {
     });
   });
 
+  describe("findByIds() — added for Component Library's tokenIds existence check", () => {
+    it("returns only CURRENT rows matching the given recordIds", async () => {
+      const created = await tokens.create({
+        publicId: uniqueId("DTL-FINDBYIDS"),
+        group: "colors",
+        name: "Find By Ids Fixture",
+        value: "#000",
+      });
+      const found = await tokens.findByIds([created.recordId, randomUUID()]);
+      expect(found).toHaveLength(1);
+      expect(found[0]?.id).toBe(created.id);
+    });
+
+    it("returns an empty array for an empty input, without querying", async () => {
+      expect(await tokens.findByIds([])).toEqual([]);
+    });
+  });
+
   describe("partial-unique-index behavior (WHERE is_current = true)", () => {
     it("rejects a second DIFFERENT record reusing the same publicId while both are current", async () => {
       const publicId = uniqueId("DTL-DUP");
