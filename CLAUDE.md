@@ -3430,9 +3430,12 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, confirming the exact merged commit is
     review findings, fixes, and validation evidence, with a decision section) was prepared for
     the required second-role human review, since the implementing agent cannot also be its own
     reviewer (ADR-0010). See `docs/implementation/module-motion-and-interaction-library.md` and
-    `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`. **Not yet
-    reviewed by a second-role human, gated, pushed, opened as a PR, or merged** — each remains
-    its own separate, not-yet-requested next step.
+    `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`. **"Push the
+    branch and open a PR" was then separately requested and executed** — pushed to `origin`,
+    opened as
+    [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86).
+    **Not yet reviewed by a second-role human, gated, or merged** — each remains its own
+    separate, not-yet-requested next step.
 
 ## Recent decisions
 
@@ -6102,9 +6105,12 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-temp
 - `[2026-08-31]` **A review packet for the required second-role human review was prepared and
   published** — see
   [Motion and Interaction Library Review Packet](https://claude.ai/code/artifact/6518fdac-e55f-441a-a2aa-3a7e0759c5c0)
-  and `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`. **Awaiting
-  that review** — a gate decision, push/PR, and merge authorization each remain separate,
-  not-yet-requested next steps.
+  and `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`.
+- `[2026-08-31]` **"Push the branch and open a PR" was separately requested and executed** on
+  `module-motion-and-interaction-library` — pushed to `origin`, opened as
+  [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86). A
+  required second-role human review, a gate decision, and merge authorization each remain
+  separate, not-yet-requested next steps.
 
 ## Open client blockers
 
