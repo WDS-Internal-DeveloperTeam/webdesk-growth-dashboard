@@ -6,7 +6,12 @@ import type { DesignTokenRecord, DesignTokenThemeVariation } from "@webdesk/shar
 import { TagListField } from "@webdesk/ui";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
-import { GROUP_LABEL, GROUP_VALUES } from "@/lib/design-token-library-query";
+import {
+  GROUP_LABEL,
+  GROUP_VALUES,
+  THEME_VARIATION_LABEL,
+  THEME_VARIATION_VALUES,
+} from "@/lib/design-token-library-query";
 import styles from "./design-token-library-form.module.css";
 
 // Mirrors apps/dashboard-api/src/design-token-library/design-token-library.dto.ts — kept in sync
@@ -19,13 +24,6 @@ const UNIT_MAX_LENGTH = 32;
 const PLAIN_TEXT_MAX_LENGTH = 2_000;
 const USAGE_REFERENCE_MAX_LENGTH = 255;
 const USAGE_REFERENCE_MAX_COUNT = 50;
-
-const THEME_VARIATION_VALUES: readonly DesignTokenThemeVariation[] = ["light", "dark", "both"];
-const THEME_VARIATION_LABEL: Readonly<Record<DesignTokenThemeVariation, string>> = {
-  light: "Light",
-  dark: "Dark",
-  both: "Both",
-};
 
 export type DesignTokenLibraryFormProps =
   | { readonly mode: "create" }

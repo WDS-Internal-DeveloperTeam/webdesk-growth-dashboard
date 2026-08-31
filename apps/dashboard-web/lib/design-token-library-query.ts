@@ -1,4 +1,8 @@
-import type { DesignTokenApprovalStatus, DesignTokenGroup } from "@webdesk/shared-types";
+import type {
+  DesignTokenApprovalStatus,
+  DesignTokenGroup,
+  DesignTokenThemeVariation,
+} from "@webdesk/shared-types";
 import type { StatusToken } from "@webdesk/ui";
 import {
   ARTIFACT_APPROVAL_STATUS_LABEL,
@@ -72,6 +76,21 @@ export const GROUP_LABEL: Readonly<Record<DesignTokenGroup, string>> = {
   component_sizes: "Component sizes",
   motion: "Motion",
   interactive_states: "Interactive states",
+};
+
+// Shared between DesignTokenLibraryForm (the "Theme variation" <select>) and
+// DesignTokenLibraryDetailPage (both the current-version Value section and each version-history
+// entry) — a single source rather than 2 independent hand-copies of the same 3-entry map.
+export const THEME_VARIATION_VALUES: readonly DesignTokenThemeVariation[] = [
+  "light",
+  "dark",
+  "both",
+];
+
+export const THEME_VARIATION_LABEL: Readonly<Record<DesignTokenThemeVariation, string>> = {
+  light: "Light",
+  dark: "Dark",
+  both: "Both",
 };
 
 export interface DesignTokenLibraryQuery {

@@ -8,6 +8,8 @@ import {
   GROUP_LABEL,
   GROUP_VALUES,
   parseDesignTokenLibrarySearchParams,
+  THEME_VARIATION_LABEL,
+  THEME_VARIATION_VALUES,
   type DesignTokenLibraryQuery,
 } from "./design-token-library-query";
 import { formatTimestamp } from "./format-timestamp";
@@ -21,6 +23,8 @@ export {
   GROUP_LABEL,
   GROUP_VALUES,
   parseDesignTokenLibrarySearchParams,
+  THEME_VARIATION_LABEL,
+  THEME_VARIATION_VALUES,
 };
 export type { DesignTokenLibraryQuery };
 

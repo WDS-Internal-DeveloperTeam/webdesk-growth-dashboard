@@ -10,6 +10,7 @@ import {
   getDesignToken,
   getDesignTokenVersions,
   GROUP_LABEL,
+  THEME_VARIATION_LABEL,
 } from "@/lib/design-token-library";
 import {
   dlStyle,
@@ -27,12 +28,6 @@ export const dynamic = "force-dynamic";
 interface DesignTokenLibraryDetailPageProps {
   readonly params: Promise<{ recordId: string }>;
 }
-
-const THEME_VARIATION_LABEL: Readonly<Record<string, string>> = {
-  light: "Light",
-  dark: "Dark",
-  both: "Both",
-};
 
 /**
  * No approved wireframe exists for this module — sections mirror the backend's own field grouping
