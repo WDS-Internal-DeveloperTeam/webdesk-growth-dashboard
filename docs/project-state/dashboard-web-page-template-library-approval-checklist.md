@@ -2,9 +2,11 @@
 
 **Status:** Built, fully validated. Independent code review complete (10 findings kept in the
 final report — 4 CONFIRMED and fixed, 6 PLAUSIBLE left as accepted, tracked debt). Security review
-complete (0 findings above threshold). Pushed to `origin`, opened as
-[PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83).
-Awaiting required second-role human review.
+complete (0 findings above threshold). Required second-role human review complete — the project
+owner, "Approved as-is." Gate `G4-dashboard-web-page-template-library` approved (WebDesk Solution,
+CONFIRM). Pushed to `origin`, opened as
+[PR #83](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/83), all 14
+CI checks green. Merge authorization remains a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -115,5 +117,18 @@ agent cannot also be its own reviewer (ADR-0010):
 [Page Template Library UI Review Packet](https://claude.ai/code/artifact/f6430b53-4c35-4973-bac3-b44872f42699).
 
 ## Sign-off
+
+**Required second-role human review:** The project owner reviewed the published review packet and
+returned **"Approved as-is,"** accepting the 6 open PLAUSIBLE code-review findings as tracked
+debt, no disputes raised.
+
+**Gate:** `G4-dashboard-web-page-template-library` approved — WebDesk Solution, decision CONFIRM
+(clean pass, not an override, since the second-role review was already complete before the gate
+was requested), approved commit `39e8deb` on branch `dashboard-web-page-template-library`. See
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-page-template-library`).
+
+This gate approval does not itself authorize merging PR #83 — merge remains its own separate,
+not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 _Second-role human review pending._
