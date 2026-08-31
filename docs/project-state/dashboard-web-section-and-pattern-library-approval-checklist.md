@@ -3,7 +3,11 @@
 **Status:** Built, fully validated, self-reviewed at light tier (per the 2026-08-27 right-sizing
 rule — a small, frontend-only UI slice consuming an already-reviewed, already-gated backend with
 no new endpoint or auth logic). **0 findings.** No separate security-review pass — nothing in
-this diff is security-relevant. **Awaiting the required second-role human review.**
+this diff is security-relevant. Required second-role human review complete — Jitesh D,
+"Approved," no disputes raised. Gate (G4-dashboard-web-section-and-pattern-library) approved —
+WebDesk Solution, decision CONFIRM, approved commit `c460b05` on branch
+`dashboard-web-section-and-pattern-library`. **Pushed to `origin`.** Opening a PR and merge
+authorization each remain separate, not-yet-requested next steps.
 
 ## Completion condition
 
@@ -64,12 +68,40 @@ Direct read-through of every new file (light tier, not the 8-angle fan-out):
 
 **0 findings.**
 
-## Required second-role human review — AWAITING
+## Required second-role human review — COMPLETE
 
-- [ ] Light-tier code review (0 findings)
-- [ ] No separate security review (skipped per the standing rule — nothing security-relevant in
-      this diff)
+- [x] Light-tier code review (0 findings) — reviewed by: **Jitesh D**, 2026-08-31, **Approved**.
+- [x] No separate security review (skipped per the standing rule — nothing security-relevant in
+      this diff) — reviewed by: **Jitesh D**, 2026-08-31, **Approved**.
 
 ## Sign-off
 
-_Pending._
+**Second-role human review: complete.** No disputes raised — 0 findings of any kind on this
+branch.
+
+| Field                         | Value                                                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Reviewer (second-role review) | Jitesh D                                                                                                       |
+| Review date                   | 2026-08-31                                                                                                     |
+| Decision                      | Approved                                                                                                       |
+| Scope reviewed                | Light-tier code review (0 findings) and the decision to skip a separate security review, per the standing rule |
+| Disputes raised               | None recorded                                                                                                  |
+
+**The gate (G4-dashboard-web-section-and-pattern-library) was then separately requested and
+approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+second-role review was already complete before the gate was requested), approved commit
+`c460b05` on branch `dashboard-web-section-and-pattern-library` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-section-and-pattern-library`).
+
+| Field                    | Value                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Gate                     | G4-dashboard-web-section-and-pattern-library                                                                                               |
+| Approver (gate decision) | WebDesk Solution                                                                                                                           |
+| Gate date                | 2026-08-31                                                                                                                                 |
+| Decision                 | CONFIRM (clean pass, not an override — the second-role review was already complete before the gate was requested)                          |
+| Approved commit          | `c460b05` on branch `dashboard-web-section-and-pattern-library`                                                                            |
+| Scope                    | `dashboard-web` Section and Pattern Library UI only. Opening a PR and merge authorization are each separate, not-yet-requested next steps. |
+
+This gate approval does not itself authorize opening a PR or merging — each remains its own
+separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
