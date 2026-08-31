@@ -57,6 +57,17 @@ const wireframeReferencesField = z
 // decision, other-fields notes), matching component-library.dto.ts's own textField helper.
 const textField = (max: number) => z.string().max(max).nullish();
 
+// contentRequirements/searchRequirements/conversionGoal now go through dashboard-web's
+// RichTextEditor (per the 2026-08-22 standing rule requiring every dashboard-web long-text field
+// to use it) — raised from the original backend-only pass's plain 4,000 cap. Every sibling
+// module's own rich-text conversion converges on this same 40,000-character ceiling regardless of
+// its own starting cap (Service/Persona/Website Strategy Center/Proof and Claims Library all went
+// 20,000→40,000, a 2x raise; this field's own 10x raise is just an artifact of its own smaller
+// starting point) — it is not a fixed multiplier, so do not mechanically apply a ratio to a
+// different field's own starting cap. phpTemplateRelationship stays at its own original, unraised
+// 2,000 cap — it's a factual, not narrative, field and is never wired to RichTextEditor.
+const RICH_TEXT_MAX_LENGTH = 40_000;
+
 export const listPageTemplatesQuerySchema = z.object({
   pageType: pageTypeSchema.optional(),
   approvalStatus: pageTemplateApprovalStatusSchema.optional(),
@@ -95,9 +106,9 @@ export const createPageTemplateSchema = z
     optionalSectionIds: idListField,
     supportedComponentIds: idListField,
     wireframeReferences: wireframeReferencesField,
-    contentRequirements: textField(4_000),
-    searchRequirements: textField(4_000),
-    conversionGoal: textField(4_000),
+    contentRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    searchRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    conversionGoal: textField(RICH_TEXT_MAX_LENGTH),
     phpTemplateRelationship: textField(2_000),
     // Existence-checked in-module (PageTemplatesService.assertReplacementExists()) against this
     // same table's own recordId — never immutable across a version chain, unlike pageType
@@ -117,9 +128,9 @@ export const updatePageTemplateSchema = z
     optionalSectionIds: idListField,
     supportedComponentIds: idListField,
     wireframeReferences: wireframeReferencesField,
-    contentRequirements: textField(4_000),
-    searchRequirements: textField(4_000),
-    conversionGoal: textField(4_000),
+    contentRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    searchRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    conversionGoal: textField(RICH_TEXT_MAX_LENGTH),
     phpTemplateRelationship: textField(2_000),
     replacementRecordId: z.string().uuid().nullish(),
   })

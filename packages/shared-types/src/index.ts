@@ -1584,3 +1584,81 @@ export interface ComponentRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+// Structurally identical to DesignTokenApprovalStatus/ArtifactApprovalStatus/
+// ComponentApprovalStatus (the shared 8-value artifact-approval workflow) — reused as its own
+// named type rather than an alias so this module's own `-query.ts` file can still narrow to it
+// directly without a cast, matching every sibling module's own precedent.
+export type PageTemplateApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/** The spec's own §16 page-type taxonomy, 17 values — mirrors
+ *  `packages/database/src/page-template-library/entities.ts`'s `PageType` exactly. Immutable
+ *  across a record's own version chain (set once at creation; a real page-type change is a
+ *  different record, not a new version of this one), mirroring `SectionPatternType`'s/
+ *  `ComponentRecord`'s own `category` immutability discipline. */
+export type PageType =
+  | "homepage"
+  | "service"
+  | "platform"
+  | "industry"
+  | "location"
+  | "case_study"
+  | "portfolio"
+  | "landing"
+  | "article"
+  | "about"
+  | "contact"
+  | "team"
+  | "careers"
+  | "archive_category"
+  | "confirmation"
+  | "not_found"
+  | "campaign_event";
+
+/**
+ * One row per VERSION, not one row per record — structurally identical to `ComponentRecord`'s/
+ * `SectionPatternRecord`'s own real version-history shape
+ * (`packages/database/src/page-template-library/entities.ts`'s own doc comment). `id` is unique
+ * per physical row/version; `recordId` is the stable logical-record identity shared by every
+ * version of the same record (the history/comparison key, and the identifier every
+ * `dashboard-web` route/link uses — never `id`, which changes across a fork). `publicId` is
+ * likewise stable across every version. `isCurrent` is true for exactly one row per `recordId` at
+ * any time. `requiredSectionIds`/`optionalSectionIds` are real, existence-validated relationships
+ * into Section and Pattern Library's own `recordId`s; `supportedComponentIds` is a real,
+ * existence-validated relationship into Component Library's own `recordId`s.
+ * `wireframeReferences` is a plain, unvalidated string array — no `wireframe_library` module
+ * exists yet to link it to for real. `replacementRecordId` is a nullable self-referential
+ * `recordId` into this same table — not immutable across a record's own version chain, unlike
+ * `pageType`.
+ */
+export interface PageTemplateRecord {
+  readonly id: string;
+  readonly recordId: string;
+  readonly publicId: string;
+  readonly pageType: PageType;
+  readonly versionNumber: number;
+  readonly isCurrent: boolean;
+  readonly name: string;
+  readonly requiredSectionIds: readonly string[];
+  readonly optionalSectionIds: readonly string[];
+  readonly supportedComponentIds: readonly string[];
+  readonly wireframeReferences: readonly string[];
+  readonly contentRequirements: string | null;
+  readonly searchRequirements: string | null;
+  readonly conversionGoal: string | null;
+  readonly phpTemplateRelationship: string | null;
+  readonly replacementRecordId: string | null;
+  readonly approvalStatus: PageTemplateApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

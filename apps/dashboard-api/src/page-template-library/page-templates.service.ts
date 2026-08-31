@@ -12,7 +12,11 @@ import type {
   PageTemplateListFilter,
   PageTemplateRepository,
 } from "@webdesk/database";
-import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
+import {
+  isSequelizeUniqueConstraintError,
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+} from "@webdesk/validation";
 import { MODULE_KEY, PAGE_TEMPLATE_REPOSITORY } from "./page-template-library.constants.js";
 import type { CreatePageTemplateDto, UpdatePageTemplateDto } from "./page-template-library.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -28,6 +32,22 @@ import { ComponentsService } from "../component-library/components.service.js";
  *  required for a given `approvalStatus` transition — identical vocabulary to Design Token
  *  Library's/Component Library's/Section and Pattern Library's own. */
 type PageTemplateApprovalAction = "submit" | "review" | "approve";
+
+/**
+ * Sanitizes a genuinely NEW patch value, or inherits the current version's own (already-sanitized)
+ * value unchanged when the patch omits the field — the fork branch's own version of the
+ * skip-if-unchanged reasoning `sanitizeNullableRichTextIfChanged()` already encodes, but with a
+ * non-optional `string | null` return (never `undefined`), since `createNewVersion()` inserts a
+ * whole new row and has no partial-update contract to leave a field untouched via. Mirrors
+ * `SectionPatternsService`'s/`WebsiteStrategyRecordsService`'s own file-local
+ * `sanitizeOrInherit()` helper exactly.
+ */
+function sanitizeOrInherit(
+  patchValue: string | null | undefined,
+  currentValue: string | null,
+): string | null {
+  return patchValue !== undefined ? (sanitizeNullableRichText(patchValue) ?? null) : currentValue;
+}
 
 /**
  * Sourced from `05_Workflow_State_Machines.md §2`'s generic artifact lifecycle, reused verbatim
@@ -154,9 +174,9 @@ export class PageTemplatesService {
         optionalSectionIds: input.optionalSectionIds ?? [],
         supportedComponentIds: input.supportedComponentIds ?? [],
         wireframeReferences: input.wireframeReferences ?? [],
-        contentRequirements: input.contentRequirements ?? null,
-        searchRequirements: input.searchRequirements ?? null,
-        conversionGoal: input.conversionGoal ?? null,
+        contentRequirements: sanitizeNullableRichText(input.contentRequirements),
+        searchRequirements: sanitizeNullableRichText(input.searchRequirements),
+        conversionGoal: sanitizeNullableRichText(input.conversionGoal),
         phpTemplateRelationship: input.phpTemplateRelationship ?? null,
         replacementRecordId: input.replacementRecordId ?? null,
         createdBy: actorUserId,
@@ -258,7 +278,22 @@ export class PageTemplatesService {
       // enforce.
       const updated = await this.pageTemplates.updateInPlace(
         current.id,
-        { ...patch, updatedBy: actorUserId },
+        {
+          ...patch,
+          contentRequirements: sanitizeNullableRichTextIfChanged(
+            patch.contentRequirements,
+            current.contentRequirements,
+          ),
+          searchRequirements: sanitizeNullableRichTextIfChanged(
+            patch.searchRequirements,
+            current.searchRequirements,
+          ),
+          conversionGoal: sanitizeNullableRichTextIfChanged(
+            patch.conversionGoal,
+            current.conversionGoal,
+          ),
+          updatedBy: actorUserId,
+        },
         undefined,
         current.approvalStatus,
       );
@@ -351,16 +386,15 @@ export class PageTemplatesService {
               patch.wireframeReferences !== undefined
                 ? (patch.wireframeReferences ?? [])
                 : current.wireframeReferences,
-            contentRequirements:
-              patch.contentRequirements !== undefined
-                ? patch.contentRequirements
-                : current.contentRequirements,
-            searchRequirements:
-              patch.searchRequirements !== undefined
-                ? patch.searchRequirements
-                : current.searchRequirements,
-            conversionGoal:
-              patch.conversionGoal !== undefined ? patch.conversionGoal : current.conversionGoal,
+            contentRequirements: sanitizeOrInherit(
+              patch.contentRequirements,
+              current.contentRequirements,
+            ),
+            searchRequirements: sanitizeOrInherit(
+              patch.searchRequirements,
+              current.searchRequirements,
+            ),
+            conversionGoal: sanitizeOrInherit(patch.conversionGoal, current.conversionGoal),
             phpTemplateRelationship:
               patch.phpTemplateRelationship !== undefined
                 ? patch.phpTemplateRelationship

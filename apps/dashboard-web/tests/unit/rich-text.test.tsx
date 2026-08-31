@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_RICH_TEXT_HTML,
+  arrayFieldValue,
   findOverLongRichTextField,
   isEmptyRichTextHtml,
   richTextFieldValue,
@@ -75,6 +76,21 @@ describe("richTextFieldValue", () => {
   it("returns the trimmed value verbatim when real content is present, in either mode", () => {
     expect(richTextFieldValue("  <p>Hello</p>  ", "create")).toBe("<p>Hello</p>");
     expect(richTextFieldValue("  <p>Hello</p>  ", "edit")).toBe("<p>Hello</p>");
+  });
+});
+
+describe("arrayFieldValue", () => {
+  it("returns undefined for an empty array in create mode", () => {
+    expect(arrayFieldValue([], "create")).toBeUndefined();
+  });
+
+  it("returns null for an empty array in edit mode", () => {
+    expect(arrayFieldValue([], "edit")).toBeNull();
+  });
+
+  it("returns the array unchanged when non-empty, in either mode", () => {
+    expect(arrayFieldValue(["a", "b"], "create")).toEqual(["a", "b"]);
+    expect(arrayFieldValue(["a", "b"], "edit")).toEqual(["a", "b"]);
   });
 });
 
