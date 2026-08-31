@@ -329,3 +329,80 @@ enforcing, not a `404`); `dashboard-web`'s `/` resolves (via the intermediate `/
 `/auth/sign-in` for an unauthenticated visitor. **The Component Library module backend is now
 genuinely live in production.** No `dashboard-web` UI exists yet -- a separate, not-yet-requested
 next step.
+
+## As-built addendum: `dashboard-web` UI (2026-08-31)
+
+Built on branch `dashboard-web-component-library`, mirroring Design Token Library's own
+`dashboard-web` UI file-for-file — both are real multi-row version-history modules (a `recordId`
+groups every version of the same logical record; editing an `approved` record forks a new draft
+version instead of mutating it in place). Worked directly, not delegated to a background
+subagent, per this project's own standing caution about a prior incident of exactly that.
+
+New `packages/shared-types` (`ComponentApprovalStatus`/`ComponentRecord`, mirroring
+`DesignTokenApprovalStatus`/`DesignTokenRecord`'s own field-by-field doc-comment style, including
+the identical `isCurrent`/`versionNumber`/`recordId`-vs-`id` version-history shape).
+`lib/component-library-query.ts`/`lib/component-library.ts` (the same zero-non-type-import-file
+split `design-token-library-query.ts`/`design-token-library.ts` establish) — `category` is parsed
+as a free-text filter, not a finite enum, matching the backend's own field (D, "Other fields —
+judgment calls" above), unlike `group`'s enum select on the Design Token Library list page.
+
+`ComponentLibraryForm`: `publicId`/`category` are both create-only and read-only on edit, matching
+`updateComponentSchema`'s own contract; `figmaReference` is a plain `type="url"` input validated
+client-side via the existing `isSafeHttpUrl()` guard before submit (the backend's own
+`safeHttpUrlSchema`); all 11 long-text fields (`htmlStructure`/`phpPath`/`scssClassesPath`/
+`jsDependencies`/`states`/`responsiveBehavior`/`browserSupport`/`accessibility`/`schema`/
+`analytics`/`tests`) stay plain `<textarea>`s, not `RichTextEditor` — confirmed by reading
+`components.service.ts` directly that none of them are sanitized, so treating them as HTML would
+be dishonest, the same reasoning `DesignTokenLibraryForm`'s own doc comment already documents for
+its own `semanticPurpose`/`responsiveVariation` fields.
+
+Two real relationship pickers, both genuinely new shapes for this app: `tokenIds` (a many-to-many,
+existence-validated relationship into Design Token Library's own `recordId`s) reuses the existing
+`RelationshipPicker` directly, matching `PersonaLibraryForm`'s own `relatedServiceIds` pattern
+including its raw-id-fallback-for-an-out-of-window-id behavior. `replacementRecordId` (a single,
+existence-validated, SELF-referential pointer into this module's own table) needed a new
+`SingleComponentPicker` — a local wrapper around `RelationshipPicker`, mirroring
+`InternalLinkForm`'s own locally-defined `SinglePagePicker` (the only prior single-value picker in
+this codebase), adapted so the record currently being edited is excluded from its own option pool
+via an `excludeRecordId` prop (the record can't pick itself as its own replacement — the real,
+authoritative guard is server-side, `ComponentsService.assertReplacementExists()`; this is purely
+a UX nicety).
+
+`ComponentStatusActions` mirrors `DesignTokenStatusActions`'s `ALLOWED_TRANSITIONS` table exactly
+(confirmed against `components.service.ts`'s real `TRANSITIONS` table, not assumed) — including
+its own deliberate divergence from every non-version-history sibling module: `approved`'s only
+target is `["archived"]`, since "supersede" is never a directly user-reachable transition for this
+module (it's an automatic side effect of a different version's own `-> approved` transition
+succeeding). This is the 6th independent hand-copy of the shared 8-value artifact-approval-status
+pattern in this codebase — accepted, tracked debt, same as the prior 5.
+
+Four routes under `app/(shell)/component-library/` (list, detail, create, edit) at the module
+registry's own seeded `route: "/component-library"` field. The detail page's "Version history"
+section mirrors `DesignTokenLibraryDetailPage`'s own genuinely novel requirement — every version
+from `GET .../:recordId/versions` is listed via a native `<details>`/`<summary>` disclosure (zero
+client JS), each resolving its own `tokenIds` to real design-token names the same way the current
+version's own section does. `figmaReference` renders as a real clickable link only when
+`isSafeHttpUrl()` confirms it, otherwise as inert text — mirroring `ProjectEnvironment.url`'s own
+established guard, matching `BrandLibraryForm`'s/detail page's own precedent.
+
+58 new `dashboard-web` unit tests (3 new test files: `component-library.test.tsx` — 33 tests, lib
+functions including both new picker-population fetchers' own failure-isolation behavior;
+`component-library-form.test.tsx` — 14 tests, including the relationship/replacement pickers and
+the client-side `figmaReference` scheme guard; `component-status-actions.test.tsx` — 11 tests) —
+1120/1120 `dashboard-web` unit tests overall (up from 1062), all passing. `@webdesk/shared-types`
+typecheck clean; `dashboard-web` typecheck clean; `dashboard-api`/`dashboard-worker` typecheck
+clean (unaffected, confirming the additive shared-types change breaks no other consumer). `eslint
+--max-warnings=0` and the CSS-token check (56 CSS Module files) both clean. `next build` clean,
+with all 4 new `/component-library` routes present in the build output. `prettier --check` clean
+on every touched file (an initial run flagged 5 files' formatting drift — fixed with
+`prettier --write`, then re-verified clean, with typecheck/lint/tests all re-run and confirmed
+still green after the reformat). `pnpm audit --audit-level=high`: 0 vulnerabilities. Live-rendered
+in the Browser pane against a real local dev server (no local `dashboard-api` was available in
+this environment, so only the unauthenticated-redirect path was exercised, the same limitation
+several prior modules' own as-built records already note for themselves) — all 4 new routes
+(`/component-library`, `/component-library/new`,
+`/component-library/11111111-1111-1111-1111-111111111111`, and its own `/edit`) returned a clean
+307 to `/auth/sign-in` (200), zero server-log errors.
+
+**Not yet reviewed, gated, pushed, or merged** — each remains its own separate, not-yet-requested
+next step, matching every prior module's own precedent.
