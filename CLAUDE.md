@@ -3462,7 +3462,7 @@ build` (all 4 routes present)/prettier all clean — independently re-run by the
     backend and now the full UI (list, detail with version history, create/edit form, status
     actions) are both live for the Wireframe Library module.
 
-60. **Motion and Interaction Library module backend — built, fully validated, code-reviewed,
+61. **Motion and Interaction Library module backend — built, fully validated, code-reviewed,
     security-reviewed; awaiting required second-role human review and gate decision
     (2026-08-31).** Not started automatically — built directly on the explicit "start Motion &
     Interaction Library" instruction. The canonical spec (§18) gives no field list, only a bare
