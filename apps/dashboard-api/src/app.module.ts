@@ -15,6 +15,7 @@ import { ComponentLibraryModule } from "./component-library/component-library.mo
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
 import { DesignReferenceLibraryModule } from "./design-reference-library/design-reference-library.module.js";
+import { DesignReviewCenterModule } from "./design-review-center/design-review-center.module.js";
 import { DesignTokenLibraryModule } from "./design-token-library/design-token-library.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { InternalLinkingLibraryModule } from "./internal-linking-library/internal-linking-library.module.js";
@@ -77,6 +78,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     ComponentLibraryModule,
     ContentTemplateLibraryModule,
     DesignReferenceLibraryModule,
+    DesignReviewCenterModule,
     DesignTokenLibraryModule,
     InternalLinkingLibraryModule,
     JobsModule,
