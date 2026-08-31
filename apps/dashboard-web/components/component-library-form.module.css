@@ -39,8 +39,7 @@
   color: var(--webdesk-dashboard-color-foreground-muted);
 }
 
-.input,
-.select {
+.input {
   composes: input from "./form-fields.module.css";
 }
 

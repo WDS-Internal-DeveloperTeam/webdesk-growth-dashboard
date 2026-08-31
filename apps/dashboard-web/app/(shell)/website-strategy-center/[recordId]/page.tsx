@@ -13,6 +13,7 @@ import {
   richContentStyle,
   sectionStyle,
   subsectionStyle,
+  versionCardStyle,
 } from "@/lib/detail-section-styles";
 import { getServerSession } from "@/lib/server-session";
 import {
@@ -176,14 +177,7 @@ function VersionEntry({ version }: { readonly version: WebsiteStrategyRecord }) 
   const isCurrent = version.isCurrent;
 
   return (
-    <li
-      style={{
-        border: "1px solid var(--webdesk-dashboard-color-border)",
-        borderRadius: "0.5rem",
-        padding: "0.75rem 1rem",
-        marginBottom: "0.75rem",
-      }}
-    >
+    <li style={versionCardStyle}>
       <details>
         <summary
           style={{

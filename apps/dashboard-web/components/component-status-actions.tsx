@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type { ComponentApprovalStatus } from "@webdesk/shared-types";
-import { parseApiErrorMessage } from "@/lib/api-errors";
+import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { useSyncedState } from "@/lib/use-synced-state";
 import styles from "./component-status-actions.module.css";
 
 export interface ComponentStatusActionsProps {
@@ -90,7 +91,7 @@ export function ComponentStatusActions({
   approvalStatus: initialStatus,
 }: ComponentStatusActionsProps): ReactNode {
   const router = useRouter();
-  const [approvalStatus, setApprovalStatus] = useState(initialStatus);
+  const [approvalStatus, setApprovalStatus] = useSyncedState(initialStatus);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<ComponentApprovalStatus | null>(null);
 
@@ -107,17 +108,12 @@ export function ComponentStatusActions({
     setError(null);
     setPending(nextStatus);
     try {
-      const response = await fetch(
+      const result = await postMutation(
         `${getApiBaseUrl()}/component-library/components/${recordId}/status`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ approvalStatus: nextStatus }),
-        },
+        { approvalStatus: nextStatus },
       );
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
       // Same batched-render pattern DesignTokenStatusActions/WebsiteStrategyStatusActions/

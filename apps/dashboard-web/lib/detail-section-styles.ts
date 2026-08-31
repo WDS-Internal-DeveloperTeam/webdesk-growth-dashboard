@@ -55,3 +55,13 @@ export const richContentStyle: CSSProperties = {
   fontSize: "0.9375rem",
   color: "var(--webdesk-dashboard-color-foreground)",
 };
+
+// Extracted from a 3rd independent copy across Design Token Library's/Website Strategy Center's
+// own detail pages' `VersionEntry` before Component Library's detail page became a 3rd — the same
+// duplication pattern this file's other exports were already extracted to stop.
+export const versionCardStyle: CSSProperties = {
+  border: "1px solid var(--webdesk-dashboard-color-border)",
+  borderRadius: "0.5rem",
+  padding: "0.75rem 1rem",
+  marginBottom: "0.75rem",
+};

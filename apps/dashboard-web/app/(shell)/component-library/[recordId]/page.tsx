@@ -20,6 +20,7 @@ import {
   richContentStyle,
   sectionStyle,
   subsectionStyle,
+  versionCardStyle,
 } from "@/lib/detail-section-styles";
 import { isSafeHttpUrl } from "@/lib/safe-http-url";
 import { getServerSession } from "@/lib/server-session";
@@ -262,14 +263,7 @@ function VersionEntry({
   const versionTokenNames = version.tokenIds.map((id) => tokenNameById.get(id) ?? id);
 
   return (
-    <li
-      style={{
-        border: "1px solid var(--webdesk-dashboard-color-border)",
-        borderRadius: "0.5rem",
-        padding: "0.75rem 1rem",
-        marginBottom: "0.75rem",
-      }}
-    >
+    <li style={versionCardStyle}>
       <details>
         <summary
           style={{

@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ComponentRecord, DesignTokenRecord } from "@webdesk/shared-types";
 import { RelationshipPicker, type RelationshipOption } from "@webdesk/ui";
-import { parseApiErrorMessage } from "@/lib/api-errors";
+import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { isSafeHttpUrl } from "@/lib/safe-http-url";
 import styles from "./component-library-form.module.css";
@@ -18,6 +18,10 @@ const NAME_MAX_LENGTH = 255;
 const SHORT_TEXT_MAX_LENGTH = 2_000;
 const LONG_TEXT_MAX_LENGTH = 4_000;
 const TOKEN_MAX_COUNT = 100;
+// Matches safeHttpUrlSchema's own .max(500) cap (component-library.dto.ts) — every other text
+// field in this form has a client-side maxLength mirroring its backend cap; figmaReference had
+// been missing one.
+const FIGMA_REFERENCE_MAX_LENGTH = 500;
 
 function toDesignTokenOption(token: DesignTokenRecord): RelationshipOption {
   return { id: token.recordId, displayName: token.name };
@@ -29,15 +33,19 @@ function toComponentOption(component: ComponentRecord): RelationshipOption {
 
 /**
  * A single-value wrapper around `@webdesk/ui`'s `RelationshipPicker`, mirroring
- * `InternalLinkForm`'s own locally-defined `SinglePagePicker` — no other prior consumer in this
- * codebase needs single-value selection against a SELF-referential relationship (a component
- * picking which OTHER component, by `recordId`, replaces it). `excludeRecordId` (the record
- * currently being edited, `undefined` in create mode since there is no prior `recordId` yet) is
- * filtered out of the option pool so a component can't pick itself as its own replacement — the
- * real, authoritative self-reference guard still runs server-side
- * (`ComponentsService.assertReplacementExists()`); this is purely a UX nicety, not the enforcement
- * point. `onSelect` REPLACES the current selection (not appends, unlike the many-to-many `tokenIds`
- * picker below) and `onRemove`/the picker's own chip "x" button clears it back to `null`.
+ * `InternalLinkForm`'s own locally-defined `SinglePagePicker`. This is now the 2nd independent
+ * hand-copy of that same wrapping shape (query/`useMemo` filter-map-slice(0,20)/`RelationshipPicker`
+ * wiring) — accepted, tracked debt: promoting a shared generic single-value picker to
+ * `packages/ui` would mean also migrating `InternalLinkForm`'s own copy in the same pass, out of
+ * scope for a Component Library-only branch. Flagged here for whoever adds a 3rd single-value
+ * relationship field, since that's the point this codebase's own established convention treats as
+ * the real trigger to extract. `excludeRecordId` (the record currently being edited, `undefined`
+ * in create mode since there is no prior `recordId` yet) is filtered out of the option pool so a
+ * component can't pick itself as its own replacement — the real, authoritative self-reference
+ * guard still runs server-side (`ComponentsService.assertReplacementExists()`); this is purely a
+ * UX nicety, not the enforcement point. `onSelect` REPLACES the current selection (not appends,
+ * unlike the many-to-many `tokenIds` picker below) and `onRemove`/the picker's own chip "x" button
+ * clears it back to `null`.
  */
 function SingleComponentPicker({
   label,
@@ -181,23 +189,25 @@ export function ComponentLibraryForm(props: ComponentLibraryFormProps): ReactNod
       .slice(0, 20);
   }, [props.designTokens, tokenIds, tokenQuery]);
 
-  const initialReplacement =
-    props.mode === "edit" && props.initial.replacementRecordId
-      ? (() => {
-          const found = props.components.find(
-            (component) => component.recordId === props.initial.replacementRecordId,
-          );
-          // An id outside the picker's 100-row fetch window falls back to showing the raw id
-          // itself as its own chip, rather than being silently dropped — matches
-          // PersonaLibraryForm's own raw-id fallback precedent for the identical case, so a real
-          // relationship is never invisible or unremovable in this UI.
-          return {
-            id: props.initial.replacementRecordId,
-            displayName: found ? found.name : props.initial.replacementRecordId,
-          };
-        })()
-      : null;
-  const [replacement, setReplacement] = useState<RelationshipOption | null>(initialReplacement);
+  // Lazy initializer — this scan over up to 100 `props.components` is only ever needed once, to
+  // seed the initial value, not on every render (unlike `tokenOptionsById` above, which is a real
+  // per-render derived value and correctly uses `useMemo`).
+  const [replacement, setReplacement] = useState<RelationshipOption | null>(() => {
+    if (props.mode !== "edit" || !props.initial.replacementRecordId) {
+      return null;
+    }
+    const found = props.components.find(
+      (component) => component.recordId === props.initial.replacementRecordId,
+    );
+    // An id outside the picker's 100-row fetch window falls back to showing the raw id itself
+    // as its own chip, rather than being silently dropped — matches PersonaLibraryForm's own
+    // raw-id fallback precedent for the identical case, so a real relationship is never
+    // invisible or unremovable in this UI.
+    return {
+      id: props.initial.replacementRecordId,
+      displayName: found ? found.name : props.initial.replacementRecordId,
+    };
+  });
 
   const isForkingEdit = props.mode === "edit" && props.initial.approvalStatus === "approved";
 
@@ -258,26 +268,26 @@ export function ComponentLibraryForm(props: ComponentLibraryFormProps): ReactNod
           ? `${getApiBaseUrl()}/component-library/components`
           : `${getApiBaseUrl()}/component-library/components/${props.recordId}/update`;
 
-      const response = await fetch(url, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const result = await postMutation<{ recordId: string }>(url, payload);
 
-      if (!response.ok) {
-        setError(await parseApiErrorMessage(response));
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
 
-      // Edit mode always uses the URL's own stable recordId — never body.data.id/recordId, which
-      // is a DIFFERENT row when this edit forked a new version (see this component's own doc
-      // comment above). Create mode has no route param yet, so it must read the freshly-created
-      // record's own recordId from the response.
+      // Edit mode always uses the URL's own stable recordId — never result.data.id/recordId,
+      // which is a DIFFERENT row when this edit forked a new version (see this component's own
+      // doc comment above). Create mode has no route param yet, so it must read the
+      // freshly-created record's own recordId from the response — postMutation() itself is
+      // tolerant of a missing/malformed body, so this is guarded explicitly rather than assumed
+      // present.
       let recordId: string;
       if (props.mode === "create") {
-        const body = (await response.json()) as { data: { recordId: string } };
-        recordId = body.data.recordId;
+        if (!result.data?.recordId) {
+          setError("Component was created, but the response was unexpected. Please refresh.");
+          return;
+        }
+        recordId = result.data.recordId;
       } else {
         recordId = props.recordId;
       }
@@ -382,6 +392,7 @@ export function ComponentLibraryForm(props: ComponentLibraryFormProps): ReactNod
             type="url"
             value={figmaReference}
             onChange={(event) => setFigmaReference(event.target.value)}
+            maxLength={FIGMA_REFERENCE_MAX_LENGTH}
             className={styles.input}
           />
         </div>
@@ -396,11 +407,18 @@ export function ComponentLibraryForm(props: ComponentLibraryFormProps): ReactNod
             return { id, displayName: token ? token.name : id };
           })}
           onSelect={(option) => {
-            if (tokenIds.length >= TOKEN_MAX_COUNT) return;
+            if (tokenIds.length >= TOKEN_MAX_COUNT) {
+              setError(`A component can bind at most ${TOKEN_MAX_COUNT} design tokens.`);
+              return;
+            }
             setTokenIds([...tokenIds, option.id]);
           }}
           onRemove={(id) => setTokenIds(tokenIds.filter((existing) => existing !== id))}
-          hint="Search and select the design tokens this component's implementation binds to."
+          hint={
+            tokenIds.length >= TOKEN_MAX_COUNT
+              ? `Maximum of ${TOKEN_MAX_COUNT} tokens reached — remove one to add another.`
+              : "Search and select the design tokens this component's implementation binds to."
+          }
         />
       </fieldset>
 
