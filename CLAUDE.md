@@ -3463,8 +3463,8 @@ build` (all 4 routes present)/prettier all clean — independently re-run by the
     actions) are both live for the Wireframe Library module.
 
 61. **Motion and Interaction Library module backend — built, fully validated, code-reviewed,
-    security-reviewed; awaiting required second-role human review and gate decision
-    (2026-08-31).** Not started automatically — built directly on the explicit "start Motion &
+    security-reviewed, second-role human reviewed; awaiting gate decision (2026-08-31).** Not
+    started automatically — built directly on the explicit "start Motion &
     Interaction Library" instruction. The canonical spec (§18) gives no field list, only a bare
     ~26-category taxonomy — the same spec-gap situation Section and Pattern Library hit. Two
     design forks confirmed directly with the project owner first (`AskUserQuestion`): the field
@@ -3500,9 +3500,14 @@ build` (all 4 routes present)/prettier all clean — independently re-run by the
     `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`. **"Push the
     branch and open a PR" was then separately requested and executed** — pushed to `origin`,
     opened as
-    [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86).
-    **Not yet reviewed by a second-role human, gated, or merged** — each remains its own
-    separate, not-yet-requested next step.
+    [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86),
+    then a Formatting-validation CI failure (a duplicate `CLAUDE.md` item number, introduced when
+    `main` moved forward again mid-review) was found and fixed, all 14 CI checks green.
+    **Required second-role human review complete** — Jitesh D reviewed it and returned
+    "Approved," no disputes raised. See
+    `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
+    section. A gate decision and merge authorization each remain separate, not-yet-requested next
+    steps.
 
 ## Recent decisions
 
@@ -6178,6 +6183,23 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-temp
   [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86). A
   required second-role human review, a gate decision, and merge authorization each remain
   separate, not-yet-requested next steps.
+- `[2026-08-31]` **A CI "Formatting validation" failure on PR #86 diagnosed and fixed.** `main`
+  had moved forward again mid-review (`dashboard-web` Wireframe Library UI, PR #85) — GitHub's
+  `pull_request` checkout tests a synthetic merge of the branch against CURRENT `main`, not the
+  branch's own last local merge, so the failure only ever surfaced in CI, never in any local
+  prettier run. Merged `main` again for real (no conflicts) and let prettier's ordered-list
+  renumbering resolve a duplicate `CLAUDE.md` item number (`60` claimed by both the incoming
+  Wireframe Library UI entry and this branch's own Motion and Interaction Library entry, now
+  `61`) — the same bug class Wireframe Library's own merge into `main` had already hit once.
+  Re-verified independently after the merge: 1386/1386 `dashboard-api` unit, 620/620
+  `packages/database` integration, 625/625 `dashboard-api` e2e/integration tests, all clean. All
+  14 CI checks on PR #86 now green.
+- `[2026-08-31]` **Required second-role human review complete for
+  `module-motion-and-interaction-library` (PR #86).** The review packet (code review + security
+  review findings, fixes, and the 1 accepted-debt item, with a decision section) was reviewed.
+  **Jitesh D reviewed it and returned "Approved,"** no disputes raised. See
+  `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
+  section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
 
 ## Open client blockers
 

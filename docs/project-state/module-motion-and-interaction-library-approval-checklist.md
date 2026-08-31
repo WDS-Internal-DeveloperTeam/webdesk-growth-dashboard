@@ -5,7 +5,18 @@ survivors, 1 CONFIRMED and fixed, 1 PLAUSIBLE left as accepted tracked debt, 1 R
 review complete (0 findings above threshold). Migration numbers renumbered `00084`/`00085`/`00086`
 → `00086`/`00087`/`00088` after merging `main` (Wireframe Library, module #16, took `00084`/
 `00085` while this branch was in progress) — independently re-verified after the renumber.
-**Awaiting required second-role human review and gate decision** — neither has happened yet.
+Pushed to `origin`, opened as
+[PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86); a
+Formatting-validation CI failure (a duplicate `CLAUDE.md` item number introduced by `main` moving
+forward again mid-review) was found and fixed, all 14 CI checks now green. **Required second-role
+human review complete — Jitesh D reviewed it and returned "Approved."** A gate decision and merge
+authorization each remain separate, not-yet-requested next steps.
+
+## Sign-off
+
+| Role                     | Reviewer | Decision | Date       |
+| ------------------------ | -------- | -------- | ---------- |
+| Second-role human review | Jitesh D | Approved | 2026-08-31 |
 
 ## Completion condition
 
@@ -22,7 +33,7 @@ for this slice can be requested.
 | 6   | Security review complete                   | ✅ `security-review` skill run separately, against the fixed branch — 0 findings above threshold                                                                                                                                                                                                                                               |
 | 7   | Known out-of-scope gaps flagged, not fixed | ✅ `updateMotionInteractionRecordSchema` hand-duplicating fields instead of deriving via `.omit()`/`.partial()` — real but matches 6 of 8 sibling modules' own dominant convention, not a rule this module uniquely broke                                                                                                                      |
 | 8   | Documentation updated                      | ✅ `docs/implementation/module-motion-and-interaction-library.md` (Scope + As-built, this project's 2026-08-27 collapsed-template convention) and `docs/phase-plans/module-implementation-roadmap.md` (moved this module from Wave 1 to Wave 2)                                                                                                |
-| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-motion-and-interaction-library`, latest commit `9d6a206` — merged with `main` (no conflicts), not yet pushed to `origin` or opened as a PR                                                                                                                                                                                   |
+| 9   | Exact branch/commit verified and recorded  | ✅ Branch `module-motion-and-interaction-library`, pushed to `origin`, [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86), all 14 CI checks green                                                                                                                                                        |
 
 ## Forbidden-actions check
 
