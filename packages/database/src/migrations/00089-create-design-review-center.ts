@@ -117,13 +117,19 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
     updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
   });
 
-  await context.addIndex("design_reviews", ["target_module_key", "target_id"], {
-    name: "design_reviews_target_module_key_target_id_idx",
-  });
   // Supports the automatic-supersede lookup's own WHERE clause (D4) — the one index this module
-  // needs that reviews doesn't, since reviews has no reviewType/supersede mechanism at all.
+  // needs that reviews doesn't, since reviews has no reviewType/supersede mechanism at all. No
+  // separate (target_module_key, target_id) index — it would only be a strict, redundant prefix
+  // of this one (code-review finding), and DesignReviewRepository.list() never filters on
+  // targetId without also having reviewType available in the same lookup path.
   await context.addIndex("design_reviews", ["target_module_key", "target_id", "review_type"], {
     name: "design_reviews_target_module_key_target_id_review_type_idx",
+  });
+  // Supports DesignReviewRepository.list()'s standalone `?reviewType=` filter (code-review
+  // finding) — the composite index above can't serve that lookup since review_type isn't its
+  // leading column.
+  await context.addIndex("design_reviews", ["review_type"], {
+    name: "design_reviews_review_type_idx",
   });
   await context.addIndex("design_reviews", ["assigned_to_user_id"], {
     name: "design_reviews_assigned_to_user_id_idx",

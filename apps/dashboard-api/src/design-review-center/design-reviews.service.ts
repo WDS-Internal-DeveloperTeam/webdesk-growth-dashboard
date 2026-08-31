@@ -226,6 +226,19 @@ export class DesignReviewsService {
     const sanitizedNotes = sanitizeNullableRichText(dto.notes) ?? null;
 
     const { updated, superseded } = await withTransaction(async (transaction) => {
+      // D4 race fix (code-review finding): lock the whole (targetModuleKey, targetId,
+      // reviewType) tuple BEFORE the CAS update whenever this decision would produce
+      // "approved" — see lockTupleForApproval()'s own doc comment for why. Only needed on the
+      // approval path; reject/request_revision never trigger a supersede side effect.
+      if (nextStatus === "approved") {
+        await this.designReviews.lockTupleForApproval(
+          review.targetModuleKey,
+          review.targetId,
+          review.reviewType,
+          transaction,
+        );
+      }
+
       const result = await this.designReviews.updateStatus(
         id,
         dto.expectedStatus,

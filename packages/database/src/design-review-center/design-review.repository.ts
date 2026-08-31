@@ -172,6 +172,35 @@ export class DesignReviewRepository {
   }
 
   /**
+   * Locks every row matching `(targetModuleKey, targetId, reviewType)` — including the row about
+   * to be approved — via `SELECT ... FOR UPDATE`, before the CAS status update runs. Without this
+   * (code-review finding), two concurrent `decide(approve)` calls on two DIFFERENT pre-existing
+   * reviews sharing the same tuple could each commit `status = "approved"` without ever seeing the
+   * other's not-yet-committed write under Postgres's default READ COMMITTED isolation — each
+   * transaction's own CAS `UPDATE` and `supersedeOtherApproved()` scan only touch rows already
+   * committed *before that statement started*, so if neither transaction has committed yet when
+   * the other runs its supersede scan, both leave two rows simultaneously `"approved"`, silently
+   * violating the "at most one approved review per tuple" invariant `supersedeOtherApproved()`
+   * exists to enforce. Acquiring this lock first serializes the two transactions: the second one's
+   * lock acquisition blocks until the first commits or rolls back, so by the time it proceeds,
+   * its own `supersedeOtherApproved()` call is guaranteed to see the first transaction's
+   * already-committed approval. A safe no-op (locks nothing) when no row yet exists for the tuple.
+   * Must be called before `updateStatus()`/`supersedeOtherApproved()`, inside the same transaction.
+   */
+  async lockTupleForApproval(
+    targetModuleKey: string,
+    targetId: string,
+    reviewType: DesignReviewType,
+    transaction: Transaction,
+  ): Promise<void> {
+    await this.model.findAll({
+      where: { targetModuleKey, targetId, reviewType },
+      lock: transaction.LOCK.UPDATE,
+      transaction,
+    });
+  }
+
+  /**
    * D4 — "supersede" is not a distinct user action; it's an automatic consequence of approving a
    * new review for the SAME `(targetModuleKey, targetId, reviewType)` tuple. Flips every OTHER row
    * matching that tuple that currently holds `status = "approved"` to `"superseded"` — mirrors

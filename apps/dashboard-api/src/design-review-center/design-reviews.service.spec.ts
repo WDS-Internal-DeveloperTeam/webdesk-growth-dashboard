@@ -73,6 +73,7 @@ describe("DesignReviewsService", () => {
     list: ReturnType<typeof vi.fn>;
     updateStatus: ReturnType<typeof vi.fn>;
     supersedeOtherApproved: ReturnType<typeof vi.fn>;
+    lockTupleForApproval: ReturnType<typeof vi.fn>;
   };
   let designReviewDecisions: {
     create: ReturnType<typeof vi.fn>;
@@ -94,6 +95,7 @@ describe("DesignReviewsService", () => {
       list: vi.fn(),
       updateStatus: vi.fn(),
       supersedeOtherApproved: vi.fn().mockResolvedValue([]),
+      lockTupleForApproval: vi.fn().mockResolvedValue(undefined),
     };
     designReviewDecisions = { create: vi.fn(), listByReview: vi.fn() };
     authorizationService = { assertAllowed: vi.fn(), isValidModuleKey: vi.fn() };
@@ -463,6 +465,7 @@ describe("DesignReviewsService", () => {
         );
 
         expect(designReviews.supersedeOtherApproved).not.toHaveBeenCalled();
+        expect(designReviews.lockTupleForApproval).not.toHaveBeenCalled();
       });
 
       it("calls supersedeOtherApproved scoped to the same (targetModuleKey, targetId, reviewType) tuple when approving, inside the same transaction", async () => {
@@ -493,6 +496,53 @@ describe("DesignReviewsService", () => {
           "review-1",
           FAKE_TRANSACTION,
         );
+      });
+
+      it("locks the (targetModuleKey, targetId, reviewType) tuple BEFORE the CAS update on the approval path (code-review race fix)", async () => {
+        designReviews.findById.mockResolvedValue(
+          designReview({ targetModuleKey: "component_library", targetId: "t-1", reviewType: "ux" }),
+        );
+        designReviews.updateStatus.mockResolvedValue({
+          outcome: "updated",
+          entity: designReview({
+            status: "approved",
+            targetModuleKey: "component_library",
+            targetId: "t-1",
+            reviewType: "ux",
+          }),
+        });
+        designReviews.supersedeOtherApproved.mockResolvedValue([]);
+
+        const callOrder: string[] = [];
+        designReviews.lockTupleForApproval.mockImplementation(async () => {
+          callOrder.push("lockTupleForApproval");
+        });
+        designReviews.updateStatus.mockImplementation(async () => {
+          callOrder.push("updateStatus");
+          return {
+            outcome: "updated",
+            entity: designReview({
+              status: "approved",
+              targetModuleKey: "component_library",
+              targetId: "t-1",
+              reviewType: "ux",
+            }),
+          };
+        });
+
+        await svc.decide(
+          "review-1",
+          { action: "approve_with_notes", expectedStatus: "submitted" },
+          "approver-1",
+        );
+
+        expect(designReviews.lockTupleForApproval).toHaveBeenCalledWith(
+          "component_library",
+          "t-1",
+          "ux",
+          FAKE_TRANSACTION,
+        );
+        expect(callOrder).toEqual(["lockTupleForApproval", "updateStatus"]);
       });
 
       it("writes a design_review_decisions 'supersede' row and a separate audit_events row for each auto-superseded review, using the same actor and timestamp as the approval", async () => {

@@ -546,6 +546,81 @@ describe("Design Review Center module (real disposable database)", () => {
         expect(stillApprovedA?.status).toBe("approved");
       });
     });
+
+    describe("lockTupleForApproval() — serializes concurrent approvals across DIFFERENT rows (D4 race fix)", () => {
+      it("prevents two different pre-existing reviews for the same tuple from both ending up approved when approved concurrently", async () => {
+        const targetId = randomUUID();
+        const first = await designReviews.create({
+          targetModuleKey: "component_library",
+          targetId,
+          reviewType: "ui",
+          submittedByUserId: submitterId,
+        });
+        const second = await designReviews.create({
+          targetModuleKey: "component_library",
+          targetId,
+          reviewType: "ui",
+          submittedByUserId: submitterId,
+        });
+
+        // Mirrors DesignReviewsService.decide()'s own real sequence for the approval path:
+        // lockTupleForApproval() first, then the CAS updateStatus(), then supersedeOtherApproved()
+        // — all inside one transaction per "concurrent" caller. Without lockTupleForApproval()
+        // serializing the two transactions, both CAS updates independently succeed (different
+        // physical rows) and each transaction's supersedeOtherApproved() scan can miss the other's
+        // not-yet-committed approval under READ COMMITTED, leaving both rows "approved".
+        const approve = (id: string) =>
+          withTransaction(async (transaction) => {
+            await designReviews.lockTupleForApproval(
+              "component_library",
+              targetId,
+              "ui",
+              transaction,
+            );
+            const result = await designReviews.updateStatus(
+              id,
+              "submitted",
+              "approved",
+              approverId,
+              new Date(),
+              transaction,
+            );
+            if (result.outcome === "updated") {
+              await designReviews.supersedeOtherApproved(
+                "component_library",
+                targetId,
+                "ui",
+                id,
+                transaction,
+              );
+            }
+            return result;
+          });
+
+        await Promise.all([approve(first.id), approve(second.id)]);
+
+        const finalFirst = await designReviews.findById(first.id);
+        const finalSecond = await designReviews.findById(second.id);
+        const statuses = [finalFirst?.status, finalSecond?.status].sort();
+        // Exactly one of the two must end up "approved" and the other "superseded" — never both
+        // "approved". Since both transactions race to approve their own row first, either could
+        // win; only the ordering, not the outcome, is nondeterministic.
+        expect(statuses).toEqual(["approved", "superseded"]);
+      });
+
+      it("is a safe no-op when no row yet exists for the tuple (nothing to lock)", async () => {
+        await withTransaction(async (transaction) => {
+          await expect(
+            designReviews.lockTupleForApproval(
+              "component_library",
+              randomUUID(),
+              "ui",
+              transaction,
+            ),
+          ).resolves.toBeUndefined();
+        });
+      });
+    });
   });
 
   describe("DesignReviewDecisionRepository", () => {
