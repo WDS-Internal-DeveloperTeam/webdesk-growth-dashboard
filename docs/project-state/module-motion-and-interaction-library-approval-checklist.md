@@ -9,14 +9,19 @@ Pushed to `origin`, opened as
 [PR #86](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/86); a
 Formatting-validation CI failure (a duplicate `CLAUDE.md` item number introduced by `main` moving
 forward again mid-review) was found and fixed, all 14 CI checks now green. **Required second-role
-human review complete — Jitesh D reviewed it and returned "Approved."** A gate decision and merge
-authorization each remain separate, not-yet-requested next steps.
+human review complete — Jitesh D reviewed it and returned "Approved."** **The gate
+(G4-motion-and-interaction-library) has been approved** — WebDesk Solution, decision CONFIRM
+(clean pass, not an override, since the second-role review was already complete before the gate
+was requested), approved commit `fddbe85` on branch `module-motion-and-interaction-library`. This
+gate approval does not itself authorize merging PR #86 — merge remains its own separate,
+not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Sign-off
 
-| Role                     | Reviewer | Decision | Date       |
-| ------------------------ | -------- | -------- | ---------- |
-| Second-role human review | Jitesh D | Approved | 2026-08-31 |
+| Role                     | Reviewer         | Decision | Date       |
+| ------------------------ | ---------------- | -------- | ---------- |
+| Second-role human review | Jitesh D         | Approved | 2026-08-31 |
+| Gate decision            | WebDesk Solution | CONFIRM  | 2026-08-31 |
 
 ## Completion condition
 

@@ -3504,10 +3504,16 @@ build` (all 4 routes present)/prettier all clean — independently re-run by the
     then a Formatting-validation CI failure (a duplicate `CLAUDE.md` item number, introduced when
     `main` moved forward again mid-review) was found and fixed, all 14 CI checks green.
     **Required second-role human review complete** — Jitesh D reviewed it and returned
-    "Approved," no disputes raised. See
+    "Approved," no disputes raised. **The gate (G4-motion-and-interaction-library) was then
+    separately requested and approved** — WebDesk Solution, decision CONFIRM (clean pass, not an
+    override, since the second-role review was already complete before the gate was requested),
+    approved commit `fddbe85` on branch `module-motion-and-interaction-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-motion-and-interaction-library`) and
     `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
-    section. A gate decision and merge authorization each remain separate, not-yet-requested next
-    steps.
+    section. **This gate approval does not itself authorize merging PR #86** — merge remains its
+    own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
+    rule.
 
 ## Recent decisions
 
@@ -6200,6 +6206,16 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-temp
   **Jitesh D reviewed it and returned "Approved,"** no disputes raised. See
   `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
   section. A gate decision and merge authorization remain separate, not-yet-requested next steps.
+- `[2026-08-31]` **The gate (G4-motion-and-interaction-library) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override, since the
+  second-role review was already complete before the gate was requested), approved commit
+  `fddbe85` on branch `module-motion-and-interaction-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-motion-and-interaction-library`) and
+  `docs/project-state/module-motion-and-interaction-library-approval-checklist.md`'s "Sign-off"
+  section. **This gate approval does not itself authorize merging PR #86** — merge remains its
+  own separate, not-yet-requested authorization, per this project's standing "no auto-merge"
+  rule.
 
 ## Open client blockers
 
