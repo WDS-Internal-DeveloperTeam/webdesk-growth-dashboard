@@ -159,7 +159,7 @@ document's wave/group structure is a direct, mechanical consequence of the alrea
 registry data, not a new judgment call about module priority or business value.
 
 **Update (2026-08-31):** `motion_and_interaction_library` moved from Wave 1 to Wave 2 (depends
-on `component_library`) per migration `00086-add-motion-and-interaction-library-dependency.ts` —
+on `component_library`) per migration `00088-add-motion-and-interaction-library-dependency.ts` —
 a code-review finding against `module-motion-and-interaction-library` (see
 `docs/implementation/module-motion-and-interaction-library.md`) surfaced that the module's real
 build (`MotionAndInteractionLibraryModule` calling `ComponentsService.existingComponentIds()` for

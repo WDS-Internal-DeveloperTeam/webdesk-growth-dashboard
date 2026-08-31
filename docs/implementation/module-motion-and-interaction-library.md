@@ -57,11 +57,11 @@ prior module's own backend-first precedent.
 Built by a background agent with a fully-specified prompt mirroring Section and Pattern Library
 (structural template) and Page Template Library (the one real cross-module relationship
 pattern), then independently re-verified in full by the orchestrating session — every high-risk
-file read directly (migration `00084`, RBAC decorator placement, both `packages/database` barrel
+file read directly (migration `00086`, RBAC decorator placement, both `packages/database` barrel
 exports, `app.module.ts` wiring), and every test suite re-run against a fresh local disposable
 PostgreSQL 17 database, not trusted from the agent's own report.
 
-Migration `00084-create-motion-and-interaction-library.ts` creates `motion_interaction_records`
+Migration `00086-create-motion-and-interaction-library.ts` creates `motion_interaction_records`
 (single table, real multi-row version history — `record_id`/`public_id`/`version_number`/
 `is_current`, partial unique index on `public_id` WHERE `is_current`, unique
 `(record_id, version_number)`, and the same three follow-up indexes Section and Pattern
@@ -75,7 +75,7 @@ prose — matching Section and Pattern Library's `scssReference`/`htmlStructure`
 `relatedComponentIds` is a real, existence-validated relationship into Component Library via
 `ComponentsService.existingComponentIds()` (D2), imported into a new
 `MotionAndInteractionLibraryModule` alongside `AuthModule`/`AuthzModule`/`AuditModule`. Migration
-`00085` marks the module `in_development` in the registry. `apps/dashboard-api/src/
+`00087` marks the module `in_development` in the registry. `apps/dashboard-api/src/
 motion-and-interaction-library/` has the standard controller (routes: `POST /`, `GET /`,
 `GET /:recordId`, `GET /:recordId/versions`, `POST /:recordId/update`, `POST /:recordId/status`,
 every `@RequirePermission` decorator method-level, never class-level), service (the standard
@@ -88,7 +88,7 @@ Backend-only pass — `dashboard-web` UI is a separate, not-yet-requested next s
 
 **Validation, independently re-run by the orchestrating session against a fresh local disposable
 PostgreSQL 17 database** (not just trusted from the build agent's own report): a real migration
-up → down → up round-trip (85 migrations, table schema confirmed directly via `psql \d`),
+up → down → up round-trip (88 migrations, table schema confirmed directly via `psql \d`),
 1340/1340 `dashboard-api` unit tests (41 new, in `motion-interactions.service.spec.ts`), 596/596
 `packages/database` integration tests (26 new), 599/599 `dashboard-api` e2e/integration tests (27
 new — covering the full `creative_design` RBAC submit/review/approve matrix, the
@@ -108,7 +108,7 @@ identical class of coupling `page_template_library`'s own seeded row already cor
 Left unfixed, this would have silently diverged from `docs/phase-plans/module-implementation-
 roadmap.md`, which computes its build-order "waves" by mechanically transcribing this exact
 field. Fixed with a new, additive migration
-(`00086-add-motion-and-interaction-library-dependency.ts` — not an edit to `00035`, which had
+(`00088-add-motion-and-interaction-library-dependency.ts` — not an edit to `00035`, which had
 already run against production before this branch existed) and the roadmap doc updated to move
 this module from Wave 1 to Wave 2. The 1 PLAUSIBLE finding — `updateMotionInteractionRecordSchema`
 hand-retyping its 8 shared optional fields from `createMotionInteractionRecordSchema` instead of
@@ -123,6 +123,12 @@ established, already-realized convention (Section and Pattern Library's identica
 `existingRecordIds()`, consumed by Page Template Library once it needed it), ships with an
 explicit doc-comment rationale, and has real, intentional test coverage, not orphaned artifacts.
 
-Re-validated after the fix: a fresh disposable-database migration round-trip (86 migrations),
+Re-validated after the fix: a fresh disposable-database migration round-trip (88 migrations),
 `motion_interaction_records.dependencies`-consuming code unaffected, `validate:module-registry`
 still 43/21 clean, typecheck/lint/prettier clean.
+
+**Migration numbers renumbered from `00084`/`00085`/`00086` to `00086`/`00087`/`00088`** after
+merging `main` — Wireframe Library (module #16) had merged to `main` as `00084`/`00085` while
+this branch was in progress. Every internal reference (doc comments, this file, the roadmap doc)
+was updated to match, and the renumbering was independently re-verified against a real database
+(a full 88-migration up round-trip, `dependencies` value confirmed via `psql`).

@@ -1,6 +1,6 @@
 /**
  * The Motion and Interaction Library module foundation — persistence-layer shapes for
- * `motion_interaction_records` (migration `00084`). Organization-wide, not project-scoped — a
+ * `motion_interaction_records` (migration `00086`). Organization-wide, not project-scoped — a
  * catalog of motion/interaction specs for the **WordPress website** deliverable. See this
  * module's own scope doc (`docs/implementation/module-motion-and-interaction-library.md`).
  *
@@ -9,7 +9,7 @@
  * `recordId` (the stable logical-record identity — NOT the same as `id`, which is unique per
  * physical row/version). `publicId` is also stable across every version of the same record.
  * Uniqueness for both `recordId`'s "current version" and `publicId` is enforced via a partial
- * unique index `WHERE is_current = true` (migration `00084`), not a bare column constraint — see
+ * unique index `WHERE is_current = true` (migration `00086`), not a bare column constraint — see
  * that migration's own doc comment for why.
  */
 

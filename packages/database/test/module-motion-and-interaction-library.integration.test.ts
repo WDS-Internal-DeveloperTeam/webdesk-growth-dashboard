@@ -6,7 +6,7 @@ import { buildMigrator } from "../src/migrate.js";
 import { withTransaction } from "../src/transaction.js";
 
 /**
- * Exercises the Motion and Interaction Library schema (migration `00084`) against a REAL,
+ * Exercises the Motion and Interaction Library schema (migration `00086`) against a REAL,
  * disposable PostgreSQL database. Mirrors
  * `module-section-and-pattern-library.integration.test.ts`'s own structure — real multi-row
  * version history: the partial-unique-index-on-`is_current` behavior, the
