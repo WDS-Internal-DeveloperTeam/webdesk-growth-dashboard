@@ -173,3 +173,93 @@ warnings=0`)/prettier all clean across `packages/database` and `apps/dashboard-a
 No `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
 matching every prior module's own backend-first precedent. Not yet independently code-reviewed,
 security-reviewed, second-role human reviewed, gated, or merged.
+
+## As-built — `dashboard-web` UI
+
+Built directly on the explicit "Start the dashboard-web UI for it" instruction, closing this
+module's last named gap. Mirrors **Component Library's** UI structure file-for-file (the closest
+sibling — real FK-validated relationships via `@webdesk/ui`'s `RelationshipPicker` plus real
+multi-row version history), on branch `dashboard-web-page-template-library`.
+
+**Rich-text conversion, backend-paired**: `contentRequirements`/`searchRequirements`/
+`conversionGoal` now go through the existing `RichTextEditor` (Tiptap) component, per the
+2026-08-22 standing rule requiring every new `dashboard-web` long-text field to use it. This
+required a real backend change in the same branch: `PageTemplatesService.create()`/`update()`
+(both the in-place and fork branches) now wire `sanitizeNullableRichText()`/
+`sanitizeNullableRichTextIfChanged()`/a local `sanitizeOrInherit()` helper (mirroring
+`SectionPatternsService`'s/`WebsiteStrategyRecordsService`'s own identical fork-branch pattern),
+and the DTO's length cap was raised 4,000→40,000 to match the converged ceiling every sibling
+rich-text conversion lands on. `phpTemplateRelationship` stays plain text (factual, not narrative,
+matching Component Library's own precedent).
+
+**Frontend**: `PageTemplateRecord`/`PageTemplateApprovalStatus`/`PageType` added to
+`packages/shared-types`; `lib/page-template-library-query.ts`/`lib/page-template-library.ts`
+(zero-non-type-import-file split, including cross-module picker-option fetches for Section and
+Pattern Library records and Component Library components, plus a self-referential
+replacement-record fetch); `PageTemplateLibraryForm` (create-only `publicId`/`pageType`;
+`RelationshipPicker` for `requiredSectionIds`/`optionalSectionIds`/`supportedComponentIds`;
+`TagListField` for the unvalidated `wireframeReferences`; `RichTextEditor` for the 3 narrative
+fields; a self-referential `SinglePageTemplatePicker` for `replacementRecordId`, the 3rd
+independent hand-copy of that wrapper shape — already self-documented as accepted debt, matching
+`SingleComponentPicker`/`SinglePagePicker`); `PageTemplateStatusActions` mirroring the backend's
+`TRANSITIONS` table exactly, including the `approved → ["archived"]`-only divergence; four routes
+under `app/(shell)/page-template-library/` (list, detail with a real Version history section,
+create, edit).
+
+**Independent code review** (this project's own `code-review` skill, high effort, 8-angle finder
+pass via parallel subagents, 1-vote self-verification) — 10 findings kept in the final report (4
+CONFIRMED and fixed, 6 PLAUSIBLE left as accepted tracked debt). Fixed: `arrayField()` extracted
+into a new `arrayFieldValue()` export in `lib/rich-text.ts` (a 2nd byte-identical copy, past this
+codebase's own 2-occurrence extraction threshold already applied to `richTextFieldValue()`),
+retrofitted onto `section-and-pattern-library-form.tsx` too, with 3 new regression tests; two
+inaccurate doc comments corrected — the status-actions component's self-declared duplication
+ordinal (verified via grep that sibling files' own claimed ordinals have already drifted
+out of sync with each other and don't track a real count) now points at a grep command instead of
+asserting a specific number, and the `RICH_TEXT_MAX_LENGTH=40_000` rationale comment (which
+claimed a "10x ratio" every sibling applies, factually inaccurate — the real, verified pattern is
+convergence on a fixed 40,000-character ceiling regardless of starting cap, and Section and
+Pattern Library was incorrectly cited as an already-converted example) was rewritten to state the
+real pattern. Left as accepted, tracked debt (each already matching an established duplication
+class elsewhere in this codebase, or too narrow/inherited to justify fixing in this branch): the
+audit trail (`afterState`) logging raw pre-sanitization HTML for the 3 rich-text fields (byte-
+identical to Website Strategy Center's/Section and Pattern Library's own already-shipped audit
+calls); three near-identical option-filtering `useMemo` blocks; selected-chip id-to-label
+resolution duplicated 3x; the `replacement` display value resolved via a one-off `useState`
+initializer instead of a `useMemo` (low risk today — `props.pageTemplates` never refetches after
+mount in this page's own fetch-once pattern); the create/edit empty-value sentinel ternary
+independently re-derived 4 times including an inlined copy for `replacementRecordId`; three
+near-identical picker-fetch functions; and `plainField()`, an 8th independent hand-copy of the
+same closure shape already duplicated across 7 sibling forms with no shared helper ever extracted
+(retrofitting one onto all 8 already-shipped forms was judged out of scope for this branch, unlike
+`arrayField()`'s narrower 2-occurrence fix).
+
+**Real, out-of-scope bug discovered and flagged, not fixed in this branch**: while verifying the
+`RICH_TEXT_MAX_LENGTH` doc-comment fix, found that Section and Pattern Library's own already-
+merged `dashboard-web` UI (PR #80) wires `RichTextEditor` for its 3 narrative fields, but that
+module's own backend length cap was never raised from 20,000 to the converged 40,000 ceiling to
+match, and its own dto comment is now stale (still claims no UI exists yet). This means a user can
+currently type up to 40,000 characters of rich content into that module's own editor and have the
+submission silently rejected by the backend's stale 20,000-character cap. Flagged as a separate
+follow-up task (spawned as a background-task suggestion) rather than fixed here, since it touches
+a different, already-merged, already-reviewed module's own backend and needs its own review cycle.
+
+**Re-validated after the fix round**: 1207/1207 `dashboard-web` unit tests (3 new), 1299/1299
+`dashboard-api` unit tests (unchanged — the fixes were doc-comment-only on the backend side),
+typecheck/lint/`check-css-tokens.mjs`/`next build`/prettier all clean across `packages/shared-
+types`, `apps/dashboard-api`, and `apps/dashboard-web`; all 4 new routes present in the build
+output.
+
+**A separate `security-review` skill run then found 0 findings above threshold** — confirmed all
+3 write paths (`create()`, `update()`'s in-place branch, the fork branch) run sanitization with no
+gap, both a `<script>`-strip test on create and on the fork branch exist; every render site for
+the 3 rich-text fields (current version and every version-history disclosure entry) routes
+exclusively through the shared, already-audited `SanitizedRichText` component; `phpTemplateRelationship`
+correctly renders as plain JSX text, never through that component; the relationship pickers render
+only plain-text option labels with real enforcement server-side (`assertReplacementExists()`,
+the `hasOverlappingSectionIds()` Zod refinement) rather than relying on client-side exclusion
+logic; no IDOR (relationship ids are existence-validated against the caller's own already-
+permission-filtered list responses); and the picker-fetch functions target only a trusted,
+build-time API base URL plus hardcoded paths or a UUID-validated `recordId`, with no SSRF or
+credential-leakage surface.
+
+Not yet second-role human reviewed, gated, pushed, opened as a PR, or merged.
