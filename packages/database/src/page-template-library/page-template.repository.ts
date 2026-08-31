@@ -235,24 +235,6 @@ export class PageTemplateRepository {
   }
 
   /**
-   * Every CURRENT-version row whose `recordId` is in `recordIds`. Backs both
-   * `assertReplacementExists()`'s batch counterpart (currently only ever called with a single id,
-   * via `findCurrentByRecordId()`) and — the actual reason this method exists in this module — the
-   * cross-module `existingPageTemplateIds()`-style delegating method a future consumer would need,
-   * mirroring `ComponentRepository.findByIds()`'s/`DesignTokenRepository.findByIds()`'s own shape.
-   * Returns only the subset of `recordIds` that resolve to a real, current page template.
-   */
-  async findByIds(recordIds: readonly string[]): Promise<readonly PageTemplateEntity[]> {
-    if (recordIds.length === 0) {
-      return [];
-    }
-    const rows = await this.model.findAll({
-      where: { recordId: { [Op.in]: [...recordIds] }, isCurrent: true },
-    });
-    return rows.map((row) => toEntityWithIsoDates<PageTemplateEntity>(row));
-  }
-
-  /**
    * A plain, generic `UPDATE ... WHERE id = ... RETURNING`, scoped to one physical row (a single
    * version). Used two ways by the service layer: (1) content edits on a non-approved current
    * row, and (2) flipping the OLD current row's `isCurrent` to `false` when a new version is

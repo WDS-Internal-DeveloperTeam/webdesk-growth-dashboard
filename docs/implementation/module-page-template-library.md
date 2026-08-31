@@ -92,9 +92,12 @@ packages/database/src/migrations/ | tail`, not assumed).
 (`page_templates` table, `underscored: true`), `entity-mapping.ts` (per-module
 `toEntityWithIsoDates()`, matching every sibling module's own independent copy),
 `page-template.repository.ts` (`PageTemplateRepository` — `create()`/`createNewVersion()`/
-`findCurrentByRecordId()`/`findCurrentByPublicId()`/`listVersions()`/`list()`/`findByIds()`/
+`findCurrentByRecordId()`/`findCurrentByPublicId()`/`listVersions()`/`list()`/
 `updateInPlace()`/`updateApprovalStatus()`/`supersedeOtherApprovedVersion()`, all mirroring
 `ComponentRepository`'s own method shapes and CAS-guard discipline exactly), `index.ts`.
+(An initial `findByIds()` on this same repository — for a hypothetical future consumer validating
+INTO this table — was added speculatively with no real caller, flagged by code review, and
+removed; add it back if/when a real consumer, e.g. Wireframe Library, actually needs it.)
 
 **Migration `00082-create-page-template-library.ts`**: `page_templates` table with the standard
 version-history column set (`id`/`record_id`/`public_id`/`page_type`/`version_number`/

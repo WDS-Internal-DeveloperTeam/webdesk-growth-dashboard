@@ -66,23 +66,45 @@ export const listPageTemplatesQuerySchema = z.object({
 });
 export type ListPageTemplatesQueryDto = z.infer<typeof listPageTemplatesQuerySchema>;
 
-export const createPageTemplateSchema = z.object({
-  publicId: z.string().min(1).max(64),
-  pageType: pageTypeSchema,
-  name: z.string().min(1).max(255),
-  requiredSectionIds: idListField,
-  optionalSectionIds: idListField,
-  supportedComponentIds: idListField,
-  wireframeReferences: wireframeReferencesField,
-  contentRequirements: textField(4_000),
-  searchRequirements: textField(4_000),
-  conversionGoal: textField(4_000),
-  phpTemplateRelationship: textField(2_000),
-  // Existence-checked in-module (PageTemplatesService.assertReplacementExists()) against this
-  // same table's own recordId — never immutable across a version chain, unlike pageType (design
-  // decision, other-fields notes).
-  replacementRecordId: z.string().uuid().nullish(),
-});
+// A section can be required or optional for a template, never both at once — an id present in
+// both arrays would be ambiguous for any future UI rendering "required" vs. "optional" sections.
+// Only checked when both fields are actually present in the same request (create always supplies
+// both as real arrays or omits them; update's partial patch may supply only one, in which case
+// there is nothing in this request to compare against the other side's current, unpatched value).
+function hasOverlappingSectionIds(data: {
+  requiredSectionIds?: readonly string[] | null;
+  optionalSectionIds?: readonly string[] | null;
+}): boolean {
+  if (!data.requiredSectionIds || !data.optionalSectionIds) {
+    return false;
+  }
+  const required = new Set(data.requiredSectionIds);
+  return data.optionalSectionIds.some((id) => required.has(id));
+}
+const OVERLAPPING_SECTION_IDS_ISSUE = {
+  message: "A section cannot be both required and optional at the same time",
+  path: ["optionalSectionIds"] as string[],
+};
+
+export const createPageTemplateSchema = z
+  .object({
+    publicId: z.string().min(1).max(64),
+    pageType: pageTypeSchema,
+    name: z.string().min(1).max(255),
+    requiredSectionIds: idListField,
+    optionalSectionIds: idListField,
+    supportedComponentIds: idListField,
+    wireframeReferences: wireframeReferencesField,
+    contentRequirements: textField(4_000),
+    searchRequirements: textField(4_000),
+    conversionGoal: textField(4_000),
+    phpTemplateRelationship: textField(2_000),
+    // Existence-checked in-module (PageTemplatesService.assertReplacementExists()) against this
+    // same table's own recordId — never immutable across a version chain, unlike pageType
+    // (design decision, other-fields notes).
+    replacementRecordId: z.string().uuid().nullish(),
+  })
+  .refine((data) => !hasOverlappingSectionIds(data), OVERLAPPING_SECTION_IDS_ISSUE);
 export type CreatePageTemplateDto = z.infer<typeof createPageTemplateSchema>;
 
 // pageType/publicId are never accepted here — both immutable after creation. approvalStatus is
@@ -106,7 +128,8 @@ export const updatePageTemplateSchema = z
   // own identical fix (updateComponentSchema, updateDesignTokenSchema, etc.).
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided",
-  });
+  })
+  .refine((data) => !hasOverlappingSectionIds(data), OVERLAPPING_SECTION_IDS_ISSUE);
 export type UpdatePageTemplateDto = z.infer<typeof updatePageTemplateSchema>;
 
 export const changePageTemplateApprovalStatusSchema = z.object({

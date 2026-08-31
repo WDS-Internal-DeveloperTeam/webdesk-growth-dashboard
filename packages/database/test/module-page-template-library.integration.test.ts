@@ -10,9 +10,8 @@ import { withTransaction } from "../src/transaction.js";
  * PostgreSQL database. Mirrors ../test/module-component-library.integration.test.ts's own
  * structure — this module's own real multi-row version history (design decision D1) is identical
  * in shape to Component Library's own, so the same test structure applies: the
- * partial-unique-index-on-`is_current` behavior, the `(record_id, version_number)` uniqueness, a
- * full end-to-end version-history round trip, and the `findByIds()` lookup this module needs for
- * its own `replacementRecordId` existence check.
+ * partial-unique-index-on-`is_current` behavior, the `(record_id, version_number)` uniqueness, and
+ * a full end-to-end version-history round trip.
  */
 describe("Page Template Library module (real disposable database)", () => {
   const pageTemplates = new PageTemplateRepository();
@@ -157,21 +156,6 @@ describe("Page Template Library module (real disposable database)", () => {
     it("list() clamps an oversized limit to MAX_LIST_LIMIT (200)", async () => {
       const result = await pageTemplates.list({ limit: 100_000 });
       expect(result.length).toBeLessThanOrEqual(200);
-    });
-
-    it("findByIds() returns only CURRENT rows matching the given recordIds", async () => {
-      const created = await pageTemplates.create({
-        publicId: uniqueId("PGT-FINDBYIDS"),
-        pageType: "team",
-        name: "Find By Ids Fixture",
-      });
-      const found = await pageTemplates.findByIds([created.recordId, randomUUID()]);
-      expect(found).toHaveLength(1);
-      expect(found[0]?.id).toBe(created.id);
-    });
-
-    it("findByIds() returns an empty array for an empty input, without querying", async () => {
-      expect(await pageTemplates.findByIds([])).toEqual([]);
     });
 
     it("updateInPlace() changes fields and never touches approvalStatus/pageType", async () => {
