@@ -1449,3 +1449,82 @@ export interface DesignTokenRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/** The spec's own §15 pattern-type taxonomy, 20 values — mirrors
+ *  `packages/database/src/section-and-pattern-library/entities.ts`'s `SectionPatternType` exactly.
+ *  Immutable across a record's own version chain (set once at creation; a real pattern-type change
+ *  is a different record, not a new version of this one), mirroring `DesignTokenGroup`'s own
+ *  immutability discipline. */
+export type SectionPatternType =
+  | "homepage_storytelling"
+  | "service"
+  | "industry"
+  | "location"
+  | "landing_conversion"
+  | "portfolio_showcase"
+  | "social_proof"
+  | "results_metrics"
+  | "engagement_models"
+  | "team_expertise"
+  | "content_hub"
+  | "article"
+  | "lead_capture"
+  | "download"
+  | "multi_step_form"
+  | "search_filter"
+  | "trust"
+  | "objection_handling"
+  | "cross_sell"
+  | "error_no_results";
+
+// Structurally identical to DesignTokenApprovalStatus/ArtifactApprovalStatus (the shared 8-value
+// artifact-approval workflow) — reused as its own named type rather than an alias so this module's
+// own `-query.ts` file can still narrow to it directly without a cast, matching every sibling
+// module's own precedent.
+export type SectionPatternApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * One row per VERSION, not one row per record — structurally identical to `DesignTokenRecord`'s
+ * own real version-history shape
+ * (`packages/database/src/section-and-pattern-library/entities.ts`'s own doc comment). `id` is
+ * unique per physical row/version; `recordId` is the stable logical-record identity shared by
+ * every version of the same record (the history/comparison key, and the identifier every
+ * `dashboard-web` route/link uses — never `id`, which changes across a fork). `publicId` is
+ * likewise stable across every version. `isCurrent` is true for exactly one row per `recordId` at
+ * any time. `jsDependencies`/`tokenReferences`/`relatedComponentIds` are plain, unvalidated string
+ * arrays — no `design_token_library`-version-identity linking or `component_library` module
+ * exists yet to link them to for real.
+ */
+export interface SectionPatternRecord {
+  readonly id: string;
+  readonly recordId: string;
+  readonly publicId: string;
+  readonly patternType: SectionPatternType;
+  readonly versionNumber: number;
+  readonly isCurrent: boolean;
+  readonly name: string;
+  readonly description: string | null;
+  readonly designReference: string | null;
+  readonly htmlStructure: string | null;
+  readonly phpPath: string | null;
+  readonly scssReference: string | null;
+  readonly jsDependencies: readonly string[];
+  readonly responsiveBehavior: string | null;
+  readonly accessibilityNotes: string | null;
+  readonly browserSupport: string | null;
+  readonly tokenReferences: readonly string[];
+  readonly relatedComponentIds: readonly string[];
+  readonly approvalStatus: SectionPatternApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
