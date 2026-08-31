@@ -28,6 +28,7 @@ import { ProjectsModule } from "./projects/projects.module.js";
 import { ProofAndClaimsLibraryModule } from "./proof-and-claims-library/proof-and-claims-library.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { ReviewAndApprovalCenterModule } from "./review-and-approval-center/review-and-approval-center.module.js";
+import { SectionAndPatternLibraryModule } from "./section-and-pattern-library/section-and-pattern-library.module.js";
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
 import { UsersModule } from "./users/users.module.js";
@@ -85,6 +86,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     ProofAndClaimsLibraryModule,
     RetentionModule,
     ReviewAndApprovalCenterModule,
+    SectionAndPatternLibraryModule,
     ServiceLibraryModule,
     SystemOperationsModule,
     UsersModule,
