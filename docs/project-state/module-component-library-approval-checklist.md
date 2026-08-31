@@ -5,8 +5,24 @@ accepted as tracked debt). Security review complete (0 findings above threshold)
 second-role human review complete — Jitesh D, "Approve as-is", accepting the 1 open tracked-debt
 finding. Gate (G4-component-library) approved — WebDesk Solution, decision CONFIRM, approved
 commit `b3fe561` on branch `module-component-library`. **Pushed to `origin` and opened as
-[PR #79](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/79).** Merge
-authorization remains a separate, not-yet-requested next step.
+[PR #79](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/79).** A real
+merge conflict against `main` was found and resolved (another PR — the Design Token Library
+`dashboard-web` UI — merged while this branch was in review); the branch was rebased onto the
+current `origin/main`, the conflict in `outputs/webdesk-growth-dashboard/project.json` resolved by
+keeping both gate/audit_log entries in sequence, and typecheck/migration-numbering re-verified
+clean before force-pushing. All 14 CI checks then passed. **"Merge PR #79" was then separately
+requested and executed** — merged with a real merge commit (not squash/rebase), matching every
+prior merge in this project's history — merge commit
+`68138e88c1e8453e361e1f486c65aeee37a39ceb`. Both Vercel projects auto-deployed on push to `main`
+and were verified live directly, not just via CI's own Vercel status check —
+`dashboard-api`'s `/health` returned `build.commitShaShort == 68138e8`, confirming the exact
+merged commit is what's serving; `GET /component-library/components` returned a clean `401`
+(route live, `SessionGuard` enforcing — not a `404`, which would mean the module never actually
+deployed); and `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to
+`/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
+Component Library module backend is now genuinely live in production.** No `dashboard-web` UI
+exists yet for this module — a separate, not-yet-requested next step, matching every prior
+module's own backend-first precedent.
 
 ## Completion condition
 
