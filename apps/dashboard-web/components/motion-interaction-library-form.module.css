@@ -1,0 +1,79 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xl);
+  max-width: 44rem;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-lg);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fieldsetLegend {
+  font-size: var(--webdesk-dashboard-font-size-md);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  color: var(--webdesk-dashboard-color-foreground);
+  padding: 0;
+  margin: 0 0 var(--webdesk-dashboard-space-xs);
+}
+
+.field {
+  composes: field from "./form-fields.module.css";
+}
+
+.label {
+  composes: label from "./form-fields.module.css";
+}
+
+.helperText {
+  composes: helperText from "./form-fields.module.css";
+}
+
+.readonlyValue {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.input,
+.select {
+  composes: input from "./form-fields.module.css";
+}
+
+.textarea {
+  composes: textarea from "./form-fields.module.css";
+}
+
+/* The approved-record-forks-a-new-version notice — an informational callout, not an error, so it
+ * composes color/border tokens directly rather than reusing `.error`'s red palette. Matches
+ * section-and-pattern-library-form.module.css's/page-template-library-form.module.css's own
+ * `.forkNotice` exactly. */
+.forkNotice {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-info-surface);
+  border: 1px solid var(--webdesk-dashboard-color-info);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  margin: 0;
+}
+
+.error {
+  composes: error from "./form-fields.module.css";
+}
+
+.actions {
+  composes: actions from "./form-fields.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./form-fields.module.css";
+}
+
+.cancelLink {
+  composes: cancelLink from "./form-fields.module.css";
+}

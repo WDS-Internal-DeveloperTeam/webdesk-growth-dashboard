@@ -52,11 +52,12 @@ const APPROVAL_STATUS_VALUES = [
 export const motionInteractionApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
 // `description`/`triggerAndBehavior`/`accessibilityNotes` are rich-text-sanitized at write time
-// (design decision — scope doc) even though no `dashboard-web` RichTextEditor UI exists yet for
-// this module (backend-only pass, matching every prior module's own backend-first precedent) — a
-// plain-text length cap here, not the doubled rich-text-markup-overhead cap sibling modules raise
-// to only once their own UI actually wires RichTextEditor in.
-const RICH_TEXT_MAX_LENGTH = 20_000;
+// (design decision — scope doc). Raised 20,000 -> 40,000 now that the `dashboard-web`
+// `RichTextEditor` UI actually wires these three fields in — the same markup-overhead-driven raise
+// ratio every sibling module applies once its own UI lands (Section and Pattern Library, Page
+// Template Library, Persona Library, Service Library, Website Strategy Center, Proof and Claims
+// Library all converge on the identical 40,000 ceiling regardless of their own starting cap).
+const RICH_TEXT_MAX_LENGTH = 40_000;
 const richTextField = z.string().max(RICH_TEXT_MAX_LENGTH).nullish();
 
 // `timingAndEasing`/`implementationSpec`/`fallbackBehavior` are plain code/spec-value fields — no

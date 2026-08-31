@@ -1008,6 +1008,20 @@
       "approved_commit": "fddbe85",
       "record": "docs/project-state/module-motion-and-interaction-library-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize merging PR #86 -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-motion-and-interaction-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-motion-and-interaction-library",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-31T00:00:00Z",
+      "approved_commit": "4f49b38",
+      "record": "docs/project-state/dashboard-web-motion-and-interaction-library-approval-checklist.md",
+      "notes": "dashboard-web UI for the Motion and Interaction Library module -- closes this module's last named gap following the backend's own build-to-production arc (PR #86, live). File-for-file mirrors Section and Pattern Library's already-reviewed UI structure, the closest sibling (both have real multi-row version history, both reuse the creative_design RBAC group): four routes (list/detail/create/edit) under app/(shell)/motion-and-interaction-library/. category is create-only (immutable across a record's own version chain); description/triggerAndBehavior/accessibilityNotes use RichTextEditor per the 2026-08-22 standing rule -- the backend already sanitized all three at write time, so only a length-cap raise (20,000 -> 40,000) was needed on motion-and-interaction-library.dto.ts, not new sanitization; timingAndEasing/implementationSpec/fallbackBehavior stay plain textareas, matching the backend's own unsanitized plain-text schema for these three fields; designReference a client-validated (isSafeHttpUrl()) URL input; relatedComponentIds a REAL, existence-validated RelationshipPicker against Component Library. MotionInteractionStatusActions mirrors the backend's TRANSITIONS table exactly, including the deliberate approved -> archived-only divergence (no superseded edge -- supersede is automatic). Independent code review (8-angle finder pass, medium effort) surfaced 4 candidates after dedup -- 3 fixed (MotionInteractionStatusActions using plain useState instead of the shared useSyncedState() hook every module built after 2026-08-27 adopts; arrayField() reimplementing the shared arrayFieldValue() helper instead of delegating to it; the detail page's relatedComponentIds id-to-name resolution being a 3rd independent inline hand-copy of a pattern already present in Component Library's and Page Template Library's own detail pages, closed by extracting a new lib/resolve-ids-to-names.ts, with the two pre-existing sibling occurrences deliberately left untouched as out-of-scope retrofits) -- 1 candidate refuted as inherited from an already-shipped Section and Pattern Library precedent. Security review skipped per the 2026-08-27 'right-size the review pipeline' standing rule -- no new endpoint, no new sink, only a validation-bound length-cap raise as the sole backend change. 1283/1283 dashboard-web unit tests (48 new), 1386/1386 dashboard-api unit tests, typecheck/lint (--max-warnings=0)/CSS-token-check (64 files)/next build (all 4 routes present)/prettier all clean -- independently re-run by the orchestrating session after every fix, not trusted from the build agent's own report. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact rather than a separately published packet, since there were no open findings of any kind on this branch after the fix round.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2911,7 +2925,16 @@
       "details": "PR #86 (module-motion-and-interaction-library) merged with a real merge commit b59fba740266236fa1aacef02a95cbe1f9948b7e, all 14 CI checks green beforehand. dashboard-api auto-deployed on push to main and was verified live directly, not just via CI's own Vercel status check -- /health returned build.commitSha == b59fba740266236fa1aacef02a95cbe1f9948b7e, confirming the exact merged commit is what's serving; GET /motion-and-interaction-library/records returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed); and dashboard-web's / resolves to /auth/sign-in for an unauthenticated visitor. The Motion and Interaction Library module backend is now genuinely live in production. No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module's own backend-first precedent.",
       "project_version_before": 97,
       "project_version_after": 98
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-motion-and-interaction-library approved (WebDesk Solution, CONFIRM) for the dashboard-web Motion and Interaction Library UI, approved commit 4f49b38 on branch dashboard-web-motion-and-interaction-library. Independent code review (8-angle finder pass) found 3 confirmed/plausible findings, all fixed and re-validated before this gate was requested -- a clean pass, not an override. Security review skipped per the 2026-08-27 review-pipeline right-sizing standing rule (no new endpoint, no new sink).",
+      "project_version_before": 98,
+      "project_version_after": 99,
+      "timestamp": "2026-08-31T00:00:00Z"
     }
   ],
-  "current_gate": "G4-motion-and-interaction-library"
+  "current_gate": "G4-dashboard-web-motion-and-interaction-library"
 }
