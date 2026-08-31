@@ -57,6 +57,15 @@ const wireframeReferencesField = z
 // decision, other-fields notes), matching component-library.dto.ts's own textField helper.
 const textField = (max: number) => z.string().max(max).nullish();
 
+// contentRequirements/searchRequirements/conversionGoal now go through dashboard-web's
+// RichTextEditor (per the 2026-08-22 standing rule requiring every dashboard-web long-text field
+// to use it) — raised from the original backend-only pass's plain 4,000 cap the same 10x ratio
+// every sibling module's own rich-text conversion already applies (Service/Persona/Website
+// Strategy Center/Section and Pattern Library), since real HTML markup carries overhead over the
+// equivalent plain text. phpTemplateRelationship stays at its own original, unraised 2,000 cap —
+// it's a factual, not narrative, field and is never wired to RichTextEditor.
+const RICH_TEXT_MAX_LENGTH = 40_000;
+
 export const listPageTemplatesQuerySchema = z.object({
   pageType: pageTypeSchema.optional(),
   approvalStatus: pageTemplateApprovalStatusSchema.optional(),
@@ -95,9 +104,9 @@ export const createPageTemplateSchema = z
     optionalSectionIds: idListField,
     supportedComponentIds: idListField,
     wireframeReferences: wireframeReferencesField,
-    contentRequirements: textField(4_000),
-    searchRequirements: textField(4_000),
-    conversionGoal: textField(4_000),
+    contentRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    searchRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    conversionGoal: textField(RICH_TEXT_MAX_LENGTH),
     phpTemplateRelationship: textField(2_000),
     // Existence-checked in-module (PageTemplatesService.assertReplacementExists()) against this
     // same table's own recordId — never immutable across a version chain, unlike pageType
@@ -117,9 +126,9 @@ export const updatePageTemplateSchema = z
     optionalSectionIds: idListField,
     supportedComponentIds: idListField,
     wireframeReferences: wireframeReferencesField,
-    contentRequirements: textField(4_000),
-    searchRequirements: textField(4_000),
-    conversionGoal: textField(4_000),
+    contentRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    searchRequirements: textField(RICH_TEXT_MAX_LENGTH),
+    conversionGoal: textField(RICH_TEXT_MAX_LENGTH),
     phpTemplateRelationship: textField(2_000),
     replacementRecordId: z.string().uuid().nullish(),
   })
