@@ -3362,24 +3362,38 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, confirming the exact merged commit is
     the full UI (list, detail, create/edit form, status actions) are both live for the Page
     Template Library module.
 
-59. **Wireframe Library module backend — built, reviewed, gated, pushed, PR opened
-    ([PR #84](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/84))
+59. **Wireframe Library module backend — built, reviewed, gated, merged
+    ([PR #84](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/84),
+    merge commit `5abb0f7091f720be1a84dace3a8c9425f209ec63`); now genuinely live in production
     (2026-08-31).** Module #16. Real multi-row version history (`wireframe_records`), mirroring
     Section and Pattern Library file-for-file. `relatedTemplateId` stays unvalidated — a real
     co-dependent cycle with `page_template_library` (item 57), which merged to `main`
     concurrently with this build; this branch's migrations were renumbered `00084`/`00085` on
     direct instruction to avoid colliding with Page Template Library's `00082`/`00083`, and
-    `origin/main` was merged in afterward (only conflict: two barrel-export files, resolved by
-    keeping both new lines, re-verified fully green after). `fileReference` is a plain
-    `safeHttpUrlSchema` URL, mirroring Brand Library. Full details, design decisions, and
-    validation evidence: `docs/implementation/module-wireframe-library.md` and
+    `origin/main` was merged in twice more afterward as two further concurrent sibling PRs
+    (`dashboard-web-page-template-library`, then its own live-verification doc commit) landed
+    ahead of this one — only conflicts were barrel-export files and duplicate `CLAUDE.md`
+    item/audit-log numbering, resolved by keeping both sides and re-sequencing, re-verified fully
+    green after each merge. `fileReference` is a plain `safeHttpUrlSchema` URL, mirroring Brand
+    Library. Full details, design decisions, and validation evidence:
+    `docs/implementation/module-wireframe-library.md` and
     `docs/project-state/module-wireframe-library-approval-checklist.md`. Independent code review
     (high effort, 8-angle finder pass): **0 findings**. Security review: **0 findings above
     threshold**. Required second-role human review complete — Jitesh D, **"Approved,"** no
     disputes. **Gate G4-wireframe-library approved** — WebDesk Solution, decision CONFIRM,
-    approved commit `ec96265` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
-    (`current_gate` now `G4-wireframe-library`). Branch pushed to `origin` and PR #84 opened.
-    **Merging remains a separate, not-yet-requested next step.**
+    approved commit `ec96265` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`.
+    **"Merge PR #84" was then separately requested and executed** — waited for all 14 CI checks
+    to go green first (twice, after each concurrent-merge conflict resolution), merge commit
+    `5abb0f7091f720be1a84dace3a8c9425f209ec63`. Verified live directly, not just via CI's own
+    Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+5abb0f7091f720be1a84dace3a8c9425f209ec63`, confirming the exact merged commit is what's serving;
+    `GET /wireframe-library/records` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to sign-in,
+    confirming the session gate is intact. **The Wireframe Library module backend is now
+    genuinely live in production.** No `dashboard-web` UI exists yet for this module — a
+    separate, not-yet-requested next step, matching every prior module's own backend-first
+    precedent.
 
 ## Recent decisions
 
@@ -6005,6 +6019,20 @@ f467be9ae3811167d40323daeeb97f84a8f6cf46`, `GET /page-template-library/page-temp
   production**, closing out this slice's full build-to-production arc — backend and now the full
   UI (list, detail, create/edit form, status actions) are both live for the Page Template Library
   module.
+- `[2026-08-31]` **"Merge PR #84" was then separately requested and executed for
+  `module-wireframe-library`.** Two rounds of merge conflicts from concurrently-landing sibling
+  PRs (`dashboard-web-page-template-library` and its own live-verification doc commit) were
+  resolved first — `project.json`'s gate/audit-log entries kept from both sides and
+  re-sequenced, and a duplicate `CLAUDE.md` item number (`58`) renumbered to `59` — each re-run
+  through all 14 CI checks before merging. Merge commit
+  `5abb0f7091f720be1a84dace3a8c9425f209ec63`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+5abb0f7091f720be1a84dace3a8c9425f209ec63`, confirming the exact merged commit is what's serving;
+  `GET /wireframe-library/records` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed); and
+  `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
+  **The Wireframe Library module backend is now genuinely live in production.**
 
 ## Open client blockers
 
