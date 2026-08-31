@@ -1,6 +1,6 @@
 <title>Wireframe Library Review Packet</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  @import url("https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
   :root {
     --bg: #f5f7f7;
@@ -58,7 +58,9 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   }
 
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
 
   body {
     margin: 0;
@@ -70,7 +72,9 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  a { color: var(--accent-strong); }
+  a {
+    color: var(--accent-strong);
+  }
 
   .mono {
     font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -150,8 +154,16 @@
     color: var(--ink-muted);
   }
 
-  .chip.good { background: var(--good-soft); color: var(--good); border-color: transparent; }
-  .chip.accent { background: var(--accent-soft); color: var(--accent-strong); border-color: transparent; }
+  .chip.good {
+    background: var(--good-soft);
+    color: var(--good);
+    border-color: transparent;
+  }
+  .chip.accent {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    border-color: transparent;
+  }
 
   main {
     max-width: 780px;
@@ -203,11 +215,24 @@
     color: var(--ink-faint);
     margin-bottom: 0.2rem;
   }
-  .field dd { margin: 0; font-weight: 500; }
+  .field dd {
+    margin: 0;
+    font-weight: 500;
+  }
 
-  ul.tight, ol.tight { margin: 0.4rem 0; padding-left: 1.25rem; }
-  ul.tight li, ol.tight li { margin-bottom: 0.45rem; }
-  ul.tight li:last-child, ol.tight li:last-child { margin-bottom: 0; }
+  ul.tight,
+  ol.tight {
+    margin: 0.4rem 0;
+    padding-left: 1.25rem;
+  }
+  ul.tight li,
+  ol.tight li {
+    margin-bottom: 0.45rem;
+  }
+  ul.tight li:last-child,
+  ol.tight li:last-child {
+    margin-bottom: 0;
+  }
 
   .decision-list {
     display: flex;
@@ -221,16 +246,29 @@
     padding: 0.85rem 1rem;
     background: var(--surface);
   }
-  .decision .n { color: var(--accent-strong); font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 0.8rem; }
-  .decision strong { display: block; margin: 0.15rem 0 0.25rem; }
-  .decision p { margin: 0; color: var(--ink-muted); font-size: 0.94rem; }
+  .decision .n {
+    color: var(--accent-strong);
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 0.8rem;
+  }
+  .decision strong {
+    display: block;
+    margin: 0.15rem 0 0.25rem;
+  }
+  .decision p {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 0.94rem;
+  }
 
   table.evidence {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.92rem;
   }
-  table.evidence th, table.evidence td {
+  table.evidence th,
+  table.evidence td {
     text-align: left;
     padding: 0.55rem 0.6rem;
     border-bottom: 1px solid var(--border);
@@ -242,9 +280,15 @@
     color: var(--ink-faint);
     font-weight: 600;
   }
-  table.evidence td.num { text-align: right; }
-  table.evidence tr:last-child td { border-bottom: none; }
-  .tablewrap { overflow-x: auto; }
+  table.evidence td.num {
+    text-align: right;
+  }
+  table.evidence tr:last-child td {
+    border-bottom: none;
+  }
+  .tablewrap {
+    overflow-x: auto;
+  }
 
   .result-row {
     display: flex;
@@ -256,9 +300,17 @@
     border-radius: 8px;
     background: var(--surface);
   }
-  .result-row + .result-row { margin-top: 0.7rem; }
-  .result-row .label { font-weight: 600; }
-  .result-row .sub { color: var(--ink-muted); font-size: 0.88rem; margin-top: 0.15rem; }
+  .result-row + .result-row {
+    margin-top: 0.7rem;
+  }
+  .result-row .label {
+    font-weight: 600;
+  }
+  .result-row .sub {
+    color: var(--ink-muted);
+    font-size: 0.88rem;
+    margin-top: 0.15rem;
+  }
   .badge-zero {
     font-family: "IBM Plex Mono", monospace;
     font-weight: 600;
@@ -278,7 +330,15 @@
     color: var(--ink);
     font-size: 0.93rem;
   }
-  .note .lbl { font-weight: 700; color: var(--warn); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.06em; display: block; margin-bottom: 0.3rem; }
+  .note .lbl {
+    font-weight: 700;
+    color: var(--warn);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
 
   .decision-panel {
     border: 1.5px dashed var(--accent);
@@ -292,8 +352,13 @@
     font-size: 1rem;
     color: var(--accent-strong);
   }
-  .decision-panel p { margin: 0 0 0.6rem; color: var(--ink); }
-  .decision-panel p:last-child { margin-bottom: 0; }
+  .decision-panel p {
+    margin: 0 0 0.6rem;
+    color: var(--ink);
+  }
+  .decision-panel p:last-child {
+    margin-bottom: 0;
+  }
 
   footer {
     max-width: 780px;
@@ -304,7 +369,11 @@
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .card, .result-row, .decision { transition: box-shadow 0.15s ease; }
+    .card,
+    .result-row,
+    .decision {
+      transition: box-shadow 0.15s ease;
+    }
   }
 </style>
 
@@ -327,20 +396,37 @@
 </header>
 
 <main>
-
   <section>
     <h2><span class="num">01</span>Scope</h2>
     <div class="card">
       <dl class="fieldgrid">
-        <div class="field"><dt>Roadmap position</dt><dd>Module #16, Recommended Module Roadmap</dd></div>
-        <div class="field"><dt>Spec source</dt><dd>03_Detailed_Module_Specifications.md §17</dd></div>
-        <div class="field"><dt>RBAC group</dt><dd>creative_design (reused verbatim)</dd></div>
-        <div class="field"><dt>Scope</dt><dd>Organization-wide — no project scoping</dd></div>
-        <div class="field"><dt>Confidentiality</dt><dd>None — registry's seeded value is null</dd></div>
-        <div class="field"><dt>Publish action</dt><dd>None — not named in the spec</dd></div>
+        <div class="field">
+          <dt>Roadmap position</dt>
+          <dd>Module #16, Recommended Module Roadmap</dd>
+        </div>
+        <div class="field">
+          <dt>Spec source</dt>
+          <dd>03_Detailed_Module_Specifications.md §17</dd>
+        </div>
+        <div class="field">
+          <dt>RBAC group</dt>
+          <dd>creative_design (reused verbatim)</dd>
+        </div>
+        <div class="field">
+          <dt>Scope</dt>
+          <dd>Organization-wide — no project scoping</dd>
+        </div>
+        <div class="field">
+          <dt>Confidentiality</dt>
+          <dd>None — registry's seeded value is null</dd>
+        </div>
+        <div class="field">
+          <dt>Publish action</dt>
+          <dd>None — not named in the spec</dd>
+        </div>
       </dl>
     </div>
-    <p style="color: var(--ink-muted); margin-top: 0.9rem;">
+    <p style="color: var(--ink-muted); margin-top: 0.9rem">
       Spec field list: page/module, viewport, version, file/image, annotations, interaction notes,
       related template, status, reviewer, approval.
     </p>
@@ -377,10 +463,10 @@
         <p>
           The module-implementation roadmap flags <code>page_template_library</code> ↔
           <code>wireframe_library</code> as a genuine, unresolved cycle in the seeded registry data:
-          a template references its wireframe and a wireframe references the template it
-          implements. Built before that cycle could be resolved — matching the established
-          precedent (Website Strategy Center ↔ Internal Linking Library). Note: Page Template
-          Library was merged to <code>main</code> concurrently with this build (see §04) — its own
+          a template references its wireframe and a wireframe references the template it implements.
+          Built before that cycle could be resolved — matching the established precedent (Website
+          Strategy Center ↔ Internal Linking Library). Note: Page Template Library was merged to
+          <code>main</code> concurrently with this build (see §04) — its own
           <code>wireframeReferences</code> field is likewise unvalidated for the identical reason,
           symmetric on both sides of the cycle.
         </p>
@@ -393,18 +479,24 @@
     <div class="result-row">
       <div>
         <div class="label">Code review — high effort, 8 finder angles</div>
-        <div class="sub">Every substantive file read directly: entities, repository, service, controller, DTO, migration, models, barrel exports, app.module.ts wiring.</div>
+        <div class="sub">
+          Every substantive file read directly: entities, repository, service, controller, DTO,
+          migration, models, barrel exports, app.module.ts wiring.
+        </div>
       </div>
       <span class="badge-zero">0 findings</span>
     </div>
     <div class="result-row">
       <div>
         <div class="label">Security review</div>
-        <div class="sub">RBAC decorator placement, OriginCheckGuard coverage, URL-scheme validation, search-injection surface, confidentiality mechanism, audit-log content.</div>
+        <div class="sub">
+          RBAC decorator placement, OriginCheckGuard coverage, URL-scheme validation,
+          search-injection surface, confidentiality mechanism, audit-log content.
+        </div>
       </div>
       <span class="badge-zero">0 findings above threshold</span>
     </div>
-    <p style="color: var(--ink-muted); margin-top: 1rem; font-size: 0.92rem;">
+    <p style="color: var(--ink-muted); margin-top: 1rem; font-size: 0.92rem">
       This implementation proactively incorporates fixes discovered during <em>prior</em> sibling
       modules' review rounds rather than repeating known bug classes: method-level
       <code>@RequirePermission</code> throughout (never class-level — the exact bug Service
@@ -421,9 +513,10 @@
     <div class="note">
       <span class="lbl">Flagged for the reviewer</span>
       While this module was being built, a separate session concurrently built and merged
-      <strong>Page Template Library</strong> to <code>main</code> (migrations <code>00082</code>/<code>00083</code>) —
-      the other half of the same dependency cycle named in D3. This branch's own migrations were
-      renumbered to <code>00084</code>/<code>00085</code> to avoid a collision, and <code>origin/main</code>
+      <strong>Page Template Library</strong> to <code>main</code> (migrations
+      <code>00082</code>/<code>00083</code>) — the other half of the same dependency cycle named in
+      D3. This branch's own migrations were renumbered to <code>00084</code>/<code>00085</code> to
+      avoid a collision, and <code>origin/main</code>
       was merged into this branch afterward. The only conflicts were two barrel-export files
       (<code>index.ts</code>/<code>index.cjs.ts</code>), resolved by keeping both new export lines —
       no logic conflict. The merged branch was independently re-verified in full afterward (§05).
@@ -432,27 +525,60 @@
 
   <section>
     <h2><span class="num">05</span>Validation evidence</h2>
-    <p style="color: var(--ink-muted); margin-top: -0.4rem;">
-      Run twice — once on the branch alone, once again after merging in Page Template Library — both against a real disposable local PostgreSQL 17 database, independently re-executed by the orchestrating session rather than trusted from the build agent's own report.
+    <p style="color: var(--ink-muted); margin-top: -0.4rem">
+      Run twice — once on the branch alone, once again after merging in Page Template Library — both
+      against a real disposable local PostgreSQL 17 database, independently re-executed by the
+      orchestrating session rather than trusted from the build agent's own report.
     </p>
     <div class="card tablewrap">
       <table class="evidence">
         <thead>
-          <tr><th>Check</th><th>Result</th></tr>
+          <tr>
+            <th>Check</th>
+            <th>Result</th>
+          </tr>
         </thead>
         <tbody>
-          <tr><td>Migrations (full chain, incl. <span class="mono">00082</span>–<span class="mono">00085</span>)</td><td class="num mono">85 / 85 applied, 0 pending</td></tr>
-          <tr><td>Module registry validation</td><td class="num mono">43 modules, 21 permission groups</td></tr>
-          <tr><td>packages/database unit tests</td><td class="num mono">28 / 28</td></tr>
-          <tr><td>packages/database integration tests</td><td class="num mono">594 / 594 (31 files)</td></tr>
-          <tr><td>dashboard-api unit tests</td><td class="num mono">1,343 / 1,343 (82 files)</td></tr>
-          <tr><td>dashboard-api e2e / integration tests</td><td class="num mono">598 / 598 (31 files)</td></tr>
-          <tr><td>pnpm audit</td><td class="num mono">0 vulnerabilities</td></tr>
-          <tr><td>Typecheck / lint (--max-warnings=0)</td><td class="num mono">clean</td></tr>
+          <tr>
+            <td>
+              Migrations (full chain, incl. <span class="mono">00082</span>–<span class="mono"
+                >00085</span
+              >)
+            </td>
+            <td class="num mono">85 / 85 applied, 0 pending</td>
+          </tr>
+          <tr>
+            <td>Module registry validation</td>
+            <td class="num mono">43 modules, 21 permission groups</td>
+          </tr>
+          <tr>
+            <td>packages/database unit tests</td>
+            <td class="num mono">28 / 28</td>
+          </tr>
+          <tr>
+            <td>packages/database integration tests</td>
+            <td class="num mono">594 / 594 (31 files)</td>
+          </tr>
+          <tr>
+            <td>dashboard-api unit tests</td>
+            <td class="num mono">1,343 / 1,343 (82 files)</td>
+          </tr>
+          <tr>
+            <td>dashboard-api e2e / integration tests</td>
+            <td class="num mono">598 / 598 (31 files)</td>
+          </tr>
+          <tr>
+            <td>pnpm audit</td>
+            <td class="num mono">0 vulnerabilities</td>
+          </tr>
+          <tr>
+            <td>Typecheck / lint (--max-warnings=0)</td>
+            <td class="num mono">clean</td>
+          </tr>
         </tbody>
       </table>
     </div>
-    <p style="color: var(--ink-muted); font-size: 0.88rem; margin-top: 0.7rem;">
+    <p style="color: var(--ink-muted); font-size: 0.88rem; margin-top: 0.7rem">
       One prettier flag surfaced on the three merge-conflict-resolution files (CRLF line endings) —
       confirmed, by checking untouched pre-existing files, to be a repo-wide Windows-checkout
       artifact rather than something this branch introduced. Left untouched.
@@ -463,9 +589,9 @@
     <div class="decision-panel">
       <h3>Decision needed</h3>
       <p>
-        This is the required second-role human review under ADR-0010 — the implementing agent
-        cannot also be its own reviewer. Code review and security review are both complete with
-        zero open findings; nothing is pending a fix.
+        This is the required second-role human review under ADR-0010 — the implementing agent cannot
+        also be its own reviewer. Code review and security review are both complete with zero open
+        findings; nothing is pending a fix.
       </p>
       <p>
         Please record one of: <strong>Approved</strong> · <strong>Approved as-is</strong> (accepting
@@ -475,7 +601,6 @@
       </p>
     </div>
   </section>
-
 </main>
 
 <footer>
