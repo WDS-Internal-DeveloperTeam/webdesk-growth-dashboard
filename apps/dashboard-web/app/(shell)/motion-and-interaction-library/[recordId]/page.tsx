@@ -22,6 +22,7 @@ import {
   getMotionInteractionRecordVersions,
   motionInteractionApprovalStatusBadge,
 } from "@/lib/motion-and-interaction-library";
+import { buildNameById, resolveIdsToNames } from "@/lib/resolve-ids-to-names";
 import { isSafeHttpUrl } from "@/lib/safe-http-url";
 import { getServerSession } from "@/lib/server-session";
 
@@ -92,12 +93,12 @@ export default async function MotionAndInteractionLibraryDetailPage({
   // Newest first for display — the backend returns oldest first (its own natural insertion order).
   const versionsNewestFirst = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
 
-  const componentNameById = new Map(
-    components.map((component) => [component.recordId, component.name]),
+  const componentNameById = buildNameById(
+    components,
+    (component) => component.recordId,
+    (component) => component.name,
   );
-  const relatedComponentNames = record.relatedComponentIds.map(
-    (id) => componentNameById.get(id) ?? id,
-  );
+  const relatedComponentNames = resolveIdsToNames(record.relatedComponentIds, componentNameById);
 
   return (
     <ContentContainer>
@@ -262,9 +263,7 @@ function VersionEntry({
   readonly componentNameById: ReadonlyMap<string, string>;
 }) {
   const badge = motionInteractionApprovalStatusBadge(version.approvalStatus);
-  const relatedComponentNames = version.relatedComponentIds.map(
-    (id) => componentNameById.get(id) ?? id,
-  );
+  const relatedComponentNames = resolveIdsToNames(version.relatedComponentIds, componentNameById);
   // Uses the version row's own isCurrent field (populated by the same GET .../:recordId/versions
   // response every entry here already comes from) rather than comparing this row's id against a
   // SEPARATE, independently-timed getMotionInteractionRecord() fetch — the two requests aren't

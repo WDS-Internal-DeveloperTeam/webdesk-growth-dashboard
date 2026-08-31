@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import type { MotionInteractionApprovalStatus } from "@webdesk/shared-types";
 import { parseApiErrorMessage } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
+import { useSyncedState } from "@/lib/use-synced-state";
 import styles from "./motion-interaction-status-actions.module.css";
 
 export interface MotionInteractionStatusActionsProps {
@@ -91,7 +92,7 @@ export function MotionInteractionStatusActions({
   approvalStatus: initialStatus,
 }: MotionInteractionStatusActionsProps): ReactNode {
   const router = useRouter();
-  const [approvalStatus, setApprovalStatus] = useState(initialStatus);
+  const [approvalStatus, setApprovalStatus] = useSyncedState(initialStatus);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<MotionInteractionApprovalStatus | null>(null);
 

@@ -7,7 +7,7 @@ import { RelationshipPicker, type RelationshipOption } from "@webdesk/ui";
 import { postMutation } from "@/lib/api-errors";
 import { getApiBaseUrl } from "@/lib/auth";
 import { CATEGORY_LABEL, CATEGORY_VALUES } from "@/lib/motion-and-interaction-library-query";
-import { findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
+import { arrayFieldValue, findOverLongRichTextField, richTextFieldValue } from "@/lib/rich-text";
 import { isSafeHttpUrl } from "@/lib/safe-http-url";
 import { RichTextEditor } from "./rich-text-editor";
 import styles from "./motion-interaction-library-form.module.css";
@@ -175,8 +175,7 @@ export function MotionInteractionLibraryForm(props: MotionInteractionLibraryForm
       }
 
       function arrayField(values: readonly string[]): readonly string[] | null | undefined {
-        if (values.length > 0) return values;
-        return props.mode === "create" ? undefined : null;
+        return arrayFieldValue(values, props.mode);
       }
 
       const sharedFields = {
