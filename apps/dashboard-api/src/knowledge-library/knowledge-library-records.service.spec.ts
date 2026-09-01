@@ -115,6 +115,14 @@ describe("KnowledgeLibraryRecordsService", () => {
       await service.create({ title: "x" }, "user-1");
       expect(usersService.assertUserExists).not.toHaveBeenCalled();
     });
+
+    it("sanitizes notes before writing it, per the 2026-08-22 RichTextEditor standing rule", async () => {
+      repository.create.mockResolvedValue(record());
+      await service.create({ title: "x", notes: "<p>Safe</p><script>alert(1)</script>" }, "user-1");
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ notes: "<p>Safe</p>" }),
+      );
+    });
   });
 
   describe("findById", () => {
@@ -212,6 +220,26 @@ describe("KnowledgeLibraryRecordsService", () => {
         service.update("missing", { ownerUserId: "owner-2" }, "user-2"),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(usersService.assertUserExists).not.toHaveBeenCalled();
+    });
+
+    it("sanitizes a changed notes value before writing it", async () => {
+      repository.findById.mockResolvedValue(record({ notes: "<p>Old</p>" }));
+      repository.update.mockResolvedValue(record({ notes: "<p>New</p>" }));
+      await service.update("record-1", { notes: "<p>New</p><script>alert(1)</script>" }, "user-2");
+      expect(repository.update).toHaveBeenCalledWith(
+        "record-1",
+        expect.objectContaining({ notes: "<p>New</p>" }),
+      );
+    });
+
+    it("skips re-sanitizing notes when the patch resends the unchanged, already-sanitized value", async () => {
+      repository.findById.mockResolvedValue(record({ notes: "<p>Unchanged</p>" }));
+      repository.update.mockResolvedValue(record({ notes: "<p>Unchanged</p>" }));
+      await service.update("record-1", { notes: "<p>Unchanged</p>" }, "user-2");
+      expect(repository.update).toHaveBeenCalledWith(
+        "record-1",
+        expect.objectContaining({ notes: "<p>Unchanged</p>" }),
+      );
     });
   });
 

@@ -2076,3 +2076,48 @@ export interface PortfolioAsset {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/** D3 — Business Knowledge Center's own 5-value vocabulary with `restricted` removed, since
+ *  confidentiality is now a real, separate field (`KnowledgeLibraryRecordConfidentiality` below) —
+ *  unlike Business Knowledge Center, where `restricted` doubles as both lifecycle and
+ *  confidentiality. `deprecated` is terminal (no hard delete, ADR-0016). */
+export type KnowledgeLibraryRecordStatus = "draft" | "mandatory" | "advisory" | "deprecated";
+
+/** D1 — a real, separate confidentiality enum (Service Library's own already-reviewed pattern),
+ *  independent of `status` — a record may be `restricted` at any lifecycle stage, including
+ *  `draft`. */
+export type KnowledgeLibraryRecordConfidentiality = "public" | "internal" | "restricted";
+
+/**
+ * The Knowledge Library module's single primary entity — every route (`list`/`findOne`/`create`/
+ * `update`/`changeStatus`) returns this exact shape, matching Business Knowledge Center's own
+ * single-table design (D2). A `restricted` record's `sourceType`/`location`/`notes` may be
+ * redacted for a viewer without a real `view_confidential` grant (currently every viewer, since
+ * that action is zero-seeded for every role) — `undefined` means redacted, `null` means a real,
+ * visible record with that field genuinely unset, matching `Service.internalDescription`'s own
+ * redaction contract, not `BusinessKnowledgeRecord.content`'s status-tied one. */
+export interface KnowledgeLibraryRecord {
+  readonly id: string;
+  readonly title: string;
+  readonly sourceType: string | null | undefined;
+  readonly location: string | null | undefined;
+  readonly ownerUserId: string | null;
+  /** `DATEONLY` — a plain `YYYY-MM-DD` string, not a `Date` instance. */
+  readonly sourceDate: string | null;
+  readonly confidentiality: KnowledgeLibraryRecordConfidentiality;
+  /** D10 — no enforcement point exists yet anywhere in this codebase; stored, not yet acted on. */
+  readonly approvedForAgentUse: boolean;
+  readonly status: KnowledgeLibraryRecordStatus;
+  readonly notes: string | null | undefined;
+  /** D7 — a plain, unvalidated string array; "related entities" isn't scoped to any single other
+   *  module in the spec, so no existence-check target exists. */
+  readonly relatedEntityIds: readonly string[];
+  /** D8 — a server-managed integer counter incremented on every real `update()` call, mirroring
+   *  Persona Library's own pattern (not real multi-row version history). */
+  readonly version: number;
+  readonly lastReviewedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
