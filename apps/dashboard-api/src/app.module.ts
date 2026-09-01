@@ -11,6 +11,7 @@ import { AuthzModule } from "./authz/authz.module.js";
 import { BrandLibraryModule } from "./brand-library/brand-library.module.js";
 import { AssetLibraryModule } from "./asset-library/asset-library.module.js";
 import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
+import { CaseStudyLibraryModule } from "./case-study-library/case-study-library.module.js";
 import { CaseStudyStudioModule } from "./case-study-studio/case-study-studio.module.js";
 import { ComponentLibraryModule } from "./component-library/component-library.module.js";
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
@@ -77,6 +78,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     BrandLibraryModule,
     AssetLibraryModule,
     BusinessKnowledgeModule,
+    CaseStudyLibraryModule,
     CaseStudyStudioModule,
     ComponentLibraryModule,
     ContentTemplateLibraryModule,
