@@ -3,7 +3,8 @@
 **Status:** Code review complete (high-effort 8-angle finder pass — 5 candidates, 2 CONFIRMED
 fixed, 3 PLAUSIBLE, 2 fixed and 1 accepted as tracked debt). Security review complete (0 findings
 above threshold). Required second-role human review complete — Jitesh D, "Approved," no disputes
-raised. Gate decision, push, and merge remain each a separate, not-yet-requested next step.
+raised. Gate (G4-design-review-center) approved — WebDesk Solution, decision CONFIRM. Push and
+merge remain each a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -89,4 +90,10 @@ implementing agent cannot also be its own reviewer (ADR-0010). **Jitesh D review
 "Approved,"** no disputes raised — both open PLAUSIBLE findings (accepted as tracked debt) and the
 one CONFIRMED efficiency finding were left as recorded.
 
-Gate decision, push, and merge: each remains its own separate, not-yet-requested next step.
+Gate decision: **G4-design-review-center approved** — WebDesk Solution, decision CONFIRM (clean
+pass, not an override, since the second-role review was already complete before the gate was
+requested), approved commit `c706b66` on branch `module-design-review-center`. See
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-design-review-center`). This gate approval does not itself authorize pushing the branch,
+opening a PR, or merging — each remains its own separate, not-yet-requested authorization, per
+this project's standing "no auto-merge" rule.
