@@ -2,8 +2,9 @@
 
 **Status:** Built, fully validated. Reviewed at light tier (0 findings) per this project's
 2026-08-27 "right-size the review pipeline" standing rule. Required second-role human review
-complete. Gate `G4-dashboard-web-design-review-center` approved (WebDesk Solution, CONFIRM). Not
-yet pushed, opened as a PR, or merged.
+complete. Gate `G4-dashboard-web-design-review-center` approved (WebDesk Solution, CONFIRM).
+Merged ([PR #91](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/91),
+merge commit `2814c06a7b816659060c52662f54a533cf99e8a0`) — **now genuinely live in production.**
 
 ## Completion condition
 
@@ -73,5 +74,21 @@ on this branch to accept as tracked debt.
 `dashboard-web-design-review-center`. See `outputs/webdesk-growth-dashboard/project.json`'s
 `gates[]` (`current_gate` now `G4-dashboard-web-design-review-center`).
 
-**This gate approval does not itself authorize opening a PR or merging** — each remains its own
-separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+**"Push the branch" and "Open a PR" were then separately requested and executed** — pushed to
+`origin`, opened as
+[PR #91](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/91). A
+concurrent merge conflict against `origin/main` (Case Study Studio's own backend + UI, PRs
+#88/#90) was resolved by merging `origin/main` in and fully re-validating (1409/1409
+`dashboard-web` unit tests, typecheck/lint/CSS-token-check/`next build`/`prettier --check` all
+clean). **"Check CI status and merge" was then separately requested and executed** — all 14 CI
+checks confirmed green, merged with a real merge commit (not squash/rebase), matching every prior
+merge in this project's history — merge commit
+`2814c06a7b816659060c52662f54a533cf99e8a0`. Both Vercel projects auto-deployed on push to `main`
+and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+`/health` returned `build.commitSha ==
+2814c06a7b816659060c52662f54a533cf99e8a0`, confirming the exact merged commit is what's serving;
+`GET /design-reviews` returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`,
+which would mean the module never actually deployed); and `dashboard-web`'s
+`/design-review-center` correctly redirects (307) an unauthenticated visitor to
+`/auth/sign-in`. **The `dashboard-web` Design Review Center UI is now genuinely live in
+production**, closing out this slice's full build-to-production arc.
