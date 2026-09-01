@@ -3767,6 +3767,76 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     production**, closing out this slice's full build-to-production arc — backend and now the full
     UI (list, detail, create/edit form) are both live for the Case Study Library module.
 
+66. **Portfolio Library module #25 backend — built, reviewed, gated, pushed as
+    [PR #94](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/94), all
+    14 CI checks green — merge in progress (2026-09-01).** Built directly on the explicit "take
+    pull and start the portfolio library" instruction, using migration numbers `00095`/`00096` per
+    the user's own explicit instruction (numbers `00093`/`00094` were reserved by concurrent
+    in-flight work, later landing as Case Study Library). Four design forks confirmed directly with
+    the user first (`AskUserQuestion`): screenshots as a real many-to-many join into the
+    already-live `assets` table (`portfolio_assets`, mirroring `case_study_assets`) rather than a
+    plain array; `relatedProofIds` as a real existence-validated array against `proof_claims` via
+    `ClaimsService.existingClaimIds()`; `visibility` reusing Case Study Studio's own 4-value
+    vocabulary; and a real, orthogonal publish/unpublish mechanism (mirroring Content Template
+    Library's own `isPublished`/`publishedAt` CAS pattern) for the seeded `portfolio` RBAC group's
+    unused `P` grant — the user chose the fuller/recommended option in all four. Organization-wide,
+    no `recordType` discriminator (a single flat field list per the spec). **The build itself, and
+    all review that followed, ran directly against a real disposable local PostgreSQL 17 database**
+    using credentials the user supplied directly in chat (not via any file/env var Claude could
+    read unprompted) — a genuine departure from most prior modules' build-time database access,
+    since no local Postgres connection had been available to earlier sessions. A first
+    build-agent pass left the DB-backed suites unverified (no working local credentials at that
+    point); once the user shared them, the full migration `up`/`down`/`up` round-trip, the 33
+    `packages/database` integration tests, and the 31 `dashboard-api` e2e tests were all run for
+    real — surfacing and fixing 2 genuine e2e-test-authoring bugs (two tests sent a bare
+    `randomUUID()` as `assetId` and expected `201`, when `PortfolioAssetsService.create()`
+    correctly rejects a nonexistent `assetId` with `400`, D2's own existence-validation design
+    working exactly as specified — fixed by seeding real `assets` fixtures via
+    `AssetRepository.create()`, mirroring `case-study-studio.e2e-spec.ts`'s own fixture pattern).
+    **Independent code review** (high effort, 8-angle finder pass) surfaced 8 findings kept after
+    dedup — 5 fixed (`relatedProofIds` retyped to a UUID array at the DTO layer; a duplicated
+    empty-patch `.refine()` validator extracted into a shared `rejectEmptyPatch()` helper; a
+    triplicated "log, don't throw" audit try/catch extracted into a shared `recordAuditSafely()`
+    private method; a redundant IDOR pre-check in `PortfolioAssetsService.remove()` removed, since
+    the already-scoped repository call independently enforces the identical compound-`WHERE`
+    scoping), 1 attempted fix reverted after it broke an existing unit test — parallelizing
+    `publish()`'s sequential `findById()`/`assertAllowed()` calls via `Promise.all` turned out to
+    be incorrect, not an improvement: the sequential order is deliberate, letting a non-approved
+    record fail with the more specific `400` without ever needing "publish" permission at all — and
+    3 left as accepted, tracked debt, each byte-identical to an already-established, repo-wide
+    convention shared by 5+ sibling modules (`update()`'s `Promise.all` 404-vs-400 race inherited
+    from `PersonasService.update()`'s/`ServicesService.update()`'s own identical shape;
+    `changeApprovalStatus()`'s same-status no-op bypassing the RBAC check, matching Content
+    Template Library's/Brand Library's own identical ordering; `updatePublishState()`'s adjacent
+    boolean parameters, matching `ContentTemplateRepository.updatePublishState()`'s own identical
+    signature verbatim). **Security review** (reviewed directly against the diff — guard/decorator
+    placement, mass-assignment exclusions, IDOR scoping, input validation, raw-SQL safety) found
+    **0 findings above threshold** — no new attack surface, every security-relevant mechanism
+    reused from already-vetted sibling modules. Everything re-validated after the fix round and
+    again after building the module on its own dedicated branch (`module-portfolio-library`,
+    created after the fact — the initial build happened directly on `main`, corrected before
+    committing) and merging in `origin/main`'s concurrent Case Study Library work (a real merge
+    conflict in both `packages/database` barrel files and `project.json`'s gate/audit-log arrays,
+    resolved by keeping both sides' entries and re-sequencing version counters — a 96-migration
+    round-trip re-confirmed clean afterward). Final numbers: 52/52 `dashboard-api` unit tests,
+    33/33 `packages/database` integration tests, 31/31 `dashboard-api` e2e tests,
+    `validate:module-registry` (43 modules, 21 permission groups), typecheck/lint/prettier all
+    clean. See `docs/implementation/module-portfolio-library.md` and
+    `docs/project-state/module-portfolio-library-approval-checklist.md` for the full account.
+    **Required second-role human review complete** — WebDesk Solution, "Approve (CONFIRM)," no
+    disputes raised, accepting the 3 open tracked-debt findings as-is. **The gate
+    (G4-portfolio-library) was then separately requested and approved** — WebDesk Solution,
+    decision CONFIRM, approved commit `3fde438` on branch `module-portfolio-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-portfolio-library`). **"Push the branch" and "Open a PR" were then separately requested
+    and executed** — pushed to `origin`, opened as
+    [PR #94](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/94), all
+    14 CI checks confirmed green. **"Merge PR #94" was then requested** — a real merge conflict
+    against `main` (a second concurrent slice, `dashboard-web-case-study-library`, had merged in
+    the meantime) is being resolved before completing the merge. No `dashboard-web` UI exists yet
+    for this module — a separate, not-yet-requested next step, matching every prior module's own
+    backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
