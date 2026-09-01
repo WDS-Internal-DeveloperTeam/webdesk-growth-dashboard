@@ -162,6 +162,17 @@ export class PagesService {
     return page !== null && page.projectId === projectId;
   }
 
+  /** A narrow, read-only delegating method for another module's own org-wide existence check —
+   *  mirrors `ServicesService.existingServiceIds()`'s own already-established shape, not the
+   *  write-capable `PAGE_REPOSITORY` token directly. Deliberately org-wide (no project filter),
+   *  unlike `existsInProject()` above — a case study can legitimately reference a page in any
+   *  project. Consumed by Case Study Library's `CaseStudyLibraryService` to validate
+   *  `relatedPageIds`. */
+  async existingPageIds(ids: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.pages.findByIds(ids);
+    return new Set(found.map((row) => row.id));
+  }
+
   async update(
     id: string,
     projectId: string,

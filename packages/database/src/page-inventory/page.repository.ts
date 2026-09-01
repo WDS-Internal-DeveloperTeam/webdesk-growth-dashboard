@@ -83,6 +83,18 @@ export class PageRepository {
     return instance ? toEntityWithIsoDates<PageEntity>(instance) : null;
   }
 
+  /** Existence check for a set of page ids, org-wide (no project filter) — mirrors
+   *  `ServiceRepository.findByIds()`'s own shape. Added so another module (Case Study Library's
+   *  `relatedPageIds`) can validate real, existing pages without duplicating this query — a case
+   *  study can legitimately reference a page in any project. */
+  async findByIds(ids: readonly string[]): Promise<readonly PageEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({ where: { id: ids } });
+    return rows.map((row) => toEntityWithIsoDates<PageEntity>(row));
+  }
+
   async findByPublicId(publicId: string): Promise<PageEntity | null> {
     const instance = await this.model.findOne({ where: { publicId } });
     return instance ? toEntityWithIsoDates<PageEntity>(instance) : null;
