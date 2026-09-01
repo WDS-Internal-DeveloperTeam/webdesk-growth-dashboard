@@ -3847,9 +3847,8 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     enforcing — not a `404`, which would mean the module never actually deployed); and
     `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
     unauthenticated visitor, confirming the session gate is intact. **The Portfolio Library module
-    backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
-    module — a separate, not-yet-requested next step, matching every prior module's own
-    backend-first precedent.
+    backend is now genuinely live in production.** No `dashboard-web` UI existed yet for this
+    module at the time — see item 68 below for its own build-to-production arc.
 
 67. **Knowledge Library module backend — built, reviewed, gated, pushed (2026-09-01).** Module
     #28 on the Recommended Module Roadmap — a Wave 1 module with no dependencies. Built directly on
@@ -3916,9 +3915,72 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     pushed to `origin`. **This gate approval does not itself authorize opening a PR or merging** —
     each remains its own separate, not-yet-requested authorization, per this project's standing
     "no auto-merge" rule. **Update (2026-09-01): the `dashboard-web` UI has since been built and
-    gated — see item 68 below.**
+    gated — see item 69 below.**
 
-68. **`dashboard-web` Knowledge Library UI — built, reviewed, gated, pushed (2026-09-01).** Closes
+68. **`dashboard-web` Portfolio Library UI — built, code-reviewed, pushed, and merged
+    ([PR #95](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/95),
+    merge commit `985158c7c9c98d48478b3a030618f1f4eec7b3b5`); now genuinely live in production
+    (2026-09-01).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #94, item 66 above). Not started automatically — built directly on
+    the explicit "Start the dashboard-web UI for it" instruction. No approved wireframe exists for
+    this module — mirrors Design Reference Library's UI structure (closest sibling — same 8-value
+    approval workflow plus an identical publish/unpublish mechanism) combined with Case Study
+    Studio's `case_study_assets` sub-resource pattern for the new `PortfolioScreenshotsSection`
+    (a real many-to-many join into Asset Library's `assets` table, `role`/`caption` editable
+    in-place — `role` is a plain free-text input, not a closed `<select>`, since no fixed
+    screenshot-role taxonomy is named anywhere in the canonical spec for this module, unlike
+    `CaseStudyAssetRole`). No long-text/rich-text fields exist on this module's schema at all
+    (every text field is `z.string().max(255)`), so no `RichTextEditor` wiring was needed — the
+    only module built since the 2026-08-22 standing rule for which that's true. Four routes under
+    `app/(shell)/portfolio-library/` (list, detail, create, edit); `relatedProofIds` is a real
+    `RelationshipPicker` against Proof and Claims Library, including the raw-id-fallback-chip
+    behavior for a selected id outside the picker's 100-row fetch window. New
+    `packages/shared-types`: `PortfolioRecord`/`PortfolioAsset`/`PortfolioApprovalStatus`/
+    `PortfolioVisibility`. **Independent code review then ran** (this project's own `code-review`
+    skill, medium effort, 8-angle finder pass via parallel subagents) — several of the 8 finder
+    agents lacked real tool access in this run and returned speculative, unconfirmed hypotheses
+    rather than line-verified findings (disclosed explicitly by those agents themselves rather than
+    silently reported as fact); every candidate from every angle was independently re-verified
+    directly against the real committed code before being trusted. 4 candidates survived
+    verification: 2 fixed — the detail page rendered `record.url` as a clickable `<a href>` with no
+    client-side `isSafeHttpUrl()` guard, and used `rel="noreferrer"` instead of
+    `"noopener noreferrer"`, both real deviations from every sibling detail page that renders a
+    stored URL (the exact defense-in-depth convention this codebase adopted after `ProjectEnvironment.url`'s
+    own historical stored-XSS finding) — fixed to match. 2 left as accepted, inherited debt,
+    verified byte-identical to already-shipped sibling code, not new to this diff:
+    `getPortfolioDetail()`'s `tolerateDiscard()` on the screenshots sub-fetch not actually isolating
+    a transient failure (identical to `getCaseStudyDetail()`'s own shape in
+    `case-study-studio.ts`), and a dead `response.status !== 204` clause in the screenshot-remove
+    handler (identical to `case-study-assets-section.tsx`'s/`claim-sources-section.tsx`'s own). No
+    separate security-review skill run — a small, frontend-only slice consuming an already-reviewed,
+    already-gated backend with no new endpoint, matching the 2026-08-27 "right-size the review
+    pipeline" standing rule. 265/265 `dashboard-web` unit tests overall (71 new: 16 query, 13 lib,
+    11 status-actions, 12 publish-actions, 8 screenshots-section, 11 form), typecheck/lint/
+    CSS-token-check (77 files)/`next build` (all 4 routes present)/prettier all clean —
+    independently re-run after the fix round. Live-rendered in the Browser pane: `/portfolio-library`
+    and the already-shipped `/projects` route were both confirmed to redirect an unauthenticated
+    visitor to `/auth/sign-in` with the identical, pre-existing `NEXT_PUBLIC_API_BASE_URL is not
+configured` console error on both — a local-environment limitation shared with every other module
+    in this app, not something this branch introduced. **Unlike every prior module this session,
+    no explicit second-role human review or gate decision was separately requested before merge** —
+    "Push the branch and open a PR," "Check CI status on the PR," and "Merge PR #95" were each
+    given as their own direct instructions in immediate succession, with the code review above as
+    the only review step actually run. All 14 CI checks were confirmed green
+    (`gh pr checks 95`) before merging with a real merge commit (not squash/rebase), matching every
+    prior merge in this project's history — merge commit
+    `985158c7c9c98d48478b3a030618f1f4eec7b3b5`. A concurrent PR (#96, Knowledge Library, item 67
+    above) landed on `main` immediately afterward; both Vercel projects auto-deployed on the
+    combined push and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` confirmed `985158c` is a real ancestor of the currently-serving
+    commit (`b406718`, PR #96's own merge); `GET /portfolio-library/records` returned a clean `401`
+    (route live, `SessionGuard` enforcing — not a `404`, which would mean the module never actually
+    deployed); and `dashboard-web`'s `/portfolio-library` correctly redirects (307) an
+    unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Portfolio Library UI is now
+    genuinely live in production**, closing out this slice's full build-to-production arc — backend
+    and now the full UI (list, detail, create/edit form, status actions, publish/unpublish actions,
+    screenshots sub-resource editing) are both live for the Portfolio Library module.
+
+69. **`dashboard-web` Knowledge Library UI — built, reviewed, gated, pushed (2026-09-01).** Closes
     this module's last named gap, following the backend's own build-to-production arc
     (PR #96, gate `G4-knowledge-library`). Built directly on the explicit "Start the dashboard-web
     UI for it" instruction. No approved wireframe exists for this module
@@ -6821,9 +6883,53 @@ c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is
   (`current_gate` now `G4-knowledge-library`). **"Push the branch" was then separately requested
   and executed** — pushed to `origin`. This gate approval does not itself authorize opening a PR or
   merging.
+- `[2026-09-01]` **Built the `dashboard-web` UI for Portfolio Library**, under the explicit "Start
+  the dashboard-web UI for it" instruction, closing this module's last named gap following the
+  backend's own build-to-production arc (PR #94, item 66). Mirrors Design Reference Library's UI
+  structure plus Case Study Studio's `case_study_assets` sub-resource pattern for the new
+  `PortfolioScreenshotsSection`. No long-text/rich-text fields exist on this module's schema at
+  all, so no `RichTextEditor` wiring was needed. New `packages/shared-types`:
+  `PortfolioRecord`/`PortfolioAsset`/`PortfolioApprovalStatus`/`PortfolioVisibility`. Committed to
+  branch `dashboard-web-portfolio-library`.
+- `[2026-09-01]` **Independent code review run on `dashboard-web-portfolio-library`** (this
+  project's own `code-review` skill, medium effort, 8-angle finder pass via parallel subagents).
+  Several finder agents lacked real tool access in this run and returned speculative, unconfirmed
+  hypotheses rather than line-verified findings — disclosed explicitly by those agents themselves;
+  every candidate from every angle was independently re-verified directly against the real
+  committed code before being trusted, not taken on faith. 4 candidates survived verification: 2
+  fixed (the detail page's `record.url` link had no client-side `isSafeHttpUrl()` guard and used
+  `rel="noreferrer"` instead of `"noopener noreferrer"`, both real deviations from every sibling
+  detail page that renders a stored URL), 2 left as accepted, inherited debt verified
+  byte-identical to already-shipped sibling code (`getPortfolioDetail()`'s `tolerateDiscard()` not
+  actually isolating the screenshots sub-fetch, and a dead `response.status !== 204` clause in the
+  screenshot-remove handler). No separate security-review skill run — a small, frontend-only slice
+  consuming an already-reviewed, already-gated backend, matching the 2026-08-27 "right-size the
+  review pipeline" standing rule. 265/265 `dashboard-web` unit tests (71 new), typecheck/lint/
+  CSS-token-check/`next build`/prettier all clean, independently re-run after the fix round.
+- `[2026-09-01]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-portfolio-library` — pushed to `origin`, opened as
+  [PR #95](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/95).
+  **"Check CI status on the PR" was then separately requested** — all 14 checks confirmed green
+  (`gh pr checks 95`), including both Vercel preview deployments. **Unlike every prior module this
+  session, no explicit second-role human review or gate decision was separately requested before
+  merge** — these three instructions were given in immediate succession, with the code review
+  above as the only review step actually run.
+- `[2026-09-01]` **"Merge PR #95" was separately requested and executed.** Merged with a real merge
+  commit (not squash/rebase), matching every prior merge in this project's history — merge commit
+  `985158c7c9c98d48478b3a030618f1f4eec7b3b5`. A concurrent PR (#96, Knowledge Library) landed on
+  `main` immediately afterward; both Vercel projects auto-deployed on the combined push and were
+  verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s `/health`
+  confirmed `985158c` is a real ancestor of the currently-serving commit (`b406718`, PR #96's own
+  merge, confirmed via `git merge-base --is-ancestor`); `GET /portfolio-library/records` returned a
+  clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean the module
+  never actually deployed); and `dashboard-web`'s `/portfolio-library` correctly redirects (307) an
+  unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Portfolio Library UI is now
+  genuinely live in production**, closing out this slice's full build-to-production arc — backend
+  and now the full UI (list, detail, create/edit form, status actions, publish/unpublish actions,
+  screenshots sub-resource editing) are both live for the Portfolio Library module.
 - `[2026-09-01]` **Built the `dashboard-web` UI for Knowledge Library**, under the explicit "Start
   the dashboard-web UI for it" instruction, closing this module's last named gap. Full account in
-  item 68 above. Mirrors Business Knowledge Center's/Persona Library's UI structure file-for-file;
+  item 69 above. Mirrors Business Knowledge Center's/Persona Library's UI structure file-for-file;
   `notes` converted to `RichTextEditor` per the 2026-08-22 standing rule with a paired backend
   sanitization change (DTO cap 10,000 → 20,000). Committed to branch
   `dashboard-web-knowledge-library`.
