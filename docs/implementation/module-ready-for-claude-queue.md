@@ -215,6 +215,69 @@ surprising and would otherwise look like a bug to the next reader.
 | `pnpm audit --audit-level=high`                    | 0 vulnerabilities                               |
 | `boundaries:check` (dependency-cruiser)            | 0 violations                                    |
 
+### Independent code review — high effort, 8-angle finder pass, 1-vote verification
+
+7 candidates survived dedup and verification, **all 7 CONFIRMED, all 7 fixed** (commit `ec29767`):
+
+1. **`changeStatus()` had no separation-of-duties check on `review`/`approve` transitions.** The
+   module's own original doc comment argued this was unnecessary since "no role holds both `submit`
+   and `approve`" — factually wrong, since `user_roles` has no one-role-per-user constraint
+   (`00012-create-user-roles.ts`), so a user holding both a submit-capable role and
+   `super_admin`/`owner_growth_approver` simultaneously could self-approve. Fixed by wiring
+   `SeparationOfDutiesService.assertDistinctActors()` (already exported by the already-imported
+   `AuthModule`) into `changeStatus()`, comparing the actor against `current.createdBy`.
+2. **`productionApproval`/`productionApproverUserId` were plain content fields writable through the
+   generic `edit`-gated `PATCH .../tasks/:id` route** — any of the four mid-tier roles (hold `edit`,
+   never `approve`) could fabricate a production sign-off with zero involvement of the real,
+   `approve`-gated `TRANSITIONS` table. Fixed by removing both from `createReadyForClaudeTaskSchema`/
+   `updateReadyForClaudeTaskSchema` and `ReadyForClaudeTaskContentFields` entirely (server-managed,
+   like `status`); `ReadyForClaudeTaskRepository.updateStatus()` now stamps both atomically, in the
+   same `UPDATE`, only when `nextStatus === "completed"` — reachable only via the `approve` action.
+3. **The `dependencies` "must complete before this one" contract was validated for existence only,
+   never actually enforced.** Fixed with a new `assertDependenciesCompleted()` check, applied at the
+   one transition where it matters — `claimed -> in_progress` ("start") — not at every earlier,
+   purely-administrative transition a task may legitimately reach before its blockers finish.
+4. **`targetModuleKey`'s Zod schema was missing `.min(1)`**, so an empty string silently skipped
+   `assertValidTargetModuleKey()`'s truthy-check guard and got persisted — neither `null` nor a real
+   module key. Fixed by adding `.min(1)` to all three schemas that declare the field (create, update,
+   list-query).
+5. **`assertDependenciesExist()` issued one `existsById()` query per dependency id** (up to 50,
+   concurrent but still N round trips) instead of one batched `IN (...)` query. Fixed with a new
+   `ReadyForClaudeTaskRepository.existingIds()` method, mirroring `ServiceRepository.findByIds()`'s
+   own established pattern.
+6. **`unwrapCasResult()` was a third independent hand-copy** of the identical CAS-outcome-unwrapping
+   helper already duplicated in `ReviewsService`/`DesignReviewsService`. Extracted into a new shared
+   `apps/dashboard-api/src/common/cas-result.util.ts` — used by this module only; the two
+   pre-existing sibling copies are deliberately left as-is, matching this codebase's own repeated
+   practice of not retrofitting an extraction onto already-shipped siblings in the same pass.
+7. **`updateReadyForClaudeTaskSchema` hand-duplicated all ~26 fields** from
+   `createReadyForClaudeTaskSchema` instead of deriving via `.omit({publicId, projectId}).partial()`
+   — the pattern at least 7 sibling DTOs already use. Fixed by deriving it.
+
+Re-validated after the fix round: 767/767 `@webdesk/database` integration tests (4 new), 1634/1634
+`dashboard-api` unit tests (8 new — separation-of-duties rejection/skip cases, dependency-completion
+blocking/allowing/scoping), 764/764 `dashboard-api` integration/e2e tests (unchanged, confirms no
+regression), a fresh migration round-trip (100 executed / 0 pending), `validate:module-registry`
+unaffected, typecheck/lint/prettier all clean, `pnpm audit` 0 vulnerabilities.
+
+### Security review — 0 findings above threshold
+
+A dedicated pass, focused specifically on the second commit's own changes (the separation-of-duties
+wiring, the `productionApproval` server-management fix, the new `existingIds()` batched query, and
+the `targetModuleKey` fix). Confirmed: no residual path exists to set `productionApproval`/
+`productionApproverUserId` outside `updateStatus()` (the DTO types structurally lack them, Zod's
+default `strip` mode would drop them even if sent, and the repository `update()` input type excludes
+them too); `existingIds()`'s `where: { id: ids }` is Sequelize's standard parameterized `IN (...)`
+shorthand, not string interpolation — no injection surface, and `ids` is additionally bounded by
+`z.array(z.string().uuid()).max(50)` before it ever reaches the query; a caller cannot use a
+fabricated `expectedStatus` to obtain a cheaper RBAC action than a transition actually requires,
+since the atomic CAS write only succeeds when `expectedStatus` matches the row's true current
+status; the status route's baseline-`view`-plus-dynamic-check pattern was confirmed to have no
+skip branch. One informational, sub-threshold note recorded (not a finding): the human-readable
+production-tracking text fields (`productionCommit`, `productionVerification`, etc.) remain
+editable via the generic `edit` action at any workflow stage — consistent with the module's own
+documented design (D8), not an RBAC bypass.
+
 ### Not built (each its own separate, not-yet-requested step)
 
 - No `dashboard-web` UI (D8).
@@ -222,4 +285,5 @@ surprising and would otherwise look like a bug to the next reader.
   own dependency note: this module's field list never references a template id.
 - No automatic execution, dispatch, or Anthropic API call of any kind — V1 is manual Claude Code
   execution, per the roadmap's own critical rule.
-- Independent code review, security review, second-role human review, and a gate decision.
+- Second-role human review, a gate decision, push/PR, and merge — each a separate,
+  not-yet-requested next step.
