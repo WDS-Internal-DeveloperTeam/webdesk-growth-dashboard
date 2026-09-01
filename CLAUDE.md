@@ -4113,9 +4113,10 @@ targetId)` shape Review and Approval Center already established (validated again
     commit `ec29767` on branch `module-ready-for-claude-queue` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-ready-for-claude-queue`). **"Push the branch" was then separately requested and
-    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR or
-    merging** — each remains its own separate, not-yet-requested authorization, per this project's
-    standing "no auto-merge" rule.
+    executed** — pushed to `origin`. **"Open a PR" was then separately requested and executed** —
+    opened as
+    [PR #99](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/99).
+    Merge authorization remains a separate, not-yet-requested next step.
 
 ## Recent decisions
 
