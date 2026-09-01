@@ -96,6 +96,15 @@ export class ClaimsService {
     private readonly auditService: AuditService,
   ) {}
 
+  /** Narrow, read-only existence check for a set of proof-claim ids — mirrors
+   *  `ServicesService.existingServiceIds()`'s own already-reviewed pattern, added so Case Study
+   *  Studio's `relatedClaimIds` field can validate against the real `proof_claims` table without
+   *  this module needing to export its write-capable repository across the module boundary. */
+  async existingClaimIds(ids: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.claims.findByIds(ids);
+    return new Set(found.map((row) => row.id));
+  }
+
   /** Validates `relatedServiceIds` against the real, already-existing `services` table, via
    *  `ServicesService.existingServiceIds()` — a narrow, read-only delegating method, not the
    *  write-capable `SERVICE_REPOSITORY` token directly (code-review finding: this module was the

@@ -69,6 +69,17 @@ export class AssetsService {
     private readonly auditService: AuditService,
   ) {}
 
+  /** Narrow, read-only existence check for a set of asset ids — mirrors
+   *  `ServicesService.existingServiceIds()`'s own already-reviewed pattern, added so Case Study
+   *  Studio's `case_study_assets` join table can validate `assetId` against the real `assets`
+   *  table without this module needing to export its write-capable repository across the module
+   *  boundary (the exact "surface grows" condition Persona Library's own security review flagged
+   *  as the trigger for closing that exposure). */
+  async existingAssetIds(ids: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.assets.findByIds(ids);
+    return new Set(found.map((row) => row.id));
+  }
+
   async create(input: CreateAssetDto, actorUserId: string): Promise<AssetEntity> {
     const existing = await this.assets.findByPublicId(input.publicId);
     if (existing) {
