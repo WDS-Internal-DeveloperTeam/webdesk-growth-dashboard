@@ -1150,6 +1150,20 @@
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     },
     {
+      "id": "G4-ready-for-claude-queue",
+      "type": "qa-security-gate",
+      "scope": "module-ready-for-claude-queue",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-01T00:00:00Z",
+      "approved_commit": "ec29767 (branch module-ready-for-claude-queue, off main at 1ddafc6; not yet pushed to origin)",
+      "record": "docs/project-state/module-ready-for-claude-queue-approval-checklist.md",
+      "notes": "Ready for Claude Queue module backend (module #30) -- a bespoke 11-state manual execution queue (draft -> ready_for_claude -> claimed -> in_progress -> awaiting_review -> approved -> completed, plus changes_requested/cancelled/paused/failed), reusing the seeded ready_for_claude RBAC permission group verbatim, migrations 00101/00102 per explicit instruction (00099/00100 reserved for other concurrent work). Two design forks confirmed directly with the user via AskUserQuestion before building: the polymorphic (targetModuleKey, targetId) record link mirroring Review and Approval Center, and an existence-validated dependencies array (self-referencing this same table). Backend only -- no dashboard-web UI yet. Independent code review (high effort, 8-angle finder pass) surfaced 7 candidates, all 7 CONFIRMED and fixed: a missing separation-of-duties check on review/approve transitions (the module's own original reasoning -- \"no role holds both submit and approve\" -- was factually wrong, since a user can hold multiple roles simultaneously, closed by wiring SeparationOfDutiesService.assertDistinctActors()); productionApproval/productionApproverUserId writable via the plain edit-gated PATCH route, bypassing the approve-gated workflow entirely (closed by making both server-managed, stamped only by updateStatus() when the transition lands on completed); the dependencies \"must complete before this one\" contract validated for existence only, never enforced (closed with a new assertDependenciesCompleted() check at the claimed -> in_progress transition); an empty-string targetModuleKey silently bypassing module-registry validation (missing .min(1), fixed); an N+1 dependency-existence check (fixed with a new batched existingIds() repository method); a third independent hand-copy of unwrapCasResult() (extracted into a new shared apps/dashboard-api/src/common/cas-result.util.ts); and a hand-duplicated update DTO (fixed by deriving via .omit().partial()). 1 candidate (missing priority/agent list-filter indexes) independently verified REFUTED -- matches an already-accepted repo-wide pattern (Internal Linking Library's own identical, unindexed priority filter). A separate security-review skill run then found 0 findings above threshold, focused specifically on the fix round's own changes -- confirmed no residual path to set productionApproval outside the approve-gated write, confirmed the new batched existingIds() query is fully parameterized (no injection surface), and confirmed a caller cannot obtain a cheaper RBAC action via a fabricated expectedStatus since the atomic CAS write only succeeds against the row's real current status. Final numbers, independently re-verified by the orchestrating session: 767/767 packages/database integration tests (4 new), 28/28 unit tests, 1634/1634 dashboard-api unit tests (63 in this module), 764/764 e2e/integration tests, a fresh migration round-trip (100 executed / 0 pending), validate:module-registry (43 modules, 21 permission groups), typecheck/lint (--max-warnings=0)/nest build/prettier all clean, pnpm audit 0 vulnerabilities. Required second-role human review complete via the direct \"Approve as-is, gate it and push the branch\" instruction -- the approval checklist's own findings tables served as the review artifact, since there were no open findings of any kind on this branch.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
       "id": "G4-workflow-and-task-template-library",
       "type": "qa-security-gate",
       "scope": "workflow-and-task-template-library",
@@ -3168,11 +3182,20 @@
       "action": "gate_approved",
       "actor": "WebDesk Solution",
       "actor_type": "human",
-      "details": "Gate G4-workflow-and-task-template-library approved (WebDesk Solution, CONFIRM) for the Workflow and Task Template Library module backend (module #29 on the advisory roadmap; a real Wave 6 vs. Wave 1 roadmap conflict was surfaced and confirmed with the project owner before building). Built mirroring Brand Library file-for-file, reusing the seeded ready_for_claude RBAC group verbatim -- a genuine separation of duties, unlike Brand Library's own creative_design group. Independent code review (high effort, 8-angle finder pass) found 7 findings after dedup (3 CONFIRMED, 4 PLAUSIBLE) -- 2 fixed (a missing implementation doc the migration itself cited by name; a doc comment misstating the RBAC role split vs. Brand Library), 5 accepted as tracked debt each matching an already-established precedent in sibling modules. Security review found 0 findings above threshold. A clean pass, not an override -- the required second-role human review (Jitesh D, 'Approve as-is') was completed via a published review-packet artifact before this gate was requested. Merged with origin/main's concurrent dashboard-web-knowledge-library gate (no file overlap beyond project.json's own gate/audit-log arrays, resolved by keeping both entries and re-sequencing version counters). This gate approval does not itself authorize committing, pushing, opening a PR, or merging.",
+      "details": "Gate G4-ready-for-claude-queue approved (WebDesk Solution, CONFIRM) for the Ready for Claude Queue module backend, approved commit ec29767 on branch module-ready-for-claude-queue (not yet pushed to origin). Module #30 -- a bespoke 11-state manual execution queue reusing the seeded ready_for_claude RBAC group, migrations 00101/00102. Independent code review (7/7 CONFIRMED findings fixed, most severe a missing separation-of-duties check and a productionApproval self-approval bypass, both closed) and a separate security review (0 findings above threshold) both complete. Required second-role human review complete via this same direct instruction, the approval checklist's own findings tables serving as the review artifact since there were no open findings of any kind on this branch. This gate approval does not itself authorize opening a PR or merging.",
       "project_version_before": 109,
       "project_version_after": 110,
+      "timestamp": "2026-09-01T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-workflow-and-task-template-library approved (WebDesk Solution, CONFIRM) for the Workflow and Task Template Library module backend (module #29 on the advisory roadmap; a real Wave 6 vs. Wave 1 roadmap conflict was surfaced and confirmed with the project owner before building). Built mirroring Brand Library file-for-file, reusing the seeded ready_for_claude RBAC group verbatim -- a genuine separation of duties, unlike Brand Library's own creative_design group. Independent code review (high effort, 8-angle finder pass) found 7 findings after dedup (3 CONFIRMED, 4 PLAUSIBLE) -- 2 fixed (a missing implementation doc the migration itself cited by name; a doc comment misstating the RBAC role split vs. Brand Library), 5 accepted as tracked debt each matching an already-established precedent in sibling modules. Security review found 0 findings above threshold. A clean pass, not an override -- the required second-role human review (Jitesh D, 'Approve as-is') was completed via a published review-packet artifact before this gate was requested. Merged with the concurrent module-ready-for-claude-queue gate (no file overlap beyond project.json's own gate/audit-log arrays, resolved by keeping both entries and re-sequencing version counters). This gate approval does not itself authorize committing, pushing, opening a PR, or merging.",
+      "project_version_before": 110,
+      "project_version_after": 111,
       "timestamp": "2026-09-02T00:00:00Z"
     }
   ],
-  "current_gate": "G4-workflow-and-task-template-library"
+  "current_gate": "G4-ready-for-claude-queue"
 }

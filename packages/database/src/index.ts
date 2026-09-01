@@ -40,4 +40,5 @@ export * from "./case-study-studio/index.js";
 export * from "./case-study-library/index.js";
 export * from "./portfolio-library/index.js";
 export * from "./knowledge-library/index.js";
+export * from "./ready-for-claude-queue/index.js";
 export * from "./workflow-and-task-template-library/index.js";
