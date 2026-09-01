@@ -34,6 +34,7 @@ import { PersonaLibraryModule } from "./persona-library/persona-library.module.j
 import { PortfolioLibraryModule } from "./portfolio-library/portfolio-library.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { ProofAndClaimsLibraryModule } from "./proof-and-claims-library/proof-and-claims-library.module.js";
+import { ReadyForClaudeQueueModule } from "./ready-for-claude-queue/ready-for-claude-queue.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { ReviewAndApprovalCenterModule } from "./review-and-approval-center/review-and-approval-center.module.js";
 import { SectionAndPatternLibraryModule } from "./section-and-pattern-library/section-and-pattern-library.module.js";
@@ -101,6 +102,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     PortfolioLibraryModule,
     ProjectsModule,
     ProofAndClaimsLibraryModule,
+    ReadyForClaudeQueueModule,
     RetentionModule,
     ReviewAndApprovalCenterModule,
     SectionAndPatternLibraryModule,
