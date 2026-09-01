@@ -3701,7 +3701,71 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming
     the session gate is intact. **The Case Study Library module backend is now genuinely live in
     production.** No `dashboard-web` UI exists yet for this module — a separate, not-yet-requested
-    next step, matching every prior module's own backend-first precedent.
+    next step, matching every prior module's own backend-first precedent. **Update (2026-09-01):
+    the `dashboard-web` UI has since been built, reviewed, gated, and merged — see item 65 below.**
+
+65. **`dashboard-web` Case Study Library UI — built, reviewed, gated, merged
+    ([PR #93](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/93),
+    merge commit `725d3ecededab98af47151f7e778bfe59da781ea`); now genuinely live in production
+    (2026-09-01).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #92). Built directly on the explicit "Start the dashboard-web UI
+    for it" instruction. Four routes (list/detail/create/edit) under
+    `app/(shell)/case-study-library/`, mirroring Case Study Studio's own UI structure minus a
+    status-actions component — this record has no lifecycle of its own, a pure extension over
+    `case_studies` (D1). `relatedPageIds` is a plain, UUID-format-checked `TagListField`, not a
+    `RelationshipPicker` — no org-wide (cross-project) page-lookup capability exists in
+    `dashboard-web` yet, since Page Inventory's own list fetch is project-scoped; the backend still
+    existence-validates every id server-side. `technologies` is a free-text tag list. `testimonials`
+    uses a new, genuinely novel array-of-objects repeatable-row editor
+    (`CaseStudyLibraryTestimonialsField`) — no existing sibling pattern for an embedded JSONB array
+    (every other module's JSONB field is either backend-internal or a real sub-resource with its
+    own CRUD endpoints). The create form's `SingleCaseStudyPicker` filters to
+    `published`/`unpublished`/`archived` case studies, matching the backend's own D5
+    creatable-status gate — deliberately does not exclude a case study that already has a library
+    record (no cheap existence check exists client-side for that); picking one just surfaces the
+    backend's own real 409, flagged directly in `lib/case-study-library.ts`. **Reviewed at light
+    tier** per the 2026-08-27 "right-size the review pipeline" standing rule — a small,
+    frontend-only slice consuming an already-reviewed, already-gated backend with no new endpoint.
+    A direct read-through pass verified the create-only field contract, the `PATCH`-not-`POST
+.../update` submit method against the real controller (`case-study-library.controller.ts`'s own
+    `@Patch(":id")`), the picker's status filter, and the testimonial field constraints against the
+    real backend DTO — **1 finding, fixed**: a duplicated UUID-regex literal in the form (now
+    delegates to `lib/uuid.ts#isUuid()`), caught alongside a testimonial-row layout correction to
+    use the established `rowMain`-wrapped structure instead of three bare flex children directly
+    inside `.row`. Security review skipped per the same standing rule — no new endpoint, no new
+    RBAC/auth logic, no new sink; testimonials render as plain text, never via
+    `dangerouslySetInnerHTML`. 1432/1432 `dashboard-web` unit tests (23 new — 17 lib/query, 6
+    component), typecheck/lint/CSS-token-check (73 files)/`next build` (all 4 routes present)/
+    prettier all clean. See
+    `docs/project-state/dashboard-web-case-study-library-approval-checklist.md`. **Required
+    second-role human review complete via the direct "gate it and push the branch" instruction** —
+    the approval checklist's own findings table served as the review artifact, since there was
+    only the one already-fixed finding on this branch. **The gate
+    (G4-dashboard-web-case-study-library) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM (clean pass, not an override, since the second-role review was
+    already complete before the gate was requested), approved commit `9ea2afe` on branch
+    `dashboard-web-case-study-library` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-dashboard-web-case-study-library`). **"Push the branch" was
+    then separately requested and executed** — pushed to `origin`. **"Open a PR" was then
+    separately requested and executed** — opened as
+    [PR #93](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/93). One
+    CI failure ("Integration tests") was investigated and found unrelated to this PR's diff (the
+    branch touches only `apps/dashboard-web`/`packages/shared-types`, no backend/migration code) —
+    a `Hook timed out in 10000ms` teardown timeout in an unrelated spec
+    (`notifications.e2e-spec.ts`) cascading into a migration-teardown error; re-running the job
+    (not changing code) resolved it, confirming the diagnosis. All 14 CI checks then green.
+    **"Merge PR #93" was then separately requested and executed** — merge commit
+    `725d3ecededab98af47151f7e778bfe59da781ea`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+725d3ecededab98af47151f7e778bfe59da781ea`, confirming the exact merged commit is what's serving;
+    and `dashboard-web`'s `/case-study-library`, `/case-study-library/new`, and a
+    `/case-study-library/:recordId` detail route all correctly redirect (307) an unauthenticated
+    visitor to `/auth/sign-in` (a transient stale-edge-cache `404` on the bare list route's first
+    two checks was ruled out via repeated checks — `x-vercel-cache: MISS` on the resolved retry,
+    not a real defect). **The `dashboard-web` Case Study Library UI is now genuinely live in
+    production**, closing out this slice's full build-to-production arc — backend and now the full
+    UI (list, detail, create/edit form) are both live for the Case Study Library module.
 
 ## Recent decisions
 
@@ -6483,6 +6547,40 @@ c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is
   of which is now genuinely live in production, closing Design Review Center out as the last
   unbuilt member of Wave 4. Not started or authorized — recorded for reference, a separate
   next-step decision remains the user's to make.
+- `[2026-09-01]` **Built the `dashboard-web` UI for Case Study Library**, closing this module's
+  last named gap, under the explicit "Start the dashboard-web UI for it" instruction following the
+  backend's own build-to-production arc (PR #92). See item 65 above for the full account —
+  `relatedPageIds` as a UUID-checked `TagListField` (no org-wide page picker exists yet), a novel
+  array-of-objects `testimonials` editor, and a status-filtered case-study picker on create.
+- `[2026-09-01]` **Reviewed at light tier, per the standing "right-size the review pipeline"
+  rule** — asked directly whether the full 8-angle pipeline was needed; explained why this
+  frontend-only slice on an already-gated backend qualifies for light tier instead. A direct
+  read-through pass found and fixed 1 issue (a duplicated UUID-regex literal, plus a testimonial-
+  row layout correction). See
+  `docs/project-state/dashboard-web-case-study-library-approval-checklist.md`.
+- `[2026-09-01]` **Required second-role human review and the gate were both completed via the
+  direct "gate it and push the branch" instruction.** Gate `G4-dashboard-web-case-study-library`
+  approved (WebDesk Solution, CONFIRM), approved commit `9ea2afe` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Branch pushed to `origin`.
+- `[2026-09-01]` **"Open a PR" was separately requested and executed** — opened as
+  [PR #93](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/93). An
+  Autofix CI-monitor event flagged a failing "Integration tests" check; investigated and confirmed
+  unrelated to this PR's diff (dashboard-web/shared-types only, no backend/migration code) — a
+  teardown-hook timeout in an unrelated spec (`notifications.e2e-spec.ts`) cascading into a
+  migration-teardown error. Re-ran the job rather than changing code; it passed on retry,
+  confirming the diagnosis. All 14 CI checks green.
+- `[2026-09-01]` **"Merge PR #93" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `725d3ecededab98af47151f7e778bfe59da781ea`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitSha ==
+725d3ecededab98af47151f7e778bfe59da781ea`, confirming the exact merged commit is what's serving;
+  `dashboard-web`'s `/case-study-library`, `/case-study-library/new`, and a detail route all
+  correctly redirect (307) an unauthenticated visitor to `/auth/sign-in` (a transient
+  stale-edge-cache `404` on the bare list route's first two checks was ruled out via a repeated
+  check showing `x-vercel-cache: MISS`, not a real defect). **The `dashboard-web` Case Study
+  Library UI is now genuinely live in production**, closing out this slice's full
+  build-to-production arc.
 
 ## Open client blockers
 
