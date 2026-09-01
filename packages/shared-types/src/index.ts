@@ -1912,6 +1912,43 @@ export interface CaseStudyApproval {
 }
 
 /**
+ * Case Study Library (module #24). An EXTENSION table over Case Study Studio's own `case_studies`
+ * (D1, `packages/database/src/case-study-library/entities.ts`) — deliberately does not duplicate
+ * any `CaseStudy` field; a caller reads those via the nested `caseStudy` on
+ * `CaseStudyLibraryRecordWithCaseStudy`. A short, structured plain-text testimonial — not
+ * rich-text/HTML (D4).
+ */
+export interface CaseStudyLibraryTestimonial {
+  readonly quote: string;
+  readonly author: string | null;
+  readonly role: string | null;
+}
+
+export interface CaseStudyLibraryRecord {
+  readonly id: string;
+  readonly publicId: string;
+  /** The one parent case study this record extends — a real DB-level FK, enforced unique (one
+   *  library record per case study, D1). Create-only; never re-pointed via edit. */
+  readonly caseStudyId: string;
+  /** Existence-validated against the real `pages` table (D2) — NOT a DB-level FK. */
+  readonly relatedPageIds: readonly string[];
+  /** Plain, unvalidated (D3) — no dedicated "technologies" module exists. */
+  readonly technologies: readonly string[];
+  readonly testimonials: readonly CaseStudyLibraryTestimonial[];
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** `GET .../records` and `GET .../records/:id` both nest the full, already-permission-filtered
+ *  parent case study under `caseStudy` rather than duplicating its fields — `null` only if the
+ *  parent lookup itself fails (case study data is otherwise never hard-deleted). */
+export interface CaseStudyLibraryRecordWithCaseStudy extends CaseStudyLibraryRecord {
+  readonly caseStudy: CaseStudy | null;
+}
+
+/**
  * Design Review Center (module #21). Mirrors `packages/database/src/design-review-center/
  * entities.ts` — a cross-cutting engine that attaches to records owned by OTHER modules
  * (`targetModuleKey`/`targetId`, no foreign key), not a single content-record library of its own.

@@ -1092,6 +1092,20 @@
       "record": "docs/project-state/module-case-study-library-approval-checklist.md",
       "notes": "Case Study Library module backend (module #24) -- an extension table over the already-live Case Study Studio (case_study_library_records, a real unique DB-level FK into case_studies), storing only relatedPageIds/technologies/testimonials, never duplicating the parent's own fields; reads join in the full parent CaseStudyEntity. Confirmed directly with the project owner via AskUserQuestion that this should be an extension table, not a fully separate table or a browse-view-only design. Creation gated on the parent's status being published/unpublished/archived (D5). No confidentiality/redaction mechanism, deliberately mirroring Case Study Studio's own already-accepted D9 precedent. Reuses the real, seeded case_studies RBAC permission group verbatim -- no new RBAC migration. Independent code review (high effort, 8-angle finder pass) surfaced 10 candidates after dedup -- 5 CONFIRMED and fixed (most severe: update() had no terminal-state guard, contradicting its own doc comment, letting an archived case study's library record stay freely editable -- fixed by fetching the parent up front and rejecting the edit, which also removed a now-redundant second fetch; also fixed a 400-vs-409 TOCTOU status-code inconsistency, an ambiguous conflict message conflating two distinct unique-constraint violations, and a cross-module RBAC-constant reuse deviation), 3 PLAUSIBLE accepted as tracked debt (an org-wide page-existence check with no RBAC scoping of its own, tempered by the current seeded matrix; two low-value list()/update() efficiency notes), 2 REFUTED. Security review found 0 findings above threshold. 1494/1494 dashboard-api unit tests (30 new), 690/690 packages/database integration tests (16 new), 690/690 dashboard-api e2e tests (13 new), a clean 94-migration round-trip, typecheck/lint/prettier clean, pnpm audit 0 vulnerabilities -- all independently re-run by the orchestrating session, not trusted from the build agent's own report. A review packet (published as a Claude artifact, 'Case Study Library Review Packet' -- code review + security review findings, fixes, and validation evidence, with a decision section) was prepared for the required second-role human review, since the implementing agent cannot also be its own reviewer (ADR-0010). The project owner reviewed it and returned 'Approved as-is,' accepting the 2 open tracked-debt items.",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. No dashboard-web UI exists yet for this module -- backend only, matching every prior module's own backend-first precedent."
+    },
+    {
+      "id": "G4-dashboard-web-case-study-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-case-study-library",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-01T00:00:00Z",
+      "approved_commit": "9ea2afe (branch dashboard-web-case-study-library, base main@e759985)",
+      "record": "docs/project-state/dashboard-web-case-study-library-approval-checklist.md",
+      "notes": "dashboard-web Case Study Library UI -- closes this module's last named gap, following the backend's own build-to-production arc (PR #92, live). Four routes (list/detail/create/edit) mirroring Case Study Studio's own UI structure, minus a status-actions component -- this record has no lifecycle of its own, a pure extension over case_studies (D1). relatedPageIds is a plain, UUID-format-checked TagListField, not a RelationshipPicker -- no org-wide (cross-project) page-lookup capability exists in dashboard-web yet; the backend still existence-validates every id server-side. technologies is a free-text tag list. testimonials uses a new, genuinely novel array-of-objects repeatable-row editor (no existing sibling pattern for an embedded JSONB array). The create form's case-study picker filters to published/unpublished/archived case studies, matching the backend's own D5 creatable-status gate. Reviewed at light tier per the 2026-08-27 'right-size the review pipeline' standing rule -- a direct read-through pass verified the create-only field contract, the PATCH submit method against the real controller, the picker's status filter, and the testimonial field constraints against the real backend DTO -- 1 finding, fixed (a duplicated UUID-regex literal now delegates to lib/uuid.ts#isUuid(), plus a testimonial-row layout correction to use the established rowMain structure). Security review skipped per the same standing rule -- no new endpoint, no new RBAC/auth logic, no new sink; testimonials render as plain text, never via dangerouslySetInnerHTML. 1432/1432 dashboard-web unit tests (23 new), typecheck/lint/CSS-token-check (73 files)/next build (all 4 routes present)/prettier all clean -- independently re-run by the orchestrating session. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact, since there was only the one already-fixed finding on this branch.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -3049,7 +3063,16 @@
       "project_version_before": 103,
       "project_version_after": 104,
       "timestamp": "2026-09-01T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-case-study-library approved (WebDesk Solution, CONFIRM) for the dashboard-web Case Study Library UI, approved commit 9ea2afe on branch dashboard-web-case-study-library (not yet pushed to origin). Reviewed at light tier per the 2026-08-27 standing rule -- 1 finding fixed (a duplicated UUID-regex literal, plus a testimonial-row layout correction). Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist itself served as the review artifact. This gate approval does not itself authorize pushing the branch, opening a PR, or merging.",
+      "project_version_before": 104,
+      "project_version_after": 105,
+      "timestamp": "2026-09-01T00:00:00Z"
     }
   ],
-  "current_gate": "G4-case-study-library"
+  "current_gate": "G4-dashboard-web-case-study-library"
 }

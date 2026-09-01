@@ -1,0 +1,68 @@
+/*
+ * Composes from `project-subresource-section.module.css`, the same shared list/row/add-form base
+ * `ClaimSourcesSection`/`CaseStudyConsentsSection` already compose from — this field's embedded
+ * array editor is structurally close enough (a list of rows, an add-row form below) to reuse the
+ * same base rather than defining a near-identical set of styles a third time.
+ */
+.field {
+  composes: field from "./form-fields.module.css";
+}
+
+.label {
+  composes: label from "./form-fields.module.css";
+}
+
+.helperText {
+  composes: helperText from "./form-fields.module.css";
+}
+
+.list {
+  composes: list from "./project-subresource-section.module.css";
+}
+
+.row {
+  composes: row from "./project-subresource-section.module.css";
+}
+
+.rowMain {
+  composes: rowMain from "./project-subresource-section.module.css";
+}
+
+.quote {
+  margin: 0;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-style: italic;
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.attribution {
+  margin: var(--webdesk-dashboard-space-xs) 0 0;
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+}
+
+.removeButton {
+  composes: deleteButton from "./project-subresource-section.module.css";
+}
+
+.draftRow {
+  composes: addForm from "./project-subresource-section.module.css";
+}
+
+.draftFieldRow {
+  composes: fieldRow from "./project-subresource-section.module.css";
+}
+
+.draftTextarea {
+  composes: textarea from "./project-subresource-section.module.css";
+  width: 100%;
+}
+
+.draftInput {
+  composes: input from "./project-subresource-section.module.css";
+}
+
+.addButton {
+  composes: submitButton from "./project-subresource-section.module.css";
+  align-self: flex-start;
+}
