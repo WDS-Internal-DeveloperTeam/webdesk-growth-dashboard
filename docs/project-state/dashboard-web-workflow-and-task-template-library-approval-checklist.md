@@ -11,7 +11,7 @@
 | 7   | `next build` clean, all 4 routes present | ✅ `/workflow-and-task-template-library`, `/new`, `/[templateId]`, `/[templateId]/edit`                        |
 | 8   | Prettier clean                           | ✅                                                                                                             |
 | 9   | Documentation updated                    | ✅ `docs/implementation/module-workflow-and-task-template-library.md`'s new "As-built — `dashboard-web` UI"    |
-| 10  | Exact branch/commit verified             | Branch `module-workflow-and-task-template-library` — committed on top of `5d0f480`                             |
+| 10  | Exact branch/commit verified             | Branch `module-workflow-and-task-template-library`, commit `24dc5da`                                           |
 
 ## Forbidden-actions check
 
