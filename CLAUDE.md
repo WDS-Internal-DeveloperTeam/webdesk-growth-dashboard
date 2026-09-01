@@ -4045,6 +4045,78 @@ configured` console error on both — a local-environment limitation shared with
     or merging** — each remains its own separate, not-yet-requested authorization, per this
     project's standing "no auto-merge" rule.
 
+70. **Ready for Claude Queue module backend — built, reviewed, gated, pushed (2026-09-01).**
+    Module #30 on the Recommended Module Roadmap, built directly on the explicit "start Ready for
+    Claude Queue" instruction, migration numbers starting at `00101` per explicit instruction
+    (`00099`/`00100` reserved for other concurrent work). A genuinely bespoke 11-state manual
+    execution queue (`05_Workflow_State_Machines.md §4`) — `draft → ready_for_claude → claimed →
+in_progress → awaiting_review → approved → completed`, plus `changes_requested`/`cancelled`/
+    `paused`/`failed` — NOT the generic 8-value `ArtifactApprovalStatus` every content-library
+    module reuses, mirroring Internal Linking Library's own bespoke-workflow precedent. Reuses the
+    seeded `ready_for_claude` RBAC permission group verbatim (`VCERAM` for `super_admin`/
+    `owner_growth_approver`, `VCSE` for the four mid-tier roles — a real property of the matrix:
+    no single role holds both `submit` and `approve`, so no one role can drive a task through its
+    whole lifecycle alone). Two design forks confirmed directly with the user (`AskUserQuestion`)
+    before building: the task's polymorphic "record" link uses the same `(targetModuleKey,
+targetId)` shape Review and Approval Center already established (validated against the real
+    module registry, `targetId` deliberately opaque); `dependencies` (other tasks that must
+    complete first) is a real, existence-validated array checked against this same table. Backend
+    only — no `dashboard-web` UI yet, matching every prior module's own backend-first precedent.
+    Built by a background agent with a fully-specified prompt mirroring Review and Approval
+    Center's/Internal Linking Library's exact file structure, then independently re-verified in
+    full by the orchestrating session — every high-risk file read directly, every test suite
+    re-run against a real local disposable PostgreSQL 17 database, not trusted from the agent's own
+    report. **Independent code review then ran** (this project's own `code-review` skill, high
+    effort, 8-angle finder pass, 1-vote verification) — 7 candidates surfaced after dedup, **all 7
+    CONFIRMED, all 7 fixed**. Most severe: `changeStatus()` had no separation-of-duties check on
+    `review`/`approve` transitions, and the module's own original doc comment justified this with
+    "no role holds both submit and approve" — factually wrong, since `user_roles` has no
+    one-role-per-user constraint, so a user holding both a submit-capable role and
+    `super_admin`/`owner_growth_approver` simultaneously could self-approve their own task; fixed
+    by wiring `SeparationOfDutiesService.assertDistinctActors()` (already exported by the
+    already-imported `AuthModule`) into `changeStatus()`. Also fixed: `productionApproval`/
+    `productionApproverUserId` were plain content fields writable through the generic
+    `edit`-gated `PATCH .../tasks/:id` route, letting any mid-tier role fabricate a production
+    sign-off with zero involvement of the real `approve`-gated `TRANSITIONS` table — fixed by
+    making both server-managed, stamped only by `updateStatus()`'s own atomic write when the
+    transition lands on `completed`; the `dependencies` "must complete before this one" contract
+    was validated for existence only, never actually enforced — fixed with a new
+    `assertDependenciesCompleted()` check applied at the one transition where it matters
+    (`claimed → in_progress`); an empty-string `targetModuleKey` silently bypassed module-registry
+    validation via a truthy-check guard (missing `.min(1)`) — fixed; an N+1 dependency-existence
+    check (up to 50 concurrent single-row queries) — fixed with a new batched `existingIds()`
+    repository method mirroring `ServiceRepository.findByIds()`'s own established pattern; a third
+    independent hand-copy of `unwrapCasResult()` — extracted into a new shared
+    `apps/dashboard-api/src/common/cas-result.util.ts`; and a hand-duplicated update DTO — fixed by
+    deriving it via `.omit({publicId, projectId}).partial()`. 1 candidate (missing indexes on the
+    `priority`/`agent` list filters) was independently verified REFUTED — the identical, unindexed
+    shape already exists on Internal Linking Library's own already-shipped `priority` filter, a
+    consistent repo-wide pattern, not a novel gap. Re-validated: 767/767 `packages/database`
+    integration tests (4 new), 28/28 unit tests, 1634/1634 `dashboard-api` unit tests (63 in this
+    module), 764/764 e2e/integration tests, a fresh migration round-trip (100 executed / 0
+    pending), `validate:module-registry` (43 modules, 21 permission groups), typecheck/lint
+    (`--max-warnings=0`)/`nest build`/prettier all clean, `pnpm audit` 0 vulnerabilities. **A
+    separate `security-review` skill run then found 0 findings above threshold**, focused
+    specifically on the fix round's own changes — confirmed no residual path exists to set
+    `productionApproval`/`productionApproverUserId` outside the `approve`-gated `updateStatus()`
+    write (the DTO types structurally lack them, Zod's `strip` mode would drop them even if sent,
+    and the repository `update()` input type excludes them too); confirmed the new batched
+    `existingIds()` query's `where: { id: ids }` is Sequelize's standard parameterized `IN (...)`
+    shorthand with no injection surface; confirmed a caller cannot obtain a cheaper RBAC action via
+    a fabricated `expectedStatus`, since the atomic CAS write only succeeds against the row's real
+    current status. See `docs/implementation/module-ready-for-claude-queue.md` and
+    `docs/project-state/module-ready-for-claude-queue-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it and push the branch"
+    instruction** — the approval checklist's own findings tables served as the review artifact,
+    since there were no open findings of any kind on this branch. **The gate
+    (G4-ready-for-claude-queue) was then approved** — WebDesk Solution, decision CONFIRM, approved
+    commit `ec29767` on branch `module-ready-for-claude-queue` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-ready-for-claude-queue`). **"Push the branch" was then separately requested and
+    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR or
+    merging** — each remains its own separate, not-yet-requested authorization, per this project's
+    standing "no auto-merge" rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full

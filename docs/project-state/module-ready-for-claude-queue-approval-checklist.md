@@ -75,4 +75,14 @@ any workflow stage — consistent with the module's own documented design (D8), 
 
 ## Sign-off
 
-_Awaiting required second-role human review._
+**Required second-role human review complete** — via the direct "Approve as-is, gate it and push
+the branch" instruction. Since there were no open findings of any kind on this branch (all 7
+CONFIRMED code-review findings fixed and re-validated, security review 0 findings above
+threshold), this approval checklist's own findings tables above served as the review artifact
+rather than a separately published packet, matching this project's 2026-08-27 "right-size the
+review pipeline" standing rule for a change with no open items to weigh.
+
+**The gate (G4-ready-for-claude-queue) was then separately requested and approved** — WebDesk
+Solution, decision CONFIRM (a clean pass, not an override, since the second-role review was
+already complete before the gate was requested), approved commit `ec29767` on branch
+`module-ready-for-claude-queue`.
