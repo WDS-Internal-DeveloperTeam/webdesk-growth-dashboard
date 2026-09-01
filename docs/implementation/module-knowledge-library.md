@@ -215,3 +215,20 @@ into the `Op.iLike` pattern, matching every sibling module's own identical patte
 A review packet for the required second-role human review, since the implementing agent cannot
 also be its own reviewer (ADR-0010), is prepared separately — see
 `docs/project-state/module-knowledge-library-approval-checklist.md`.
+
+**Production migration incident (2026-09-01), diagnosed and resolved same-day.** After PR #96
+merged, the user's first `pnpm --filter @webdesk/database run migrate` against production failed
+with `relation "knowledge_library_records_source_type_idx" already exists` even though
+`migrate:status` showed migration `00097` as still pending. Root cause: Sequelize's
+`createTable()` emits `CREATE TABLE IF NOT EXISTS` for Postgres by default, but `addIndex()` does
+not add `IF NOT EXISTS` — so a first, uncommitted-to-umzug attempt had already created the table
+and its first (`source_type`) index before failing or being interrupted, and the retry re-hit that
+same non-idempotent `CREATE INDEX` statement. Diagnosed via two read-only checks the user ran
+themselves (`migrate:status` confirmed `00097`/`00098` pending; `list-tables` confirmed
+`knowledge_library_records` already existed) — no destructive action taken until both were
+confirmed. Since the table was brand new (created only by the failed attempt, zero real data, zero
+dependents — the module has no `dashboard-web` UI or traffic yet), the user ran
+`DROP TABLE IF EXISTS knowledge_library_records CASCADE;` themselves, then re-ran `migrate`, which
+applied `00097`/`00098` cleanly. `migrate:status` now shows 98/98 executed, 0 pending. **The
+Knowledge Library backend's schema is now genuinely live in production**, matching the already-
+deployed code.
