@@ -2012,3 +2012,67 @@ export interface DesignReviewDecision {
   readonly notes: string | null;
   readonly decidedAt: string;
 }
+
+/**
+ * Portfolio Library (module #25). Mirrors `packages/database/src/portfolio-library/entities.ts` —
+ * a single flat table (D1), organization-wide, no `recordType` discriminator, reusing the shared
+ * 8-value `ArtifactApprovalStatus` workflow verbatim (D6). `relatedProofIds` is
+ * existence-validated against the real `proof_claims` table (D3); `additionalCategories`/`tags`
+ * are plain, unvalidated, non-nullable string arrays (default `[]`, D8). `isPublished`/
+ * `publishedAt` mirror Brand/Content Template/Design Reference Library's own identical
+ * publish/unpublish mechanism — orthogonal to `approvalStatus`: `publish()` requires
+ * `approvalStatus === "approved"`, but `isPublished` is NOT cleared by a later status transition,
+ * and `unpublish()` carries no such gate (D5).
+ */
+export type PortfolioApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/** Reuses Case Study Studio's own 4-value vocabulary (D4). */
+export type PortfolioVisibility =
+  "public" | "internal_only" | "confidential" | "client_approval_required";
+
+export interface PortfolioRecord {
+  readonly id: string;
+  readonly publicId: string;
+  readonly projectOrClientName: string;
+  readonly url: string | null;
+  readonly primaryCategory: string | null;
+  readonly additionalCategories: readonly string[];
+  readonly tags: readonly string[];
+  readonly industry: string | null;
+  readonly platform: string | null;
+  readonly serviceType: string | null;
+  /** `DATEONLY` — a plain `YYYY-MM-DD` string, not a `Date` instance. */
+  readonly launchDate: string | null;
+  readonly relatedProofIds: readonly string[];
+  readonly visibility: PortfolioVisibility;
+  readonly approvalStatus: PortfolioApprovalStatus;
+  readonly isPublished: boolean;
+  readonly publishedAt: string | null;
+  readonly version: number;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** D2 — a real many-to-many join into the real, already-live `assets` table (Asset Library).
+ *  `assetId` is existence-validated at the app layer, not a DB-level FK. `role` is a plain,
+ *  free-text string (unlike `CaseStudyAssetRole`'s closed enum) — no fixed screenshot-role
+ *  taxonomy is named anywhere in the canonical spec for this module. */
+export interface PortfolioAsset {
+  readonly id: string;
+  readonly portfolioRecordId: string;
+  readonly assetId: string;
+  readonly role: string;
+  readonly caption: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
