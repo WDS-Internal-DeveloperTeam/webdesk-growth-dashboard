@@ -1799,3 +1799,68 @@ export interface MotionInteractionRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * Design Review Center (module #21). Mirrors `packages/database/src/design-review-center/
+ * entities.ts` — a cross-cutting engine that attaches to records owned by OTHER modules
+ * (`targetModuleKey`/`targetId`, no foreign key), not a single content-record library of its own.
+ * Structurally close to `Review`/`ReviewDecision` (Review and Approval Center, module #11), with a
+ * dedicated `reviewType` vocabulary and an automatic-supersede mechanism neither of those have.
+ */
+export type DesignReviewType =
+  | "creative_direction"
+  | "ux"
+  | "conversion"
+  | "ui"
+  | "accessibility_by_design"
+  | "responsive_behavior"
+  | "component_consistency"
+  | "motion"
+  | "performance_impact";
+
+/** `approved`/`rejected`/`superseded` are all terminal. `superseded` is reached ONLY as the
+ *  automatic side effect of a DIFFERENT review (sharing the same `targetModuleKey`/`targetId`/
+ *  `reviewType`) being approved — never as a directly-requested `decide()` action. */
+export type DesignReviewStatus =
+  "submitted" | "revision_requested" | "approved" | "rejected" | "superseded";
+
+/** The full action vocabulary a `DesignReviewDecision` row may record — the 4 approval-shaped
+ *  `decide()` actions plus `supersede`, which is NEVER a directly-requested `decide()` action; it
+ *  is written only by the automatic supersede side effect. Unlike `ReviewDecisionAction`, there is
+ *  no `pause`/`resume`/`delegate` — this module has no process-management actions. */
+export type DesignReviewDecisionAction =
+  "approve" | "approve_with_notes" | "request_revision" | "reject" | "supersede";
+
+/** The primary workflow record. No `isPaused`/process-management fields — this module has none. */
+export interface DesignReview {
+  readonly id: string;
+  readonly targetModuleKey: string;
+  readonly targetId: string;
+  readonly targetLabel: string | null;
+  readonly reviewType: DesignReviewType;
+  readonly status: DesignReviewStatus;
+  readonly submittedByUserId: string;
+  readonly assignedToUserId: string | null;
+  /** Stamped on every `decide()` call — records the MOST RECENT decision, overwritten on each
+   *  successive call. Not stamped by the automatic supersede side effect. */
+  readonly decidedByUserId: string | null;
+  readonly decidedAt: string | null;
+  readonly versionALabel: string | null;
+  readonly versionBLabel: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** An append-only, queryable local action-history row — this module's own history, distinct from
+ *  the real, DB-trigger-enforced `audit_events` table, which separately receives a copy of every
+ *  genuine approval-shaped decision, including the automatic supersede side effect. `notes` is
+ *  real, server-sanitized HTML from `dashboard-web`'s `RichTextEditor` — rendered exclusively via
+ *  the shared `SanitizedRichText` component, matching every sibling module's own rich-text field. */
+export interface DesignReviewDecision {
+  readonly id: string;
+  readonly reviewId: string;
+  readonly action: DesignReviewDecisionAction;
+  readonly actorUserId: string;
+  readonly notes: string | null;
+  readonly decidedAt: string;
+}
