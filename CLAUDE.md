@@ -3635,7 +3635,73 @@ c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is
     opened as [PR #90](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/90),
     all 14 CI checks confirmed green. **Neither gate approval authorizes merging PR #90** — merge
     remains its own separate, not-yet-requested authorization, per this project's standing
-    "no auto-merge" rule.
+    "no auto-merge" rule. **Update (2026-09-01): PR #90 has since been merged** (merge commit
+    `a44c76d`) and verified live in production.
+
+64. **Case Study Library module #24 backend — built, reviewed, gated
+    (G4-case-study-library, WebDesk Solution, CONFIRM), merged
+    ([PR #92](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/92),
+    merge commit `b54442cd428a25098f6827bd83935f07b0074009`) — now genuinely live in production
+    (2026-09-01).** Built directly on the explicit "start Case Study Library" instruction. One
+    genuine design fork confirmed directly with the project owner first (`AskUserQuestion`): a
+    fully separate table, a browse view over Case Study Studio with no new table, or an extension
+    table FK'd to Studio — **the project owner chose the extension-table approach**. Table
+    `case_study_library_records` carries a real, unique DB-level FK into `case_studies` (one
+    library record per case study), storing only `relatedPageIds` (existence-validated org-wide
+    against the real Page Inventory `pages` table via a new `PagesService.existingPageIds()`/
+    `PageRepository.findByIds()` pair), `technologies` (plain, unvalidated), and `testimonials`
+    (a JSONB array of `{quote, author, role}`, plain text, no HTML) — never duplicating any of
+    Case Study Studio's own fields; reads join in the full parent `CaseStudyEntity` at the service
+    layer. Creation is gated on the parent's status being `published`/`unpublished`/`archived`
+    (D5). No confidentiality/redaction mechanism, deliberately mirroring Case Study Studio's own
+    already-accepted D9 precedent (the same `visibility` vocabulary is a workflow label, not a
+    redaction axis, on both modules for consistency). Reuses the real, seeded `case_studies` RBAC
+    permission group verbatim — no new RBAC migration. Built by a background agent with a
+    fully-specified prompt, then independently re-verified in full by the orchestrating session —
+    every high-risk file read directly, every test suite re-run against a real disposable
+    PostgreSQL 17 database. **Independent code review** (high effort, 8-angle finder pass) surfaced
+    10 candidates after dedup — 5 CONFIRMED, all fixed (most severe: `update()` had no
+    terminal-state guard on the parent case study's status, contradicting its own doc comment,
+    letting an archived case study's library record stay freely editable — fixed by fetching the
+    parent up front and rejecting the edit, which also removed a now-redundant second fetch; also
+    fixed a 400-vs-409 TOCTOU status-code inconsistency, an ambiguous conflict message conflating
+    two distinct unique-constraint violations, and a cross-module RBAC-constant reuse deviation —
+    `CASE_STUDY_LIBRARY_MODULE_KEY` is now declared locally instead of importing Case Study
+    Studio's own constant, matching Persona Library's own precedent for a coincidentally shared
+    value), 3 PLAUSIBLE accepted as tracked debt (an org-wide page-existence check with no RBAC
+    scoping of its own, tempered by the current seeded matrix; two low-value `list()`/`update()`
+    efficiency notes), 2 REFUTED. **Security review found 0 findings above threshold.** Final
+    numbers: 1494/1494 `dashboard-api` unit tests (30 new), 690/690 `packages/database`
+    integration tests (16 new), 690/690 `dashboard-api` e2e tests (13 new), a clean 94-migration
+    round-trip, typecheck/lint/prettier clean, `pnpm audit` 0 vulnerabilities — all independently
+    re-run by the orchestrating session, not trusted from the build agent's own report. A review
+    packet (published as a Claude artifact, "Case Study Library Review Packet" — code review +
+    security review findings, fixes, and validation evidence, with a decision section) was
+    prepared for the required second-role human review, since the implementing agent cannot also
+    be its own reviewer (ADR-0010). **The project owner reviewed it and returned "Approved
+    as-is,"** accepting the 2 open tracked-debt items. **The gate (G4-case-study-library) was
+    then separately requested and approved** — WebDesk Solution, decision CONFIRM (clean pass,
+    not an override, since the second-role review was already complete before the gate was
+    requested), approved commit `d6e88af` on branch `module-case-study-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-case-study-library`). **"Push the branch and open a PR" was then separately requested and
+    executed** — pushed to `origin`, opened as
+    [PR #92](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/92). A
+    real merge conflict surfaced against `main` (Design Review Center's `dashboard-web` UI, PR
+    #91, had merged concurrently) — resolved (only `outputs/webdesk-growth-dashboard/project.json`
+    conflicted, both sides' gate/audit-log entries kept and re-sequenced), fully re-verified clean
+    after the merge, then pushed again; all 14 CI checks confirmed green. **"Merge PR #92" was
+    then separately requested and executed** — merge commit
+    `b54442cd428a25098f6827bd83935f07b0074009`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is what's serving;
+    `GET /case-study-library/records` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` resolves to `/auth/sign-in` for an unauthenticated visitor, confirming
+    the session gate is intact. **The Case Study Library module backend is now genuinely live in
+    production.** No `dashboard-web` UI exists yet for this module — a separate, not-yet-requested
+    next step, matching every prior module's own backend-first precedent.
 
 ## Recent decisions
 

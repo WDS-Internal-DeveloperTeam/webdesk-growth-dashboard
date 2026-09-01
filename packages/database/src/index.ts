@@ -37,4 +37,5 @@ export * from "./page-template-library/index.js";
 export * from "./design-review-center/index.js";
 export * from "./motion-and-interaction-library/index.js";
 export * from "./case-study-studio/index.js";
+export * from "./case-study-library/index.js";
 export * from "./portfolio-library/index.js";
