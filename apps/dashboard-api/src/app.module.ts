@@ -29,6 +29,7 @@ import { PageInventoryModule } from "./page-inventory/page-inventory.module.js";
 import { PageTemplateLibraryModule } from "./page-template-library/page-template-library.module.js";
 import { PageWorkspaceModule } from "./page-workspace/page-workspace.module.js";
 import { PersonaLibraryModule } from "./persona-library/persona-library.module.js";
+import { PortfolioLibraryModule } from "./portfolio-library/portfolio-library.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { ProofAndClaimsLibraryModule } from "./proof-and-claims-library/proof-and-claims-library.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
@@ -93,6 +94,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     PageTemplateLibraryModule,
     PageWorkspaceModule,
     PersonaLibraryModule,
+    PortfolioLibraryModule,
     ProjectsModule,
     ProofAndClaimsLibraryModule,
     RetentionModule,
