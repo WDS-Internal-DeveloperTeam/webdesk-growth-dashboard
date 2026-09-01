@@ -1,8 +1,9 @@
 # `dashboard-web` Case Study Library UI — Approval Checklist
 
 **Status:** Built, fully validated. Reviewed at light tier (1 finding, fixed) per this project's
-2026-08-27 "right-size the review pipeline" standing rule. Awaiting required second-role human
-review, gate decision, push, PR, and merge — each a separate, not-yet-requested next step.
+2026-08-27 "right-size the review pipeline" standing rule. Required second-role human review
+complete. Gate `G4-dashboard-web-case-study-library` approved (WebDesk Solution, CONFIRM). Not yet
+pushed to `origin`, opened as a PR, or merged — each a separate, not-yet-requested next step.
 
 ## Completion condition
 
@@ -60,7 +61,14 @@ unchanged `OriginCheckGuard`/`PermissionGuard`/existence-validation.
 
 ## Sign-off
 
-**Required second-role human review:** _Pending — this checklist is the review artifact for
-Jitesh D, per the light-tier convention (no separate published packet)._
+**Required second-role human review:** Complete — via the direct "gate it and push the branch"
+instruction. Light tier, so this checklist's own findings table served as the review artifact
+rather than a separately published Claude artifact packet, matching the Wireframe Library/Brand
+Library UI precedent for a light-tier slice. There was only the one already-fixed finding on this
+branch to accept.
 
-**Gate:** _Not yet requested._
+**Gate:** `G4-dashboard-web-case-study-library` approved — WebDesk Solution, decision CONFIRM
+(clean pass, not an override, since the second-role review was already complete before the gate
+was requested), approved commit `9ea2afe` on branch `dashboard-web-case-study-library`. See
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-case-study-library`).
