@@ -7,6 +7,7 @@ import { PortfolioScreenshotsSection } from "@/components/portfolio-screenshots-
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
 import { dlStyle, h2Style, sectionStyle } from "@/lib/detail-section-styles";
 import { buildNameById, resolveIdsToNames } from "@/lib/resolve-ids-to-names";
+import { isSafeHttpUrl } from "@/lib/safe-http-url";
 import { getServerSession } from "@/lib/server-session";
 import {
   formatTimestamp,
@@ -62,6 +63,7 @@ export default async function PortfolioLibraryDetailPage({
     (claim) => claim.publicId,
   );
   const relatedProofNames = resolveIdsToNames(record.relatedProofIds, claimNameById);
+  const hasSafeUrl = record.url !== null && isSafeHttpUrl(record.url);
 
   return (
     <ContentContainer>
@@ -105,9 +107,13 @@ export default async function PortfolioLibraryDetailPage({
           <Fact label="Project/client name">{record.projectOrClientName}</Fact>
           <Fact label="URL">
             {record.url ? (
-              <a href={record.url} target="_blank" rel="noreferrer">
-                {record.url}
-              </a>
+              hasSafeUrl ? (
+                <a href={record.url} target="_blank" rel="noopener noreferrer">
+                  {record.url}
+                </a>
+              ) : (
+                record.url
+              )
             ) : (
               "—"
             )}
