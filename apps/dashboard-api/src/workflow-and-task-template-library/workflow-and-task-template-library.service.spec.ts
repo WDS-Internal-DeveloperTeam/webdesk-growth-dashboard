@@ -96,6 +96,27 @@ describe("WorkflowAndTaskTemplateLibraryService", () => {
       );
     });
 
+    it("sanitizes rich-text fields before writing, stripping a disallowed tag", async () => {
+      templates.findByPublicId.mockResolvedValue(null);
+      templates.create.mockResolvedValue(template());
+
+      await svc.create(
+        {
+          publicId: "WTT-X",
+          templateType: "content",
+          title: "X",
+          authorizedStage: "content_production",
+          requiredInputs: "<script>alert(1)</script><p>A brief</p>",
+          expectedOutputs: null,
+        },
+        "actor-1",
+      );
+
+      const [writtenInput] = templates.create.mock.calls[0] as [Record<string, unknown>];
+      expect(writtenInput.requiredInputs).toBe("<p>A brief</p>");
+      expect(writtenInput.expectedOutputs).toBeNull();
+    });
+
     it("rejects a duplicate publicId", async () => {
       templates.findByPublicId.mockResolvedValue(template());
 
@@ -226,6 +247,22 @@ describe("WorkflowAndTaskTemplateLibraryService", () => {
       expect(patchArg).not.toHaveProperty("approvalStatus");
       expect(patchArg).not.toHaveProperty("version");
       expect(patchArg).not.toHaveProperty("templateType");
+    });
+
+    it("sanitizes a changed rich-text field but leaves an unchanged one alone", async () => {
+      templates.findById.mockResolvedValue(
+        template({ approvalStatus: "draft", restrictions: "<p>Old</p>" }),
+      );
+      templates.update.mockResolvedValue(template({ version: 2 }));
+
+      await svc.update(
+        "template-1",
+        { validationCriteria: "<script>alert(1)</script><p>New criteria</p>" },
+        "actor-1",
+      );
+
+      const [, patchArg] = templates.update.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patchArg.validationCriteria).toBe("<p>New criteria</p>");
     });
 
     it("returns the repository's updated entity, with version incremented server-side", async () => {

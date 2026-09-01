@@ -11,7 +11,11 @@ import type {
   WorkflowTaskTemplateListFilter,
   WorkflowTaskTemplateRepository,
 } from "@webdesk/database";
-import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
+import {
+  isSequelizeUniqueConstraintError,
+  sanitizeNullableRichText,
+  sanitizeNullableRichTextIfChanged,
+} from "@webdesk/validation";
 import {
   WORKFLOW_TASK_TEMPLATE_LIBRARY_MODULE_KEY,
   WORKFLOW_TASK_TEMPLATE_REPOSITORY,
@@ -91,6 +95,10 @@ export class WorkflowAndTaskTemplateLibraryService {
     try {
       created = await this.templates.create({
         ...input,
+        requiredInputs: sanitizeNullableRichText(input.requiredInputs),
+        expectedOutputs: sanitizeNullableRichText(input.expectedOutputs),
+        restrictions: sanitizeNullableRichText(input.restrictions),
+        validationCriteria: sanitizeNullableRichText(input.validationCriteria),
         createdBy: actorUserId,
       });
     } catch (error) {
@@ -159,6 +167,19 @@ export class WorkflowAndTaskTemplateLibraryService {
       id,
       {
         ...patch,
+        requiredInputs: sanitizeNullableRichTextIfChanged(
+          patch.requiredInputs,
+          current.requiredInputs,
+        ),
+        expectedOutputs: sanitizeNullableRichTextIfChanged(
+          patch.expectedOutputs,
+          current.expectedOutputs,
+        ),
+        restrictions: sanitizeNullableRichTextIfChanged(patch.restrictions, current.restrictions),
+        validationCriteria: sanitizeNullableRichTextIfChanged(
+          patch.validationCriteria,
+          current.validationCriteria,
+        ),
         updatedBy: actorUserId,
       },
       current.approvalStatus,

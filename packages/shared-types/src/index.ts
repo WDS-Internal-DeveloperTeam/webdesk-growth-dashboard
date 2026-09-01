@@ -2121,3 +2121,67 @@ export interface KnowledgeLibraryRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+// Structurally identical to BrandLibraryApprovalStatus/ContentTemplateApprovalStatus/
+// PersonaApprovalStatus/ServiceApprovalStatus (the shared 8-value artifact-approval workflow) —
+// reused verbatim as its own named type rather than an alias so this module's own `-query.ts`
+// file can still narrow to it directly without a cast, matching every sibling module's own
+// precedent.
+export type WorkflowTaskTemplateApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/** Mirrors `packages/database/src/workflow-and-task-template-library/entities.ts`'s own
+ *  discriminator-column shape — one table, 11 real task/template kinds named by
+ *  `03_Detailed_Module_Specifications.md §29`. Immutable once created — changing it would be a
+ *  different record. */
+export type WorkflowTaskTemplateType =
+  | "existing_page_audit"
+  | "new_page_opportunity"
+  | "search_brief"
+  | "content"
+  | "case_study"
+  | "design"
+  | "development"
+  | "code_review"
+  | "security"
+  | "qa"
+  | "release";
+
+/**
+ * The Workflow and Task Template Library module's single primary entity (module #23 on the
+ * Recommended Module Roadmap) — organization-wide, not project-scoped, single table, no
+ * sub-resources, no cross-module relationship fields, no confidentiality mechanism, no
+ * publish/unpublish action. `requiredInputs`/`expectedOutputs`/`restrictions`/
+ * `validationCriteria` are rich text (`RichTextEditor`), per the 2026-08-22 standing rule —
+ * sanitized server-side before storage
+ * (`WorkflowAndTaskTemplateLibraryService.create()`/`update()`) and again at render time via
+ * `SanitizedRichText`. `agentAssignment`/`requiredApprovals` stay plain descriptive text — neither
+ * is ever read by any status-transition or execution gate in this codebase (the roadmap's own
+ * "Templates never authorize execution by themselves" note).
+ */
+export interface WorkflowTaskTemplate {
+  readonly id: string;
+  readonly publicId: string;
+  readonly templateType: WorkflowTaskTemplateType;
+  readonly title: string;
+  readonly authorizedStage: string;
+  readonly requiredInputs: string | null;
+  readonly expectedOutputs: string | null;
+  readonly restrictions: string | null;
+  readonly agentAssignment: string | null;
+  readonly validationCriteria: string | null;
+  readonly requiredApprovals: string | null;
+  readonly approvalStatus: WorkflowTaskTemplateApprovalStatus;
+  readonly version: number;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
