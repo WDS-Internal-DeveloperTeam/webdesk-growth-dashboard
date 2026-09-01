@@ -103,17 +103,23 @@ export class KnowledgeLibraryRecordsService {
     patch: UpdateKnowledgeLibraryRecordInput,
     actorUserId: string,
   ): Promise<KnowledgeLibraryRecordEntity> {
+    const current = await this.records.findById(id);
+    if (!current) {
+      throw new NotFoundException(`Knowledge library record not found: ${id}`);
+    }
+    // `deprecated` is terminal (no hard delete, ADR-0016) — content edits must never be allowed
+    // to reach it, matching Website Strategy Center's/Page Inventory's own already-reviewed
+    // terminal-state guard; only `changeStatus()`'s own transition table governs `deprecated`.
+    if (current.status === "deprecated") {
+      throw new BadRequestException(
+        `Knowledge library record ${id} is deprecated and can no longer be edited`,
+      );
+    }
     // Only re-validate ownerUserId when the patch actually sets it to a real, different id —
     // clearing it to null/undefined (leave-unchanged) never needs a lookup (mirrors
     // ProjectService.update()'s own already-reviewed pattern).
-    if (patch.ownerUserId) {
-      const current = await this.records.findById(id);
-      if (!current) {
-        throw new NotFoundException(`Knowledge library record not found: ${id}`);
-      }
-      if (patch.ownerUserId !== current.ownerUserId) {
-        await this.usersService.assertUserExists(patch.ownerUserId, "ownerUserId");
-      }
+    if (patch.ownerUserId && patch.ownerUserId !== current.ownerUserId) {
+      await this.usersService.assertUserExists(patch.ownerUserId, "ownerUserId");
     }
 
     const updated = await this.records.update(id, { ...patch, updatedBy: actorUserId });

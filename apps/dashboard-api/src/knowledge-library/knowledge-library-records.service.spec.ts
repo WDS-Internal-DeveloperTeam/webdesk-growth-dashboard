@@ -140,6 +140,7 @@ describe("KnowledgeLibraryRecordsService", () => {
 
   describe("update", () => {
     it("passes the patch plus updatedBy to the repository, then records an audit event", async () => {
+      repository.findById.mockResolvedValue(record({ status: "draft" }));
       repository.update.mockResolvedValue(record({ title: "New title" }));
       const result = await service.update("record-1", { title: "New title" }, "user-2");
       expect(repository.update).toHaveBeenCalledWith("record-1", {
@@ -190,10 +191,19 @@ describe("KnowledgeLibraryRecordsService", () => {
     });
 
     it("does not existence-check ownerUserId when the patch clears it to null", async () => {
+      repository.findById.mockResolvedValue(record({ ownerUserId: "owner-1", status: "draft" }));
       repository.update.mockResolvedValue(record({ ownerUserId: null }));
       await service.update("record-1", { ownerUserId: null }, "user-2");
       expect(usersService.assertUserExists).not.toHaveBeenCalled();
-      expect(repository.findById).not.toHaveBeenCalled();
+    });
+
+    it("rejects editing a deprecated (terminal) record", async () => {
+      repository.findById.mockResolvedValue(record({ status: "deprecated" }));
+      await expect(
+        service.update("record-1", { title: "New title" }, "user-2"),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repository.update).not.toHaveBeenCalled();
+      expect(auditService.record).not.toHaveBeenCalled();
     });
 
     it("throws NotFoundException when re-validating ownerUserId against a record that has since disappeared", async () => {

@@ -122,6 +122,11 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
   await context.addIndex("knowledge_library_records", ["confidentiality"], {
     name: "knowledge_library_records_confidentiality_idx",
   });
+  // list() orders every paginated query by (updatedAt DESC, id ASC) — mirrors
+  // Persona Library's own personas_updated_at_idx (code-review finding).
+  await context.addIndex("knowledge_library_records", ["updated_at"], {
+    name: "knowledge_library_records_updated_at_idx",
+  });
 
   // Fuzzy-search support on title, mirroring section_pattern_records_name_trgm_idx/
   // design_tokens_name_trgm_idx/website_strategy_records_title_trgm_idx/etc.

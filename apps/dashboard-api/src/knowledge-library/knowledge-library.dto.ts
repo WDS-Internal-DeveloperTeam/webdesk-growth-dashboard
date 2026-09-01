@@ -16,6 +16,9 @@ export const listKnowledgeLibraryRecordsQuerySchema = z.object({
   status: knowledgeLibraryStatusSchema.optional(),
   confidentiality: knowledgeLibraryConfidentialitySchema.optional(),
   approvedForAgentUse: booleanQueryParam.optional(),
+  // Fuzzy substring match on `title` — backed by `knowledge_library_records_title_trgm_idx`
+  // (code-review finding: the trigram index existed with no consuming filter).
+  search: z.string().min(1).max(255).optional(),
   // Mirrors BusinessKnowledgeCenter's own DEFAULT_LIST_LIMIT/MAX_LIST_LIMIT bound (50/200).
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),

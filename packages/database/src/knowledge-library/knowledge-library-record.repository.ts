@@ -1,4 +1,5 @@
-import { literal } from "sequelize";
+import { Op, literal } from "sequelize";
+import { escapeLikePattern } from "../auth/user.repository.js";
 import { getKnowledgeLibraryModels } from "./models.js";
 import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type {
@@ -12,6 +13,10 @@ export interface KnowledgeLibraryRecordListFilter {
   readonly status?: KnowledgeLibraryRecordStatus;
   readonly confidentiality?: KnowledgeLibraryRecordConfidentiality;
   readonly approvedForAgentUse?: boolean;
+  /** Fuzzy substring match on `title`, backed by the `knowledge_library_records_title_trgm_idx`
+   *  GIN trigram index (mirrors Persona Library's/Service Library's own `search` filter shape;
+   *  code-review finding — the index existed with no consuming filter). */
+  readonly search?: string;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -96,6 +101,9 @@ export class KnowledgeLibraryRecordRepository {
     }
     if (filter.approvedForAgentUse !== undefined) {
       where.approvedForAgentUse = filter.approvedForAgentUse;
+    }
+    if (filter.search) {
+      where.title = { [Op.iLike]: `%${escapeLikePattern(filter.search)}%` };
     }
     const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
     const rows = await this.model.findAll({

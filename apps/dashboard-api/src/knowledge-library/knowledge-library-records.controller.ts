@@ -45,13 +45,16 @@ type KnowledgeLibraryRequest = AuthenticatedRequest & RequestWithCorrelationId;
 // business-knowledge-records.controller.ts draws for its own module.
 const MODULE_KEY = "business_knowledge";
 
-// A `restricted` record's `location`/`notes` are hidden from anyone without a real
+// A `restricted` record's `location`/`sourceType`/`notes` are hidden from anyone without a real
 // `view_confidential` grant on this module (zero-seeded today, mirroring
 // business-knowledge-records.controller.ts's own `CONFIDENTIAL_RESTRICTED_FIELDS`/
 // `redactIfRestricted` pattern) — unlike Business Knowledge Center, `confidentiality` here is a
 // field independent of `status` (D1), so a record can be `restricted` at any lifecycle stage,
-// including `draft`.
+// including `draft`. `sourceType` is included (unlike BKC's own visible `recordType`, a closed
+// enum) because it's free text with no taxonomy (D4) and can itself carry sensitive provenance —
+// code-review finding.
 const CONFIDENTIAL_RESTRICTED_FIELDS: readonly (keyof KnowledgeLibraryRecordEntity)[] = [
+  "sourceType",
   "location",
   "notes",
 ];

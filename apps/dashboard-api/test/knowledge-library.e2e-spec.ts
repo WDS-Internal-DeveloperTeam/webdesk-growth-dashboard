@@ -325,7 +325,7 @@ describe("Knowledge Library module endpoints (e2e, real disposable database)", (
       .expect(400);
   });
 
-  it("D1 — a record can be created directly as restricted, and its location/notes are redacted for a caller with no view_confidential grant (zero-seeded — no role currently holds it, including super_admin)", async () => {
+  it("D1 — a record can be created directly as restricted, and its location/sourceType/notes are redacted for a caller with no view_confidential grant (zero-seeded — no role currently holds it, including super_admin)", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     const createResponse = await request(app.getHttpServer())
       .post("/knowledge-library/records")
@@ -333,6 +333,7 @@ describe("Knowledge Library module endpoints (e2e, real disposable database)", (
       .set("Origin", process.env.WEB_APP_ORIGIN!)
       .send({
         title: "Sensitive internal reference",
+        sourceType: "board_only_strategy_memo",
         location: "https://internal.example/sensitive-doc",
         notes: "Also sensitive.",
         confidentiality: "restricted",
@@ -340,6 +341,7 @@ describe("Knowledge Library module endpoints (e2e, real disposable database)", (
       .expect(201);
     const recordId = createResponse.body.data.id as string;
     expect(createResponse.body.data.confidentiality).toBe("restricted");
+    expect(createResponse.body.data.sourceType).toBeUndefined();
     expect(createResponse.body.data.location).toBeUndefined();
     expect(createResponse.body.data.notes).toBeUndefined();
     expect(createResponse.body.data.title).toBe("Sensitive internal reference");
@@ -348,6 +350,7 @@ describe("Knowledge Library module endpoints (e2e, real disposable database)", (
       .get(`/knowledge-library/records/${recordId}`)
       .set("Cookie", cookie)
       .expect(200);
+    expect(getResponse.body.data.sourceType).toBeUndefined();
     expect(getResponse.body.data.location).toBeUndefined();
     expect(getResponse.body.data.notes).toBeUndefined();
     expect(getResponse.body.data.confidentiality).toBe("restricted");
@@ -358,11 +361,64 @@ describe("Knowledge Library module endpoints (e2e, real disposable database)", (
       .set("Cookie", cookie)
       .expect(200);
     const listed = (
-      listResponse.body.data as Array<{ id: string; location?: string; notes?: string }>
+      listResponse.body.data as Array<{
+        id: string;
+        sourceType?: string;
+        location?: string;
+        notes?: string;
+      }>
     ).find((r) => r.id === recordId);
     expect(listed).toBeDefined();
+    expect(listed?.sourceType).toBeUndefined();
     expect(listed?.location).toBeUndefined();
     expect(listed?.notes).toBeUndefined();
+  });
+
+  it("rejects editing a deprecated (terminal) record with 400, even for a caller holding edit", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const createResponse = await request(app.getHttpServer())
+      .post("/knowledge-library/records")
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ title: "About to be deprecated" })
+      .expect(201);
+    const recordId = createResponse.body.data.id as string;
+
+    await request(app.getHttpServer())
+      .post(`/knowledge-library/records/${recordId}/status`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ status: "deprecated" })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/knowledge-library/records/${recordId}/update`)
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ title: "Trying to edit a deprecated record" })
+      .expect(400);
+  });
+
+  it("finds a record by a fuzzy substring match on title via the search filter", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const uniqueTitle = `Searchable Onboarding Reference ${Date.now()}`;
+    const createResponse = await request(app.getHttpServer())
+      .post("/knowledge-library/records")
+      .set("Cookie", cookie)
+      .set("Origin", process.env.WEB_APP_ORIGIN!)
+      .send({ title: uniqueTitle })
+      .expect(201);
+    const recordId = createResponse.body.data.id as string;
+
+    const searchResponse = await request(app.getHttpServer())
+      .get("/knowledge-library/records")
+      .query({ search: "onboarding reference" })
+      .set("Cookie", cookie)
+      .expect(200);
+    const found = (searchResponse.body.data as Array<{ id: string }>).find(
+      (r) => r.id === recordId,
+    );
+    expect(found).toBeDefined();
   });
 
   it("D1 — confidentiality is independent of status: a restricted record can also be draft (not doubling as lifecycle, unlike Business Knowledge Center)", async () => {

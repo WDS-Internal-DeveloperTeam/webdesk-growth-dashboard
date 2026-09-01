@@ -88,6 +88,17 @@ describe("Knowledge Library module (real disposable database)", () => {
       expect(byApprovedForAgentUse.every((r) => r.approvedForAgentUse === true)).toBe(true);
     });
 
+    it("list() finds a record via a fuzzy substring match on title through the search filter (backed by the trigram index)", async () => {
+      const title = uniqueTitle("Onboarding Reference Guide");
+      const created = await records.create({ title });
+
+      const found = await records.list({ search: "onboarding reference" });
+      expect(found.some((r) => r.id === created.id)).toBe(true);
+
+      const notFound = await records.list({ search: "definitely-not-a-real-title-substring" });
+      expect(notFound.some((r) => r.id === created.id)).toBe(false);
+    });
+
     it("list() clamps an oversized limit to MAX_LIST_LIMIT (200)", async () => {
       const result = await records.list({ limit: 100_000 });
       expect(result.length).toBeLessThanOrEqual(200);

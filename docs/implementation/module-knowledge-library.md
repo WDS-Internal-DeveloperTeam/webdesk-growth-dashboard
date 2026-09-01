@@ -168,3 +168,50 @@ exact-value match, the same reasoning Business Knowledge Center's own `recordTyp
 already established; `notes` uses `DataTypes.TEXT` at the model/migration layer (matching BKC's
 own `notes` column) with the 10,000-character cap enforced only at the Zod DTO layer, not a
 DB-level `VARCHAR` bound.
+
+**Independent code review then ran** (this project's own `code-review` skill, high effort, 8-angle
+finder pass via parallel subagents, 1-vote self-verification) — 30+ candidates surfaced across all
+8 angles, deduped and verified down to 6 kept findings (all CONFIRMED). **4 fixed**: `update()` had
+no terminal-state guard, unlike Website Strategy Center's/Page Inventory's own already-reviewed
+precedent (a caller holding only `edit` could freely mutate a `deprecated` record) — fixed by
+unconditionally fetching the current record first and rejecting the edit outright, which also
+removed the redundant double-fetch the `ownerUserId` re-validation branch had; `CONFIDENTIAL_
+RESTRICTED_FIELDS` omitted `sourceType` from redaction — unlike Business Knowledge Center's own
+visible metadata field (`recordType`, a closed enum), Knowledge Library's `sourceType` is free
+text (D4) and can carry sensitive provenance, so it's now redacted alongside `location`/`notes`;
+the migration created no index on `updated_at` even though `list()` orders every paginated query
+by it — Persona Library, the repository's own cited template, already has the equivalent index,
+so this was a module-specific miss, not inherited debt — fixed by adding `knowledge_library_
+records_updated_at_idx`; and the `pg_trgm` trigram index on `title` was built with zero consuming
+code — every sibling module the migration comment itself cites (Persona Library, Service Library,
+Section and Pattern Library, Proof and Claims Library, Website Strategy Center) wires a `search`
+query param through `Op.iLike` + `escapeLikePattern()` onto the identical index shape — fixed by
+adding `search` to `KnowledgeLibraryRecordListFilter`/the list DTO/`list()`'s `where` construction.
+**2 findings left as accepted, tracked debt**, both verified byte-identical to Business Knowledge
+Center's own already-shipped, already-accepted shape (not novel regressions this module
+introduces): `update()`'s audit `afterState` logs the raw, unredacted patch even for a restricted
+record (BKC's own `update()` has the identical unguarded `{ ...patch }` shape); and `create()` has
+no try/catch around its post-commit audit call, unlike `changeStatus()` in the same file (BKC's own
+`create()` has the identical unguarded shape). Re-validated after every fix: 22/22 `dashboard-api`
+unit tests for this module (1 new, 2 updated for the new unconditional pre-fetch), 16/16
+`packages/database` integration tests (1 new), 16/16 `dashboard-api` e2e tests (2 new — the
+terminal-state rejection and the search filter), a real migration up/down/up round-trip including
+the new index, `validate:module-registry` (43 modules, 21 permission groups, unaffected),
+typecheck/lint (`--max-warnings=0`)/prettier all clean, `pnpm audit` 0 vulnerabilities — every
+check independently re-run against a real local disposable PostgreSQL 17 database, not assumed.
+
+**A separate `security-review` skill run then found 0 findings above threshold.** Confirmed all 5
+routes correctly call `canViewConfidential()` and pass the result through `redactIfRestricted()`/
+`redactRestrictedRecords()` (including `create()`, since D1 means a record can be created directly
+as `restricted`); every `@RequirePermission` decorator is method-level (never class-level);
+`OriginCheckGuard`/`ParseUUIDPipe` are correctly applied; every Sequelize query is parameterized
+with no raw-SQL interpolation of user input (the only raw `sequelize.query()` calls are the two
+migrations' static DDL strings); every Zod field is bounded; `location` is never rendered as a
+link by this backend-only pass, so no stored-XSS-via-URL-scheme surface; and `changeStatus()`'s
+atomic compare-and-swap has no TOCTOU gap. The new `search` filter added during the code-review fix
+round was also checked: `escapeLikePattern()` correctly escapes `%`/`_`/`\` before interpolation
+into the `Op.iLike` pattern, matching every sibling module's own identical pattern.
+
+A review packet for the required second-role human review, since the implementing agent cannot
+also be its own reviewer (ADR-0010), is prepared separately — see
+`docs/project-state/module-knowledge-library-approval-checklist.md`.
