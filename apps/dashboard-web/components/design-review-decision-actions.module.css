@@ -1,0 +1,31 @@
+.wrapper {
+  composes: wrapper from "./status-actions.module.css";
+}
+
+.actionButton {
+  composes: actionButton from "./status-actions.module.css";
+}
+
+.terminalButton {
+  composes: terminalButton from "./status-actions.module.css";
+}
+
+.error {
+  composes: error from "./status-actions.module.css";
+}
+
+.notesForm {
+  composes: notesForm from "./review-decision-actions.module.css";
+}
+
+.notesFormTitle {
+  composes: notesFormTitle from "./review-decision-actions.module.css";
+}
+
+.notesLabel {
+  composes: notesLabel from "./review-decision-actions.module.css";
+}
+
+.cancelButton {
+  composes: cancelButton from "./review-decision-actions.module.css";
+}
