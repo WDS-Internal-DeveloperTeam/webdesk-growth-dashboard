@@ -42,6 +42,7 @@ import { ServiceLibraryModule } from "./service-library/service-library.module.j
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
 import { UsersModule } from "./users/users.module.js";
 import { WebsiteStrategyCenterModule } from "./website-strategy-center/website-strategy-center.module.js";
+import { WorkflowAndTaskTemplateLibraryModule } from "./workflow-and-task-template-library/workflow-and-task-template-library.module.js";
 import { API_VERSION } from "./version.js";
 
 const env = loadEnv(baseEnvSchema);
@@ -109,6 +110,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     SystemOperationsModule,
     UsersModule,
     WebsiteStrategyCenterModule,
+    WorkflowAndTaskTemplateLibraryModule,
   ],
 })
 export class AppModule implements NestModule {
