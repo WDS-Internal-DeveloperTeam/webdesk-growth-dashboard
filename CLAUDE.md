@@ -4115,8 +4115,27 @@ targetId)` shape Review and Approval Center already established (validated again
     `G4-ready-for-claude-queue`). **"Push the branch" was then separately requested and
     executed** — pushed to `origin`. **"Open a PR" was then separately requested and executed** —
     opened as
-    [PR #99](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/99).
-    Merge authorization remains a separate, not-yet-requested next step.
+    [PR #99](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/99), all
+    14 CI checks confirmed green. **A real merge conflict against `main` then surfaced** —
+    Workflow and Task Template Library (module #29, PR #98) had merged concurrently, claiming
+    migration numbers `00099`/`00100` exactly as reserved (no collision with this branch's own
+    `00101`/`00102`). Only `packages/database/src/index.ts`/`index.cjs.ts` (both barrel exports)
+    and `outputs/webdesk-growth-dashboard/project.json` (the gates/audit-log arrays) conflicted,
+    resolved by keeping both sides' entries and re-sequencing version counters — fully
+    re-verified against a real disposable database before pushing again (102 migrations clean,
+    787/787 `packages/database` integration tests, 1663/1663 `dashboard-api` unit tests, 780/780
+    e2e/integration tests, `validate:module-registry` clean), all 14 CI checks green a second
+    time. **"Merge PR #99" was then separately requested and executed** — merge commit
+    `a22a6a820c694fe92c40b42ad967bdccf47fdf60`, all 14 CI checks green beforehand. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly, not just via CI's
+    own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+a22a6a820c694fe92c40b42ad967bdccf47fdf60`, confirming the exact merged commit is what's serving;
+    `GET /ready-for-claude-queue/tasks` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` correctly redirects (307) to `/home` for an unauthenticated visitor.
+    **The Ready for Claude Queue module backend is now genuinely live in production.** No
+    `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+    matching every prior module's own backend-first precedent.
 
 ## Recent decisions
 

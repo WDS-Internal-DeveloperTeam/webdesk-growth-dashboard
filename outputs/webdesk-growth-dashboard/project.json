@@ -3195,6 +3195,15 @@
       "project_version_before": 110,
       "project_version_after": 111,
       "timestamp": "2026-09-02T00:00:00Z"
+    },
+    {
+      "timestamp": "2026-09-01T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "pr_merged",
+      "details": "PR #99 (module-ready-for-claude-queue) merged with a real merge commit a22a6a820c694fe92c40b42ad967bdccf47fdf60, all 14 CI checks green beforehand (a second run, after resolving a real merge conflict against main from the concurrently-merged Workflow and Task Template Library backend, PR #98 -- only the packages/database barrel exports and project.json own gates/audit-log arrays conflicted, resolved by keeping both sides entries; fully re-verified against a real disposable database before pushing again: 102 migrations clean, 787/787 packages/database integration tests, 1663/1663 dashboard-api unit tests, 780/780 e2e/integration tests, validate:module-registry clean). Both Vercel projects auto-deployed on push to main and were verified live directly, not just via CI own Vercel status check -- dashboard-api /health returned build.commitSha == a22a6a820c694fe92c40b42ad967bdccf47fdf60, confirming the exact merged commit is what is serving; GET /ready-for-claude-queue/tasks returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed); and dashboard-web / correctly redirects (307) to /home for an unauthenticated visitor. The Ready for Claude Queue module backend is now genuinely live in production. No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module own backend-first precedent.",
+      "project_version_before": 111,
+      "project_version_after": 112
     }
   ],
   "current_gate": "G4-ready-for-claude-queue"
