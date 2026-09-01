@@ -4,7 +4,7 @@ import { closeConnection } from "../src/connection.js";
 import { buildMigrator } from "../src/migrate.js";
 
 /**
- * Exercises the Knowledge Library schema (migration `00095`) against a REAL, disposable
+ * Exercises the Knowledge Library schema (migration `00097`) against a REAL, disposable
  * PostgreSQL database. Mirrors ../test/module-persona-library.integration.test.ts's own
  * structure — the closest sibling (a single organization-wide table, a server-managed `version`
  * counter incremented atomically on `update()`, an atomic compare-and-swap `updateStatus()`).

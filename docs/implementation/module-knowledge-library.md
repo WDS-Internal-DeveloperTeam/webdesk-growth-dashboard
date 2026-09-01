@@ -80,9 +80,9 @@ Knowledge Library redacts `location`/`notes` (its own analogues of "the sensitiv
 Backend built directly on branch `module-knowledge-library`, off `main`. `KnowledgeLibraryRecordEntity`
 (single table `knowledge_library_records`) with `title`/`sourceType`/`location`/`ownerUserId`/
 `sourceDate`/`confidentiality`/`approvedForAgentUse`/`status`/`notes`/`relatedEntityIds`/`version`/
-`lastReviewedAt` per D1–D10. Migration `00095-create-knowledge-library` (table, three plain indexes,
+`lastReviewedAt` per D1–D10. Migration `00097-create-knowledge-library` (table, three plain indexes,
 plus a `pg_trgm` GIN trigram index on `title` mirroring Section and Pattern Library/Design Token
-Library/Website Strategy Center's own precedent) and `00096-mark-knowledge-library-in-development`.
+Library/Website Strategy Center's own precedent) and `00098-mark-knowledge-library-in-development`.
 
 `KnowledgeLibraryRecordRepository` mirrors `PersonaRepository`'s own already-reviewed pattern for
 the server-managed `version` counter (`literal("version + 1")` inside `update()`'s own `UPDATE`
@@ -118,8 +118,8 @@ exists yet for this module.
 (`webdesk_knowledge_library_dev`), not assumed:**
 
 - `packages/database` typecheck/build: clean.
-- Migration round-trip: `up` (all 96 migrations, including `00095`/`00096`), `down` (reverting
-  `00096` then `00095`), `up` again — clean both directions.
+- Migration round-trip: `up` (all 98 migrations, including `00097`/`00098`), `down` (reverting
+  `00098` then `00097`), `up` again — clean both directions.
 - `packages/database/test/module-knowledge-library.integration.test.ts`: 15/15 new tests, against
   a real database — covers create defaults, full field round-trip (including the `confidentiality`
   enum and `sourceDate` DATEONLY column), `list()` filtering (status/confidentiality/exact-match
