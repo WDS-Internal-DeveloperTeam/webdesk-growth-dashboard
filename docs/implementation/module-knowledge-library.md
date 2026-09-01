@@ -232,3 +232,85 @@ dependents — the module has no `dashboard-web` UI or traffic yet), the user ra
 applied `00097`/`00098` cleanly. `migrate:status` now shows 98/98 executed, 0 pending. **The
 Knowledge Library backend's schema is now genuinely live in production**, matching the already-
 deployed code.
+
+## As-built — `dashboard-web` UI (2026-09-01)
+
+Built directly on the explicit "Start the dashboard-web UI for it" instruction, closing this
+module's last named gap. No approved wireframe/screen spec exists for this module
+(`03_Detailed_Module_Specifications.md §28` is a flat field list) — every field mirrors the
+backend's actual `createKnowledgeLibraryRecordSchema`/`updateKnowledgeLibraryRecordSchema`
+directly, matching every sibling module's own "smallest honest reading" precedent for an unsourced
+screen. Mirrors Business Knowledge Center's/Persona Library's UI structure file-for-file (the
+closest siblings — a single generic table, an independent confidentiality field with the same
+`undefined`-means-redacted contract Service Library already established).
+
+New `packages/shared-types` `KnowledgeLibraryRecordStatus`/`KnowledgeLibraryRecordConfidentiality`/
+`KnowledgeLibraryRecord` — `sourceType`/`location`/`notes` are typed `string | null | undefined`
+directly on the shared type (not narrowed away), honestly reflecting that the backend's
+confidential-field redaction (`redactIfRestricted()`) can delete all three keys outright for a
+`restricted` record when the caller lacks `view_confidential` — currently every caller, since that
+action is zero-seeded for every role. `lib/knowledge-library-query.ts`/`lib/knowledge-library.ts`
+(zero-non-type-import-file split, mirroring `persona-library-query.ts`/`persona-library.ts`) —
+`search` is clamped (not rejected) to 255 characters, matching Persona/Service Library's own
+established defense-in-depth precedent (a fix applied here after first copying Business Knowledge
+Center's stricter reject-on-overlong shape, which doesn't actually match the more common sibling
+convention).
+
+`KnowledgeLibraryForm`: `title`/`sourceType`/`location`/`sourceDate`/`confidentiality`/
+`approvedForAgentUse`/`notes`/`relatedEntityIds`/`lastReviewedAt` are all editable in both create
+and edit mode — unlike several sibling modules, there is no create-only field here (no
+`recordType`-style discriminator, no immutable `publicId`). `status` is deliberately never a form
+field — only the dedicated `POST .../:id/status` route (`KnowledgeLibraryStatusActions`) may
+change it, matching `updateKnowledgeLibraryRecordSchema`'s own contract. `ownerUserId` uses the
+reusable `UserPicker` with the established `ownerTouched` guard (preserves an unresolvable existing
+assignment rather than silently clearing it, mirroring `ProjectForm`'s own precedent).
+`relatedEntityIds` is a free-text `TagListField` (unvalidated, matching Service Library's own
+`icpIds` shape — "related entities" isn't scoped to any single other module in the spec).
+`lastReviewedAt` uses the existing `datetime-local`/`toDateTimeLocalValue`/`fromDateTimeLocalValue`
+helpers (`lib/datetime-local.ts`), extracted during Case Study Studio's own build. `location` stays
+a plain text input, deliberately never validated as a URL or rendered as a link — the backend's own
+doc comment states a reference source's location may genuinely be a URL, an internal file path, or
+a citation.
+
+Per the 2026-08-22 standing rule, `notes` uses the existing `RichTextEditor` — this required a real,
+paired backend change alongside the UI (the field predates the standing rule and was originally
+built plain, per its own original backend-only pass): `KnowledgeLibraryRecordsService.create()`/
+`update()` now sanitize `notes` via `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`
+(`@webdesk/validation`), and the DTO cap was raised 10,000 → 20,000 to match the standard markup-
+overhead ratio every prior rich-text conversion in this codebase uses. 3 new `dashboard-api` unit
+tests prove sanitization on both create and update (including the skip-if-unchanged path).
+`sourceType`/`location` stay plain text — neither carries markup risk and neither predates a
+rich-text conversion decision either way.
+
+The detail page renders sections mirroring the backend's own field grouping (Identity, Source,
+Confidentiality, Notes, Status) rather than client-side tabs, the same simplification every sibling
+detail page already establishes. A redacted record shows an inert notice for its Source and Notes
+sections instead of the actual (absent) values. "Edit" is hidden once a record reaches its terminal
+`deprecated` status, matching the equivalent already-shipped precedent on sibling detail pages
+(e.g. Website Strategy Center).
+
+**Reviewed at light tier**, per this project's own 2026-08-27 "right-size the review pipeline"
+standing rule — a small, frontend-only UI slice consuming an already-reviewed, already-gated
+backend, plus a well-established, low-risk backend pattern (rich-text sanitization wiring) already
+used identically in 6+ prior modules. A direct read-through pass verified: the create/edit field
+contract against the real backend DTOs, the status-actions transition table against the real
+backend `ALLOWED_TRANSITIONS` table, the redaction contract (`undefined` vs `null`) against the
+real controller's `redactIfRestricted()`/`CONFIDENTIAL_RESTRICTED_FIELDS`, reuse of every
+established shared helper (`form-field-value.ts`, `rich-text.ts`, `datetime-local.ts`,
+`detail-section-styles.ts`, `list-filter-styles.ts`, `list-table-styles.ts`, `pagination.ts`,
+`SanitizedRichText`, `UserPicker`, `TagListField`), the terminal-state Edit-link hiding, and query
+clamping consistency — **0 findings** kept after the one fix noted above. A separate security
+review was skipped per the same standing rule — the only backend change is a length-cap raise plus
+sanitization wiring identical to 6+ already-reviewed prior modules, and every rich-text render site
+routes exclusively through the existing, already-audited `SanitizedRichText` component.
+
+Full validation, independently re-run and confirmed by the orchestrating session: 1571/1571
+`dashboard-api` unit tests (3 new), 1540/1540 `dashboard-web` unit tests (37 new — 22 lib/query, 8
+status-actions, 7 form), a clean `next build` with all 4 new routes present
+(`/knowledge-library`, `/knowledge-library/new`, `/knowledge-library/[recordId]`,
+`/knowledge-library/[recordId]/edit`), typecheck (`dashboard-api`/`dashboard-web`/
+`dashboard-worker`/`@webdesk/shared-types` all clean), `eslint --max-warnings=0` clean, CSS-token
+check clean (79 files), and `prettier --check` clean.
+
+Not yet reviewed by a second-role human, gated, pushed, or merged — each remains its own separate,
+not-yet-requested next step, per this project's standing "no auto-merge" rule.

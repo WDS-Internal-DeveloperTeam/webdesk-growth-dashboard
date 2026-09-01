@@ -41,7 +41,12 @@ export const createKnowledgeLibraryRecordSchema = z.object({
   sourceDate: z.string().date().nullish(),
   confidentiality: knowledgeLibraryConfidentialitySchema.optional(),
   approvedForAgentUse: z.boolean().optional(),
-  notes: z.string().max(10_000).nullish(),
+  // Raised 10_000 -> 20_000 alongside the 2026-08-22 standing rule's `dashboard-web` conversion of
+  // this field to `RichTextEditor` — the same 2x markup-overhead ratio every prior rich-text
+  // conversion in this codebase has used (Service/Persona/Website-Strategy-Center/Internal-Linking
+  // Library), since HTML output from the editor carries real tag overhead over the equivalent
+  // plain text.
+  notes: z.string().max(20_000).nullish(),
   // D7 — plain, unvalidated string array.
   relatedEntityIds: z.array(z.string().min(1).max(255)).max(RELATED_ENTITY_IDS_MAX).nullish(),
   // D9 — a plain, caller-settable nullable timestamp; no dedicated "mark reviewed" action exists.
@@ -61,7 +66,7 @@ export const updateKnowledgeLibraryRecordSchema = z.object({
   sourceDate: z.string().date().nullish(),
   confidentiality: knowledgeLibraryConfidentialitySchema.optional(),
   approvedForAgentUse: z.boolean().optional(),
-  notes: z.string().max(10_000).nullish(),
+  notes: z.string().max(20_000).nullish(),
   relatedEntityIds: z.array(z.string().min(1).max(255)).max(RELATED_ENTITY_IDS_MAX).nullish(),
   lastReviewedAt: z.string().datetime().nullish(),
 });
