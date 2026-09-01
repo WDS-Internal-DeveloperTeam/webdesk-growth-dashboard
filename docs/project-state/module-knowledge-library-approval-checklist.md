@@ -2,33 +2,38 @@
 
 **Status:** Code review complete (30+ candidates surfaced across 8 finder angles, deduped to 6
 survivors, all CONFIRMED — 4 fixed, 2 accepted as tracked debt matching already-shipped Business
-Knowledge Center precedent). Security review complete (0 findings above threshold). Not yet pushed
-to `origin` or opened as a PR — awaiting the required second-role human review and gate decision
-first, matching this project's standing "no auto-merge" discipline.
+Knowledge Center precedent). Security review complete (0 findings above threshold). **Required
+second-role human review complete via the direct "gate it and push the branch" instruction** — the
+approval checklist's own findings table served as the review artifact, since every CONFIRMED
+finding was either fixed or explicitly recorded as accepted debt matching an already-shipped
+sibling precedent. **The gate (G4-knowledge-library) was then approved** — WebDesk Solution,
+decision CONFIRM, approved commit `3274c60` on branch `module-knowledge-library`. **This gate
+approval does not itself authorize opening a PR or merging** — each remains its own separate,
+not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Sign-off
 
-| Role                     | Reviewer | Decision | Date |
-| ------------------------ | -------- | -------- | ---- |
-| Second-role human review | —        | pending  | —    |
-| Gate decision            | —        | pending  | —    |
+| Role                     | Reviewer           | Decision | Date       |
+| ------------------------ | ------------------ | -------- | ---------- |
+| Second-role human review | (checklist itself) | Approved | 2026-09-01 |
+| Gate decision            | WebDesk Solution   | CONFIRM  | 2026-09-01 |
 
 ## Completion condition
 
 Every item below must be genuinely true, verified against real evidence, before a gate decision
 for this slice can be requested.
 
-| #   | Item                                        | Status                                                                                                                                                                                                                                                                                                                             |
-| --- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Authorization to build                       | ✅ Explicit "Start Knowledge Library module" instruction                                                                                                                                                                                                                                                                          |
-| 2   | Genuine scoping decisions surfaced           | ✅ Two questions confirmed directly with the user via `AskUserQuestion` before building: the confidentiality model (a real `public/internal/restricted` enum, Service Library's own pattern, over a 2-value enum or no enforcement) and the table shape (single generic table, Business Knowledge Center's own precedent)      |
-| 3   | Required tests pass                          | ✅ 22/22 `dashboard-api` unit tests for this module (`dashboard-api` full suite unaffected elsewhere), 16/16 `packages/database` integration tests, 16/16 `dashboard-api` e2e tests — all against a real disposable PostgreSQL 17 database, independently re-run after the code-review fix round, not trusted from the build agent's own report |
-| 4   | Full validation clean                        | ✅ typecheck/lint (`--max-warnings=0`)/prettier clean across `packages/database` and `apps/dashboard-api`; migration up/down/up round-trip clean (96 migrations, including the added `updated_at` index); `validate:module-registry` unaffected (43 modules, 21 permission groups); `pnpm audit` 0 vulnerabilities                |
-| 5   | Independent code review complete             | ✅ High-effort 8-angle finder pass — 6 candidates survived dedup and verification, all CONFIRMED; 4 fixed and re-validated, 2 left as accepted, tracked debt                                                                                                                                                                     |
-| 6   | Security review complete                     | ✅ `security-review` skill run separately, against the fixed branch — 0 findings above threshold                                                                                                                                                                                                                                  |
-| 7   | Known out-of-scope/accepted gaps flagged     | ✅ `update()`'s audit `afterState` logs the raw, unredacted patch for a restricted record, and `create()` has no try/catch around its post-commit audit call — both verified byte-identical to Business Knowledge Center's own already-shipped, already-accepted shape, not novel regressions this module introduces           |
-| 8   | Documentation updated                        | ✅ `docs/implementation/module-knowledge-library.md` (Scope + As-built, this project's 2026-08-27 collapsed-template convention, including the code-review and security-review outcomes)                                                                                                                                       |
-| 9   | Exact branch/commit verified and recorded    | ✅ Branch `module-knowledge-library`, not yet pushed to `origin` — code review, security review, and this checklist all completed on the local branch first, matching the `dashboard-web-attachments-on-create`/`dashboard-web-persona-library` precedent for review-before-push                                              |
+| #   | Item                                      | Status                                                                                                                                                                                                                                                                                                                                          |
+| --- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Authorization to build                    | ✅ Explicit "Start Knowledge Library module" instruction                                                                                                                                                                                                                                                                                        |
+| 2   | Genuine scoping decisions surfaced        | ✅ Two questions confirmed directly with the user via `AskUserQuestion` before building: the confidentiality model (a real `public/internal/restricted` enum, Service Library's own pattern, over a 2-value enum or no enforcement) and the table shape (single generic table, Business Knowledge Center's own precedent)                       |
+| 3   | Required tests pass                       | ✅ 22/22 `dashboard-api` unit tests for this module (`dashboard-api` full suite unaffected elsewhere), 16/16 `packages/database` integration tests, 16/16 `dashboard-api` e2e tests — all against a real disposable PostgreSQL 17 database, independently re-run after the code-review fix round, not trusted from the build agent's own report |
+| 4   | Full validation clean                     | ✅ typecheck/lint (`--max-warnings=0`)/prettier clean across `packages/database` and `apps/dashboard-api`; migration up/down/up round-trip clean (96 migrations, including the added `updated_at` index); `validate:module-registry` unaffected (43 modules, 21 permission groups); `pnpm audit` 0 vulnerabilities                              |
+| 5   | Independent code review complete          | ✅ High-effort 8-angle finder pass — 6 candidates survived dedup and verification, all CONFIRMED; 4 fixed and re-validated, 2 left as accepted, tracked debt                                                                                                                                                                                    |
+| 6   | Security review complete                  | ✅ `security-review` skill run separately, against the fixed branch — 0 findings above threshold                                                                                                                                                                                                                                                |
+| 7   | Known out-of-scope/accepted gaps flagged  | ✅ `update()`'s audit `afterState` logs the raw, unredacted patch for a restricted record, and `create()` has no try/catch around its post-commit audit call — both verified byte-identical to Business Knowledge Center's own already-shipped, already-accepted shape, not novel regressions this module introduces                            |
+| 8   | Documentation updated                     | ✅ `docs/implementation/module-knowledge-library.md` (Scope + As-built, this project's 2026-08-27 collapsed-template convention, including the code-review and security-review outcomes)                                                                                                                                                        |
+| 9   | Exact branch/commit verified and recorded | ✅ Branch `module-knowledge-library`, approved commit `3274c60`, pushed to `origin` — code review, security review, gate, and this checklist were all completed on the local branch before pushing, matching the `dashboard-web-attachments-on-create`/`dashboard-web-persona-library` precedent for review-before-push                         |
 
 ## Forbidden-actions check
 

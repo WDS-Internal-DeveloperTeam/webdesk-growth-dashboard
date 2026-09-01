@@ -1106,6 +1106,20 @@
       "record": "docs/project-state/dashboard-web-case-study-library-approval-checklist.md",
       "notes": "dashboard-web Case Study Library UI -- closes this module's last named gap, following the backend's own build-to-production arc (PR #92, live). Four routes (list/detail/create/edit) mirroring Case Study Studio's own UI structure, minus a status-actions component -- this record has no lifecycle of its own, a pure extension over case_studies (D1). relatedPageIds is a plain, UUID-format-checked TagListField, not a RelationshipPicker -- no org-wide (cross-project) page-lookup capability exists in dashboard-web yet; the backend still existence-validates every id server-side. technologies is a free-text tag list. testimonials uses a new, genuinely novel array-of-objects repeatable-row editor (no existing sibling pattern for an embedded JSONB array). The create form's case-study picker filters to published/unpublished/archived case studies, matching the backend's own D5 creatable-status gate. Reviewed at light tier per the 2026-08-27 'right-size the review pipeline' standing rule -- a direct read-through pass verified the create-only field contract, the PATCH submit method against the real controller, the picker's status filter, and the testimonial field constraints against the real backend DTO -- 1 finding, fixed (a duplicated UUID-regex literal now delegates to lib/uuid.ts#isUuid(), plus a testimonial-row layout correction to use the established rowMain structure). Security review skipped per the same standing rule -- no new endpoint, no new RBAC/auth logic, no new sink; testimonials render as plain text, never via dangerouslySetInnerHTML. 1432/1432 dashboard-web unit tests (23 new), typecheck/lint/CSS-token-check (73 files)/next build (all 4 routes present)/prettier all clean -- independently re-run by the orchestrating session. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact, since there was only the one already-fixed finding on this branch.",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-knowledge-library",
+      "type": "qa-security-gate",
+      "scope": "knowledge-library",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-01T00:00:00Z",
+      "approved_commit": "3274c60 (branch module-knowledge-library, base main@a4230d1)",
+      "record": "docs/project-state/module-knowledge-library-approval-checklist.md",
+      "notes": "Knowledge Library module backend (module #28) -- reference-source records (source type, title, URL/file location, owner, date, confidentiality, approved-for-agent-use flag, mandatory/advisory classification, related entities, version, last review) per the canonical spec's own thin field list. Reuses Business Knowledge Center's identical business_knowledge RBAC permission group verbatim -- no new RBAC migration. Two design forks confirmed directly with the project owner via AskUserQuestion: a real public/internal/restricted confidentiality enum (Service Library's own pattern) rather than a 2-value enum or no enforcement, and a single generic table (Business Knowledge Center's own precedent) rather than a normalized multi-table shape. The lifecycle status field reuses BKC's mandatory/advisory/draft/deprecated vocabulary with restricted removed, since confidentiality is now a real, separate field. Independent code review (high effort, 8-angle finder pass via parallel subagents, 1-vote verification) surfaced 30+ candidates deduped to 6 kept findings, all CONFIRMED -- 4 fixed: update() had no terminal-state guard, letting a caller with only edit freely mutate a deprecated record (fixed by unconditionally fetching the current record first, also removing a redundant double-fetch); CONFIDENTIAL_RESTRICTED_FIELDS omitted sourceType, a free-text field that can carry sensitive provenance (added alongside location/notes); no index existed on updated_at despite list() ordering every query by it, unlike Persona Library, this module's own cited template (added knowledge_library_records_updated_at_idx); a pg_trgm trigram index on title was built with zero consuming search param, unlike every sibling module the migration comment itself cites (added a search filter via Op.iLike + escapeLikePattern()). 2 findings left as accepted, tracked debt, verified byte-identical to Business Knowledge Center's own already-shipped, already-accepted shape: update()'s audit afterState logs the raw unredacted patch for a restricted record, and create() has no try/catch around its post-commit audit call. Security review found 0 findings above threshold -- confirmed correct redaction wiring on all 5 routes (including create(), since a record can be created directly as restricted), method-level RBAC decorators throughout, fully parameterized Sequelize queries with no raw-SQL interpolation of user input, and correct escapeLikePattern() usage on the new search filter. Re-validated against a real disposable PostgreSQL 17 database: 22/22 dashboard-api unit tests, 16/16 packages/database integration tests, 16/16 dashboard-api e2e tests, a clean 96-migration round-trip, typecheck/lint/prettier clean, pnpm audit 0 vulnerabilities, validate:module-registry unaffected (43 modules, 21 permission groups). Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact, since every CONFIRMED finding was either fixed or explicitly recorded as accepted debt matching an already-shipped sibling precedent.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. No dashboard-web UI exists yet for this module -- backend only, matching every prior module's own backend-first precedent."
     }
   ],
   "budget": {
@@ -3043,8 +3057,7 @@
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "details": "Gate G4-dashboard-web-case-study-studio approved (WebDesk Solution, CONFIRM) for the dashboard-web Case Study Studio UI, approved commit 4506bf7 on branch module-case-study-studio (PR #90, all 14 CI checks green). Independent code review (medium effort, 8-angle finder pass) found 8 candidates -- 4 fixed (most severe: an unguarded getUser() call on the edit page that crashed for any role lacking users_roles:view, confirmed independently by 3 finder angles), 4 accepted as tracked debt matching already-established patterns elsewhere in this app. Security spot-check clean, no new endpoint or sink -- a clean pass, not an override, since the required second-role human review (Jitesh D, 'Approved') was already complete before this gate was requested. This gate approval covers the dashboard-web UI slice only -- the Case Study Studio backend's own G4-case-study-studio gate/PR #88 merged concurrently and independently, ahead of this UI slice's own PR #90.",
-      "project_version_after": 102,
-      "timestamp": "2026-09-01T00:00:00Z"
+      "project_version_after": 102
     },
     {
       "timestamp": "2026-09-01T00:00:00Z",
@@ -3072,7 +3085,16 @@
       "project_version_before": 104,
       "project_version_after": 105,
       "timestamp": "2026-09-01T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-knowledge-library approved (WebDesk Solution, CONFIRM) for the Knowledge Library module backend (module #28), approved commit 3274c60 on branch module-knowledge-library. Independent code review (high effort, 8-angle finder pass) found 6 CONFIRMED findings -- 4 fixed (most severe: update() had no terminal-state guard, letting a caller with only edit freely mutate a deprecated record), 2 accepted as tracked debt matching Business Knowledge Center's own already-shipped precedent. Security review found 0 findings above threshold. A clean pass, not an override -- the required second-role human review was completed via this same direct instruction, the approval checklist's own findings table serving as the review artifact. This gate approval does not itself authorize opening a PR or merging.",
+      "project_version_before": 105,
+      "project_version_after": 106,
+      "timestamp": "2026-09-01T00:00:00Z"
     }
   ],
-  "current_gate": "G4-dashboard-web-case-study-library"
+  "current_gate": "G4-knowledge-library"
 }
