@@ -12,6 +12,7 @@ import type {
   KnowledgeLibraryRecordRepository,
   KnowledgeLibraryRecordStatus,
 } from "@webdesk/database";
+import { sanitizeNullableRichText, sanitizeNullableRichTextIfChanged } from "@webdesk/validation";
 import { KNOWLEDGE_LIBRARY_RECORD_REPOSITORY } from "./knowledge-library.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuditService } from "../audit/audit.service.js";
@@ -66,7 +67,15 @@ export class KnowledgeLibraryRecordsService {
     if (input.ownerUserId) {
       await this.usersService.assertUserExists(input.ownerUserId, "ownerUserId");
     }
-    const created = await this.records.create({ ...input, createdBy: actorUserId });
+    const created = await this.records.create({
+      ...input,
+      // `notes` is rendered via `RichTextEditor` in `dashboard-web` (2026-08-22 standing rule) —
+      // sanitized here at write time and again at render time via the shared `SanitizedRichText`
+      // component, the same double-sanitization pattern every other rich-text field in this
+      // codebase already establishes (Service/Persona Library, Website Strategy Center).
+      notes: sanitizeNullableRichText(input.notes),
+      createdBy: actorUserId,
+    });
     await this.auditService.record({
       eventType: "data_change",
       actorUserId,
@@ -122,7 +131,11 @@ export class KnowledgeLibraryRecordsService {
       await this.usersService.assertUserExists(patch.ownerUserId, "ownerUserId");
     }
 
-    const updated = await this.records.update(id, { ...patch, updatedBy: actorUserId });
+    const updated = await this.records.update(id, {
+      ...patch,
+      notes: sanitizeNullableRichTextIfChanged(patch.notes, current.notes),
+      updatedBy: actorUserId,
+    });
     if (!updated) {
       throw new NotFoundException(`Knowledge library record not found: ${id}`);
     }

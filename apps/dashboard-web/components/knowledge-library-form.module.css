@@ -1,0 +1,67 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xl);
+  max-width: 44rem;
+}
+
+.field {
+  composes: field from "./form-fields.module.css";
+}
+
+.label {
+  composes: label from "./form-fields.module.css";
+}
+
+.helperText {
+  composes: helperText from "./form-fields.module.css";
+}
+
+.input {
+  composes: input from "./form-fields.module.css";
+}
+
+.select {
+  composes: select from "./form-fields.module.css";
+}
+
+.checkboxField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-xs);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.redactedNotice {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm);
+  margin: 0;
+}
+
+.error {
+  composes: error from "./form-fields.module.css";
+}
+
+.actions {
+  composes: actions from "./form-fields.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./form-fields.module.css";
+}
+
+.cancelLink {
+  composes: cancelLink from "./form-fields.module.css";
+}
