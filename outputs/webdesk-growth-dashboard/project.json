@@ -1094,6 +1094,20 @@
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. No dashboard-web UI exists yet for this module -- backend only, matching every prior module's own backend-first precedent."
     },
     {
+      "id": "G4-dashboard-web-case-study-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-case-study-library",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-01T00:00:00Z",
+      "approved_commit": "9ea2afe (branch dashboard-web-case-study-library, base main@e759985)",
+      "record": "docs/project-state/dashboard-web-case-study-library-approval-checklist.md",
+      "notes": "dashboard-web Case Study Library UI -- closes this module's last named gap, following the backend's own build-to-production arc (PR #92, live). Four routes (list/detail/create/edit) mirroring Case Study Studio's own UI structure, minus a status-actions component -- this record has no lifecycle of its own, a pure extension over case_studies (D1). relatedPageIds is a plain, UUID-format-checked TagListField, not a RelationshipPicker -- no org-wide (cross-project) page-lookup capability exists in dashboard-web yet; the backend still existence-validates every id server-side. technologies is a free-text tag list. testimonials uses a new, genuinely novel array-of-objects repeatable-row editor (no existing sibling pattern for an embedded JSONB array). The create form's case-study picker filters to published/unpublished/archived case studies, matching the backend's own D5 creatable-status gate. Reviewed at light tier per the 2026-08-27 'right-size the review pipeline' standing rule -- a direct read-through pass verified the create-only field contract, the PATCH submit method against the real controller, the picker's status filter, and the testimonial field constraints against the real backend DTO -- 1 finding, fixed (a duplicated UUID-regex literal now delegates to lib/uuid.ts#isUuid(), plus a testimonial-row layout correction to use the established rowMain structure). Security review skipped per the same standing rule -- no new endpoint, no new RBAC/auth logic, no new sink; testimonials render as plain text, never via dangerouslySetInnerHTML. 1432/1432 dashboard-web unit tests (23 new), typecheck/lint/CSS-token-check (73 files)/next build (all 4 routes present)/prettier all clean -- independently re-run by the orchestrating session. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact, since there was only the one already-fixed finding on this branch.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
       "id": "G4-portfolio-library",
       "type": "qa-security-gate",
       "scope": "portfolio-library",
@@ -3068,9 +3082,18 @@
       "action": "gate_approved",
       "actor": "WebDesk Solution",
       "actor_type": "human",
-      "details": "Gate G4-portfolio-library approved (WebDesk Solution, CONFIRM) for the Portfolio Library module backend (module #25), approved commit 3fde438 on branch module-portfolio-library (merged with origin/main including case-study-library migrations 00093/00094; not yet pushed to origin). Independent code review (high effort, 8-angle finder pass) found 8 candidates kept after dedup -- 5 fixed (relatedProofIds retyped to a UUID array; a duplicated empty-patch validator extracted into rejectEmptyPatch(); a triplicated audit try/catch extracted into recordAuditSafely(); a redundant IDOR pre-check in PortfolioAssetsService.remove() removed), 1 attempted fix reverted after inspection showed the original sequential order in publish() was deliberate, 3 left as accepted tracked debt matching already-established conventions in 5+ sibling modules. Security review found 0 findings above threshold. Real database validation run against a fresh disposable PostgreSQL 17 database using credentials the user supplied directly: 52/52 dashboard-api unit tests, 33/33 packages/database integration tests, 31/31 dashboard-api e2e tests, a 96-migration round-trip, validate:module-registry (43 modules, 21 permission groups) -- all re-verified after the fix round and again after merging concurrent origin/main work. A clean pass, not an override, since the required second-role human review (WebDesk Solution, 'Approve (CONFIRM)') was already complete before this gate was requested. This gate approval does not itself authorize pushing the branch, opening a PR, or merging.",
+      "details": "Gate G4-dashboard-web-case-study-library approved (WebDesk Solution, CONFIRM) for the dashboard-web Case Study Library UI, approved commit 9ea2afe on branch dashboard-web-case-study-library (not yet pushed to origin). Reviewed at light tier per the 2026-08-27 standing rule -- 1 finding fixed (a duplicated UUID-regex literal, plus a testimonial-row layout correction). Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist itself served as the review artifact. This gate approval does not itself authorize pushing the branch, opening a PR, or merging.",
       "project_version_before": 104,
       "project_version_after": 105,
+      "timestamp": "2026-09-01T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-portfolio-library approved (WebDesk Solution, CONFIRM) for the Portfolio Library module backend (module #25), approved commit 3fde438 on branch module-portfolio-library (merged with origin/main including case-study-library migrations 00093/00094; not yet pushed to origin). Independent code review (high effort, 8-angle finder pass) found 8 candidates kept after dedup -- 5 fixed (relatedProofIds retyped to a UUID array; a duplicated empty-patch validator extracted into rejectEmptyPatch(); a triplicated audit try/catch extracted into recordAuditSafely(); a redundant IDOR pre-check in PortfolioAssetsService.remove() removed), 1 attempted fix reverted after inspection showed the original sequential order in publish() was deliberate, 3 left as accepted tracked debt matching already-established conventions in 5+ sibling modules. Security review found 0 findings above threshold. Real database validation run against a fresh disposable PostgreSQL 17 database using credentials the user supplied directly: 52/52 dashboard-api unit tests, 33/33 packages/database integration tests, 31/31 dashboard-api e2e tests, a 96-migration round-trip, validate:module-registry (43 modules, 21 permission groups) -- all re-verified after the fix round and again after merging concurrent origin/main work. A clean pass, not an override, since the required second-role human review (WebDesk Solution, 'Approve (CONFIRM)') was already complete before this gate was requested. This gate approval does not itself authorize pushing the branch, opening a PR, or merging.",
+      "project_version_before": 105,
+      "project_version_after": 106,
       "timestamp": "2026-09-01T00:00:00Z"
     }
   ],
