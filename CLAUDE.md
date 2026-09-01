@@ -3601,6 +3601,42 @@ c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is
     unbuilt member of Wave 4. Not started or authorized — a separate, not-yet-requested next
     step.**
 
+63. **Case Study Studio module #23 — backend built, reviewed, and gated (G4-case-study-studio,
+    WebDesk Solution, CONFIRM); `dashboard-web` UI then built, reviewed, and gated
+    (G4-dashboard-web-case-study-studio, WebDesk Solution, CONFIRM); pushed and opened as
+    [PR #90](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/90), all
+    14 CI checks green — not yet merged (2026-09-01).** Built directly on the explicit "start
+    Case Study Studio" instruction, ahead of `design_review_center`. The backend implements the
+    full bespoke 14-stage lifecycle named in the spec (D1), reusing Proof and Claims Library
+    (`relatedClaimIds`) and Asset Library (`case_study_assets` join) instead of duplicating the
+    spec's own separate tables, plus a `case_study_consents` sub-resource and a read-only
+    `case_study_approvals` decision-history log. Independent code review (high effort, 8-angle
+    finder pass) found 9 candidates, 7 fixed (most severe: `clientApprovalRequired` was patchable
+    through the ordinary content-edit route, letting a caller with `edit`+`approve` silently
+    bypass the mandatory `client_approval` stage — fixed by making it create-only/immutable), 1
+    accepted as tracked debt. Security review found 0 findings above threshold. See
+    `docs/implementation/module-case-study-studio.md` and
+    `docs/project-state/module-case-study-studio-approval-checklist.md`.
+    The `dashboard-web` UI (built directly on the explicit "Start the dashboard-web UI for it"
+    instruction, on top of the still-unmerged backend on this same branch) adds
+    list/detail/create/edit routes, a status-actions component byte-verified against the
+    backend's real `TRANSITIONS` map, two independent `RelationshipPicker`s
+    (`relatedServiceIds`/`relatedClaimIds`), and the three sub-resource sections. Independent
+    code review (medium effort, 8-angle finder pass) found 8 candidates, 4 fixed (most severe: an
+    unguarded `getUser()` call crashed the edit page for any role lacking `users_roles:view`,
+    confirmed independently by 3 of the 8 finder angles — fixed with a try/catch mirroring
+    `ProjectForm`'s own guard, plus a new regression test), 4 accepted as tracked debt matching
+    already-established patterns elsewhere in this app. A security spot-check (not a full
+    separate skill run, per the 2026-08-27 review-pipeline right-sizing standing rule) found no
+    new endpoint or sink. **Required second-role human review complete for both slices** —
+    Jitesh D reviewed both packets and returned "Approved." See
+    `docs/project-state/dashboard-web-case-study-studio-approval-checklist.md`. **"Push the
+    branch and open a PR" was then separately requested and executed** — pushed to `origin`,
+    opened as [PR #90](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/90),
+    all 14 CI checks confirmed green. **Neither gate approval authorizes merging PR #90** — merge
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
