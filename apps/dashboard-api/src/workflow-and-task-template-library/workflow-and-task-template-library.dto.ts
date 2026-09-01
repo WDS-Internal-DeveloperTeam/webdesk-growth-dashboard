@@ -35,11 +35,12 @@ const APPROVAL_STATUS_VALUES = [
 export const workflowTaskTemplateApprovalStatusSchema = z.enum(APPROVAL_STATUS_VALUES);
 
 // `.nullish()` so an explicit `null` can clear a field on update, same convention every sibling
-// module's own text fields use. Backend-only pass — plain unsanitized text, no RichTextEditor/
-// sanitization wiring yet (matches Persona Library's/Service Library's own original backend-only
-// builds; see CLAUDE.md's "Cautions" standing rule for when rich-text wiring is added later
-// alongside the dashboard-web UI).
-const LONG_TEXT_MAX_LENGTH = 4000;
+// module's own text fields use. `requiredInputs`/`expectedOutputs`/`restrictions`/
+// `validationCriteria` render via `RichTextEditor` in `dashboard-web` (2026-08-22 standing rule)
+// and are sanitized at write time in the service — the cap is raised 2x over the original
+// backend-only pass's plain-text limit to absorb markup overhead, matching every sibling
+// module's own identical rich-text-conversion ratio.
+const LONG_TEXT_MAX_LENGTH = 8000;
 const longTextField = z.string().max(LONG_TEXT_MAX_LENGTH).nullish();
 
 export const listWorkflowTaskTemplatesQuerySchema = z.object({

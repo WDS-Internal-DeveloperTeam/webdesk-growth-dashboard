@@ -105,4 +105,56 @@ across 4 layers (migration/model/TS union/DTO) with no code-generation step in t
 keep them in sync.
 
 A separate `security-review` skill run, the required second-role human review, a gate decision,
-and merge authorization each remain their own separate, not-yet-requested next steps.
+and merge authorization for the backend each remain their own separate, not-yet-requested next
+steps.
+
+## As-built — `dashboard-web` UI
+
+Built directly on the explicit "Start the dashboard-web UI for it" instruction, on this same
+branch, on top of the still-unmerged backend above. No approved wireframe/screen spec exists for
+this module (`03_Detailed_Module_Specifications.md §29` is a flat field list) — sections mirror
+that grouping (Identity, Task details, Governance, Status), the smallest honest reading of an
+unsourced screen, matching every sibling module's own precedent. File-for-file mirrors Brand
+Library's UI structure — the closest sibling (single table, standard 8-value approval workflow, no
+publish mechanism, no sub-resources).
+
+Per the 2026-08-22 standing rule requiring every `dashboard-web` long-text field to use
+`RichTextEditor`, this build also closed the backend's own deferred sanitization gap in the same
+pass, rather than shipping a UI that types HTML into fields the backend still stores as plain,
+unsanitized text: `requiredInputs`/`expectedOutputs`/`restrictions`/`validationCriteria` are wired
+into `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()`
+(`WorkflowAndTaskTemplateLibraryService.create()`/`update()`), and `LONG_TEXT_MAX_LENGTH` raised
+4,000 → 8,000 (both DTO and form), the standard 2x markup-overhead ratio every prior rich-text
+conversion in this codebase uses. `authorizedStage`/`agentAssignment`/`requiredApprovals` stay
+plain text (short descriptive fields, matching how `title`/`name` never convert anywhere in this
+codebase).
+
+Files:
+
+- `packages/shared-types/src/index.ts` — added `WorkflowTaskTemplate`/
+  `WorkflowTaskTemplateApprovalStatus`/`WorkflowTaskTemplateType`.
+- `apps/dashboard-web/lib/workflow-and-task-template-library-query.ts` (zero-non-type-import file,
+  client-safe) / `workflow-and-task-template-library.ts` (server-side fetch functions) — the same
+  split every sibling module's own `-query.ts`/plain file pair uses.
+- `apps/dashboard-web/components/workflow-task-template-form.{tsx,module.css}`,
+  `workflow-task-template-status-actions.{tsx,module.css}` — the status-actions component reuses
+  `useSyncedState()` (not a hand-rolled `useEffect`, the current convention as of Motion and
+  Interaction Library) and mirrors the backend's `TRANSITIONS` table verbatim, including keeping
+  `approved -> superseded` as a real, reachable target (unlike Motion/Section/Page Template/
+  Wireframe Library, whose own backends dropped that edge — this module's backend still has it).
+- Four routes under `app/(shell)/workflow-and-task-template-library/` (list, detail, create, edit)
+  at the module registry's own seeded `route` field.
+- Test coverage: `tests/unit/workflow-and-task-template-library.test.tsx` (20 tests — query
+  parsing/href building/badge mapping/fetch functions), `workflow-task-template-status-actions.test.tsx`
+  (10 tests), `workflow-task-template-form.test.tsx` (8 tests) — 38 new tests total, mirroring
+  Brand Library's own equivalent 3-file test-coverage shape.
+
+Validation, independently re-run: 1578/1578 `dashboard-web` unit tests (38 new), 1602/1602
+`dashboard-api` unit tests (2 new — sanitization on create and on a changed field, mirroring Brand
+Library's own equivalent tests), a clean `next build` with all 4 new routes present, `eslint
+--max-warnings=0` clean, the CSS-token check clean, `prettier --check` clean across both apps and
+`packages/shared-types`.
+
+A separate `security-review` skill run, the required second-role human review, a gate decision,
+and merge authorization for the combined backend + UI branch each remain their own separate,
+not-yet-requested next steps.
