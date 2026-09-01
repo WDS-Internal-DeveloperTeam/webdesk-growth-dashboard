@@ -336,6 +336,19 @@ describe("Case Study Library module endpoints (e2e, real disposable database)", 
       .expect(400);
   });
 
+  it("rejects an update with 400 once the parent case study is archived", async () => {
+    const cookie = await cookieForNewSession(superAdminUserId);
+    const archivedId = await createParentCaseStudy("archived");
+    const created = await createLibraryRecord(cookie, { caseStudyId: archivedId });
+
+    await request(app.getHttpServer())
+      .patch(`/case-study-library/records/${created.id}`)
+      .set("Cookie", cookie)
+      .set("Origin", ORIGIN)
+      .send({ technologies: ["React"] })
+      .expect(400);
+  });
+
   it("returns 404 for a missing library record", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
     await request(app.getHttpServer())

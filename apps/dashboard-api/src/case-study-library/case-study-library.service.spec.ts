@@ -13,9 +13,12 @@ import { CaseStudyLibraryService } from "./case-study-library.service.js";
 const NOW = new Date("2026-09-01T00:00:00.000Z");
 const FAKE_PAGE_ID = "11111111-1111-4111-8111-111111111111";
 
-function uniqueConstraintError(): Error {
-  const error = new Error("Validation error");
+function uniqueConstraintError(fields: Record<string, unknown> = {}): Error & {
+  fields: Record<string, unknown>;
+} {
+  const error = new Error("Validation error") as Error & { fields: Record<string, unknown> };
   error.name = "SequelizeUniqueConstraintError";
+  error.fields = fields;
   return error;
 }
 
@@ -179,15 +182,26 @@ describe("CaseStudyLibraryService", () => {
       expect(records.create).not.toHaveBeenCalled();
     });
 
-    it("converts a TOCTOU unique-constraint race at the database layer into a clean 409", async () => {
+    it("converts a publicId TOCTOU unique-constraint race into a clean 400, matching the deterministic pre-check's own status code", async () => {
       caseStudies.findById.mockResolvedValue(caseStudy({ status: "published" }));
       records.findByCaseStudyId.mockResolvedValue(null);
       records.findByPublicId.mockResolvedValue(null);
-      records.create.mockRejectedValue(uniqueConstraintError());
+      records.create.mockRejectedValue(uniqueConstraintError({ public_id: "CSL-ACME-001" }));
 
       await expect(
         svc.create({ publicId: "CSL-ACME-001", caseStudyId: "cs-1" }, "actor-1"),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("converts a caseStudyId TOCTOU unique-constraint race into a 400 naming the actual collision, not the publicId one", async () => {
+      caseStudies.findById.mockResolvedValue(caseStudy({ status: "published" }));
+      records.findByCaseStudyId.mockResolvedValue(null);
+      records.findByPublicId.mockResolvedValue(null);
+      records.create.mockRejectedValue(uniqueConstraintError({ case_study_id: "cs-1" }));
+
+      await expect(
+        svc.create({ publicId: "CSL-ACME-001", caseStudyId: "cs-1" }, "actor-1"),
+      ).rejects.toThrow(/library record already exists for case study cs-1/);
     });
 
     it("propagates a NotFoundException when the parent case study doesn't exist", async () => {
@@ -314,6 +328,16 @@ describe("CaseStudyLibraryService", () => {
       await expect(
         svc.update("csl-1", { relatedPageIds: [FAKE_PAGE_ID] }, "actor-1"),
       ).rejects.toThrow(BadRequestException);
+      expect(records.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects an edit with 400 once the parent case study is archived, matching CaseStudiesService's own terminal-state guard", async () => {
+      records.findById.mockResolvedValue(libraryRecord());
+      caseStudies.findById.mockResolvedValue(caseStudy({ status: "archived" }));
+
+      await expect(svc.update("csl-1", { technologies: ["React"] }, "actor-1")).rejects.toThrow(
+        BadRequestException,
+      );
       expect(records.update).not.toHaveBeenCalled();
     });
   });

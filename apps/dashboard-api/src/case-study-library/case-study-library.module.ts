@@ -18,9 +18,10 @@ import { CaseStudyLibraryController } from "./case-study-library.controller.js";
  * `PageInventoryModule` for its exported `PagesService` (`relatedPageIds` existence validation,
  * org-wide, via `PagesService.existingPageIds()`, D2).
  *
- * Reuses `CASE_STUDY_STUDIO_MODULE_KEY` (the real, seeded `case_studies` RBAC permission group)
- * verbatim — no new RBAC migration, since `case_study_library`'s own module-registry entry already
- * shares that same permission group with `case_study_studio`.
+ * Declares its own `CASE_STUDY_LIBRARY_MODULE_KEY` with the real, seeded `case_studies` RBAC
+ * permission-group value — no new RBAC migration, since `case_study_library`'s own module-registry
+ * entry already shares that same permission group with `case_study_studio` (a coincidental value
+ * match, not a real coupling — see `case-study-library.constants.ts`'s own doc comment).
  *
  * No `AuthorizationService.canViewConfidential()` usage — no confidential-field mechanism exists
  * here (D6), matching Case Study Studio's own D9 precedent: the module registry's own

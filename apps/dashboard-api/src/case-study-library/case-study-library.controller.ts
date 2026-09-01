@@ -29,7 +29,7 @@ import {
   type ListCaseStudyLibraryRecordsQueryDto,
   type UpdateCaseStudyLibraryRecordDto,
 } from "./case-study-library.dto.js";
-import { CASE_STUDY_STUDIO_MODULE_KEY } from "./case-study-library.constants.js";
+import { CASE_STUDY_LIBRARY_MODULE_KEY } from "./case-study-library.constants.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import {
   CaseStudyLibraryService,
@@ -49,7 +49,7 @@ export class CaseStudyLibraryController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @RequirePermission(CASE_STUDY_STUDIO_MODULE_KEY, "view")
+  @RequirePermission(CASE_STUDY_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({
     summary: "List case study library records, each joined with its parent case study",
   })
@@ -64,7 +64,7 @@ export class CaseStudyLibraryController {
 
   @Get(":id")
   @UseGuards(PermissionGuard)
-  @RequirePermission(CASE_STUDY_STUDIO_MODULE_KEY, "view")
+  @RequirePermission(CASE_STUDY_LIBRARY_MODULE_KEY, "view")
   @ApiOperation({ summary: "Get one case study library record, joined with its parent case study" })
   async findOne(
     @Param("id", new ParseUUIDPipe()) id: string,
@@ -77,7 +77,7 @@ export class CaseStudyLibraryController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(CASE_STUDY_STUDIO_MODULE_KEY, "create")
+  @RequirePermission(CASE_STUDY_LIBRARY_MODULE_KEY, "create")
   @ApiOperation({
     summary:
       "Create a library record for a published/unpublished/archived case study (one per case study)",
@@ -94,7 +94,7 @@ export class CaseStudyLibraryController {
   @Patch(":id")
   @HttpCode(HttpStatus.OK)
   @UseGuards(OriginCheckGuard, PermissionGuard)
-  @RequirePermission(CASE_STUDY_STUDIO_MODULE_KEY, "edit")
+  @RequirePermission(CASE_STUDY_LIBRARY_MODULE_KEY, "edit")
   @ApiOperation({ summary: "Edit a library record's extension fields" })
   async update(
     @Param("id", new ParseUUIDPipe()) id: string,

@@ -135,12 +135,23 @@ export class CaseStudyLibraryService {
       // The publicId/caseStudyId uniqueness checks above are TOCTOU (two concurrent creates can
       // both pass them before either INSERT commits) — the real unique indexes catch the race
       // loser, but without this catch it would otherwise surface as a raw 500 instead of a clean
-      // 409/400, mirroring every sibling create()'s own established pattern.
+      // 400, mirroring every sibling create()'s own established pattern (CaseStudiesService's/
+      // PersonasService's own race-loser paths both throw BadRequestException, matching their own
+      // deterministic pre-checks — a prior version of this catch threw ConflictException here,
+      // giving the same logical error a different status code depending on timing; fixed by an
+      // independent code review). ADR-0006 forbids `dashboard-api` from importing `sequelize`
+      // directly (so no `instanceof` check on the error's own field-violation shape), but reading
+      // a plain property off the caught value is not an `instanceof` check — this disambiguates
+      // which of the two unique indexes actually fired instead of collapsing both into one
+      // ambiguous message (another code-review finding).
       if (isSequelizeUniqueConstraintError(error)) {
-        throw new ConflictException(
-          `publicId already in use, or a library record already exists for case study ` +
-            `${input.caseStudyId}`,
-        );
+        const fields = (error as { fields?: Record<string, unknown> }).fields ?? {};
+        if ("case_study_id" in fields) {
+          throw new BadRequestException(
+            `A library record already exists for case study ${input.caseStudyId}`,
+          );
+        }
+        throw new BadRequestException(`publicId already in use: ${input.publicId}`);
       }
       throw error;
     }
@@ -201,8 +212,14 @@ export class CaseStudyLibraryService {
     });
   }
 
-  /** Content update — no status of its own to guard (D1: this record has no independent lifecycle,
-   *  it always reads the parent case study's status). */
+  /** Content update — no status of its own to guard (D1: this record has no independent lifecycle),
+   *  but it must still respect the PARENT case study's own terminal state: `CaseStudiesService`
+   *  itself blocks further edits once `status === "archived"`, and every sibling module in this
+   *  codebase (Page Inventory, Content Template Library, Website Strategy Center) guards its own
+   *  analogous update() against a terminal governing status the same way. A prior version of this
+   *  method fetched the parent only for response enrichment AFTER the write, never actually
+   *  checking its status — fixed by an independent code review to fetch it up front instead, both
+   *  closing the guard gap and removing the now-redundant second fetch at the end of the method. */
   async update(
     id: string,
     patch: UpdateCaseStudyLibraryRecordDto,
@@ -212,6 +229,12 @@ export class CaseStudyLibraryService {
       this.findEntityById(id),
       this.assertPageIdsExist(patch.relatedPageIds),
     ]);
+    const caseStudy = await this.caseStudies.findById(current.caseStudyId);
+    if (caseStudy.status === "archived") {
+      throw new BadRequestException(
+        `Case study ${current.caseStudyId} is archived; its library record can no longer be edited`,
+      );
+    }
 
     const updated = await this.records.update(id, {
       ...patch,
@@ -233,7 +256,6 @@ export class CaseStudyLibraryService {
       retentionCategory: "audit-7y",
     });
 
-    const caseStudy = await this.caseStudies.findById(current.caseStudyId);
     return { ...updated, caseStudy };
   }
 }
