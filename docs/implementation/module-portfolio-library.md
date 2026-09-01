@@ -237,3 +237,19 @@ references resolve.
 
 Security review, required second-role human review, a gate decision, push/PR, and merge
 authorization each remain their own separate, not-yet-requested next steps.
+
+### Security review
+
+Reviewed directly against the diff — `SessionGuard`/`PermissionGuard`/`OriginCheckGuard` correctly
+placed on every route (`SessionGuard` at controller level, `PermissionGuard` + method-level
+`@RequirePermission` on every handler, never class-level), `ParseUUIDPipe` on every path param,
+`ZodValidationPipe` on every request body, no mass-assignment path (`approvalStatus`/`isPublished`/
+`publishedAt`/`version` are all excluded from `createPortfolioRecordSchema`/
+`updatePortfolioRecordSchema` — only `changeApprovalStatus()`/`publish()`/`unpublish()` may change
+them), IDOR scoping on the `portfolio_assets` sub-resource enforced by the repository's own
+compound `(id, portfolioRecordId)` `WHERE` clause (independent of the application-layer pre-check
+the code review removed as redundant), `url` validated via the shared `safeHttpUrlSchema`, search
+input routed through the existing `escapeLikePattern()`, and the migration's two raw
+`sequelize.query()` calls are static SQL literals with no interpolated input. No new attack surface
+introduced — this module reuses every security-relevant mechanism (RBAC, guards, sanitization
+helpers) already vetted across 10+ sibling modules. **0 findings above threshold.**
