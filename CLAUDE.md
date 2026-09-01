@@ -3851,6 +3851,73 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     module — a separate, not-yet-requested next step, matching every prior module's own
     backend-first precedent.
 
+67. **Knowledge Library module backend — built, reviewed, gated, pushed (2026-09-01).** Module
+    #28 on the Recommended Module Roadmap — a Wave 1 module with no dependencies. Built directly on
+    the explicit "Start Knowledge Library module" instruction. Reuses Business Knowledge Center's
+    identical `business_knowledge` RBAC permission group verbatim — no new RBAC migration. Two
+    design forks confirmed directly with the project owner first (`AskUserQuestion`): a real
+    `public | internal | restricted` confidentiality enum (Service Library's own pattern, gated via
+    `AuthorizationService.canViewConfidential()`) over a 2-value enum or no enforcement, and a
+    single generic table (Business Knowledge Center's own precedent) over a normalized multi-table
+    shape. The lifecycle `status` field reuses BKC's own `mandatory`/`advisory`/`draft`/`deprecated`
+    vocabulary with `restricted` removed, since confidentiality is now a real, separate field —
+    `sourceType` (D4) and `location` (D5, the spec's own "URL/file" field) both stay plain,
+    uncapped free text, since the canonical spec gives no taxonomy for either and forcing URL
+    validation onto `location` would reject legitimate non-URL values (an internal file path, a
+    citation). `ownerUserId` is a real, existence-validated FK into `users`; `relatedEntityIds` is
+    a plain, unvalidated string array (no single scoped target module exists in the spec);
+    `version` is a server-managed integer counter (Persona Library's own atomic
+    `literal("version + 1")` + `returning: true` pattern, an improvement over BKC's own older
+    re-fetch-after-write shape); `approvedForAgentUse` is stored but unenforced (no consuming
+    "agent memory" mechanism exists anywhere in this codebase yet). Built by a background agent
+    with a fully-specified prompt mirroring Business Knowledge Center's file structure, then
+    independently re-verified in full by the orchestrating session — every high-risk file read
+    directly, every test suite re-run fresh: 21/21 `dashboard-api` unit tests, 15/15
+    `packages/database` integration tests, 14/14 `dashboard-api` e2e tests (real disposable
+    PostgreSQL 17 database + real seeded RBAC), a clean migration round-trip, typecheck/lint/
+    prettier all clean, `pnpm audit` 0 vulnerabilities. **Independent code review then ran** (high
+    effort, 8-angle finder pass via parallel subagents, 1-vote self-verification) — 30+ candidates
+    surfaced across all 8 angles, deduped to 6 kept findings, all CONFIRMED. **4 fixed**: `update()`
+    had no terminal-state guard, letting a caller with only `edit` freely mutate a `deprecated`
+    record — the exact gap-class Website Strategy Center's/Page Inventory's own reviews already
+    converged on closing — fixed by unconditionally fetching the current record first and rejecting
+    the edit outright, which also removed a redundant double-fetch in the `ownerUserId`
+    re-validation branch; `CONFIDENTIAL_RESTRICTED_FIELDS` omitted `sourceType` — unlike BKC's own
+    visible metadata field (`recordType`, a closed enum), Knowledge Library's `sourceType` is free
+    text and can carry sensitive provenance — fixed by adding it alongside `location`/`notes`; no
+    index existed on `updated_at` despite `list()` ordering every query by it, unlike Persona
+    Library, this module's own explicitly-cited template — fixed by adding
+    `knowledge_library_records_updated_at_idx`; and a `pg_trgm` trigram index on `title` was built
+    with zero consuming search param, unlike every sibling module the migration comment itself
+    cites — fixed by adding a `search` filter (`Op.iLike` + `escapeLikePattern()`). **2 findings
+    left as accepted, tracked debt**, both verified byte-identical to Business Knowledge Center's
+    own already-shipped, already-accepted shape: `update()`'s audit `afterState` logs the raw
+    unredacted patch for a restricted record, and `create()` has no try/catch around its post-commit
+    audit call. **A separate `security-review` skill run then found 0 findings above threshold** —
+    confirmed correct redaction wiring on all 5 routes (including `create()`, since a record can be
+    created directly as `restricted`), method-level RBAC decorators throughout, fully parameterized
+    Sequelize queries with no raw-SQL interpolation of user input, and correct
+    `escapeLikePattern()` usage on the new `search` filter. Re-validated: 22/22 `dashboard-api` unit
+    tests, 16/16 `packages/database` integration tests, 16/16 `dashboard-api` e2e tests, migration
+    round-trip clean, `validate:module-registry` unaffected (43 modules, 21 permission groups),
+    typecheck/lint/prettier all clean, `pnpm audit` 0 vulnerabilities. **Migration numbers
+    renumbered `00095`/`00096` → `00097`/`00098` after merging `main`**, which had concurrently
+    taken `00095`/`00096` for Portfolio Library (item 66) — every internal reference updated,
+    re-verified against a fresh database (98 migrations, round-trip clean) after the rename. See
+    `docs/implementation/module-knowledge-library.md` and
+    `docs/project-state/module-knowledge-library-approval-checklist.md`. **Required second-role
+    human review complete via the direct "gate it and push the branch" instruction** — the
+    approval checklist's own findings table served as the review artifact, since every CONFIRMED
+    finding was either fixed or explicitly recorded as accepted debt matching an already-shipped
+    sibling precedent. **The gate (G4-knowledge-library) was then approved** — WebDesk Solution,
+    decision CONFIRM, approved commit `3274c60` on branch `module-knowledge-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-knowledge-library`). **"Push the branch" was then separately requested and executed** —
+    pushed to `origin`. **This gate approval does not itself authorize opening a PR or merging** —
+    each remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -6665,6 +6732,30 @@ c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is
   check showing `x-vercel-cache: MISS`, not a real defect). **The `dashboard-web` Case Study
   Library UI is now genuinely live in production**, closing out this slice's full
   build-to-production arc.
+- `[2026-09-01]` **Built the Knowledge Library module backend** (module #28), under the explicit
+  "Start Knowledge Library module" instruction. Two design forks confirmed directly with the user
+  first: a real `public/internal/restricted` confidentiality enum (Service Library's own pattern)
+  and a single generic table (Business Knowledge Center's own precedent, same RBAC group). See item
+  66 above and `docs/implementation/module-knowledge-library.md` for the full account.
+- `[2026-09-01]` **Independent code review run on `module-knowledge-library`, then 4 of 6 confirmed
+  findings fixed.** High effort, 8-angle finder pass — 6 kept findings, all CONFIRMED. Most severe:
+  `update()` had no terminal-state guard, letting a caller with only `edit` freely mutate a
+  `deprecated` record — fixed. Also fixed: `sourceType` omitted from confidential redaction, a
+  missing `updated_at` index, and a dead `pg_trgm` trigram index with no consuming search param
+  (added a `search` filter). 2 findings left as accepted, tracked debt, verified byte-identical to
+  Business Knowledge Center's own already-shipped shape.
+- `[2026-09-01]` **Security review run on `module-knowledge-library`, separately from the code
+  review.** 0 findings above threshold — confirmed correct redaction wiring on all 5 routes, RBAC
+  decorator placement, parameterized queries, and correct `escapeLikePattern()` usage on the new
+  `search` filter.
+- `[2026-09-01]` **Required second-role human review complete for `module-knowledge-library`, via
+  the direct "gate it and push the branch" instruction** — the approval checklist's own findings
+  table served as the review artifact. **The gate (G4-knowledge-library) was then approved** —
+  WebDesk Solution, decision CONFIRM, approved commit `3274c60` on branch
+  `module-knowledge-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-knowledge-library`). **"Push the branch" was then separately requested
+  and executed** — pushed to `origin`. This gate approval does not itself authorize opening a PR or
+  merging.
 
 ## Open client blockers
 
