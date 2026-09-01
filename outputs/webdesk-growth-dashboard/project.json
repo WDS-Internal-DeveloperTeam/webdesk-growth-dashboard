@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-design-review-center",
+    "current_gate": "G4-dashboard-web-design-review-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -1064,6 +1064,20 @@
       "record": "docs/project-state/dashboard-web-case-study-studio-approval-checklist.md",
       "notes": "dashboard-web UI for Case Study Studio (module #23) -- closes this module's last named gap, built directly on the explicit 'Start the dashboard-web UI for it' instruction, on top of the already-gated (not yet merged) backend on the same branch. List/detail/create/edit routes under /case-study-studio, a status-actions component hand-mirroring the backend's real 14-state TRANSITIONS map exactly (byte-verified against case-studies.service.ts, including the clientApprovalRequired branch at internal_approval and the required unpublishReason on published->unpublished), two independent RelationshipPickers (relatedServiceIds/relatedClaimIds), and three sub-resource sections (case_study_assets with role/caption inline edit, case_study_consents full CRUD mirroring ClaimSourcesSection, and a read-only case_study_approvals decision-history list). Independent code review (medium effort, 8-angle finder pass) surfaced 8 candidates -- 4 fixed: an unguarded getUser() call on the edit page that crashed for any role lacking users_roles:view (confirmed independently by 3 of the 8 finder angles, fixed with a try/catch mirroring ProjectForm's own guard, plus a new regression test), a sequential fetch on the edit page combined into one Promise.all, and two duplicated helpers (toDateTimeLocalValue/fromDateTimeLocalValue extracted into a new lib/datetime-local.ts; the detail page's hand-rolled id-to-name resolution swapped for the existing lib/resolve-ids-to-names.ts). 4 lower-severity findings left as tracked debt, each matching an already-accepted pattern elsewhere in this app (a stale-disabled-reviewer-id edge case shared with ProjectForm/InternalLinkForm; add/edit asset-field duplication; a duplicated resync useEffect across two sub-resource sections; router.refresh() firing on every status transition, not just approval ones). Security spot-check (not a full separate skill run, per the 2026-08-27 review-pipeline right-sizing standing rule -- a frontend-only slice consuming an already security-reviewed backend) confirmed the only dangerouslySetInnerHTML in the diff routes through the existing SanitizedRichText component and consentEvidenceReference is guarded by isSafeHttpUrl() before ever rendering as a link. 108/108 test files, 1358/1358 dashboard-web unit tests passing (4 new), typecheck/lint (--max-warnings=0)/CSS-token-check/next build (all 4 routes present)/prettier all clean -- independently re-run by the orchestrating session after every fix, not trusted from the build agent's own report. A review packet (published as a Claude artifact, 'Case Study Studio UI Review Packet' -- code review findings, fixes, and validation evidence, with a decision section) was prepared for the required second-role human review, since the implementing agent cannot also be its own reviewer (ADR-0010). Jitesh D reviewed it and returned 'Approved.'",
       "scope_excludes": "This gate approval does not itself authorize merging PR #90 or a production deployment -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. The Case Study Studio backend itself (this same branch/PR) is separately gated under G4-case-study-studio."
+    },
+    {
+      "id": "G4-dashboard-web-design-review-center",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-design-review-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-01T00:00:00Z",
+      "approved_commit": "2f67c75",
+      "record": "docs/project-state/dashboard-web-design-review-center-approval-checklist.md",
+      "notes": "dashboard-web UI for the Design Review Center module -- closes this module's last named gap following the backend's own build-to-production arc (PR #89, live). File-for-file mirrors Review and Approval Center's already-reviewed UI structure, the closest sibling (both are cross-cutting engines attaching to records in other modules via targetModuleKey/targetId): three routes (list/new/detail) under app/(shell)/design-review-center/ -- no generic edit route, since design reviews have no update endpoint. Adds a required reviewType field (9-value vocabulary from 03_Detailed_Module_Specifications.md section 19, immutable after creation) that Review and Approval Center has no equivalent of; DesignReviewDecisionActions renders nothing once status is approved/rejected/superseded, a 3rd terminal value beyond ReviewDecisionActions' own 2 (superseded is reached only via the backend's automatic-supersede mechanism, never a directly-requested decide() action); no comments/process-management capability, since the spec names neither for this module. moduleDisplayName/sortModulesForPicker re-exported from lib/review-and-approval-center-query.ts rather than re-declared (2nd occurrence of the identical cross-cutting-engine picker need). New packages/shared-types: DesignReviewType, DesignReviewStatus, DesignReviewDecisionAction, DesignReview, DesignReviewDecision. Reviewed at light tier per the 2026-08-27 'right-size the review pipeline' standing rule (small frontend-only slice on an already-reviewed, already-gated backend, built as a direct mirror of an already-reviewed sibling) -- a direct read-through pass verified the create payload, the decide() transition table, and the terminal-status set byte-for-byte against the real backend, 0 findings. Security review skipped per the same standing rule -- no new endpoint, no new sink, notes routes exclusively through the existing, already-audited RichTextEditor/SanitizedRichText pairing with unchanged server-side sanitization. 1334/1334 dashboard-web unit tests (51 new), typecheck/lint (--max-warnings=0)/CSS-token-check (66 files)/next build (all 3 routes present)/prettier all clean -- independently re-run by the orchestrating session, not trusted from any agent's own report. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact rather than a separately published packet, since there were no open findings of any kind on this branch.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -2996,14 +3010,23 @@
       "project_version_after": 101
     },
     {
+      "timestamp": "2026-09-01T00:00:00Z",
       "action": "gate_approved",
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "details": "Gate G4-dashboard-web-case-study-studio approved (WebDesk Solution, CONFIRM) for the dashboard-web Case Study Studio UI, approved commit 4506bf7 on branch module-case-study-studio (PR #90, all 14 CI checks green). Independent code review (medium effort, 8-angle finder pass) found 8 candidates -- 4 fixed (most severe: an unguarded getUser() call on the edit page that crashed for any role lacking users_roles:view, confirmed independently by 3 finder angles), 4 accepted as tracked debt matching already-established patterns elsewhere in this app. Security spot-check clean, no new endpoint or sink -- a clean pass, not an override, since the required second-role human review (Jitesh D, 'Approved') was already complete before this gate was requested. This gate approval covers the dashboard-web UI slice only -- the Case Study Studio backend's own G4-case-study-studio gate/PR #88 merged concurrently and independently, ahead of this UI slice's own PR #90.",
       "project_version_before": 101,
-      "project_version_after": 102,
-      "timestamp": "2026-09-01T00:00:00Z"
+      "project_version_after": 102
+    },
+    {
+      "timestamp": "2026-09-01T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-dashboard-web-design-review-center approved (WebDesk Solution, CONFIRM) for the dashboard-web Design Review Center UI, on branch dashboard-web-design-review-center (commit 2f67c75) -- closes this module's last named gap following the backend's own build-to-production arc (PR #89, live). File-for-file mirrors Review and Approval Center's already-reviewed UI structure (both are cross-cutting engines attaching to records in other modules via targetModuleKey/targetId): three routes (list/new/detail) -- no generic edit route, since design reviews have no update endpoint. Adds a required reviewType field (9-value vocabulary, immutable after creation) Review and Approval Center has no equivalent of, and a 3rd terminal status (superseded, reached only via the backend's automatic-supersede mechanism) beyond ReviewDecisionActions' own 2 -- DesignReviewDecisionActions correctly renders nothing once status is approved/rejected/superseded. No comments/process-management capability, since the spec names neither for this module. moduleDisplayName/sortModulesForPicker re-exported from lib/review-and-approval-center-query.ts rather than re-declared (2nd occurrence of the identical picker need, past this project's own extract-after-2nd-occurrence convention). New packages/shared-types: DesignReviewType, DesignReviewStatus, DesignReviewDecisionAction, DesignReview, DesignReviewDecision. Reviewed at light tier per the 2026-08-27 'right-size the review pipeline' standing rule -- a direct read-through pass verified the create payload, the decide() transition table, and the terminal-status set byte-for-byte against the real backend, 0 findings. Security review skipped per the same standing rule -- no new endpoint, no new sink, notes routes exclusively through the existing, already-audited RichTextEditor/SanitizedRichText pairing with unchanged server-side sanitization. 1334/1334 dashboard-web unit tests (51 new), typecheck/lint/CSS-token-check (66 files)/next build (all 3 routes present)/prettier all clean -- independently re-run by the orchestrating session. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact, since there were no open findings of any kind on this branch. This gate approval does not itself authorize opening a PR or merging.",
+      "project_version_before": 102,
+      "project_version_after": 103
     }
   ],
-  "current_gate": "G4-dashboard-web-case-study-studio"
+  "current_gate": "G4-dashboard-web-design-review-center"
 }
