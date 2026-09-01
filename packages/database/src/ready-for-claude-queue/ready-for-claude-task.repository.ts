@@ -10,10 +10,13 @@ import type {
 
 /** Every field a caller may set on create, i.e. `ReadyForClaudeTaskEntity` minus its server-only-
  *  managed columns (`id`, `status`, `createdAt`, `updatedAt`) — derived, not hand-retyped,
- *  mirroring `InternalLinkContentFields`'s own precedent. */
+ *  mirroring `InternalLinkContentFields`'s own precedent. `productionApproval`/
+ *  `productionApproverUserId` are ALSO excluded (code-review finding) — both are stamped only by
+ *  `updateStatus()`'s own atomic write when the `approve`-gated `approved -> completed` transition
+ *  happens, never accepted as plain content input, the same discipline `status` itself gets. */
 type ReadyForClaudeTaskContentFields = Omit<
   ReadyForClaudeTaskEntity,
-  "id" | "status" | "createdAt" | "updatedAt"
+  "id" | "status" | "createdAt" | "updatedAt" | "productionApproval" | "productionApproverUserId"
 >;
 
 /** `update()`'s patch shape: every content field is optional (a partial edit); `publicId` and
@@ -96,8 +99,11 @@ export class ReadyForClaudeTaskRepository {
       stagingUrl: input.stagingUrl ?? null,
       dashboardReview: input.dashboardReview ?? null,
       changesRequestedNotes: input.changesRequestedNotes ?? null,
-      productionApproval: input.productionApproval ?? false,
-      productionApproverUserId: input.productionApproverUserId ?? null,
+      // Never caller-settable (see `ReadyForClaudeTaskContentFields`'s own doc comment) — every
+      // task starts with no production approval; `updateStatus()` is the only place either field
+      // is ever written.
+      productionApproval: false,
+      productionApproverUserId: null,
       productionCommit: input.productionCommit ?? null,
       productionDeployment: input.productionDeployment ?? null,
       productionVerification: input.productionVerification ?? null,
@@ -130,6 +136,23 @@ export class ReadyForClaudeTaskRepository {
    */
   async existsById(id: string): Promise<boolean> {
     return (await this.model.count({ where: { id } })) > 0;
+  }
+
+  /**
+   * Batched existence check for the `dependencies` array validation (D2) — one `IN (...)` query
+   * instead of N single-id `existsById()` calls (code-review finding: the service previously fanned
+   * out up to 50 concurrent `existsById()` round trips, each borrowing a connection-pool slot).
+   * Mirrors `ServiceRepository.findByIds()`'s own established "validate an array of ids against a
+   * table" pattern, already reused by Persona Library/Proof and Claims Library/Component
+   * Library/Page Template Library — returns only a bare `Set<string>` of the ids that resolve to a
+   * real row, never the full entities, so the caller never pulls data it only needed to discard.
+   */
+  async existingIds(ids: readonly string[]): Promise<ReadonlySet<string>> {
+    if (ids.length === 0) {
+      return new Set();
+    }
+    const rows = await this.model.findAll({ where: { id: ids }, attributes: ["id"] });
+    return new Set(rows.map((row) => row.get("id") as string));
   }
 
   async list(
@@ -220,6 +243,15 @@ export class ReadyForClaudeTaskRepository {
    * `COALESCE`-based `implementedAt`/`verifiedAt` write) — this module's own field list names no
    * per-status timestamp; the audit trail (`AuditService`) is the record of when each transition
    * happened.
+   *
+   * When `nextStatus` is `"completed"`, `productionApproval`/`productionApproverUserId` are
+   * stamped in this SAME atomic write (code-review finding — these two fields were previously
+   * plain content columns writable through the generic `edit`-gated `update()`, letting any
+   * mid-tier role fabricate a production sign-off with no involvement of the `approve`-gated
+   * `approved -> completed` transition this method itself enforces). `updatedBy` — the actor who
+   * just cleared the dynamic `approve` RBAC check in `ReadyForClaudeTasksService.changeStatus()`
+   * — becomes the approver, since `completed` is only reachable from `approved` and only via the
+   * `approve` action.
    */
   async updateStatus(
     id: string,
@@ -227,10 +259,15 @@ export class ReadyForClaudeTaskRepository {
     nextStatus: ReadyForClaudeTaskStatus,
     updatedBy: string | null,
   ): Promise<ReadyForClaudeTaskCasResult<ReadyForClaudeTaskEntity>> {
-    const [affectedCount, affectedRows] = await this.model.update(
-      { status: nextStatus, updatedBy },
-      { where: { id, status: expectedCurrentStatus }, returning: true },
-    );
+    const values: Record<string, unknown> = { status: nextStatus, updatedBy };
+    if (nextStatus === "completed") {
+      values.productionApproval = true;
+      values.productionApproverUserId = updatedBy;
+    }
+    const [affectedCount, affectedRows] = await this.model.update(values, {
+      where: { id, status: expectedCurrentStatus },
+      returning: true,
+    });
     if (affectedCount > 0 && affectedRows[0]) {
       return {
         outcome: "updated",

@@ -6,7 +6,6 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import type {
-  ReadyForClaudeTaskCasResult,
   ReadyForClaudeTaskEntity,
   ReadyForClaudeTaskListFilter,
   ReadyForClaudeTaskRepository,
@@ -22,10 +21,13 @@ import type {
   CreateReadyForClaudeTaskDto,
   UpdateReadyForClaudeTaskDto,
 } from "./ready-for-claude-queue.dto.js";
+import { unwrapCasResult } from "../common/cas-result.util.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuthorizationService } from "../authz/authorization.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
+import { SeparationOfDutiesService } from "../auth/common/separation-of-duties.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { ProjectService } from "../projects/project.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -102,44 +104,49 @@ export class ReadyForClaudeTasksService {
     private readonly projects: ProjectService,
     private readonly usersService: UsersService,
     private readonly authorizationService: AuthorizationService,
+    private readonly separationOfDuties: SeparationOfDutiesService,
     private readonly auditService: AuditService,
   ) {}
 
   /**
-   * Resolves a CAS result into its entity or throws the matching HTTP exception — mirrors
-   * `ReviewsService.unwrapCasResult()`'s/`DesignReviewsService.unwrapCasResult()`'s own already-
-   * reviewed extraction. `conflictMessage` is a thunk so each caller can report its own wording
-   * without re-deriving the branching itself.
-   */
-  private unwrapCasResult(
-    id: string,
-    result: ReadyForClaudeTaskCasResult<ReadyForClaudeTaskEntity>,
-    conflictMessage: (entity: ReadyForClaudeTaskEntity) => string,
-  ): ReadyForClaudeTaskEntity {
-    if (result.outcome === "not_found") {
-      throw new NotFoundException(`Ready for Claude task not found: ${id}`);
-    }
-    if (result.outcome === "conflict") {
-      throw new ConflictException(conflictMessage(result.entity));
-    }
-    return result.entity;
-  }
-
-  /**
-   * D2 — every dependency id must be a real row in THIS same table. Checked concurrently (never
-   * one round trip per element in sequence), and the array itself is capped at 50 by the DTO so
-   * the fan-out is bounded. Duplicate ids are de-duplicated first so a caller repeating the same
-   * id 50 times still only issues one lookup for it.
+   * D2 — every dependency id must be a real row in THIS same table. One batched `IN (...)` query
+   * (code-review finding — previously N single-id round trips, one per dependency, up to the DTO's
+   * own 50-id cap), mirroring `ServiceRepository.findByIds()`'s own established "validate an array
+   * of ids against a table" pattern. Duplicate ids are de-duplicated first so a caller repeating
+   * the same id 50 times still only issues one lookup for it.
    */
   private async assertDependenciesExist(dependencies: readonly string[]): Promise<void> {
     const unique = [...new Set(dependencies)];
-    const results = await Promise.all(
-      unique.map(async (id) => ({ id, exists: await this.tasks.existsById(id) })),
-    );
-    const missing = results.filter((result) => !result.exists).map((result) => result.id);
+    const existing = await this.tasks.existingIds(unique);
+    const missing = unique.filter((id) => !existing.has(id));
     if (missing.length > 0) {
       throw new BadRequestException(
         `dependencies contains ids that do not resolve to a Ready for Claude task: ${missing.join(", ")}`,
+      );
+    }
+  }
+
+  /**
+   * D2 — the "must complete before this one" contract the `dependencies` column is documented as
+   * (migration `00101`'s own doc comment), actually enforced (code-review finding — existence
+   * validation alone let a task freely enter `in_progress` regardless of its dependencies' real
+   * status). Enforced at the one transition where it matters — `claimed -> in_progress`, i.e.
+   * before real work starts — not at every earlier, purely-administrative transition
+   * (draft/ready_for_claude/claimed), which a task may legitimately reach before its blockers
+   * finish.
+   */
+  private async assertDependenciesCompleted(dependencies: readonly string[]): Promise<void> {
+    if (dependencies.length === 0) {
+      return;
+    }
+    const tasks = await Promise.all(dependencies.map((id) => this.tasks.findById(id)));
+    const incomplete = tasks
+      .filter((task): task is ReadyForClaudeTaskEntity => task !== null)
+      .filter((task) => task.status !== "completed")
+      .map((task) => task.id);
+    if (incomplete.length > 0) {
+      throw new BadRequestException(
+        `Cannot start: dependencies not yet completed: ${incomplete.join(", ")}`,
       );
     }
   }
@@ -156,26 +163,21 @@ export class ReadyForClaudeTasksService {
   }
 
   /**
-   * The four nullable user-reference fields, validated via `UsersService.assertUserExists()` (the
-   * shared helper extracted during Review and Approval Center's own code review) — a clean 400,
-   * not a raw FK-violation 500. `only` narrows the check to the fields actually present in a
-   * patch, so `update()` never re-validates an unchanged (possibly since-deactivated) user and
-   * blocks an edit that doesn't touch that field at all.
+   * The three nullable, caller-settable user-reference fields, validated via
+   * `UsersService.assertUserExists()` (the shared helper extracted during Review and Approval
+   * Center's own code review) — a clean 400, not a raw FK-violation 500. `productionApproverUserId`
+   * is deliberately NOT among them (code-review finding) — it is server-managed, stamped only by
+   * `updateStatus()`'s own atomic write, never caller-settable via `create()`/`update()`. `only`
+   * narrows the check to the fields actually present in a patch, so `update()` never re-validates
+   * an unchanged (possibly since-deactivated) user and blocks an edit that doesn't touch that
+   * field at all.
    */
   private userFieldChecks(
     input: Partial<
-      Pick<
-        CreateReadyForClaudeTaskDto,
-        "operatorUserId" | "developerUserId" | "reviewerUserId" | "productionApproverUserId"
-      >
+      Pick<CreateReadyForClaudeTaskDto, "operatorUserId" | "developerUserId" | "reviewerUserId">
     >,
   ): Array<Promise<void>> {
-    const fields = [
-      "operatorUserId",
-      "developerUserId",
-      "reviewerUserId",
-      "productionApproverUserId",
-    ] as const;
+    const fields = ["operatorUserId", "developerUserId", "reviewerUserId"] as const;
     return fields
       .filter((field) => Boolean(input[field]))
       .map((field) => this.usersService.assertUserExists(input[field]!, field));
@@ -297,10 +299,6 @@ export class ReadyForClaudeTasksService {
           patch.developerUserId !== current.developerUserId ? patch.developerUserId : undefined,
         reviewerUserId:
           patch.reviewerUserId !== current.reviewerUserId ? patch.reviewerUserId : undefined,
-        productionApproverUserId:
-          patch.productionApproverUserId !== current.productionApproverUserId
-            ? patch.productionApproverUserId
-            : undefined,
       }),
     ]);
 
@@ -412,9 +410,40 @@ export class ReadyForClaudeTasksService {
       requiredAction,
     );
 
-    const task = this.unwrapCasResult(
-      id,
+    const current = await this.findById(id);
+
+    // Separation of duties (code-review finding) — mirrors `ReviewsService.decide()`'s own
+    // identical check. The module's original doc comment argued this was unnecessary because "no
+    // role holds both submit and approve," but `user_roles` has no one-role-per-user constraint
+    // (`00012-create-user-roles.ts`), so a single user CAN hold both a submit-capable role and
+    // super_admin/owner_growth_approver simultaneously — a legitimate RBAC configuration this
+    // check must still cover. `current.createdBy` stands in for "the submitter" (this module has
+    // no dedicated per-submission actor field, unlike Review and Approval Center's
+    // `submittedByUserId`) — the closest real signal for "who is this task's own work," so the
+    // actor exercising `review`/`approve` can never also be the task's own creator. Skipped only
+    // when `createdBy` is null (a task with no recorded creator, e.g. a pre-existing row).
+    if ((requiredAction === "review" || requiredAction === "approve") && current.createdBy) {
+      await this.separationOfDuties.assertDistinctActors(
+        actorUserId,
+        current.createdBy,
+        "Ready for Claude task reviewer/approver",
+        {
+          entityType: "ready_for_claude_task",
+          entityId: id,
+          retentionCategory: "approval-audit-7y",
+        },
+      );
+    }
+
+    // D2 — enforced only at the one transition where it matters (see
+    // `assertDependenciesCompleted()`'s own doc comment).
+    if (nextStatus === "in_progress") {
+      await this.assertDependenciesCompleted(current.dependencies);
+    }
+
+    const task = unwrapCasResult(
       await this.tasks.updateStatus(id, expectedStatus, nextStatus, actorUserId),
+      () => `Ready for Claude task not found: ${id}`,
       (entity) =>
         `Ready for Claude task ${id} status changed concurrently ` +
         `(expected ${expectedStatus}, now ${entity.status}) — reload and retry`,

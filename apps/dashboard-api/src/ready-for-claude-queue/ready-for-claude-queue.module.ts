@@ -23,7 +23,11 @@ import { ReadyForClaudeTasksController } from "./ready-for-claude-tasks.controll
  * precedent for a cross-cutting engine.
  *
  * Imports:
- * - `AuthModule` for `SessionGuard`/`OriginCheckGuard`.
+ * - `AuthModule` for `SessionGuard`/`OriginCheckGuard`, plus `SeparationOfDutiesService`
+ *   (code-review finding — `ReadyForClaudeTasksService.changeStatus()` now calls
+ *   `assertDistinctActors()` before honoring a `review`/`approve` transition, the same check
+ *   `ReviewsService.decide()` performs, closing a real self-approval gap for any user who holds
+ *   both a submit-capable role and an approve-capable role simultaneously).
  * - `AuthzModule` for `PermissionGuard`, plus `AuthorizationService` — used twice here: the
  *   dynamic per-transition permission check in `ReadyForClaudeTasksService.changeStatus()` (the
  *   four workflow actions map to genuinely different role tiers, so no single static

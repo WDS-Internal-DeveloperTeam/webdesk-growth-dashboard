@@ -136,6 +136,22 @@ describe("Ready for Claude Queue module (real disposable database)", () => {
       expect(await tasks.existsById("00000000-0000-4000-8000-000000000000")).toBe(false);
     });
 
+    it("existingIds resolves a mixed real/nonexistent id array in one batched query (code-review fix)", async () => {
+      const first = await createTaskFixture();
+      const second = await createTaskFixture();
+      const missing = "00000000-0000-4000-8000-000000000000";
+      const found = await tasks.existingIds([first.id, second.id, missing]);
+      expect(found.has(first.id)).toBe(true);
+      expect(found.has(second.id)).toBe(true);
+      expect(found.has(missing)).toBe(false);
+      expect(found.size).toBe(2);
+    });
+
+    it("existingIds returns an empty set for an empty input array without querying", async () => {
+      const found = await tasks.existingIds([]);
+      expect(found.size).toBe(0);
+    });
+
     it("finds a task by its publicId", async () => {
       const publicId = uniqueId("RFC");
       await tasks.create({ publicId, title: "Findable" });
@@ -284,6 +300,33 @@ describe("Ready for Claude Queue module (real disposable database)", () => {
       ]);
       const outcomes = [first.outcome, second.outcome].sort();
       expect(outcomes).toEqual(["conflict", "updated"]);
+    });
+
+    it("stamps productionApproval atomically when the transition lands on completed (code-review fix)", async () => {
+      // `updatedBy`/the stamped approver both use `null` here, matching every other
+      // `updateStatus()` test in this file — `production_approver_user_id` is a real FK into
+      // `users`, and no user fixture exists in this suite to satisfy it with a non-null id.
+      const created = await createTaskFixture();
+      expect(created.productionApproval).toBe(false);
+      expect(created.productionApproverUserId).toBeNull();
+
+      const result = await tasks.updateStatus(created.id, "draft", "completed", null);
+
+      expect(result.outcome).toBe("updated");
+      if (result.outcome === "updated") {
+        expect(result.entity.productionApproval).toBe(true);
+        expect(result.entity.productionApproverUserId).toBeNull();
+      }
+    });
+
+    it("never stamps productionApproval for a transition that does not land on completed", async () => {
+      const created = await createTaskFixture();
+      const result = await tasks.updateStatus(created.id, "draft", "ready_for_claude", null);
+      expect(result.outcome).toBe("updated");
+      if (result.outcome === "updated") {
+        expect(result.entity.productionApproval).toBe(false);
+        expect(result.entity.productionApproverUserId).toBeNull();
+      }
     });
   });
 });

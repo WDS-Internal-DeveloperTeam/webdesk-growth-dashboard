@@ -48,7 +48,7 @@ export const listReadyForClaudeTasksQuerySchema = z.object({
   // Optional (D5) — a filter, not a mandatory route-derived scope, unlike every prior
   // project-scoped module. RBAC for this module is organization-wide.
   projectId: z.string().uuid().optional(),
-  targetModuleKey: z.string().max(64).optional(),
+  targetModuleKey: z.string().min(1).max(64).optional(),
   agent: z.string().max(255).optional(),
   search: z.string().max(255).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
@@ -57,7 +57,14 @@ export const listReadyForClaudeTasksQuerySchema = z.object({
 export type ListReadyForClaudeTasksQueryDto = z.infer<typeof listReadyForClaudeTasksQuerySchema>;
 
 /** `status` is never accepted — a task always starts `draft`, and only the dedicated
- *  status-transition route may change it thereafter. */
+ *  status-transition route may change it thereafter. `productionApproval`/
+ *  `productionApproverUserId` are ALSO never accepted here, for the same reason (code-review
+ *  finding) — both are server-managed, stamped only by `ReadyForClaudeTasksService.changeStatus()`
+ *  when the `approve`-gated `approved -> completed` transition actually happens. Originally these
+ *  were plain content fields writable through this route and the generic `edit`-gated `update()`
+ *  below, letting any of the four mid-tier roles (who hold `edit` but never `approve`) fabricate a
+ *  production sign-off with zero involvement of the real, RBAC-gated `TRANSITIONS` table — a
+ *  genuine separation-of-duties bypass this fix closes at the schema layer, not just the service. */
 export const createReadyForClaudeTaskSchema = z.object({
   publicId: z.string().min(1).max(64),
   title: titleField,
@@ -70,8 +77,9 @@ export const createReadyForClaudeTaskSchema = z.object({
   // D5 — optional; existence-validated at the service layer when provided.
   projectId: z.string().uuid().nullish(),
   // D1 — validated against the real module registry at the service layer via
-  // `AuthorizationService.isValidModuleKey()`.
-  targetModuleKey: z.string().max(64).nullish(),
+  // `AuthorizationService.isValidModuleKey()`. `.min(1)` closes a code-review finding: without it,
+  // an empty string is falsy and silently skips that service-layer check entirely.
+  targetModuleKey: z.string().min(1).max(64).nullish(),
   // D1 — deliberately opaque and UNVALIDATED beyond its UUID shape: no generic cross-module
   // record-existence lookup exists anywhere in this codebase.
   targetId: z.string().uuid().nullish(),
@@ -93,8 +101,6 @@ export const createReadyForClaudeTaskSchema = z.object({
   stagingUrl: safeHttpUrlSchema.nullish(),
   dashboardReview: longTextField,
   changesRequestedNotes: longTextField,
-  productionApproval: z.boolean().optional(),
-  productionApproverUserId: z.string().uuid().nullish(),
   productionCommit: varchar100Field,
   productionDeployment: varchar255Field,
   productionVerification: longTextField,
@@ -106,46 +112,16 @@ export const createReadyForClaudeTaskSchema = z.object({
 });
 export type CreateReadyForClaudeTaskDto = z.infer<typeof createReadyForClaudeTaskSchema>;
 
-/** `publicId`/`projectId` are never accepted here — both immutable after creation (a task never
- *  moves between projects, and its own identity never changes), mirroring
- *  `updateInternalLinkSchema`'s own identical exclusion. `status` is likewise never accepted —
- *  only the dedicated status-transition route may change it. */
-export const updateReadyForClaudeTaskSchema = z
-  .object({
-    title: titleField.optional(),
-    description: longTextField,
-    priority: readyForClaudeTaskPrioritySchema.optional(),
-    agent: varchar255Field,
-    agentVersion: varchar100Field,
-    targetModuleKey: z.string().max(64).nullish(),
-    targetId: z.string().uuid().nullish(),
-    stage: varchar255Field,
-    dependencies: dependenciesField,
-    operatorUserId: z.string().uuid().nullish(),
-    developerUserId: z.string().uuid().nullish(),
-    featureBranch: varchar255Field,
-    sourceCommit: varchar100Field,
-    prId: varchar100Field,
-    prUrl: safeHttpUrlSchema.nullish(),
-    prStatus: varchar100Field,
-    reviewerUserId: z.string().uuid().nullish(),
-    codeReviewResult: varchar100Field,
-    stagingCommit: varchar100Field,
-    stagingDeployment: varchar255Field,
-    stagingUrl: safeHttpUrlSchema.nullish(),
-    dashboardReview: longTextField,
-    changesRequestedNotes: longTextField,
-    productionApproval: z.boolean().optional(),
-    productionApproverUserId: z.string().uuid().nullish(),
-    productionCommit: varchar100Field,
-    productionDeployment: varchar255Field,
-    productionVerification: longTextField,
-    rollbackVersion: varchar100Field,
-    failureReason: longTextField,
-    retryCount: z.number().int().min(0).optional(),
-    dueDate: z.string().datetime().nullish(),
-    auditReference: varchar255Field,
-  })
+/** Derived from `createReadyForClaudeTaskSchema` via `.omit().partial()` (code-review finding —
+ *  the two schemas were previously hand-duplicated field-by-field, a real drift risk: a validator
+ *  change on create, e.g. a length cap, silently wouldn't propagate to update). `publicId`/
+ *  `projectId` are omitted — both immutable after creation (a task never moves between projects,
+ *  and its own identity never changes), mirroring `updateInternalLinkSchema`'s own identical
+ *  exclusion. `status`/`productionApproval`/`productionApproverUserId` are likewise never
+ *  accepted — see `createReadyForClaudeTaskSchema`'s own doc comment. */
+export const updateReadyForClaudeTaskSchema = createReadyForClaudeTaskSchema
+  .omit({ publicId: true, projectId: true })
+  .partial()
   // Rejects a genuinely empty patch (`{}`) with a clean 400 instead of silently succeeding as a
   // no-op that still writes an essentially-empty audit event, mirroring every sibling module's own
   // identical fix.

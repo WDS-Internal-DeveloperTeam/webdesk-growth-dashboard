@@ -8,6 +8,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuditService } from "../audit/audit.service.js";
 import type { AuthorizationService } from "../authz/authorization.service.js";
+import type { SeparationOfDutiesService } from "../auth/common/separation-of-duties.service.js";
 import type { ProjectService } from "../projects/project.service.js";
 import type { UsersService } from "../users/users.service.js";
 import { ReadyForClaudeTasksService } from "./ready-for-claude-tasks.service.js";
@@ -80,6 +81,7 @@ describe("ReadyForClaudeTasksService", () => {
     findById: ReturnType<typeof vi.fn>;
     findByPublicId: ReturnType<typeof vi.fn>;
     existsById: ReturnType<typeof vi.fn>;
+    existingIds: ReturnType<typeof vi.fn>;
     list: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     updateStatus: ReturnType<typeof vi.fn>;
@@ -90,15 +92,21 @@ describe("ReadyForClaudeTasksService", () => {
     assertAllowed: ReturnType<typeof vi.fn>;
     isValidModuleKey: ReturnType<typeof vi.fn>;
   };
+  let separationOfDuties: { assertDistinctActors: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
   let svc: ReadyForClaudeTasksService;
 
   beforeEach(() => {
     tasks = {
       create: vi.fn(),
-      findById: vi.fn(),
+      // Default: a task authored by a different actor than "actor-1" (every changeStatus test
+      // below acts as "actor-1"), so the separation-of-duties check passes by default; tests that
+      // exercise self-approval override this per-test.
+      findById: vi.fn().mockResolvedValue(task({ createdBy: "creator-1" })),
       findByPublicId: vi.fn(),
       existsById: vi.fn().mockResolvedValue(true),
+      // Default: every id passed in resolves as existing, mirroring the old existsById default.
+      existingIds: vi.fn().mockImplementation(async (ids: readonly string[]) => new Set(ids)),
       list: vi.fn(),
       update: vi.fn(),
       updateStatus: vi.fn(),
@@ -109,12 +117,14 @@ describe("ReadyForClaudeTasksService", () => {
       assertAllowed: vi.fn(),
       isValidModuleKey: vi.fn().mockResolvedValue(true),
     };
+    separationOfDuties = { assertDistinctActors: vi.fn() };
     auditService = { record: vi.fn() };
     svc = new ReadyForClaudeTasksService(
       tasks as unknown as ReadyForClaudeTaskRepository,
       projects as unknown as ProjectService,
       usersService as unknown as UsersService,
       authorizationService as unknown as AuthorizationService,
+      separationOfDuties as unknown as SeparationOfDutiesService,
       auditService as unknown as AuditService,
     );
   });
@@ -183,33 +193,34 @@ describe("ReadyForClaudeTasksService", () => {
       );
       expect(authorizationService.isValidModuleKey).toHaveBeenCalledWith("page_inventory");
       // targetId is deliberately never existence-checked — no generic cross-module lookup exists.
-      expect(tasks.existsById).not.toHaveBeenCalled();
+      expect(tasks.existingIds).not.toHaveBeenCalled();
     });
 
-    it("existence-validates every dependency id against this same table (D2)", async () => {
+    it("existence-validates every dependency id against this same table (D2), in one batched query", async () => {
       tasks.findByPublicId.mockResolvedValue(null);
       tasks.create.mockResolvedValue(task());
       await svc.create({ ...validInput, dependencies: [DEPENDENCY_ID] }, "actor-1");
-      expect(tasks.existsById).toHaveBeenCalledWith(DEPENDENCY_ID);
+      expect(tasks.existingIds).toHaveBeenCalledWith([DEPENDENCY_ID]);
     });
 
     it("rejects a dependency id that does not resolve to a task (D2)", async () => {
       tasks.findByPublicId.mockResolvedValue(null);
-      tasks.existsById.mockResolvedValue(false);
+      tasks.existingIds.mockResolvedValue(new Set());
       await expect(
         svc.create({ ...validInput, dependencies: [DEPENDENCY_ID] }, "actor-1"),
       ).rejects.toThrow(/dependencies contains ids that do not resolve/);
       expect(tasks.create).not.toHaveBeenCalled();
     });
 
-    it("de-duplicates repeated dependency ids so each is only looked up once", async () => {
+    it("de-duplicates repeated dependency ids into a single batched lookup", async () => {
       tasks.findByPublicId.mockResolvedValue(null);
       tasks.create.mockResolvedValue(task());
       await svc.create(
         { ...validInput, dependencies: [DEPENDENCY_ID, DEPENDENCY_ID, DEPENDENCY_ID] },
         "actor-1",
       );
-      expect(tasks.existsById).toHaveBeenCalledTimes(1);
+      expect(tasks.existingIds).toHaveBeenCalledTimes(1);
+      expect(tasks.existingIds).toHaveBeenCalledWith([DEPENDENCY_ID]);
     });
 
     it("existence-validates every supplied user-reference field", async () => {
@@ -498,6 +509,107 @@ describe("ReadyForClaudeTasksService", () => {
       expect(auditService.record).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: "data_change", retentionCategory: "audit-7y" }),
       );
+    });
+
+    it.each([
+      ["awaiting_review", "approved", "approve"],
+      ["awaiting_review", "changes_requested", "review"],
+      ["approved", "completed", "approve"],
+    ] as const)(
+      "rejects %s -> %s (a %s-gated transition) when the actor is the task's own creator",
+      async (from, to, _requiredAction) => {
+        tasks.findById.mockResolvedValue(task({ status: from, createdBy: "actor-1" }));
+        separationOfDuties.assertDistinctActors.mockRejectedValue(
+          new ForbiddenException("Separation of duties"),
+        );
+        await expect(
+          svc.changeStatus(TASK_ID, { status: to, expectedStatus: from }, "actor-1"),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        expect(separationOfDuties.assertDistinctActors).toHaveBeenCalledWith(
+          "actor-1",
+          "actor-1",
+          expect.any(String),
+          expect.objectContaining({ entityType: "ready_for_claude_task", entityId: TASK_ID }),
+        );
+        expect(tasks.updateStatus).not.toHaveBeenCalled();
+      },
+    );
+
+    it("never checks separation of duties for an edit/submit-gated transition", async () => {
+      tasks.findById.mockResolvedValue(task({ status: "ready_for_claude", createdBy: "actor-1" }));
+      tasks.updateStatus.mockResolvedValue({
+        outcome: "updated",
+        entity: task({ status: "claimed" }),
+      });
+      await svc.changeStatus(
+        TASK_ID,
+        { status: "claimed", expectedStatus: "ready_for_claude" },
+        "actor-1",
+      );
+      expect(separationOfDuties.assertDistinctActors).not.toHaveBeenCalled();
+    });
+
+    it("skips the separation-of-duties check when the task has no recorded creator", async () => {
+      tasks.findById.mockResolvedValue(task({ status: "awaiting_review", createdBy: null }));
+      tasks.updateStatus.mockResolvedValue({
+        outcome: "updated",
+        entity: task({ status: "approved" }),
+      });
+      await svc.changeStatus(
+        TASK_ID,
+        { status: "approved", expectedStatus: "awaiting_review" },
+        "actor-1",
+      );
+      expect(separationOfDuties.assertDistinctActors).not.toHaveBeenCalled();
+    });
+
+    it("blocks claimed -> in_progress while a declared dependency has not reached completed (D2)", async () => {
+      const dependency = task({ id: DEPENDENCY_ID, status: "in_progress" });
+      tasks.findById.mockImplementation(async (id: string) =>
+        id === TASK_ID
+          ? task({ status: "claimed", dependencies: [DEPENDENCY_ID], createdBy: "creator-1" })
+          : dependency,
+      );
+      await expect(
+        svc.changeStatus(TASK_ID, { status: "in_progress", expectedStatus: "claimed" }, "actor-1"),
+      ).rejects.toThrow(/dependencies not yet completed/);
+      expect(tasks.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it("allows claimed -> in_progress once every declared dependency is completed", async () => {
+      const dependency = task({ id: DEPENDENCY_ID, status: "completed" });
+      tasks.findById.mockImplementation(async (id: string) =>
+        id === TASK_ID
+          ? task({ status: "claimed", dependencies: [DEPENDENCY_ID], createdBy: "creator-1" })
+          : dependency,
+      );
+      tasks.updateStatus.mockResolvedValue({
+        outcome: "updated",
+        entity: task({ status: "in_progress" }),
+      });
+      const result = await svc.changeStatus(
+        TASK_ID,
+        { status: "in_progress", expectedStatus: "claimed" },
+        "actor-1",
+      );
+      expect(result.status).toBe("in_progress");
+    });
+
+    it("never checks dependency completion for a transition other than claimed -> in_progress", async () => {
+      tasks.findById.mockResolvedValue(
+        task({ status: "ready_for_claude", dependencies: [DEPENDENCY_ID], createdBy: "creator-1" }),
+      );
+      tasks.updateStatus.mockResolvedValue({
+        outcome: "updated",
+        entity: task({ status: "claimed" }),
+      });
+      await svc.changeStatus(
+        TASK_ID,
+        { status: "claimed", expectedStatus: "ready_for_claude" },
+        "actor-1",
+      );
+      // Only the one findById call for `current` — no extra lookups for a dependency task.
+      expect(tasks.findById).toHaveBeenCalledTimes(1);
     });
 
     it("still returns the transitioned task when the audit write itself fails", async () => {
