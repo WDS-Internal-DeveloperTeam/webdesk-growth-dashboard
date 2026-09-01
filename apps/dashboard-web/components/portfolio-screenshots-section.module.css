@@ -1,0 +1,86 @@
+/*
+ * Composes from `project-subresource-section.module.css` — the same list/row/add-form/edit-form
+ * shape `case-study-assets-section.module.css`/`claim-sources-section.module.css` already reuse
+ * for the identical "list of rows, each with inline Edit/Delete, plus an add form below"
+ * structure.
+ */
+
+.list {
+  composes: list from "./project-subresource-section.module.css";
+}
+
+.row {
+  composes: row from "./project-subresource-section.module.css";
+}
+
+.rowMain {
+  composes: rowMain from "./project-subresource-section.module.css";
+}
+
+.primaryText {
+  composes: primaryText from "./project-subresource-section.module.css";
+}
+
+.secondaryText {
+  composes: secondaryText from "./project-subresource-section.module.css";
+}
+
+.rowActions {
+  composes: rowActions from "./project-subresource-section.module.css";
+}
+
+.actionButton {
+  composes: actionButton from "./project-subresource-section.module.css";
+}
+
+.deleteButton {
+  composes: deleteButton from "./project-subresource-section.module.css";
+}
+
+.editForm {
+  composes: editForm from "./project-subresource-section.module.css";
+}
+
+.addForm {
+  composes: addForm from "./project-subresource-section.module.css";
+}
+
+.addFormTitle {
+  composes: addFormTitle from "./project-subresource-section.module.css";
+}
+
+.fieldRow {
+  composes: fieldRow from "./project-subresource-section.module.css";
+}
+
+.field {
+  composes: field from "./project-subresource-section.module.css";
+}
+
+.label {
+  composes: label from "./project-subresource-section.module.css";
+}
+
+.input {
+  composes: input from "./project-subresource-section.module.css";
+}
+
+.formActions {
+  composes: formActions from "./project-subresource-section.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./project-subresource-section.module.css";
+}
+
+.cancelButton {
+  composes: cancelButton from "./project-subresource-section.module.css";
+}
+
+.error {
+  composes: error from "./project-subresource-section.module.css";
+}
+
+.muted {
+  composes: muted from "./project-subresource-section.module.css";
+}
