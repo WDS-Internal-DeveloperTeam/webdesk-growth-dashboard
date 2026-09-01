@@ -90,6 +90,18 @@ export class ProofClaimRepository {
     return instance ? toEntityWithIsoDates<ProofClaimEntity>(instance) : null;
   }
 
+  /** Existence check for a set of claim ids, mirroring `ServiceRepository.findByIds()` — added so
+   *  another module (Case Study Studio's `relatedClaimIds`, via
+   *  `ClaimsService.existingClaimIds()`) can validate real, existing claims without duplicating
+   *  this query. */
+  async findByIds(ids: readonly string[]): Promise<readonly ProofClaimEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({ where: { id: ids } });
+    return rows.map((row) => toEntityWithIsoDates<ProofClaimEntity>(row));
+  }
+
   async list(filter: ProofClaimListFilter = {}): Promise<readonly ProofClaimEntity[]> {
     const where: Record<string, unknown> = {};
     if (filter.approvalStatus) {
