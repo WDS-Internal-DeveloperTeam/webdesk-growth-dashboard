@@ -3915,8 +3915,73 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     `G4-knowledge-library`). **"Push the branch" was then separately requested and executed** —
     pushed to `origin`. **This gate approval does not itself authorize opening a PR or merging** —
     each remains its own separate, not-yet-requested authorization, per this project's standing
-    "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a separate,
-    not-yet-requested next step, matching every prior module's own backend-first precedent.
+    "no auto-merge" rule. **Update (2026-09-01): the `dashboard-web` UI has since been built and
+    gated — see item 68 below.**
+
+68. **`dashboard-web` Knowledge Library UI — built, reviewed, gated, pushed (2026-09-01).** Closes
+    this module's last named gap, following the backend's own build-to-production arc
+    (PR #96, gate `G4-knowledge-library`). Built directly on the explicit "Start the dashboard-web
+    UI for it" instruction. No approved wireframe exists for this module
+    (`03_Detailed_Module_Specifications.md §28` is a flat field list) — every field mirrors the
+    backend's actual `createKnowledgeLibraryRecordSchema`/`updateKnowledgeLibraryRecordSchema`
+    directly, matching every sibling module's own "smallest honest reading" precedent. Mirrors
+    Business Knowledge Center's/Persona Library's UI structure file-for-file — the closest
+    siblings (a single generic table, an independent confidentiality field with the same
+    `undefined`-means-redacted contract Service Library already established). New
+    `packages/shared-types` `KnowledgeLibraryRecordStatus`/`KnowledgeLibraryRecordConfidentiality`/
+    `KnowledgeLibraryRecord` (`sourceType`/`location`/`notes` typed `string | null | undefined`
+    directly, honestly reflecting the backend's confidential-field redaction).
+    `lib/knowledge-library-query.ts`/`lib/knowledge-library.ts` mirror
+    `persona-library-query.ts`/`persona-library.ts`'s own zero-non-type-import-file split —
+    `search` is clamped (not rejected) to 255 characters, matching Persona/Service Library's own
+    established defense-in-depth precedent, a fix applied after first mistakenly copying Business
+    Knowledge Center's stricter reject-on-overlong shape. `KnowledgeLibraryForm` has no create-only
+    field (unlike most siblings — no `recordType`-style discriminator, no immutable `publicId`);
+    `status` is deliberately never a form field, only the dedicated status route may change it;
+    `ownerUserId` uses the reusable `UserPicker` with the established `ownerTouched` guard;
+    `relatedEntityIds` is a free-text `TagListField` (unvalidated, matching Service Library's own
+    `icpIds` shape); `location` stays plain text, deliberately never validated as a URL or rendered
+    as a link, per the backend's own doc comment (a reference source's location may genuinely be a
+    URL, an internal file path, or a citation). Per the 2026-08-22 standing rule, `notes` now uses
+    `RichTextEditor` — a real, paired backend change since this field predates that rule:
+    `KnowledgeLibraryRecordsService.create()`/`update()` now sanitize `notes` via
+    `sanitizeNullableRichText()`/`sanitizeNullableRichTextIfChanged()` (`@webdesk/validation`), and
+    the DTO cap was raised 10,000 → 20,000 to match the standard markup-overhead ratio every prior
+    rich-text conversion in this codebase uses; 3 new `dashboard-api` unit tests prove sanitization
+    on both create and update (including the skip-if-unchanged path). The detail page renders
+    sections mirroring the backend's own field grouping (Identity, Source, Confidentiality, Notes,
+    Status); a redacted record shows an inert notice for its Source and Notes sections; "Edit" is
+    hidden once a record reaches its terminal `deprecated` status, matching Website Strategy
+    Center's own precedent. **Reviewed at light tier**, per this project's own 2026-08-27
+    "right-size the review pipeline" standing rule — a small, frontend-only UI slice consuming an
+    already-reviewed, already-gated backend, plus a well-established, low-risk backend pattern
+    (rich-text sanitization wiring) already used identically in 6+ prior modules. A direct
+    read-through pass verified the create/edit field contract, the status-actions transition table
+    against the real backend `ALLOWED_TRANSITIONS` table, the redaction contract (`undefined` vs
+    `null`) against the real controller's `redactIfRestricted()`/`CONFIDENTIAL_RESTRICTED_FIELDS`,
+    reuse of every established shared helper, and the terminal-state Edit-link hiding — **0
+    findings** kept after the one search-clamping fix noted above. A separate security review was
+    skipped per the same standing rule — no new endpoint, no new RBAC action, and the sole backend
+    change (length-cap raise plus sanitization wiring) is identical in shape to 6+ already-reviewed
+    prior modules; the one rich-text render site routes exclusively through the existing,
+    already-audited `SanitizedRichText` component. Full validation, independently re-run and
+    confirmed by the orchestrating session: 1571/1571 `dashboard-api` unit tests (3 new), 1540/1540
+    `dashboard-web` unit tests (37 new — 22 lib/query, 8 status-actions, 7 form), a clean
+    `next build` with all 4 new routes present, typecheck (`dashboard-api`/`dashboard-web`/
+    `dashboard-worker`/`@webdesk/shared-types` all clean), `eslint --max-warnings=0` clean,
+    CSS-token check clean (79 files), and `prettier --check` clean. See
+    `docs/implementation/module-knowledge-library.md`'s "As-built — `dashboard-web` UI" section and
+    `docs/project-state/dashboard-web-knowledge-library-approval-checklist.md`. **Required
+    second-role human review complete via the direct "gate it and push the branch" instruction** —
+    the approval checklist's own findings table served as the review artifact, since there were no
+    open findings of any kind on this branch after the one fix. **The gate
+    (G4-dashboard-web-knowledge-library) was then approved** — WebDesk Solution, decision CONFIRM,
+    approved commit `11939b9` on branch `dashboard-web-knowledge-library` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-knowledge-library`). **"Push the branch" was then separately requested and
+    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
+    or merging** — each remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -6755,6 +6820,28 @@ c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is
   `module-knowledge-library` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
   (`current_gate` now `G4-knowledge-library`). **"Push the branch" was then separately requested
   and executed** — pushed to `origin`. This gate approval does not itself authorize opening a PR or
+  merging.
+- `[2026-09-01]` **Built the `dashboard-web` UI for Knowledge Library**, under the explicit "Start
+  the dashboard-web UI for it" instruction, closing this module's last named gap. Full account in
+  item 68 above. Mirrors Business Knowledge Center's/Persona Library's UI structure file-for-file;
+  `notes` converted to `RichTextEditor` per the 2026-08-22 standing rule with a paired backend
+  sanitization change (DTO cap 10,000 → 20,000). Committed to branch
+  `dashboard-web-knowledge-library`.
+- `[2026-09-01]` **Reviewed at light tier, per the 2026-08-27 "right-size the review pipeline"
+  standing rule** — a small, frontend-only UI slice consuming an already-reviewed, already-gated
+  backend. A direct read-through pass found and fixed 1 issue (the list page's `search` clamping
+  logic, corrected to match the Persona/Service Library convention). Security review skipped per
+  the same standing rule — no new endpoint, no new sink. 1571/1571 `dashboard-api` unit tests
+  (3 new), 1540/1540 `dashboard-web` unit tests (37 new), clean typecheck/lint/`next build`/
+  prettier/CSS-token-check.
+- `[2026-09-01]` **Required second-role human review complete for
+  `dashboard-web-knowledge-library`, via the direct "gate it and push the branch" instruction** —
+  the approval checklist's own findings table served as the review artifact. **The gate
+  (G4-dashboard-web-knowledge-library) was then approved** — WebDesk Solution, decision CONFIRM,
+  approved commit `11939b9` on branch `dashboard-web-knowledge-library` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-knowledge-library`). **"Push the branch" was then separately requested and
+  executed** — pushed to `origin`. This gate approval does not itself authorize opening a PR or
   merging.
 
 ## Open client blockers

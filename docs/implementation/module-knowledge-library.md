@@ -312,5 +312,13 @@ status-actions, 7 form), a clean `next build` with all 4 new routes present
 `dashboard-worker`/`@webdesk/shared-types` all clean), `eslint --max-warnings=0` clean, CSS-token
 check clean (79 files), and `prettier --check` clean.
 
-Not yet reviewed by a second-role human, gated, pushed, or merged — each remains its own separate,
-not-yet-requested next step, per this project's standing "no auto-merge" rule.
+**Required second-role human review complete and the gate approved** (2026-09-01), both via the
+direct "gate it and push the branch" instruction — the approval checklist's own findings table
+served as the review artifact, since there were no open findings of any kind on this branch. The
+gate (`G4-dashboard-web-knowledge-library`) was approved by WebDesk Solution, decision CONFIRM,
+approved commit `11939b9` on branch `dashboard-web-knowledge-library` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` and
+`docs/project-state/dashboard-web-knowledge-library-approval-checklist.md`'s "Sign-off" section.
+**"Push the branch" was then separately requested and executed** — pushed to `origin`. This gate
+approval does not itself authorize opening a PR or merging — each remains its own separate,
+not-yet-requested authorization, per this project's standing "no auto-merge" rule.

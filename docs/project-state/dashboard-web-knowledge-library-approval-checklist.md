@@ -1,17 +1,17 @@
 # `dashboard-web` Knowledge Library UI — approval checklist
 
-| # | Item | Status |
-|---|------|--------|
-| 1 | Built to explicit instruction | ✅ "Start the dashboard-web UI for it" (Knowledge Library) |
-| 2 | Backend already reviewed/gated/merged | ✅ PR #96, gate `G4-knowledge-library`, live in production |
-| 3 | Full validation clean | ✅ 1571/1571 `dashboard-api` unit (3 new), 1540/1540 `dashboard-web` unit (37 new) |
-| 4 | Typecheck clean | ✅ `dashboard-api`/`dashboard-web`/`dashboard-worker`/`@webdesk/shared-types` |
-| 5 | Lint clean | ✅ `eslint --max-warnings=0` (new files) |
-| 6 | CSS-token check clean | ✅ 79 CSS Module files |
-| 7 | `next build` clean, all 4 routes present | ✅ `/knowledge-library`, `/new`, `/[recordId]`, `/[recordId]/edit` |
-| 8 | Prettier clean | ✅ |
-| 9 | Documentation updated | ✅ `docs/implementation/module-knowledge-library.md`'s new "As-built — `dashboard-web` UI" section |
-| 10 | Exact branch/commit verified | Branch `dashboard-web-knowledge-library` — not yet pushed to `origin` |
+| #   | Item                                     | Status                                                                                             |
+| --- | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 1   | Built to explicit instruction            | ✅ "Start the dashboard-web UI for it" (Knowledge Library)                                         |
+| 2   | Backend already reviewed/gated/merged    | ✅ PR #96, gate `G4-knowledge-library`, live in production                                         |
+| 3   | Full validation clean                    | ✅ 1571/1571 `dashboard-api` unit (3 new), 1540/1540 `dashboard-web` unit (37 new)                 |
+| 4   | Typecheck clean                          | ✅ `dashboard-api`/`dashboard-web`/`dashboard-worker`/`@webdesk/shared-types`                      |
+| 5   | Lint clean                               | ✅ `eslint --max-warnings=0` (new files)                                                           |
+| 6   | CSS-token check clean                    | ✅ 79 CSS Module files                                                                             |
+| 7   | `next build` clean, all 4 routes present | ✅ `/knowledge-library`, `/new`, `/[recordId]`, `/[recordId]/edit`                                 |
+| 8   | Prettier clean                           | ✅                                                                                                 |
+| 9   | Documentation updated                    | ✅ `docs/implementation/module-knowledge-library.md`'s new "As-built — `dashboard-web` UI" section |
+| 10  | Exact branch/commit verified             | Branch `dashboard-web-knowledge-library`, commit `11939b9` — pushed to `origin`                    |
 
 ## Forbidden-actions check
 
@@ -22,7 +22,7 @@
   the identical pattern already shipped for Persona Library, Service Library, Website Strategy
   Center, Internal Linking Library, and others.
 - No new npm dependency.
-- No confidential-field/redaction *mechanism* change — the redaction contract
+- No confidential-field/redaction _mechanism_ change — the redaction contract
   (`sourceType`/`location`/`notes` → `undefined` when redacted) was already built and reviewed on
   the backend (PR #96); this UI only honors that existing contract, the same way
   `BusinessKnowledgeRecordForm`/`ServiceLibraryForm` already do for their own redacted fields.
@@ -56,12 +56,21 @@ already-audited `SanitizedRichText` component.
 
 ## Sign-off
 
-**Required second-role human review:** Not yet requested.
+**Required second-role human review:** Complete — via the direct "gate it and push the branch"
+instruction. Light tier, so the findings table above served as the review artifact rather than a
+separately published Claude artifact packet, matching the Wireframe Library/Motion and Interaction
+Library UI precedent for a light-tier slice. There were no open findings of any kind on this
+branch to accept as tracked debt.
 
-**Gate:** Not yet requested.
+**Gate:** `G4-dashboard-web-knowledge-library` approved — WebDesk Solution, decision CONFIRM
+(clean pass, not an override, since the second-role review was already complete before the gate
+was requested), approved commit `11939b9` on branch `dashboard-web-knowledge-library`. See
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-dashboard-web-knowledge-library`).
 
-**Note on push/PR/gate/merge:** Committed to branch `dashboard-web-knowledge-library`, off `main`
-at the commit recording the Knowledge Library backend's production migration incident. Pushing
-the branch, opening a PR, requesting the required second-role human review, requesting the gate,
-and merging are each their own separate, not-yet-requested authorization, per this project's
-standing "no auto-merge" rule — none of the four has happened yet.
+**This gate approval does not itself authorize pushing the branch, opening a PR, or merging** —
+pushing the branch was separately requested in the same instruction ("gate it and push the
+branch") and executed immediately after the gate above; opening a PR and merging each remain their
+own separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+
+**"Push the branch" was then separately requested and executed** — pushed to `origin`.
