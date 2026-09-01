@@ -41,5 +41,6 @@ export * from "./asset-library/index.js";
 export * from "./component-library/index.js";
 export * from "./wireframe-library/index.js";
 export * from "./page-template-library/index.js";
+export * from "./design-review-center/index.js";
 export * from "./motion-and-interaction-library/index.js";
 export * from "./case-study-studio/index.js";
