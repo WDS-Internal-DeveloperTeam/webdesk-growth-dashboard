@@ -105,6 +105,18 @@ export class AssetRepository {
     return instance ? toEntityWithIsoDates<AssetEntity>(instance) : null;
   }
 
+  /** Existence check for a set of asset ids, mirroring `ServiceRepository.findByIds()` — added so
+   *  another module (Case Study Studio's `case_study_assets` join, via
+   *  `AssetsService.existingAssetIds()`) can validate real, existing assets without duplicating
+   *  this query. */
+  async findByIds(ids: readonly string[]): Promise<readonly AssetEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.model.findAll({ where: { id: ids } });
+    return rows.map((row) => toEntityWithIsoDates<AssetEntity>(row));
+  }
+
   async findByPublicId(publicId: string): Promise<AssetEntity | null> {
     const instance = await this.model.findOne({ where: { publicId } });
     return instance ? toEntityWithIsoDates<AssetEntity>(instance) : null;

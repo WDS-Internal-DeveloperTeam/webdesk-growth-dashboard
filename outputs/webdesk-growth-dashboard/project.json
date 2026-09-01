@@ -1008,6 +1008,48 @@
       "approved_commit": "c706b66",
       "record": "docs/project-state/module-design-review-center-approval-checklist.md",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-motion-and-interaction-library",
+      "type": "qa-security-gate",
+      "scope": "module-motion-and-interaction-library",
+      "status": "passed",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-31T00:00:00Z",
+      "decision": "CONFIRM",
+      "notes": "Motion and Interaction Library module backend -- module #20 on the Recommended Module Roadmap. The canonical spec (Section 18) gives no field list, only a bare ~26-category taxonomy -- the same spec-gap situation Section and Pattern Library hit. Two design forks confirmed directly with the project owner first (AskUserQuestion): the field set (a 26-value category enum plus 8 content fields, modeled on the taxonomy) and relatedComponentIds as a REAL, existence-validated relationship into Component Library (ComponentsService.existingComponentIds()) rather than an unvalidated array -- a genuine improvement over the Design Token/Section and Pattern Library precedent, since Component Library already exists. Single table (motion_interaction_records), real multi-row version history mirroring Section and Pattern Library structurally, the standard 8-value approval workflow, no confidentiality mechanism, no publish/unpublish action, reuses the seeded creative_design RBAC group verbatim -- no new RBAC migration. Backend-only pass -- dashboard-web UI is a separate, not-yet-requested next step. Independent code review (high effort, 8-angle finder pass) surfaced 3 candidates after dedup -- 1 CONFIRMED and fixed (the seeded module_registry.dependencies for this module was null, inconsistent with the real, hard runtime dependency this build introduces on Component Library; fixed via an additive migration and the roadmap doc updated to move this module from Wave 1 to Wave 2), 1 PLAUSIBLE left as accepted debt (the update DTO schema hand-duplicated instead of derived via .omit()/.partial() -- matches 6 of 8 sibling modules' own convention), 1 REFUTED (an 'unused speculative existence-check method' claim, raised independently by 3 finder angles, refuted on verification since it mirrors an established, already-consumed convention, not Page Template Library's genuinely-removed dead method). Security review found 0 findings above threshold. Mid-review, main moved forward twice (Wireframe Library module backend taking migrations 00084/00085, then its dashboard-web UI landing and claiming CLAUDE.md item 60) -- both were caught and fixed: migrations renumbered to 00086-00088 with every internal reference updated, and a duplicate CLAUDE.md item number resolved by merging main again and letting prettier's ordered-list renumbering apply. 1386/1386 dashboard-api unit tests, 620/620 packages/database integration tests, 625/625 dashboard-api e2e/integration tests, all independently re-run against a real disposable PostgreSQL 17 database after every fix round; a clean 88-migration round-trip; validate:module-registry unaffected (43 modules, 21 permission groups); typecheck/lint (--max-warnings=0)/prettier clean; pnpm audit 0 vulnerabilities. A review packet (published as a Claude artifact -- code review + security review findings, fixes, and validation evidence, with a decision section) was prepared for the required second-role human review, since the implementing agent cannot also be its own reviewer (ADR-0010). Jitesh D reviewed it and returned 'Approved,' no disputes raised.",
+      "approved_commit": "fddbe85",
+      "record": "docs/project-state/module-motion-and-interaction-library-approval-checklist.md",
+      "scope_excludes": "This gate approval does not itself authorize merging PR #86 -- merge remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-dashboard-web-motion-and-interaction-library",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-motion-and-interaction-library",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-08-31T00:00:00Z",
+      "approved_commit": "4f49b38",
+      "record": "docs/project-state/dashboard-web-motion-and-interaction-library-approval-checklist.md",
+      "notes": "dashboard-web UI for the Motion and Interaction Library module -- closes this module's last named gap following the backend's own build-to-production arc (PR #86, live). File-for-file mirrors Section and Pattern Library's already-reviewed UI structure, the closest sibling (both have real multi-row version history, both reuse the creative_design RBAC group): four routes (list/detail/create/edit) under app/(shell)/motion-and-interaction-library/. category is create-only (immutable across a record's own version chain); description/triggerAndBehavior/accessibilityNotes use RichTextEditor per the 2026-08-22 standing rule -- the backend already sanitized all three at write time, so only a length-cap raise (20,000 -> 40,000) was needed on motion-and-interaction-library.dto.ts, not new sanitization; timingAndEasing/implementationSpec/fallbackBehavior stay plain textareas, matching the backend's own unsanitized plain-text schema for these three fields; designReference a client-validated (isSafeHttpUrl()) URL input; relatedComponentIds a REAL, existence-validated RelationshipPicker against Component Library. MotionInteractionStatusActions mirrors the backend's TRANSITIONS table exactly, including the deliberate approved -> archived-only divergence (no superseded edge -- supersede is automatic). Independent code review (8-angle finder pass, medium effort) surfaced 4 candidates after dedup -- 3 fixed (MotionInteractionStatusActions using plain useState instead of the shared useSyncedState() hook every module built after 2026-08-27 adopts; arrayField() reimplementing the shared arrayFieldValue() helper instead of delegating to it; the detail page's relatedComponentIds id-to-name resolution being a 3rd independent inline hand-copy of a pattern already present in Component Library's and Page Template Library's own detail pages, closed by extracting a new lib/resolve-ids-to-names.ts, with the two pre-existing sibling occurrences deliberately left untouched as out-of-scope retrofits) -- 1 candidate refuted as inherited from an already-shipped Section and Pattern Library precedent. Security review skipped per the 2026-08-27 'right-size the review pipeline' standing rule -- no new endpoint, no new sink, only a validation-bound length-cap raise as the sole backend change. 1283/1283 dashboard-web unit tests (48 new), 1386/1386 dashboard-api unit tests, typecheck/lint (--max-warnings=0)/CSS-token-check (64 files)/next build (all 4 routes present)/prettier all clean -- independently re-run by the orchestrating session after every fix, not trusted from the build agent's own report. Required second-role human review complete via the direct 'gate it and push the branch' instruction -- the approval checklist's own findings table served as the review artifact rather than a separately published packet, since there were no open findings of any kind on this branch after the fix round.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-case-study-studio",
+      "type": "qa-security-gate",
+      "scope": "case-study-studio",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-01T00:00:00Z",
+      "approved_commit": "uncommitted (branch module-case-study-studio, base main@103c532)",
+      "record": "docs/project-state/module-case-study-studio-approval-checklist.md",
+      "notes": "Case Study Studio module backend (module #23) -- the full bespoke 14-stage lifecycle (intake through publish/unpublish/archive) plus two mandatory approval gates (internal, client). Reuses Proof and Claims Library (relatedClaimIds) and Asset Library (case_study_assets join) instead of duplicating the spec's own separate tables. Reuses the already-seeded case_studies RBAC group verbatim -- no new RBAC migration. Independent code review (high effort, 8-angle finder pass) surfaced 9 candidates after dedup -- 7 CONFIRMED and fixed (most severe: a workflow-integrity bug letting a caller with edit+approve silently bypass the mandatory client_approval stage by toggling clientApprovalRequired mid-workflow, closed by making the field create-only/immutable), 1 downgraded to PLAUSIBLE and accepted as tracked debt (the same-status no-op RBAC-check ordering, verified byte-identical to Service Library's own already-accepted precedent). Security review found 0 findings above threshold. 51/51 dashboard-api unit tests (module), 28/28 e2e tests (module), 650/650 packages/database integration tests, a clean 90-migration round-trip, typecheck/lint/prettier clean, pnpm audit 0 vulnerabilities -- all independently re-run by the orchestrating session, not trusted from the build agent's own report. A review packet (published as a Claude artifact, 'Case Study Studio Review Packet' -- code review + security review findings, fixes, and validation evidence, with a decision section) was prepared for the required second-role human review, since the implementing agent cannot also be its own reviewer (ADR-0010). Jitesh D reviewed it and returned 'Approved.'",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, merging, or a production deployment -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule. No dashboard-web UI exists yet for this module -- backend only, matching every prior module's own backend-first precedent."
     }
   ],
   "budget": {
@@ -2895,13 +2937,49 @@
       "project_version_after": 96
     },
     {
+      "timestamp": "2026-08-31T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "gate_approved",
+      "details": "Gate G4-motion-and-interaction-library approved (WebDesk Solution, CONFIRM) for the Motion and Interaction Library module backend, approved commit fddbe85 on branch module-motion-and-interaction-library. Required second-role human review (Jitesh D, 'Approved') was already complete before the gate was requested -- a clean pass, not an override.",
+      "project_version_before": 96,
+      "project_version_after": 97
+    },
+    {
+      "timestamp": "2026-08-31T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "pr_merged",
+      "details": "PR #86 (module-motion-and-interaction-library) merged with a real merge commit b59fba740266236fa1aacef02a95cbe1f9948b7e, all 14 CI checks green beforehand. dashboard-api auto-deployed on push to main and was verified live directly, not just via CI's own Vercel status check -- /health returned build.commitSha == b59fba740266236fa1aacef02a95cbe1f9948b7e, confirming the exact merged commit is what's serving; GET /motion-and-interaction-library/records returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed); and dashboard-web's / resolves to /auth/sign-in for an unauthenticated visitor. The Motion and Interaction Library module backend is now genuinely live in production. No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module's own backend-first precedent.",
+      "project_version_before": 97,
+      "project_version_after": 98
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-motion-and-interaction-library approved (WebDesk Solution, CONFIRM) for the dashboard-web Motion and Interaction Library UI, approved commit 4f49b38 on branch dashboard-web-motion-and-interaction-library. Independent code review (8-angle finder pass) found 3 confirmed/plausible findings, all fixed and re-validated before this gate was requested -- a clean pass, not an override. Security review skipped per the 2026-08-27 review-pipeline right-sizing standing rule (no new endpoint, no new sink).",
+      "project_version_before": 98,
+      "project_version_after": 99,
+      "timestamp": "2026-08-31T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-case-study-studio approved (WebDesk Solution, CONFIRM) for the Case Study Studio module backend, on branch module-case-study-studio (base main@103c532, not yet pushed/merged). Independent code review (8-angle finder pass) found 7 confirmed findings, all fixed and re-validated, plus 1 accepted as tracked debt (inherited precedent from Service Library); security review found 0 findings above threshold -- a clean pass, not an override, since the required second-role human review (Jitesh D, 'Approved') was already complete before this gate was requested.",
+      "project_version_before": 99,
+      "project_version_after": 100,
+      "timestamp": "2026-09-01T00:00:00Z"
+    },
+    {
       "timestamp": "2026-09-01T00:00:00Z",
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "action": "gate_approved",
       "details": "Design Review Center module backend (module #21 on the canonical module registry) -- a polymorphic design-critique workflow engine (9-value reviewType: creative direction, UX, conversion, UI, accessibility-by-design, responsive, component consistency, motion, performance-impact) sharing the review_center RBAC group with the already-live Review and Approval Center. One genuine design fork confirmed directly with the user first (AskUserQuestion): extend the existing reviews table with a nullable reviewType column vs. a dedicated design_reviews/design_review_decisions table pair vs. no new schema at all -- the user chose the dedicated table pair, keeping the already-shipped, already-reviewed Review and Approval Center schema untouched. Adds a 5th terminal status (superseded) and an automatic-supersede-on-approve mechanism (D4) scoped to (targetModuleKey, targetId, reviewType), mirroring WebsiteStrategyRecordRepository's own already-reviewed supersede pattern. Migrations 00089/00090 explicitly numbered past the still-open, unmerged PR #86/#87 (Motion and Interaction Library, claiming 00086-00088) per the user's own instruction to account for it even before that PR merged; no collision after it landed first. Built by a background agent with a fully-specified prompt, then independently re-verified in full by the orchestrating session against a real disposable PostgreSQL 17 database -- every high-risk file read directly, every test suite re-run, not trusted from the agent's own report. Independent code review (high effort, 8-angle finder pass, 1-vote verification) surfaced 5 candidates after dedup (2 CONFIRMED, 3 PLAUSIBLE) -- 3 fixed: most severe, a real race condition where two concurrent decide(approve) calls on two different pre-existing reviews sharing the same tuple could both commit 'approved' under Postgres's default READ COMMITTED isolation (supersedeOtherApproved()'s scan only sees data committed before its own statement started; the sibling WebsiteStrategyRecordRepository pattern this was modeled on has the identical structural gap, confirmed by a dedicated verifier, not a regression unique to this module) -- fixed with a new DesignReviewRepository.lockTupleForApproval(), a SELECT ... FOR UPDATE lock on the whole tuple acquired before the CAS update on the approval path, serializing concurrent approvers; a new regression test races two reviews via Promise.all and proves exactly one ends up approved, the other superseded, never both. Also fixed: a missing index for list()'s standalone reviewType filter, and a redundant 2-column index made obsolete by a 3-column composite. 2 PLAUSIBLE findings left as accepted, tracked debt (supersedeOtherApproved() returning full entities when only .id is used; unwrapCasResult()/casUpdate() duplicated from the sibling review-and-approval-center module with no shared extraction), matching this project's own already-accepted duplication/efficiency debt class. A separate security-review skill run then found 0 findings above threshold -- confirmed method-level RBAC decorators throughout, an exhaustive action-to-permission mapping over the closed action enum, unconditional separation-of-duties enforcement, correct organization-wide scope, sanitizeNullableRichText() coverage on every write path, no raw SQL interpolation (including the new lock query, fully parameterized), and no secrets. Final numbers: 1372/1372 dashboard-api unit tests (26 new), 26/26 module integration tests (2 new), 24/24 e2e tests, migration round-trip clean (87/87, 0 pending), validate:module-registry (43 modules, 21 permission groups), typecheck/lint/prettier/pnpm audit all clean. Required second-role human review complete -- Jitesh D reviewed the published review packet and returned 'Approved,' no disputes raised. Recorded as CONFIRM, not an override, since that review was already complete before this gate was requested.",
-      "project_version_before": 96,
-      "project_version_after": 97
+      "project_version_before": 100,
+      "project_version_after": 101
     }
   ],
   "current_gate": "G4-design-review-center"

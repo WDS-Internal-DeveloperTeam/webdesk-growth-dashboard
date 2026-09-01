@@ -1714,3 +1714,88 @@ export interface WireframeRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/** The spec's own §18 motion/interaction category taxonomy, 26 values — mirrors
+ *  `packages/database/src/motion-and-interaction-library/entities.ts`'s
+ *  `MotionInteractionCategory` exactly. Immutable across a record's own version chain (set once at
+ *  creation; a real category change is a different record, not a new version of this one),
+ *  mirroring `SectionPatternType`'s/`PageType`'s own immutability discipline. */
+export type MotionInteractionCategory =
+  | "page_transition"
+  | "focus_state"
+  | "active_state"
+  | "selected_state"
+  | "disabled_state"
+  | "form_feedback"
+  | "menu"
+  | "modal_drawer"
+  | "tooltip"
+  | "sticky_behavior"
+  | "content_reveal"
+  | "loader"
+  | "progress_indicator"
+  | "success_error_state"
+  | "notification"
+  | "media_control"
+  | "filter_search"
+  | "pagination"
+  | "copy_share"
+  | "anchor_scroll"
+  | "parallax"
+  | "cursor"
+  | "dismissal"
+  | "screen_reader_announcement"
+  | "timing_and_interruption"
+  | "analytics_event"
+  | "no_js_fallback";
+
+/** Structurally identical to `PageTemplateApprovalStatus`/`SectionPatternApprovalStatus`/
+ *  `WireframeApprovalStatus`/`ArtifactApprovalStatus` (the shared 8-value artifact-approval
+ *  workflow) — reused as its own named type rather than an alias so this module's own `-query.ts`
+ *  file can still narrow to it directly without a cast, matching every sibling module's own
+ *  precedent. */
+export type MotionInteractionApprovalStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "revision_requested"
+  | "rejected"
+  | "superseded"
+  | "archived";
+
+/**
+ * One row per VERSION, not one row per record — structurally identical to `WireframeRecord`'s/
+ * `PageTemplateRecord`'s/`SectionPatternRecord`'s own real version-history shape
+ * (`packages/database/src/motion-and-interaction-library/entities.ts`'s own doc comment). `id` is
+ * unique per physical row/version; `recordId` is the stable logical-record identity shared by
+ * every version of the same record (the history/comparison key, and the identifier every
+ * `dashboard-web` route/link uses — never `id`, which changes across a fork). `publicId` is
+ * likewise stable across every version. `isCurrent` is true for exactly one row per `recordId` at
+ * any time. `category` is immutable across a record's own version chain. `relatedComponentIds` is
+ * a real, existence-validated relationship into Component Library's own `recordId`s — unlike
+ * `SectionPatternRecord`'s own `relatedComponentIds`, which predates Component Library and stays
+ * unvalidated.
+ */
+export interface MotionInteractionRecord {
+  readonly id: string;
+  readonly recordId: string;
+  readonly publicId: string;
+  readonly category: MotionInteractionCategory;
+  readonly versionNumber: number;
+  readonly isCurrent: boolean;
+  readonly name: string;
+  readonly description: string | null;
+  readonly triggerAndBehavior: string | null;
+  readonly timingAndEasing: string | null;
+  readonly implementationSpec: string | null;
+  readonly accessibilityNotes: string | null;
+  readonly fallbackBehavior: string | null;
+  readonly designReference: string | null;
+  readonly relatedComponentIds: readonly string[];
+  readonly approvalStatus: MotionInteractionApprovalStatus;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

@@ -11,6 +11,7 @@ import { AuthzModule } from "./authz/authz.module.js";
 import { BrandLibraryModule } from "./brand-library/brand-library.module.js";
 import { AssetLibraryModule } from "./asset-library/asset-library.module.js";
 import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
+import { CaseStudyStudioModule } from "./case-study-studio/case-study-studio.module.js";
 import { ComponentLibraryModule } from "./component-library/component-library.module.js";
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
@@ -21,6 +22,7 @@ import { HealthModule } from "./health/health.module.js";
 import { InternalLinkingLibraryModule } from "./internal-linking-library/internal-linking-library.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
 import { KeywordAndEntityLibraryModule } from "./keyword-and-entity-library/keyword-and-entity-library.module.js";
+import { MotionAndInteractionLibraryModule } from "./motion-and-interaction-library/motion-and-interaction-library.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OperationalContactsModule } from "./operational-contacts/operational-contacts.module.js";
 import { PageInventoryModule } from "./page-inventory/page-inventory.module.js";
@@ -75,6 +77,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     BrandLibraryModule,
     AssetLibraryModule,
     BusinessKnowledgeModule,
+    CaseStudyStudioModule,
     ComponentLibraryModule,
     ContentTemplateLibraryModule,
     DesignReferenceLibraryModule,
@@ -83,6 +86,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     InternalLinkingLibraryModule,
     JobsModule,
     KeywordAndEntityLibraryModule,
+    MotionAndInteractionLibraryModule,
     NotificationsModule,
     OperationalContactsModule,
     PageInventoryModule,
