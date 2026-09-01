@@ -3095,6 +3095,15 @@
       "project_version_before": 105,
       "project_version_after": 106,
       "timestamp": "2026-09-01T00:00:00Z"
+    },
+    {
+      "timestamp": "2026-09-01T00:00:00Z",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "action": "pr_merged",
+      "details": "PR #94 (module-portfolio-library) merged with a real merge commit 747a4737763e8859c0c6ae2b53d493fda280b29f, all 14 CI checks green beforehand (a second run, after resolving a real merge conflict against main from a concurrently-merged dashboard-web-case-study-library slice). dashboard-api auto-deployed on push to main and was verified live directly, not just via CI's own Vercel status check -- /health returned build.commitSha == 747a4737763e8859c0c6ae2b53d493fda280b29f, confirming the exact merged commit is what's serving; GET /portfolio-library/records returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed); and dashboard-web's / resolves (via the intermediate /home hop) to /auth/sign-in for an unauthenticated visitor. The Portfolio Library module backend is now genuinely live in production. No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module's own backend-first precedent.",
+      "project_version_before": 106,
+      "project_version_after": 107
     }
   ],
   "current_gate": "G4-portfolio-library"

@@ -3767,9 +3767,10 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     production**, closing out this slice's full build-to-production arc — backend and now the full
     UI (list, detail, create/edit form) are both live for the Case Study Library module.
 
-66. **Portfolio Library module #25 backend — built, reviewed, gated, pushed as
-    [PR #94](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/94), all
-    14 CI checks green — merge in progress (2026-09-01).** Built directly on the explicit "take
+66. **Portfolio Library module #25 backend — built, reviewed, gated, merged
+    ([PR #94](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/94),
+    merge commit `747a4737763e8859c0c6ae2b53d493fda280b29f`); now genuinely live in production
+    (2026-09-01).** Built directly on the explicit "take
     pull and start the portfolio library" instruction, using migration numbers `00095`/`00096` per
     the user's own explicit instruction (numbers `00093`/`00094` were reserved by concurrent
     in-flight work, later landing as Case Study Library). Four design forks confirmed directly with
@@ -3831,10 +3832,23 @@ b54442cd428a25098f6827bd83935f07b0074009`, confirming the exact merged commit is
     `G4-portfolio-library`). **"Push the branch" and "Open a PR" were then separately requested
     and executed** — pushed to `origin`, opened as
     [PR #94](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/94), all
-    14 CI checks confirmed green. **"Merge PR #94" was then requested** — a real merge conflict
-    against `main` (a second concurrent slice, `dashboard-web-case-study-library`, had merged in
-    the meantime) is being resolved before completing the merge. No `dashboard-web` UI exists yet
-    for this module — a separate, not-yet-requested next step, matching every prior module's own
+    14 CI checks confirmed green. **"Merge PR #94" was then separately requested and executed** —
+    a real merge conflict against `main` surfaced first (a second concurrent slice,
+    `dashboard-web-case-study-library`, had merged in the meantime), resolved by keeping both
+    sides' `project.json` gate/audit-log entries and re-sequencing version counters, re-verified
+    (96-migration round-trip, 33/33 integration tests, 31/31 e2e tests, `validate:module-registry`
+    all clean) before pushing again and waiting for all 14 CI checks to go green a second time.
+    Merged with a real merge commit (not squash/rebase), matching every prior merge in this
+    project's history — merge commit `747a4737763e8859c0c6ae2b53d493fda280b29f`. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly, not just via CI's
+    own Vercel status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+747a4737763e8859c0c6ae2b53d493fda280b29f`, confirming the exact merged commit is what's serving;
+    `GET /portfolio-library/records` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+    unauthenticated visitor, confirming the session gate is intact. **The Portfolio Library module
+    backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this
+    module — a separate, not-yet-requested next step, matching every prior module's own
     backend-first precedent.
 
 ## Recent decisions
