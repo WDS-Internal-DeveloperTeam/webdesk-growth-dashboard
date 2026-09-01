@@ -3,8 +3,10 @@
 **Status:** Code review complete (high-effort 8-angle finder pass — 5 candidates, 2 CONFIRMED
 fixed, 3 PLAUSIBLE, 2 fixed and 1 accepted as tracked debt). Security review complete (0 findings
 above threshold). Required second-role human review complete — Jitesh D, "Approved," no disputes
-raised. Gate (G4-design-review-center) approved — WebDesk Solution, decision CONFIRM. Push and
-merge remain each a separate, not-yet-requested next step.
+raised. Gate (G4-design-review-center) approved — WebDesk Solution, decision CONFIRM. Pushed as
+[PR #89](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/89) and
+**merged** — merge commit `0933b2ad6ddd5601a59d084766fd0557acdcf11b`, verified live in
+production.
 
 ## Completion condition
 
