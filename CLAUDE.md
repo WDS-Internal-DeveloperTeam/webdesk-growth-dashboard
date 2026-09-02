@@ -4344,7 +4344,7 @@ fcd33f1b15e87abae483743cf047eaf548fb8042`, confirming the exact merged commit is
     **This gate approval does not itself authorize merging** — merge remains its own separate,
     not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
-73. **Change Center module backend — built, reviewed, gated, pushed (2026-09-02).** Module #33,
+74. **Change Center module backend — built, reviewed, gated, pushed (2026-09-02).** Module #33,
     built directly on the explicit "start Change Center and use the migration numbering from the
     00105" instruction. Two genuine forks confirmed with the user first (`AskUserQuestion`): the
     `scan_center` dependency's source-linkage shape and the target-record shape. **A real mid-task
@@ -4425,7 +4425,7 @@ accepted`/`rejected`/`deferred`/`manual_merge_required` `→ applying → applie
     been built, reviewed, gated, and merged — now genuinely live in production — see item 74
     below.**
 
-74. **`dashboard-web` Change Center UI — built, reviewed, gated, pushed (2026-09-02).** Closes
+75. **`dashboard-web` Change Center UI — built, reviewed, gated, pushed (2026-09-02).** Closes
     this module's last named gap, following the backend's own build-to-production arc (PR #103,
     item 73 above). Not started automatically — built directly on the explicit "Start the
     dashboard-web UI for it" instruction. Four routes under `/change-center` (list, detail,
