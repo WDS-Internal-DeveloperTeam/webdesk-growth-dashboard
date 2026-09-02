@@ -2290,3 +2290,146 @@ export interface ReadyForClaudeTask {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * Scan Center (module #31) — a real pipeline across four tables: a `ScanDefinition` describes
+ * WHAT to scan (and how); a `ScanRun` is one execution of a definition, progressing through a
+ * bespoke 8-state lifecycle; a `ScanFinding` is a discrete issue surfaced by a completed/
+ * partially-completed run; `ScanEvidence` is immutable supporting material attached to one
+ * finding. Record-keeping only — no real scanner/crawler/WordPress-adapter execution engine exists
+ * anywhere in this codebase yet, matching Ready for Claude Queue's/Review and Approval Center's own
+ * precedent for a mechanism with no execution engine yet. All four tables are project-scoped
+ * (`scan-center/projects/:projectId/...`). See
+ * `apps/dashboard-api/src/scan-center/scan-center.dto.ts`/`scan-center.constants.ts` and
+ * `packages/database/src/scan-center/entities.ts` for the full backend contract this mirrors.
+ */
+export type ScanType =
+  | "full_website"
+  | "selected_page"
+  | "repository"
+  | "wordpress_health"
+  | "theme_plugin_core_currency"
+  | "security_indicators"
+  | "accessibility"
+  | "performance"
+  | "links"
+  | "metadata"
+  | "structured_data";
+
+export type ScanMode = "manual" | "scheduled";
+
+/**
+ * A saved scan configuration — what to scan, and (optionally) on what schedule. Has no workflow
+ * of its own; only `isEnabled` toggles whether it may currently be run. `target` is deliberately
+ * plain free text, not URL-validated — a repository ref or a "selected page" slug is not always a
+ * URL. `scanType` is create-only (immutable), mirroring every sibling module's own discriminator-
+ * field create-only contract.
+ */
+export interface ScanDefinition {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly scanType: ScanType;
+  readonly mode: ScanMode;
+  readonly target: string | null;
+  readonly environment: string | null;
+  readonly scheduleCron: string | null;
+  readonly isEnabled: boolean;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * A run's real 8-state lifecycle: `requested -> queued -> running ->` one of five terminal
+ * outcomes (`completed`/`partially_completed`/`failed`/`timed_out`/`cancelled`), plus two
+ * direct-to-`cancelled` shortcuts from `queued`/`running`. Every terminal state has no outbound
+ * transition — unlike Internal Linking Library's own 4-state loop, this workflow really does end.
+ * See `apps/dashboard-api/src/scan-center/scan-runs.service.ts`'s own `TRANSITIONS` table for the
+ * exact allowed edges.
+ */
+export type ScanRunStatus =
+  | "requested"
+  | "queued"
+  | "running"
+  | "completed"
+  | "partially_completed"
+  | "failed"
+  | "timed_out"
+  | "cancelled";
+
+export type ScanRunTriggerType = "manual" | "scheduled";
+
+/**
+ * One execution of a `ScanDefinition`. `startedAt`/`completedAt` are server-stamped only, by the
+ * repository's own atomic conditional write — never accepted as caller input on the create route,
+ * never overwritten once first set. `errorSummary`/`findings` may only be supplied alongside a
+ * transition into `failed`/`timed_out` and `completed`/`partially_completed` respectively — there
+ * is no standalone create route for `ScanFinding`.
+ */
+export interface ScanRun {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly scanDefinitionId: string;
+  readonly status: ScanRunStatus;
+  readonly triggerType: ScanRunTriggerType;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly errorSummary: string | null;
+  readonly requestedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export type ScanFindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+/** `open`/`acknowledged` may move to any of the three dispositional states (or back to `open` to
+ *  reconsider); `resolved`/`dismissed` are both terminal — findings, once disposed, are not
+ *  reopened in this pass. */
+export type ScanFindingStatus = "open" | "acknowledged" | "resolved" | "dismissed";
+
+/**
+ * A discrete issue surfaced by a run. `category` is plain free text (no canonical value list
+ * exists for this field). Created only as a side effect of a run transitioning to
+ * `completed`/`partially_completed` with a non-empty `findings` payload — there is no standalone
+ * create route for this table.
+ */
+export interface ScanFinding {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly scanRunId: string;
+  readonly category: string | null;
+  readonly severity: ScanFindingSeverity;
+  readonly title: string;
+  readonly description: string | null;
+  readonly location: string | null;
+  readonly status: ScanFindingStatus;
+  readonly resolvedBy: string | null;
+  readonly resolvedAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * Immutable supporting material attached to one finding — no update/delete route exists for this
+ * table (append-only, ADR-0016). `reference` is validated (when present) via the shared
+ * `safeHttpUrlSchema` at the DTO layer server-side; render only via a client-side `isSafeHttpUrl()`
+ * guard before ever showing it as a link, matching every other stored-URL field in this app.
+ */
+export interface ScanEvidence {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly scanFindingId: string;
+  readonly evidenceType: string | null;
+  readonly reference: string | null;
+  readonly notes: string | null;
+  readonly capturedAt: string | null;
+  readonly createdBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

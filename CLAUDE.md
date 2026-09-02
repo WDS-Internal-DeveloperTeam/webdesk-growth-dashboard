@@ -4289,7 +4289,58 @@ fcd33f1b15e87abae483743cf047eaf548fb8042`, confirming the exact merged commit is
     and `dashboard-web`'s `/` correctly redirects (307) to sign-in for an unauthenticated visitor.
     **The Scan Center module backend is now genuinely live in production.** No `dashboard-web` UI
     exists yet for this module — a separate, not-yet-requested next step, matching every prior
-    module's own backend-first precedent.
+    module's own backend-first precedent. **Update (2026-09-02): the `dashboard-web` UI has since
+    been built and gated — see item 73 below.**
+
+73. **`dashboard-web` Scan Center UI — built, reviewed, gated, pushed (2026-09-02).** Closes this
+    module's last named gap, following the backend's own build-to-production arc (PR #102, item 72
+    above). Built directly on the explicit "Scan Center - start the dashboard-web UI for it"
+    instruction. No wireframe/spec exists for this module's UI — designed a 6-route IA against the
+    backend's own real 4-table pipeline shape: a project-scoped scan-definitions list (mirroring
+    Page Inventory's own project-picker pattern) → definition detail/edit with a "Trigger scan
+    run" action → run detail with a bespoke 8-state status-actions component (mirroring Internal
+    Linking Library's own non-standard-workflow badge pattern) that also embeds the only UI for
+    creating scan findings, since the backend has no standalone create route for that table —
+    findings are created only alongside a run's own `completed`/`partially_completed` transition
+    — → finding detail with a bespoke 4-state disposition status-actions component and an
+    append-only evidence add/list section (the backend exposes no update/delete route for
+    `scan_evidence`, ADR-0016). New `packages/shared-types` additions
+    (`ScanType`/`ScanMode`/`ScanDefinition`/`ScanRunStatus`/`ScanRunTriggerType`/`ScanRun`/
+    `ScanFindingSeverity`/`ScanFindingStatus`/`ScanFinding`/`ScanEvidence`) mirror
+    `packages/database/src/scan-center/entities.ts` exactly.
+    `lib/scan-center-query.ts`/`lib/scan-center.ts` mirror the established zero-non-type-
+    import-file split every sibling module uses. Deliberately kept `target`/`errorSummary`/finding
+    `description`/evidence `notes` as plain `<textarea>`s, not `RichTextEditor` — verified directly
+    against `scan-runs.service.ts`/`scan-findings.service.ts`/`scan-evidence.service.ts` that none
+    of them sanitize these fields as HTML, matching the identical, already-established Ready for
+    Claude Queue precedent for a module whose long-text fields are genuinely plain text. Built by a
+    background agent with a fully-specified prompt embedding the full backend contract and every
+    established `dashboard-web` convention to reuse, then independently re-verified in full by the
+    orchestrating session — every high-risk file read directly (both hand-mirrored status-
+    transition tables checked byte-for-byte against the real backend `TRANSITIONS` tables in
+    `scan-runs.service.ts`/`scan-findings.service.ts`, correctly including the real
+    `acknowledged → open` reopen edge on the finding workflow that the build prompt itself hadn't
+    anticipated), and every validation command re-run fresh rather than trusted from the agent's
+    own report: 1691/1691 `dashboard-web` unit tests (68 new), typecheck/`eslint --max-warnings=0`/
+    CSS-token-check (88 files)/`next build` (all 6 new routes present)/`prettier --check` all
+    clean. **Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing
+    rule — a small, frontend-only slice (plus additive shared-types only) consuming an
+    already-reviewed, already-gated backend with no new endpoint. A direct read-through pass (the
+    same one that caught the `acknowledged → open` transition) also verified the embedded
+    findings-creation flow against `scanRunFindingInputSchema`'s own field list/length caps, and
+    `ScanEvidenceSection`'s `isSafeHttpUrl()` guard applied consistently before both submit and
+    render of a stored `reference` — **0 findings**. Security review skipped per the same standing
+    rule — no new backend endpoint, no new RBAC action, no new sink. See
+    `docs/project-state/dashboard-web-scan-center-approval-checklist.md`. **Required second-role
+    human review complete via the direct "Gate it and push the branch" instruction** — the
+    approval checklist's own findings table served as the review artifact, since there were no
+    open findings of any kind on this branch. **The gate (G4-dashboard-web-scan-center) was then
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override), approved on
+    branch `dashboard-web-scan-center` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-dashboard-web-scan-center`). **"Push the branch" was then
+    separately requested and executed** — pushed to `origin`. **This gate approval does not itself
+    authorize opening a PR or merging** — each remains its own separate, not-yet-requested
+    authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
