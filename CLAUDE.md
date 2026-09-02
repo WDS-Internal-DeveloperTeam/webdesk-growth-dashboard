@@ -4205,7 +4205,10 @@ a22a6a820c694fe92c40b42ad967bdccf47fdf60`, confirming the exact merged commit is
     build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
     actions) are both live for the Ready for Claude Queue module.
 
-72. **Scan Center module backend — built, reviewed, gated (2026-09-02).** Module #31, Wave 1 on the
+72. **Scan Center module backend — built, reviewed, gated, merged
+    ([PR #102](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/102),
+    merge commit `fcd33f1b15e87abae483743cf047eaf548fb8042`); now genuinely live in production
+    (2026-09-02).** Module #31, Wave 1 on the
     dependency-computed roadmap — no dependencies. Built directly on the explicit "start scan
     center" instruction. Two genuine forks confirmed with the user first (`AskUserQuestion`):
     record-keeping only (no real scanner/crawler/WordPress-adapter infrastructure exists anywhere
@@ -4268,11 +4271,25 @@ a22a6a820c694fe92c40b42ad967bdccf47fdf60`, confirming the exact merged commit is
     findings tables served as the review artifact. **The gate (G4-scan-center) was then
     approved** — WebDesk Solution, decision CONFIRM, approved commit `0fa6af7` on branch
     `module-scan-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
-    (`current_gate` now `G4-scan-center`). **This gate approval does not itself authorize
-    committing** (already committed to the local branch), **pushing the branch, opening a PR, or
-    merging** — each remains its own separate, not-yet-requested authorization, per this project's
-    standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a separate,
-    not-yet-requested next step, matching every prior module's own backend-first precedent.
+    (`current_gate` now `G4-scan-center`). **"Push the branch" and "Open a PR" were then
+    separately requested and executed** — pushed to `origin`, opened as
+    [PR #102](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/102).
+    A real merge conflict against `main` surfaced (Ready for Claude Queue UI, PR #101, had merged
+    concurrently) — only `CLAUDE.md`'s own item numbering/gate-record text conflicted, resolved by
+    keeping both sides' content and re-sequencing (item 71 = the Ready for Claude Queue UI entry,
+    item 72 = this one), fully re-verified (typecheck/lint/104-migration round-trip/1691 unit
+    tests all clean) before pushing again. All 14 CI checks confirmed green. **"Merge PR #102" was
+    then separately requested and executed** — merge commit
+    `fcd33f1b15e87abae483743cf047eaf548fb8042`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+fcd33f1b15e87abae483743cf047eaf548fb8042`, confirming the exact merged commit is what's serving;
+    `GET /scan-center/projects/:projectId/definitions` returned a clean `401` (route live,
+    `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+    and `dashboard-web`'s `/` correctly redirects (307) to sign-in for an unauthenticated visitor.
+    **The Scan Center module backend is now genuinely live in production.** No `dashboard-web` UI
+    exists yet for this module — a separate, not-yet-requested next step, matching every prior
+    module's own backend-first precedent.
 
 ## Recent decisions
 
