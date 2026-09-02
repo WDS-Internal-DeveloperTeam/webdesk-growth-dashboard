@@ -1,0 +1,29 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+  align-items: flex-end;
+}
+
+.notesRow {
+  display: flex;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.notesInput {
+  composes: input from "./form-fields.module.css";
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  min-width: 14rem;
+}
+
+.buttonRow {
+  composes: wrapper from "./status-actions.module.css";
+}
+
+.actionButton {
+  composes: actionButton from "./status-actions.module.css";
+}
+
+.error {
+  composes: error from "./status-actions.module.css";
+}

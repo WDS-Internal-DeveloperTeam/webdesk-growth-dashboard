@@ -13,6 +13,7 @@ import { AssetLibraryModule } from "./asset-library/asset-library.module.js";
 import { BusinessKnowledgeModule } from "./business-knowledge/business-knowledge.module.js";
 import { CaseStudyLibraryModule } from "./case-study-library/case-study-library.module.js";
 import { CaseStudyStudioModule } from "./case-study-studio/case-study-studio.module.js";
+import { ChangeCenterModule } from "./change-center/change-center.module.js";
 import { ComponentLibraryModule } from "./component-library/component-library.module.js";
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
@@ -85,6 +86,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     BusinessKnowledgeModule,
     CaseStudyLibraryModule,
     CaseStudyStudioModule,
+    ChangeCenterModule,
     ComponentLibraryModule,
     ContentTemplateLibraryModule,
     DesignReferenceLibraryModule,
