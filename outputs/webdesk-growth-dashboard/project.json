@@ -3282,6 +3282,15 @@
       "project_version_before": 115,
       "project_version_after": 116,
       "timestamp": "2026-09-02T00:00:00Z"
+    },
+    {
+      "action": "pr_opened",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Branch dashboard-web-scan-center pushed to origin (commit 25d65c8) and opened as PR #105 (https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/105), under explicit 'Open a PR' authorization (the push itself was done under a prior 'Gate it and push the branch' instruction). Gate G4-dashboard-web-scan-center and the required second-role human review (light tier, 0 findings) were both already complete before this push/PR. Merge remains its own separate, not-yet-requested step, per this project's standing no-auto-merge rule.",
+      "project_version_before": 116,
+      "project_version_after": 117,
+      "timestamp": "2026-09-02T00:00:00Z"
     }
   ],
   "current_gate": "G4-dashboard-web-scan-center"

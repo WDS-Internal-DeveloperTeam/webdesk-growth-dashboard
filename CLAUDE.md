@@ -4338,9 +4338,11 @@ fcd33f1b15e87abae483743cf047eaf548fb8042`, confirming the exact merged commit is
     approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override), approved on
     branch `dashboard-web-scan-center` — see `outputs/webdesk-growth-dashboard/project.json`'s
     `gates[]` (`current_gate` now `G4-dashboard-web-scan-center`). **"Push the branch" was then
-    separately requested and executed** — pushed to `origin`. **This gate approval does not itself
-    authorize opening a PR or merging** — each remains its own separate, not-yet-requested
-    authorization, per this project's standing "no auto-merge" rule.
+    separately requested and executed** — pushed to `origin`. **"Open a PR" was then separately
+    requested and executed** — opened as
+    [PR #105](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/105).
+    **This gate approval does not itself authorize merging** — merge remains its own separate,
+    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
