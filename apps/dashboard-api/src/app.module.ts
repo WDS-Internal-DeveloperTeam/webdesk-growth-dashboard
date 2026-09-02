@@ -37,6 +37,7 @@ import { ProofAndClaimsLibraryModule } from "./proof-and-claims-library/proof-an
 import { ReadyForClaudeQueueModule } from "./ready-for-claude-queue/ready-for-claude-queue.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { ReviewAndApprovalCenterModule } from "./review-and-approval-center/review-and-approval-center.module.js";
+import { ScanCenterModule } from "./scan-center/scan-center.module.js";
 import { SectionAndPatternLibraryModule } from "./section-and-pattern-library/section-and-pattern-library.module.js";
 import { WireframeLibraryModule } from "./wireframe-library/wireframe-library.module.js";
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
@@ -106,6 +107,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     ReadyForClaudeQueueModule,
     RetentionModule,
     ReviewAndApprovalCenterModule,
+    ScanCenterModule,
     SectionAndPatternLibraryModule,
     WireframeLibraryModule,
     ServiceLibraryModule,
