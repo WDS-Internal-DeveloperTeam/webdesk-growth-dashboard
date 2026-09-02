@@ -21,6 +21,7 @@ import { DesignReferenceLibraryModule } from "./design-reference-library/design-
 import { DesignReviewCenterModule } from "./design-review-center/design-review-center.module.js";
 import { DesignTokenLibraryModule } from "./design-token-library/design-token-library.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { ImportAndExportCenterModule } from "./import-and-export-center/import-and-export-center.module.js";
 import { InternalLinkingLibraryModule } from "./internal-linking-library/internal-linking-library.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
 import { KeywordAndEntityLibraryModule } from "./keyword-and-entity-library/keyword-and-entity-library.module.js";
@@ -92,6 +93,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     DesignReferenceLibraryModule,
     DesignReviewCenterModule,
     DesignTokenLibraryModule,
+    ImportAndExportCenterModule,
     InternalLinkingLibraryModule,
     JobsModule,
     KeywordAndEntityLibraryModule,
