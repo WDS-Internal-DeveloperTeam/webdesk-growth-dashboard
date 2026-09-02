@@ -40,6 +40,7 @@ import { ReadyForClaudeQueueModule } from "./ready-for-claude-queue/ready-for-cl
 import { RetentionModule } from "./retention/retention.module.js";
 import { ReviewAndApprovalCenterModule } from "./review-and-approval-center/review-and-approval-center.module.js";
 import { ScanCenterModule } from "./scan-center/scan-center.module.js";
+import { TechnicalCenterModule } from "./technical-center/technical-center.module.js";
 import { SectionAndPatternLibraryModule } from "./section-and-pattern-library/section-and-pattern-library.module.js";
 import { WireframeLibraryModule } from "./wireframe-library/wireframe-library.module.js";
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
@@ -112,6 +113,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     RetentionModule,
     ReviewAndApprovalCenterModule,
     ScanCenterModule,
+    TechnicalCenterModule,
     SectionAndPatternLibraryModule,
     WireframeLibraryModule,
     ServiceLibraryModule,
