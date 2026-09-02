@@ -2510,3 +2510,168 @@ export interface ChangeRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * Import and Export Center (module #34) — a real pipeline across five tables:
+ * `ImportTemplate` (a reusable, versioned import configuration) -> `ImportRun` (one execution,
+ * through a real two-tier submit/review/approve gate) -> `ImportRow`/`ImportError` (read-only,
+ * created only as a side effect of a run's own status transition). `ExportRun` is a separate,
+ * simpler 5-state pipeline with no approval gate. Organization-wide — no `projectId` field
+ * anywhere. Record-keeping only — no real file-parsing/schema-mapping/write-to-target-table engine
+ * exists anywhere in this codebase yet, matching Scan Center's/Ready for Claude Queue's own
+ * precedent. See `apps/dashboard-api/src/import-and-export-center/import-and-export-center.dto.ts`
+ * and `packages/database/src/import-and-export-center/entities.ts` for the full backend contract
+ * this mirrors.
+ */
+export type ImportDuplicateStrategy = "skip" | "overwrite" | "create_new";
+export type ImportExportFileFormat = "csv" | "xlsx" | "json";
+
+/**
+ * A reusable, versioned import configuration — WHAT to import, and how source columns map onto a
+ * target module's own fields. `targetModuleKey` is validated against the real module registry at
+ * the service layer, not a closed enum. `publicId`/`targetModuleKey`/`fileFormat` are all
+ * create-only (immutable), mirroring every sibling module's own discriminator-field create-only
+ * contract. `version` is server-managed: incremented by 1 as part of the same `UPDATE` statement,
+ * mirroring `PersonaRepository.update()`'s own atomic `literal("version + 1")` pattern.
+ */
+export interface ImportTemplate {
+  readonly id: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly targetModuleKey: string;
+  readonly columnMapping: Record<string, unknown> | null;
+  readonly duplicateStrategyDefault: ImportDuplicateStrategy;
+  readonly fileFormat: ImportExportFileFormat;
+  readonly version: number;
+  readonly isActive: boolean;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * A run's real 12-state lifecycle, sourced verbatim from `ImportRunsService`'s own `TRANSITIONS`
+ * table: `draft -> submitted -> approved -> validating ->` a dry-run branch
+ * (`dry_run_completed -> importing`) or a direct real-import branch (`importing` directly, only
+ * when `isDryRun` is `false`) `-> completed|partially_completed ->` optionally `rolled_back`, plus
+ * `failed`/`cancelled`/`rejected` as additional terminal outcomes reachable from various points.
+ * `failed`/`cancelled`/`rejected`/`rolled_back` are TERMINAL — no outbound transition exists from
+ * any of them.
+ */
+export type ImportRunStatus =
+  | "draft"
+  | "submitted"
+  | "approved"
+  | "validating"
+  | "dry_run_completed"
+  | "importing"
+  | "completed"
+  | "partially_completed"
+  | "failed"
+  | "cancelled"
+  | "rejected"
+  | "rolled_back";
+
+/**
+ * One execution of an `ImportTemplate`, through a real two-tier submit/review/approve gate before
+ * any mechanical validation/import. `templateVersion` is a snapshot of the template's own
+ * `version` at run-creation time — NOT a live join. `totalRows`/`successCount`/`errorCount`/
+ * `skippedCount` are server-computed only, via a real `GROUP BY status, COUNT(*)` query over
+ * `import_rows` after each bulk row-insert — never trusted from caller input. `startedAt`/
+ * `completedAt` are server-stamped only, by the repository's own atomic conditional write — never
+ * accepted as caller input, never overwritten once first set. `rollbackNotes` is only ever
+ * meaningful on a transition INTO `rolled_back` — the backend rejects it outright on any other
+ * target status. `rows`/`runErrors` (see `ImportRow`/`ImportError` below) may only be submitted
+ * alongside the run's ORIGINAL `validating -> dry_run_completed`/`validating -> importing`
+ * transition, never the separate `dry_run_completed -> importing` "promote" transition.
+ */
+export interface ImportRun {
+  readonly id: string;
+  readonly publicId: string;
+  readonly importTemplateId: string;
+  readonly templateVersion: number;
+  readonly isDryRun: boolean;
+  readonly duplicateStrategy: ImportDuplicateStrategy | null;
+  readonly sourceFileReference: string | null;
+  readonly sourceChecksum: string | null;
+  readonly status: ImportRunStatus;
+  readonly totalRows: number;
+  readonly successCount: number;
+  readonly errorCount: number;
+  readonly skippedCount: number;
+  readonly errorSummary: string | null;
+  readonly rollbackNotes: string | null;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly requestedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export type ImportRowStatus = "pending" | "valid" | "invalid" | "imported" | "skipped" | "failed";
+export type ImportRowResolution = "created" | "overwritten" | "skipped_duplicate";
+
+/**
+ * One row of a run's own source data and its outcome. No `publicId` — a row is identified by its
+ * own `id` or `(importRunId, rowNumber)`, matching the "no public identity" precedent for the
+ * deepest sub-resource in a pipeline. Read-only from `dashboard-web`'s own perspective — created
+ * only as a side effect of a run transitioning `validating -> dry_run_completed`/`validating ->
+   importing` with a non-empty `rows` payload; there is no standalone create route.
+ */
+export interface ImportRow {
+  readonly id: string;
+  readonly importRunId: string;
+  readonly rowNumber: number;
+  readonly externalId: string | null;
+  readonly rawData: Record<string, unknown> | null;
+  readonly status: ImportRowStatus;
+  readonly resolution: ImportRowResolution | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * Immutable, append-only — no update route exists for this table (ADR-0016). `importRowId` is
+ * nullable — a run-level error (e.g. "file not found") has no specific row. Created only as a
+ * side effect of a run's own status transition, same as `ImportRow`.
+ */
+export interface ImportError {
+  readonly id: string;
+  readonly importRunId: string;
+  readonly importRowId: string | null;
+  readonly errorCode: string | null;
+  readonly message: string;
+  readonly fieldName: string | null;
+  readonly createdAt: string;
+}
+
+export type ExportRunStatus = "requested" | "processing" | "completed" | "failed" | "cancelled";
+
+/**
+ * A simple, no-approval-gate 5-state pipeline (the `exports` RBAC group has no submit/review/
+ * approve letters — `export` itself functions as the create-gate, and every legal transition also
+ * requires `export`, not just create). `targetModuleKey` is validated against the real module
+ * registry at the service layer. `filterCriteria`/`fileReference` are deliberately unvalidated
+ * (`fileReference` is NOT URL-checked server-side — client rendering must guard it with
+ * `isSafeHttpUrl()` before ever showing it as a link, the same defense-in-depth convention every
+ * other stored-URL field in this app follows). `excludesConfidentialFields` is always `true` at
+ * creation. `startedAt`/`completedAt` are server-stamped, the same atomic pattern as `ImportRun`.
+ */
+export interface ExportRun {
+  readonly id: string;
+  readonly publicId: string;
+  readonly targetModuleKey: string;
+  readonly filterCriteria: Record<string, unknown> | null;
+  readonly format: ImportExportFileFormat;
+  readonly status: ExportRunStatus;
+  readonly rowCount: number | null;
+  readonly fileReference: string | null;
+  readonly excludesConfidentialFields: boolean;
+  readonly errorSummary: string | null;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly requestedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
