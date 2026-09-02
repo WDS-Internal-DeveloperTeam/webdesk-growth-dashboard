@@ -4341,8 +4341,24 @@ fcd33f1b15e87abae483743cf047eaf548fb8042`, confirming the exact merged commit is
     separately requested and executed** — pushed to `origin`. **"Open a PR" was then separately
     requested and executed** — opened as
     [PR #105](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/105).
-    **This gate approval does not itself authorize merging** — merge remains its own separate,
-    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    A real merge conflict against `main` surfaced (Change Center's own concurrently-merged
+    backend/UI, PR #103/#104) — `packages/shared-types/src/index.ts` (kept both the Scan Center
+    and `ChangeRecord` type additions) and `project.json`'s own `gates[]`/`audit_log` arrays
+    conflicted, resolved by keeping both sides' entries and re-sequencing version counters, fully
+    re-verified (typecheck/lint/CSS-token-check/1691-test-suite/production-build all clean) before
+    pushing again; a stale `CLAUDE.md` item-numbering collision then failed CI's Formatting
+    validation check on the first re-run, fixed with a follow-up commit. **"Merge PR #105" was
+    then separately requested and executed** — all 14 CI checks confirmed green first, merged
+    with a real merge commit (not squash/rebase), matching every prior merge in this project's
+    history — merge commit `046f18965f27e962a0984860cad283be07e693c5`. Both Vercel projects
+    auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+    status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+046f18965f27e962a0984860cad283be07e693c5`, confirming the exact merged commit is what's serving;
+    and `dashboard-web`'s `/scan-center` correctly redirects (307) an unauthenticated visitor to
+    `/auth/sign-in`. **The `dashboard-web` Scan Center UI is now genuinely live in production**,
+    closing out this slice's full build-to-production arc — backend and now the full UI
+    (definitions list/create/edit/detail, run detail with status actions and findings creation,
+    finding detail with status actions and evidence) are both live for the Scan Center module.
 
 74. **Change Center module backend — built, reviewed, gated, pushed (2026-09-02).** Module #33,
     built directly on the explicit "start Change Center and use the migration numbering from the
