@@ -4205,6 +4205,75 @@ a22a6a820c694fe92c40b42ad967bdccf47fdf60`, confirming the exact merged commit is
     build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
     actions) are both live for the Ready for Claude Queue module.
 
+72. **Scan Center module backend — built, reviewed, gated (2026-09-02).** Module #31, Wave 1 on the
+    dependency-computed roadmap — no dependencies. Built directly on the explicit "start scan
+    center" instruction. Two genuine forks confirmed with the user first (`AskUserQuestion`):
+    record-keeping only (no real scanner/crawler/WordPress-adapter infrastructure exists anywhere
+    in this codebase — this backend builds the full data model, workflow, RBAC, and API surface,
+    matching Ready for Claude Queue's/Review and Approval Center's own precedent for a mechanism
+    with no execution engine yet) and project-scoped (matching Page Inventory/Keyword & Entity
+    Library/Internal Linking Library). Four tables sourced directly from
+    `04_Data_Model_and_Ownership.md:85-95` — `scan_definitions` (a reusable scan config: type/
+    target/mode/schedule), `scan_runs` (a real, required FK to a definition; a genuinely bespoke
+    workflow sourced verbatim from `05_Workflow_State_Machines.md §7` —
+    `requested → queued → running →` one of `completed`/`partially_completed`/`failed`/
+    `timed_out`/`cancelled`, plus two direct-to-`cancelled` shortcuts — every terminal state has no
+    outbound edge, unlike Internal Linking Library's own loop-forever workflow), `scan_findings` (a
+    separate, lightweight `open`/`acknowledged`/`resolved`/`dismissed` disposition lifecycle — no
+    RBAC `submit`/`approve` letters exist for this group to build a real approval workflow from),
+    and `scan_evidence` (immutable once created, scoped to a finding). Findings are created only
+    through a run's own status-transition route (`completed`/`partially_completed`, atomically),
+    not a standalone create route — matches the workflow doc's own framing exactly. Reuses the
+    already-seeded `scans` RBAC group verbatim (`V/C/E/R/M` — no submit/approve letters at all) —
+    no new RBAC migration; scan-run transitions gated uniformly on `edit`, scan-finding transitions
+    on `review`, `configure`/`M` left deliberately unwired (documented, not fabricated). Built by a
+    background agent with a fully-specified prompt mirroring Internal Linking Library's/Ready for
+    Claude Queue's exact file structure, landed in an isolated worktree then merged in and
+    independently re-verified in full by the orchestrating session — every high-risk file read
+    directly (both CAS repository methods, RBAC decorator placement, both `packages/database`
+    barrel exports), every test suite re-run against a real local disposable PostgreSQL 17
+    database, catching one real gap itself before the formal review ran: `ScanEvidenceService
+.create()` was missing the unique-constraint catch every sibling `create()` has. **Independent
+    code review then ran** (this project's own `code-review` skill, high effort, 8 finder angles
+    run via parallel subagents, each candidate 1-vote-verified) — 30+ candidates surfaced across
+    all 8 angles, deduped, **8 CONFIRMED and fixed**: an `errorSummary` null-clearing bug
+    (independently found by 3 angles — `?? undefined` silently collapsed an explicit `null` into
+    "field omitted," leaving a stale error message in place on retry); an N+1, non-atomic
+    findings-batch insert (found by 4 angles — up to 500 findings inserted one row at a time, a
+    mid-batch failure silently leaving a partial, undetectable set persisted — fixed with a new
+    atomic `ScanFindingRepository.bulkCreate()`); two missing indexes (a `pg_trgm` GIN index on
+    `scan_definitions.name`, a composite index on `scan_evidence` matching its own `list()` query
+    shape); a `resolvedAt`/`resolvedBy` stamping asymmetry (found by 2 angles — only stamped on
+    `resolved`, never `dismissed`, though the service passes the actor id for both); CAS-result
+    unwrap hand-duplicated twice more instead of reusing the already-shared `unwrapCasResult()`
+    helper (extracted during Ready for Claude Queue's own review specifically to stop this
+    pattern); and a type-safety gap letting the immutable `scanType` field be mutated through
+    `ScanDefinitionRepository.update()`'s own type. **2 PLAUSIBLE altitude findings left as
+    accepted, tracked debt**: `scan_definitions.isEnabled` gated on `edit` rather than the seeded
+    `configure`/`M` action (a real RBAC-model tradeoff, no precedent for retrofitting a split
+    action onto an already-seeded group), and the `scan_run` audit `eventType` not differentiating
+    each transition the way `job_*` events do (matches Internal Linking Library's own identical,
+    already-accepted approach). **A separate `security-review` skill run then found 0 findings
+    above threshold** — confirmed correct IDOR scoping on every read/write, method-level RBAC
+    decorators throughout, correct project-scoped dynamic authorization threading, `escapeLikePattern()`
+    reuse, no mass-assignment path for server-managed fields, and `safeHttpUrlSchema` validation on
+    `scan_evidence.reference`. Re-validated after every fix: 26/26 `dashboard-api` unit tests (2
+    updated), 12/12 `packages/database` integration tests, 8/8 `dashboard-api` e2e tests, full
+    suites clean — 1691/1691 `dashboard-api` unit, 799/799 `packages/database` integration,
+    788/788 `dashboard-api` e2e, migration round-trip clean (104 migrations), typecheck/lint/
+    prettier clean across both packages. See `docs/implementation/module-scan-center.md` and
+    `docs/project-state/module-scan-center-approval-checklist.md`. **Required second-role human
+    review complete via the direct "Approve as-is, gate it" instruction** (`AskUserQuestion`),
+    accepting the 2 open PLAUSIBLE findings as tracked debt — the approval checklist's own
+    findings tables served as the review artifact. **The gate (G4-scan-center) was then
+    approved** — WebDesk Solution, decision CONFIRM, approved commit `0fa6af7` on branch
+    `module-scan-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+    (`current_gate` now `G4-scan-center`). **This gate approval does not itself authorize
+    committing** (already committed to the local branch), **pushing the branch, opening a PR, or
+    merging** — each remains its own separate, not-yet-requested authorization, per this project's
+    standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
