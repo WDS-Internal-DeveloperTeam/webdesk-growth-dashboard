@@ -4603,6 +4603,47 @@ Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, 
     **The Import and Export Center module backend is now genuinely live in production.** No
     `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
     matching every prior module's own backend-first precedent.
+77. **Technical Center module backend — built, reviewed, gated; not yet pushed, opened as a PR,
+    or merged (2026-09-02).** Key `technical_center`, built directly on the explicit "start
+    Technical Center and start the numbering for the migration from the 00109" instruction.
+    Migrations `00109`/`00110` (`00107`/`00108` were reserved for the concurrently-built Import
+    and Export Center module — not because they were unavailable). Two genuine design forks
+    confirmed with the project owner first (`AskUserQuestion`): a Scan-Center-style 3-level
+    pipeline (`technical_check_definitions` → `technical_check_runs` → `technical_findings`) over
+    a single generic table — the spec's own ~13-category taxonomy (coding standards, linting,
+    automated tests, coverage, dependency/vulnerability scans, WordPress/PHP compatibility, code
+    review, security, accessibility, performance, browser compatibility, visual regression) reads
+    as a report-run + findings shape, not a flat content library — and project-scoped over
+    organization-wide, matching Page Inventory's/Scan Center's/Change Center's own precedent.
+    Built by a background agent with a fully-specified prompt naming Scan Center as the literal
+    structural template, then independently re-verified by the orchestrating session: migration
+    content read directly, RBAC decorator placement confirmed method-level via `grep`, both
+    `packages/database` barrel files (`index.ts`/`index.cjs.ts`) confirmed updated together,
+    typecheck re-run directly for both packages (clean), the module's own 25 unit tests re-run
+    directly (25/25), lint/prettier re-run directly on every new file (clean), and the CAS
+    repository logic (`updateStatus()`'s atomic compare-and-swap with `COALESCE`-stamped
+    timestamps) read directly and confirmed sound. No local PostgreSQL instance was available in
+    this environment to independently re-run the DB-backed integration (16/16 reported) and e2e
+    (10/10 reported, including per-role RBAC checks and a cross-project IDOR-scoping regression
+    test) suites — relied on the agent's own reported real-database run plus direct code
+    inspection. Reuses the seeded `development_code` RBAC group verbatim, no new RBAC migration —
+    the group's letter legend was read directly from the seed script before wiring
+    `@RequirePermission` (run-status transitions gated on `edit`, finding-disposition transitions
+    gated on `review`, mirroring Scan Center's own gating against this group's actual grants;
+    `submit`/`approve`/`release`/`rollback` deliberately left unwired, documented in
+    `technical-center.constants.ts`). **Independent code review** (high effort, 8-angle finder
+    pass) found 1 low-severity finding — an unused `findByPublicId()` repository method,
+    inherited verbatim from Scan Center's own equally-unused method — left as accepted, tracked
+    debt (copied debt, not a new deviation). **Security review found 0 findings above
+    threshold.** See `docs/implementation/module-technical-center.md` and
+    `docs/project-state/module-technical-center-approval-checklist.md`. **Required second-role
+    human review complete** — WebDesk Solution, "Approve as-is," accepting the 1 open
+    tracked-debt finding. **The gate (G4-technical-center) was then separately requested and
+    approved** — WebDesk Solution, decision CONFIRM, approved commit `8975169` on branch
+    `module-technical-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+    (`current_gate` now `G4-technical-center`). **This gate approval does not itself authorize
+    pushing the branch, opening a PR, or merging** — each remains its own separate,
+    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -7600,6 +7641,26 @@ build`/prettier all clean. No separate security-review skill run, per the 2026-0
   clean `401` (route live, `SessionGuard` enforcing — not a `404`); and `dashboard-web`'s `/`
   correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Import and Export
   Center module backend is now genuinely live in production.**
+- `[2026-09-02]` **Built the Technical Center module backend** (key `technical_center`), under
+  the explicit "start Technical Center and start the numbering for the migration from the 00109"
+  instruction. Two design forks confirmed with the user first: a Scan-Center-style 3-level
+  pipeline over a single generic table, and project-scoped over organization-wide. See item 77
+  above and `docs/implementation/module-technical-center.md` for the full account.
+- `[2026-09-02]` **Independent code review run on `module-technical-center`, high effort —
+  8-angle finder pass.** 1 low-severity finding kept: an unused `findByPublicId()` repository
+  method, verified inherited verbatim from Scan Center's own equally-unused method — left as
+  accepted, tracked debt.
+- `[2026-09-02]` **Security review run on `module-technical-center`, separately from the code
+  review.** 0 findings above threshold — confirmed RBAC decorator placement, `:projectId` IDOR
+  scoping, no mass-assignment path for server-managed fields, and no injection surface in the CAS
+  methods' fixed SQL literals.
+- `[2026-09-02]` **Required second-role human review complete for `module-technical-center`, via
+  the direct "Approve as-is" instruction** — the approval checklist's own findings table served
+  as the review artifact. **The gate (G4-technical-center) was then separately requested and
+  approved** — WebDesk Solution, decision CONFIRM, approved commit `8975169` on branch
+  `module-technical-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+  (`current_gate` now `G4-technical-center`). Not yet pushed to `origin`, opened as a PR, or
+  merged — each remains its own separate, not-yet-requested authorization.
 
 ## Open client blockers
 
