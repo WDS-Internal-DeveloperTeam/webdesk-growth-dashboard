@@ -2290,3 +2290,80 @@ export interface ReadyForClaudeTask {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+export type ChangeRecordCategory =
+  | "theme"
+  | "plugin"
+  | "core"
+  | "database"
+  | "integration"
+  | "seo_metadata"
+  | "analytics_tracking"
+  | "security"
+  | "accessibility"
+  | "performance"
+  | "redirects_urls"
+  | "assets"
+  | "conflicts_failed_sync"
+  | "rollback_history";
+
+export type ChangeRecordSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+/**
+ * A genuinely bespoke, 10-state workflow — a decision loop (`under_review`/`manual_merge_required`/
+ * `deferred` -> `accepted`/`rejected`/`deferred`/`manual_merge_required`) followed by a separate
+ * apply+verify tail (`accepted -> applying -> applied|apply_failed -> ... -> verified`).
+ * `rejected`/`verified` are terminal — no outbound transition. See `ChangeRecordsService`'s own
+ * `TRANSITIONS` table for the exact legal edges and the real, seeded RBAC action each requires.
+ */
+export type ChangeRecordStatus =
+  | "detected"
+  | "under_review"
+  | "accepted"
+  | "rejected"
+  | "deferred"
+  | "manual_merge_required"
+  | "applying"
+  | "applied"
+  | "verified"
+  | "apply_failed";
+
+/**
+ * The Change Center module's primary (and only) record — project-scoped
+ * (`change-center/projects/:projectId/records`). `scanFindingId` is a nullable, existence-and-
+ * same-project-validated FK into Scan Center's own `scan_findings`. `targetModuleKey`/`targetId`
+ * mirror Review and Approval Center's/Ready for Claude Queue's own polymorphic record link — the
+ * module key is validated against the real module registry, the id is deliberately opaque and
+ * unvalidated; always either both present or both absent. `beforeValue`/`afterValue`/
+ * `recommendation`/`decisionNotes` all stay plain, unsanitized text — this module was deliberately
+ * excluded from the 2026-08-22 rich-text-editor standing rule, since the backend DTO stores these
+ * fields as raw detected/proposed data (a version string, a config diff snippet, a URL), not prose.
+ * `status`/`rollbackGuidance` are server-managed — only the dedicated status route may change
+ * either; `rollbackGuidance` is only ever meaningful on a transition INTO `apply_failed`.
+ * `severity`, unlike `category`, is NOT create-only — a triager may correct an initially
+ * miscategorized severity before the record is decided.
+ */
+export interface ChangeRecord {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly category: ChangeRecordCategory;
+  readonly severity: ChangeRecordSeverity;
+  readonly scanFindingId: string | null;
+  readonly source: string | null;
+  readonly targetModuleKey: string | null;
+  readonly targetId: string | null;
+  readonly recordLabel: string;
+  readonly beforeValue: string | null;
+  readonly afterValue: string | null;
+  readonly confidence: number | null;
+  readonly recommendation: string | null;
+  readonly status: ChangeRecordStatus;
+  readonly assignedToUserId: string | null;
+  readonly decisionNotes: string | null;
+  readonly rollbackGuidance: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
