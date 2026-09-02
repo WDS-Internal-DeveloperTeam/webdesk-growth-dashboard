@@ -4605,7 +4605,9 @@ Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, 
     matching every prior module's own backend-first precedent. **Update (2026-09-02): the
     `dashboard-web` UI has since been built and gated — see item 77 below.**
 
-77. **`dashboard-web` Import and Export Center UI — built, reviewed, gated
+77. **`dashboard-web` Import and Export Center UI — built, reviewed, gated, merged
+    ([PR #107](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/107),
+    merge commit `cbc10ecaffb2b0b6e18e90556d5c8b2ee4bafaef`); now genuinely live in production
     (2026-09-02).** Closes this module's last named gap, following the backend's own
     build-to-production arc (PR #106, item 76 above). Built directly on the explicit
     "Import/Export - Start the dashboard-web UI for it" instruction. No wireframe/spec exists for
@@ -4668,9 +4670,32 @@ Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, 
     CONFIRM (clean pass, not an override), approved commit `13c5933` on branch
     `dashboard-web-import-and-export-center-ui` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
-    `G4-dashboard-web-import-and-export-center`). **This gate approval does not itself authorize
-    pushing the branch, opening a PR, or merging** — each remains its own separate,
-    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    `G4-dashboard-web-import-and-export-center`). **"Push the branch" and "Open a PR" were then
+    separately requested and executed** — pushed to `origin`, opened as
+    [PR #107](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/107). A
+    genuinely pre-existing, unrelated CI failure surfaced first ("Dependency vulnerability audit"
+    — 4 high `fast-uri` findings, GHSA-jqff-g426-hqxp/GHSA-fph4-wmhf-6fwf, plus 1 moderate
+    `@xmldom/xmldom` finding, GHSA-6gmq-8vp8-gcm6, confirmed byte-identical to `main` before the
+    fix, since this branch made zero lockfile/`package.json` changes) — fixed with a
+    `pnpm-workspace.yaml` override floor raise (`fast-uri` >=3.1.6, pulled in only via
+    `@nestjs/cli`'s own devDependency Angular schematics tooling; `@xmldom/xmldom` >=0.8.15, a
+    patch-version bump for mammoth's real runtime DOCX-preview dependency) — `pnpm audit` now
+    reports 0 known vulnerabilities, re-verified clean: `dashboard-api`'s full 1756/1756 unit suite
+    (unchanged count, confirming the xmldom bump didn't affect mammoth's DOCX parsing),
+    `dashboard-web`'s typecheck/lint/1771/1771 unit suite/production build, and `pnpm format`. All
+    14 CI checks then confirmed green. **"Merge PR #107" was then separately requested and
+    executed** — merged with a real merge commit (not squash/rebase), matching every prior merge
+    in this project's history — merge commit `cbc10ecaffb2b0b6e18e90556d5c8b2ee4bafaef`. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort ==
+cbc10ec`, confirming the exact merged commit is what's serving; `GET
+/import-and-export-center/templates` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s new `/import-and-export-center` route correctly redirects (307) an
+    unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Import and Export Center UI
+    is now genuinely live in production**, closing out this slice's full build-to-production
+    arc — backend and now the full UI (templates list/create/detail/edit, runs list/detail,
+    exports list/create/detail) are both live for the Import and Export Center module.
 
 ## Recent decisions
 
@@ -7686,6 +7711,33 @@ build`/prettier all clean. Committed to branch `dashboard-web-import-and-export-
   `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
   `G4-dashboard-web-import-and-export-center`). This gate approval does not itself authorize
   pushing the branch, opening a PR, or merging.
+- `[2026-09-02]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-import-and-export-center-ui` — pushed to `origin`, opened as
+  [PR #107](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/107). A
+  genuinely pre-existing CI failure surfaced ("Dependency vulnerability audit"), unrelated to this
+  branch's own diff (zero lockfile/`package.json` changes, confirmed via `git diff`) — 4 high
+  `fast-uri` findings (GHSA-jqff-g426-hqxp, GHSA-fph4-wmhf-6fwf) plus 1 moderate
+  `@xmldom/xmldom` finding (GHSA-6gmq-8vp8-gcm6). Fixed with a `pnpm-workspace.yaml` override
+  floor raise — `fast-uri` >=3.1.6 (pulled in only via `@nestjs/cli`'s own devDependency Angular
+  schematics tooling, confirmed via `pnpm why fast-uri`, never bundled into either app's runtime)
+  and `@xmldom/xmldom` >=0.8.15 (a patch-version bump for mammoth's real runtime DOCX-preview
+  dependency, confirmed via `pnpm why @xmldom/xmldom`). `pnpm audit` now reports 0 known
+  vulnerabilities. Re-verified clean: `dashboard-api`'s typecheck + full 1756/1756 unit suite
+  (unchanged count, confirming the xmldom bump didn't affect mammoth's DOCX parsing),
+  `dashboard-web`'s typecheck/lint/1771/1771 unit suite/production build, and `pnpm format`. All
+  14 CI checks then confirmed green.
+- `[2026-09-02]` **"Merge PR #107" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `cbc10ecaffb2b0b6e18e90556d5c8b2ee4bafaef`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitShaShort ==
+cbc10ec`, confirming the exact merged commit is what's serving; `GET
+/import-and-export-center/templates` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed); and
+  `dashboard-web`'s new `/import-and-export-center` route correctly redirects (307) an
+  unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Import and Export Center UI is
+  now genuinely live in production**, closing out this slice's full build-to-production arc —
+  backend and now the full UI are both live for the Import and Export Center module.
 
 ## Open client blockers
 
