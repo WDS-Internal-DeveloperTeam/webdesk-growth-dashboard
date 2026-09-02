@@ -428,3 +428,32 @@ repository-layer scoping), and audit-trail content (no secret-shaped data in any
 a filesystem/HTTP call anywhere in this module — no SSRF/path-traversal surface) and that the new
 `boundedJsonObjectSchema()` size bound closes the JSONB write-amplification gap the code review
 found.
+
+### Merge (PR #106)
+
+Opened as [PR #106](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/106).
+A real merge conflict against `main` surfaced (the Scan Center `dashboard-web` UI, PR #105, had
+merged concurrently) — only `project.json`'s own `gates[]`/`audit_log` arrays conflicted, resolved
+by keeping both sides' entries and re-sequencing version counters.
+
+CI then surfaced a genuine, pre-existing "Dependency vulnerability audit" failure — 3 moderate
+GHSA advisories against packages already locked in `pnpm-lock.yaml` (`qs` array-limit bypass +
+isBuffer-controlled DoS, `@tiptap/core`'s `mergeAttributes()` `__proto__` prototype-pollution
+path), confirmed byte-identical to `main` before the fix — unrelated to this branch's own changes
+and would have failed `main`'s own next CI run too. Presented to the user directly
+(`AskUserQuestion`); they chose to patch. Fixed with a `pnpm-workspace.yaml` override floor raise
+(`qs` `6.15.2` → `6.16.0`, closing `GHSA-x5fp-wj9c-mxmx`/`GHSA-4mjr-xmp4-gh2g`) and a direct
+`apps/dashboard-web/package.json` version bump (`@tiptap/core`/`pm`/`react`/`starter-kit`
+`3.30.2` → `3.30.4`, closing `GHSA-cp6q-959q-f8rh`) — `pnpm audit` now reports 0 known
+vulnerabilities. Full re-verification after: typecheck/lint (via each package's own real CI
+script) across `@webdesk/database`/`dashboard-api`/`dashboard-web`, the full 1756/1756
+`dashboard-api` and 1691/1691 `dashboard-web` unit suites (unchanged counts, no regressions), a
+full `dashboard-web` production build, and `pnpm format`. All 14 CI checks then confirmed green.
+
+Merged with a real merge commit (not squash/rebase) — `705fe117e5a27a103d88a80bdfc6b8b943b48bc3`.
+`dashboard-api` auto-deployed on push to `main` and was verified live directly, not just via CI's
+own Vercel status check — `/health` returned `build.commitShaShort == 705fe11`, confirming the
+exact merged commit is what's serving; `GET /import-and-export-center/templates` returned a clean
+`401` (route live, `SessionGuard` enforcing — not a `404`); and `dashboard-web`'s `/` correctly
+redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Import and Export Center
+module backend is now genuinely live in production.**

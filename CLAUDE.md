@@ -4572,11 +4572,37 @@ Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, 
     requested), approved commit `3158b96` on branch `module-import-and-export-center` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-import-and-export-center`). **"Push the branch" was then separately requested and
-    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
-    or merging** — each remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a
-    separate, not-yet-requested next step, matching every prior module's own backend-first
-    precedent.
+    executed** — pushed to `origin`. **"Open a PR and merge it" was then separately requested and
+    executed** — pushed to `origin`, opened as
+    [PR #106](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/106). A
+    real merge conflict against `main` surfaced first (the Scan Center `dashboard-web` UI, PR
+    #105, had merged concurrently) — only `project.json`'s own `gates[]`/`audit_log` arrays
+    conflicted, resolved by keeping both sides' entries and re-sequencing version counters, fully
+    re-verified (1756/1756 `dashboard-api` + 1691/1691 `dashboard-web` unit tests, typecheck/lint/
+    prettier all clean) before pushing again. CI then surfaced a real "Dependency vulnerability
+    audit" failure — 3 moderate GHSA advisories (`qs` array-limit bypass + isBuffer DoS,
+    `@tiptap/core` `mergeAttributes()` `__proto__` prototype pollution) against packages already
+    locked in `pnpm-lock.yaml`, confirmed byte-identical to `main` before the fix — genuinely
+    pre-existing and unrelated to this branch's own changes, not something introduced by it, and
+    would have failed `main`'s own next CI run too. Presented to the user directly
+    (`AskUserQuestion`: patch now / merge with an admin override / wait), who chose to patch.
+    Fixed with a `pnpm-workspace.yaml` override floor raise (`qs` `6.15.2` → `6.16.0`) and a
+    direct `package.json` version bump (`@tiptap/core`/`pm`/`react`/`starter-kit` `3.30.2` →
+    `3.30.4`) — `pnpm audit` now reports 0 known vulnerabilities. Re-verified clean after: full
+    typecheck/lint (via each package's own real CI script) across all three touched packages, the
+    full 1756/1756 `dashboard-api` and 1691/1691 `dashboard-web` unit suites (unchanged counts —
+    no regressions), a full `dashboard-web` production build, and `pnpm format`. All 14 CI checks
+    then confirmed green. **"Merge PR #106" was then executed** — merged with a real merge commit
+    (not squash/rebase), matching every prior merge in this project's history — merge commit
+    `705fe117e5a27a103d88a80bdfc6b8b943b48bc3`. `dashboard-api` auto-deployed on push to `main` and
+    was verified live directly, not just via CI's own Vercel status check — `/health` returned
+    `build.commitShaShort == 705fe11`, confirming the exact merged commit is what's serving;
+    `GET /import-and-export-center/templates` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
+    **The Import and Export Center module backend is now genuinely live in production.** No
+    `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+    matching every prior module's own backend-first precedent.
 
 ## Recent decisions
 
@@ -7551,6 +7577,29 @@ build`/prettier all clean. No separate security-review skill run, per the 2026-0
   direct "Approve as-is, gate it and push the branch" instruction.** Gate
   `G4-import-and-export-center` approved (WebDesk Solution, CONFIRM), approved commit `3158b96` —
   see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Branch pushed to `origin`.
+- `[2026-09-02]` **"Open a PR and merge it" was separately requested and executed** on
+  `module-import-and-export-center` — opened as
+  [PR #106](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/106). A
+  real merge conflict against `main` surfaced (Scan Center's `dashboard-web` UI, PR #105, had
+  merged concurrently) — resolved (only `project.json`'s `gates[]`/`audit_log` conflicted, both
+  sides kept, re-sequenced), fully re-verified, and pushed again.
+- `[2026-09-02]` **A genuine, pre-existing CI failure surfaced on PR #106** — "Dependency
+  vulnerability audit" failing on 3 moderate GHSA advisories (`qs`, `@tiptap/core`) against
+  packages already locked in `pnpm-lock.yaml`, confirmed byte-identical to `main` before the fix —
+  unrelated to this branch's own changes, would have failed `main`'s next CI run too. Presented to
+  the user directly (`AskUserQuestion`), who chose to patch now. Fixed with a
+  `pnpm-workspace.yaml` override floor raise (`qs` `6.15.2` → `6.16.0`) and a direct `package.json`
+  version bump (`@tiptap/*` `3.30.2` → `3.30.4`) — `pnpm audit` now reports 0 known
+  vulnerabilities. Full re-verification (typecheck/lint/unit suites/production build/format) all
+  clean, no regressions. All 14 CI checks then confirmed green.
+- `[2026-09-02]` **"Merge PR #106" was executed.** Merged with a real merge commit (not squash/
+  rebase), matching every prior merge in this project's history — merge commit
+  `705fe117e5a27a103d88a80bdfc6b8b943b48bc3`. `dashboard-api` auto-deployed on push to `main` and
+  was verified live directly — `/health` returned `build.commitShaShort == 705fe11`, confirming
+  the exact merged commit is what's serving; `GET /import-and-export-center/templates` returned a
+  clean `401` (route live, `SessionGuard` enforcing — not a `404`); and `dashboard-web`'s `/`
+  correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Import and Export
+  Center module backend is now genuinely live in production.**
 
 ## Open client blockers
 
