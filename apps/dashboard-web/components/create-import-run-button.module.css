@@ -1,0 +1,77 @@
+.wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.actionButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-foreground);
+  background: var(--webdesk-dashboard-color-surface);
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  cursor: pointer;
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.inlineForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  max-width: 32rem;
+}
+
+.field {
+  composes: field from "./form-fields.module.css";
+}
+
+.label {
+  composes: label from "./form-fields.module.css";
+}
+
+.helperText {
+  composes: helperText from "./form-fields.module.css";
+}
+
+.input,
+.select {
+  composes: input from "./form-fields.module.css";
+}
+
+.error {
+  composes: error from "./form-fields.module.css";
+}
+
+.cancelButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}

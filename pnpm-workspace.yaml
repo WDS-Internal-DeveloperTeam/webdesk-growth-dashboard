@@ -100,3 +100,15 @@ overrides:
   vite: ">=6.4.3 <7.0.0"
   nanoid: ">=3.3.18 <4.0.0"
   htmlparser2: ">=10.1.0 <11.0.0"
+  # GHSA-jqff-g426-hqxp (host confusion via percent-encoded scheme normalization, high) and
+  # GHSA-fph4-wmhf-6fwf (a second, related fast-uri issue, high), both patched >=3.1.6 -- pulled
+  # in transitively via ajv, itself only reached through @nestjs/cli's own @angular-devkit
+  # schematics tooling (a devDependency build-tool chain, never bundled into either app's runtime
+  # output), confirmed via `pnpm why fast-uri`.
+  fast-uri: ">=3.1.6 <4.0.0"
+  # GHSA-6gmq-8vp8-gcm6 (XML fragment injection via invalid EntityReference.nodeName during
+  # requireWellFormed serialization, moderate), patched >=0.8.15 -- pulled in via mammoth, a real
+  # runtime dependency of dashboard-api (DOCX attachment preview generation,
+  # business-knowledge-center-rich-content-attachments.md). A patch-version bump from the
+  # previously-resolved 0.8.14; confirmed via `pnpm why @xmldom/xmldom`.
+  "@xmldom/xmldom": ">=0.8.15 <1.0.0"

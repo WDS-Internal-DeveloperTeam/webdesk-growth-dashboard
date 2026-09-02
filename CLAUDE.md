@@ -4602,7 +4602,75 @@ Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, 
     `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
     **The Import and Export Center module backend is now genuinely live in production.** No
     `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
-    matching every prior module's own backend-first precedent.
+    matching every prior module's own backend-first precedent. **Update (2026-09-02): the
+    `dashboard-web` UI has since been built and gated — see item 77 below.**
+
+77. **`dashboard-web` Import and Export Center UI — built, reviewed, gated
+    (2026-09-02).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #106, item 76 above). Built directly on the explicit
+    "Import/Export - Start the dashboard-web UI for it" instruction. No wireframe/spec exists for
+    this module's UI — a 9-route IA was designed directly against the real backend contract (the
+    DTOs/controllers/services were read first, not assumed): templates list (the module's home
+    view, filterable by `targetModuleKey`/`isActive`/`search`)/create/detail/edit, runs list
+    (filterable by `importTemplateId`/`status`)/detail (embeds a read-only rows/errors sub-list
+    plus the status-actions component), exports list (filterable by `targetModuleKey`/`status` —
+    deliberately no `search`, matching the backend's own `listExportRunsQuerySchema`, which has
+    none)/create/detail. Mirrors Scan Center's list-to-detail-with-a-create-action-to-run-
+    detail-with-embedded-row-creation shape (there being no standalone create route for
+    `import_rows`/`import_errors`, mirroring Scan Center's own `scan_findings` precedent) combined
+    with Ready for Claude Queue's organization-wide, `session.navigation`-backed target-module
+    picker pattern. New `packages/shared-types` additions
+    (`ImportDuplicateStrategy`/`ImportExportFileFormat`/`ImportTemplate`/`ImportRunStatus`/
+    `ImportRun`/`ImportRowStatus`/`ImportRowResolution`/`ImportRow`/`ImportError`/
+    `ExportRunStatus`/`ExportRun`) mirror
+    `packages/database/src/import-and-export-center/entities.ts` exactly.
+    `ImportRunStatusActions` computes its allowed-transition set as a function of
+    `(status, isDryRun)` rather than a static table, matching the backend's own real dry-run-aware
+    `TRANSITIONS` gating exactly (verified line-by-line against `import-runs.service.ts` — the
+    asymmetry that `validating -> dry_run_completed` is only legal when `isDryRun` and
+    `validating -> importing` only when it isn't) — and gates the `rows`/`runErrors` inline editor
+    on `fromStatus === "validating"` specifically, so the separate `dry_run_completed -> importing`
+    "promote" transition never offers it, matching the backend's own `hasRowsPayload` guard rather
+    than the target status alone. No `expectedStatus`/CAS field is sent in either
+    status-transition request body — confirmed directly against both DTOs (neither declares one),
+    correctly diverging from Ready for Claude Queue's own `{status, expectedStatus}` shape rather
+    than copying it blindly. Both JSON-shaped fields (`ImportTemplateForm`'s `columnMapping`,
+    `ExportRunForm`'s `filterCriteria`) and the rows editor's per-row `rawData` are parsed
+    client-side with a clear error before ever reaching `postMutation()`. `ExportRun.fileReference`
+    is rendered as a link only behind the existing `isSafeHttpUrl()` guard, matching every other
+    stored-URL field's convention in this app — the backend deliberately does not URL-validate this
+    field server-side. **A real bug was caught and fixed during the build's own test-writing pass**:
+    a `min`/`step` HTML constraint on two number inputs (the rows editor's Row #, the
+    export-completed `rowCount`) silently blocked native form submission on an invalid value,
+    meaning the component's own clearer JS-side error message would never show and a real submit
+    would silently no-op — both constraints removed in favor of the existing JS-side validation.
+    Built by a background agent with a fully-specified prompt (the exact backend contract, every
+    established `dashboard-web` convention to reuse, and pseudocode for the trickiest transition
+    logic spelled out in detail), then independently re-verified in full by the orchestrating
+    session — every high-risk file read directly (the status-actions transition logic, both
+    JSON-parsing form fields, the safe-URL guard), and every validation command re-run fresh rather
+    than trusted from the agent's own report: 1771/1771 `dashboard-web` unit tests (80 new, including
+    an exhaustive `allowedTargets(status, isDryRun)` test matrix), typecheck (`@webdesk/shared-types`
+    and `dashboard-web`)/`eslint --max-warnings=0`/CSS-token-check (95 files)/`next build` (all 9
+    new routes present)/`prettier --check` all clean. **Reviewed at light tier**, per the
+    2026-08-27 "right-size the review pipeline" standing rule — a frontend-only slice consuming an
+    already-reviewed, already-gated backend with no new endpoint. A direct read-through pass found
+    **0 blocking findings** and one non-blocking styling note (the run detail page's Rows/Errors
+    tables use their own local `th`/`td` style objects instead of the shared list-table styles,
+    left as-is). Security review skipped per the same standing rule — no new endpoint, no new RBAC
+    action, no new sink; every JSON value renders via `JSON.stringify()` inside a `<pre>`, never
+    `dangerouslySetInnerHTML`. See
+    `docs/project-state/dashboard-web-import-and-export-center-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it" instruction** — the
+    approval checklist's own findings summary served as the review artifact, since there were no
+    open blocking findings on this branch. **The gate
+    (G4-dashboard-web-import-and-export-center) was then approved** — WebDesk Solution, decision
+    CONFIRM (clean pass, not an override), approved commit `13c5933` on branch
+    `dashboard-web-import-and-export-center-ui` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-import-and-export-center`). **This gate approval does not itself authorize
+    pushing the branch, opening a PR, or merging** — each remains its own separate,
+    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -7600,6 +7668,24 @@ build`/prettier all clean. No separate security-review skill run, per the 2026-0
   clean `401` (route live, `SessionGuard` enforcing — not a `404`); and `dashboard-web`'s `/`
   correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Import and Export
   Center module backend is now genuinely live in production.**
+- `[2026-09-02]` **Built the `dashboard-web` UI for Import and Export Center**, under the explicit
+  "Import/Export - Start the dashboard-web UI for it" instruction, closing this module's last
+  named gap following the backend's own build-to-production arc (PR #106). Full account in item
+  77 above. Built by a background agent with a fully-specified prompt embedding the full backend
+  contract and pseudocode for the trickiest transition logic (`ImportRunStatusActions`' dry-run-
+  aware `allowedTargets(status, isDryRun)`), then independently re-verified in full by the
+  orchestrating session — every high-risk file read directly, every validation command re-run
+  fresh: 1771/1771 `dashboard-web` unit tests (80 new), typecheck/lint/CSS-token-check/`next
+build`/prettier all clean. Committed to branch `dashboard-web-import-and-export-center-ui`
+  (commit `13c5933`) — not pushed to `origin` yet.
+- `[2026-09-02]` **Required second-role human review and the gate were both completed via the
+  direct "Approve as-is, gate it" instruction** — the approval checklist's own findings summary
+  (0 blocking findings, one non-blocking styling note) served as the review artifact. Gate
+  `G4-dashboard-web-import-and-export-center` approved — WebDesk Solution, decision CONFIRM,
+  approved commit `13c5933` on branch `dashboard-web-import-and-export-center-ui` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-import-and-export-center`). This gate approval does not itself authorize
+  pushing the branch, opening a PR, or merging.
 
 ## Open client blockers
 
