@@ -4291,6 +4291,70 @@ fcd33f1b15e87abae483743cf047eaf548fb8042`, confirming the exact merged commit is
     exists yet for this module — a separate, not-yet-requested next step, matching every prior
     module's own backend-first precedent.
 
+73. **Change Center module backend — built, reviewed, gated, pushed (2026-09-02).** Module #33,
+    built directly on the explicit "start Change Center and use the migration numbering from the
+    00105" instruction. Two genuine forks confirmed with the user first (`AskUserQuestion`): the
+    `scan_center` dependency's source-linkage shape and the target-record shape. **A real mid-task
+    blocker surfaced and was resolved**: the user referenced Scan Center migrations `00103`/`00104`
+    on a branch (`module-scan-center`) that hadn't reached `origin` yet — confirmed via
+    `git branch -a`/the GitHub API (404), work paused rather than guessing, and resumed once
+    `git fetch` showed the branch had landed and PR #102 had genuinely merged to `main`. Single
+    project-scoped `change_records` table (migrations `00105`/`00106`) implementing
+    `05_Workflow_State_Machines.md §8`'s own workflow (`detected → under_review →
+accepted`/`rejected`/`deferred`/`manual_merge_required` `→ applying → applied → verified`, plus an
+    `apply_failed` retry state, per the spec's own "Failed application becomes Apply Failed and
+    records rollback guidance" line). A real, nullable FK into Scan Center's own `scan_findings`
+    (`scan_finding_id`) for the source link, an optional polymorphic `(targetModuleKey, targetId)`
+    reference mirroring Review and Approval Center's own pattern, and a required free-text
+    `recordLabel` for change categories with no real dashboard record at all (theme/plugin/core
+    version, a redirect rule). Reuses the already-seeded `change_center` RBAC group verbatim — no
+    new RBAC migration; the `"(assigned)"` qualifier for the four mid-tier roles is deliberately
+    not enforced as real object-level access control, matching the already-established precedent
+    this project's own RBAC threat-model pass and Review and Approval Center's own build both
+    record explicitly (a blanket role grant plus an app-level `assignedToMe` list filter only).
+    Built directly, then independently re-verified in full by the orchestrating session — every
+    high-risk file read directly, every test suite re-run against a real local disposable
+    PostgreSQL 17 database, not trusted from the build report alone. **Independent code review
+    then ran** (this project's own `code-review` skill, high effort, 8 finder angles run via
+    parallel subagents, each candidate independently verified) — 6 findings kept in the final
+    report (5 CONFIRMED, 1 PLAUSIBLE), **all fixed**. Most severe: the repository's own
+    `updateStatus()` doc comment claimed abandoning `COALESCE(column, NOW())` "stamp once"
+    semantics for the actor-id half of `decidedByUserId`/`appliedByUserId`/`verifiedByUserId` was
+    unavoidable without string-interpolating `actorUserId` into raw SQL — independently verified
+    factually wrong (Sequelize's `fn("COALESCE", col(...), actorUserId)` binds the value as a real
+    parameterized argument) — fixed by adopting `fn`/`col`, restoring genuine stamp-once semantics
+    and resolving a real self-contradiction against `ChangeRecordEntity`'s own documented contract;
+    proven empirically, not just by inspection, via two new integration tests re-entering a
+    decision state and an apply state with a different actor each time. Also fixed: unguarded
+    post-write `AuditService.record()` calls in `create()`/`update()` (unlike `changeStatus()`'s
+    deliberately-wrapped call); `rollbackGuidance` never clearing on a successful retry out of
+    `apply_failed` (fixed at the repository layer — leaving `apply_failed` without a fresh value
+    now nulls it automatically); `severity` missing an update API path despite the repository's own
+    type allowing it; a missing `(project_id, assigned_to_user_id)` index backing the
+    `assignedToMe` list filter; and a redundant ternary re-deriving an already-DTO-enforced
+    invariant. **A separate `security-review` skill run then found 0 findings above threshold** —
+    confirmed the raw-SQL `col()`/`fn()`/`literal()` usage is entirely static column names /
+    parameterized `fn()` arguments (never string-built with user input), correct IDOR/project
+    scoping on every route (verified via a dedicated cross-project 404 e2e test), method-level RBAC
+    decorators throughout with the dynamic per-transition check correctly threading `projectId`,
+    and correct mass-assignment exclusion of every server-managed field. Re-validated: 25/25
+    `dashboard-api` unit tests, 815/815 `packages/database` integration tests (2 new), 804/804
+    `dashboard-api` e2e/integration tests, a fresh migration round-trip (106 executed, 0 pending,
+    with the new index present), module-registry validation unaffected (43 modules, 21 permission
+    groups), `eslint --max-warnings=0`/`prettier --check` clean, `pnpm audit` 0 vulnerabilities.
+    See `docs/implementation/module-change-center.md` and
+    `docs/project-state/module-change-center-approval-checklist.md`. **Required second-role human
+    review complete via the direct "gate it and push the branch" instruction** — since every
+    finding across both reviews was fixed (0 open findings of any kind), the approval checklist's
+    own findings tables served as the review artifact. **The gate (G4-change-center) was then
+    approved** — WebDesk Solution, decision CONFIRM, approved commit `c470ca6` on branch
+    `module-change-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+    (`current_gate` now `G4-change-center`). **This gate approval does not itself authorize
+    opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
+    per this project's standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this
+    module — a separate, not-yet-requested next step, matching every prior module's own
+    backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
