@@ -4349,11 +4349,26 @@ accepted`/`rejected`/`deferred`/`manual_merge_required` `→ applying → applie
     own findings tables served as the review artifact. **The gate (G4-change-center) was then
     approved** — WebDesk Solution, decision CONFIRM, approved commit `c470ca6` on branch
     `module-change-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
-    (`current_gate` now `G4-change-center`). **This gate approval does not itself authorize
-    opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
-    per this project's standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this
-    module — a separate, not-yet-requested next step, matching every prior module's own
-    backend-first precedent.
+    (`current_gate` now `G4-change-center`). **"Open a PR and merge it" was then separately
+    requested and executed** — pushed to `origin`, opened as
+    [PR #103](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/103). A
+    real merge conflict against `main` surfaced (Scan Center's own "verified live" doc commit had
+    landed concurrently) — only `CLAUDE.md`'s item numbering/gate-record text and
+    `project.json`'s `audit_log` version counters conflicted, resolved by keeping both sides'
+    content and re-sequencing, fully re-typechecked/re-tested (1716/1716 `dashboard-api` unit
+    tests clean) before pushing again. All 14 CI checks confirmed green. **"Merge PR #103" was
+    then separately requested and executed** — merged with a real merge commit (not squash/
+    rebase), matching every prior merge in this project's history — merge commit
+    `5730543783817a7b3ede201b35de932a32f3a210`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+5730543783817a7b3ede201b35de932a32f3a210`, confirming the exact merged commit is what's serving;
+    `GET /change-center/projects/:projectId/records` returned a clean `401` (route live,
+    `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+    and `dashboard-web`'s `/` correctly redirects (307) to sign-in for an unauthenticated visitor.
+    **The Change Center module backend is now genuinely live in production.** No `dashboard-web`
+    UI exists yet for this module — a separate, not-yet-requested next step, matching every prior
+    module's own backend-first precedent.
 
 ## Recent decisions
 
