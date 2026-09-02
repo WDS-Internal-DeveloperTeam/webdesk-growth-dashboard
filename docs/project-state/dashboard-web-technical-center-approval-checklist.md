@@ -95,10 +95,16 @@ never `dangerouslySetInnerHTML`.
 
 ## Sign-off
 
-Required second-role human review (ADR-0010): _pending._
+Required second-role human review (ADR-0010): **Approved as-is**, WebDesk
+Solution, 2026-09-02 — via the direct "Approve, gate it, and push the
+branch" instruction; the approval checklist's own findings summary above
+served as the review artifact, since there were no open findings of any
+kind on this branch.
 
-Gate `G4-dashboard-web-technical-center`: _pending._
+Gate `G4-dashboard-web-technical-center`: **CONFIRM** — WebDesk Solution,
+2026-09-02, approved commit `dc39ba7` on branch
+`dashboard-web-technical-center`.
 
-This checklist itself does not authorize pushing the branch, opening a PR,
-or merging — each remains its own separate, not-yet-requested
-authorization, per this project's standing "no auto-merge" rule.
+This gate approval does not itself authorize opening a PR or merging —
+each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule.

@@ -4697,9 +4697,10 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     arc — backend and now the full UI (templates list/create/detail/edit, runs list/detail,
     exports list/create/detail) are both live for the Import and Export Center module.
 
-78. **Technical Center module backend — built, reviewed, gated; not yet pushed, opened as a PR,
-    or merged (2026-09-02).** Key `technical_center`, built directly on the explicit "start
-    Technical Center and start the numbering for the migration from the 00109" instruction.
+78. **Technical Center module backend — built, reviewed, gated, pushed, opened as PR #108, and
+    merged; now genuinely live in production (2026-09-02).** Key `technical_center`, built
+    directly on the explicit "start Technical Center and start the numbering for the migration
+    from the 00109" instruction.
     Migrations `00109`/`00110` (`00107`/`00108` were reserved for the concurrently-built Import
     and Export Center module — not because they were unavailable). Two genuine design forks
     confirmed with the project owner first (`AskUserQuestion`): a Scan-Center-style 3-level
@@ -4734,10 +4735,67 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     human review complete** — WebDesk Solution, "Approve as-is," accepting the 1 open
     tracked-debt finding. **The gate (G4-technical-center) was then separately requested and
     approved** — WebDesk Solution, decision CONFIRM, approved commit `8975169` on branch
-    `module-technical-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
-    (`current_gate` now `G4-technical-center`). **This gate approval does not itself authorize
-    pushing the branch, opening a PR, or merging** — each remains its own separate,
-    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    `module-technical-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`.
+    **"Push the branch and open a PR" were then separately requested and executed** — pushed to
+    `origin`, opened as
+    [PR #108](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/108),
+    then merged with a real merge commit (not squash/rebase), matching every prior merge in this
+    project's history — merge commit `8c6a489676a3028d2e922d46369723e4a434d371`. `dashboard-api`
+    auto-deployed on push to `main` and was verified live directly, not just via CI's own Vercel
+    status check — `/health` returned `build.commitSha ==
+8c6a489676a3028d2e922d46369723e4a434d371`, confirming the exact merged commit is what's serving;
+    `GET /technical-center/projects/:projectId/definitions` returned a clean `401` (route live,
+    `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed).
+    **The Technical Center module backend is now genuinely live in production.** No
+    `dashboard-web` UI existed yet as of this entry — see item 79 below for its own
+    build-to-production arc.
+
+79. **`dashboard-web` Technical Center UI — built, reviewed, gated, pushed
+    (2026-09-02).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #108, item 78 above). Not started automatically — built directly
+    on the explicit "Technical Center - Start Dashboard web UI" instruction. This local checkout
+    was 4 commits behind `origin/main` (the backend had already merged from another session) —
+    pulled and independently confirmed it live in production (`dashboard-api`'s `/health` matched
+    the merge commit, `GET /technical-center/projects/:projectId/definitions` returned a clean
+    `401`, not `404`) before starting. File-for-file mirrors Scan Center's `dashboard-web` UI, the
+    closest sibling — identical project-scoped 3-level definitions/runs/findings pipeline and
+    `TRANSITIONS` tables. Six routes under `app/(shell)/technical-center/`: definitions list
+    (project picker, filters)/create/detail (with a "Trigger run" action)/edit; run detail (status
+    actions with an inline findings-creation form embedded in the `completed`/
+    `partially_completed` transition — there is no standalone create route for
+    `technical_findings`); finding detail (its own 4-state disposition status actions). New
+    `packages/shared-types` additions (`TechnicalCheckDefinition`/`TechnicalCheckRun`/
+    `TechnicalFinding` and their enums) mirror `packages/database/src/technical-center/entities.ts`
+    exactly. `target`/`environment`/`scheduleCron`/`errorSummary`/finding `description` stay plain
+    text, not `RichTextEditor` — an explicit, documented exception to the 2026-08-22 rich-text
+    standing rule, since the backend never sanitizes these fields as HTML, matching Scan Center's
+    own identical precedent for the same field shapes. Built by a background agent with a
+    fully-specified prompt naming Scan Center as the literal file-for-file template, then
+    independently re-verified in full by the orchestrating session — every validation command
+    re-run fresh rather than trusted from the agent's own report: `@webdesk/shared-types`/
+    `dashboard-web` typecheck clean, `eslint --max-warnings=0` + CSS-token-check (99 files) clean,
+    1823/1823 `dashboard-web` unit tests passing (52 new), `next build` clean with all 6 new
+    routes present, `prettier --check` clean. Both status-actions components' transition tables
+    were read directly and diffed byte-for-byte against the real backend `TRANSITIONS` tables in
+    `technical-check-runs.service.ts`/`technical-findings.service.ts` — identical; every mutating
+    `fetch()`/`postMutation()` call site was read directly and confirmed matching the real
+    controllers' routes/HTTP methods exactly (notably `POST .../definitions/:id/update`, not a
+    `PATCH`); the create/edit definition form was read directly and confirmed `publicId`/
+    `checkType` are correctly create-only. **Reviewed at light tier**, per the 2026-08-27
+    "right-size the review pipeline" standing rule — a small, frontend-only UI slice consuming an
+    already-reviewed, already-gated backend with no new endpoint — **0 findings**. Security review
+    skipped per the same standing rule — no new endpoint, no new RBAC/auth logic, no new sink. See
+    `docs/project-state/dashboard-web-technical-center-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve, gate it, and push the branch"
+    instruction** — the approval checklist's own findings summary served as the review artifact,
+    since there were no open findings of any kind on this branch. **The gate
+    (G4-dashboard-web-technical-center) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM (clean pass, not an override), approved commit `dc39ba7` on branch
+    `dashboard-web-technical-center` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-dashboard-web-technical-center`). **"Push the branch" was
+    then separately requested and executed** — pushed to `origin`. **This gate approval does not
+    itself authorize opening a PR or merging** — each remains its own separate, not-yet-requested
+    authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
