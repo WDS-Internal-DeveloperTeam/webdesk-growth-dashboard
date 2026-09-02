@@ -4368,7 +4368,59 @@ accepted`/`rejected`/`deferred`/`manual_merge_required` `→ applying → applie
     and `dashboard-web`'s `/` correctly redirects (307) to sign-in for an unauthenticated visitor.
     **The Change Center module backend is now genuinely live in production.** No `dashboard-web`
     UI exists yet for this module — a separate, not-yet-requested next step, matching every prior
-    module's own backend-first precedent.
+    module's own backend-first precedent. **Update (2026-09-02): the `dashboard-web` UI has since
+    been built and gated — see item 74 below.**
+
+74. **`dashboard-web` Change Center UI — built, reviewed, gated, pushed (2026-09-02).** Closes
+    this module's last named gap, following the backend's own build-to-production arc (PR #103,
+    item 73 above). Not started automatically — built directly on the explicit "Start the
+    dashboard-web UI for it" instruction. Four routes under `/change-center` (list, detail,
+    create, edit), mirroring Internal Linking Library's structure — the closest sibling
+    (project-scoped, a bespoke non-8-value status workflow). New `packages/shared-types`
+    `ChangeRecord`/`ChangeRecordCategory`/`ChangeRecordSeverity`/`ChangeRecordStatus`;
+    `lib/change-center-query.ts`/`lib/change-center.ts` mirror `lib/internal-linking-library-
+query.ts`/`lib/internal-linking-library.ts`'s own zero-non-type-import-file split.
+    `ChangeRecordForm` treats `publicId`/`category` as create-only, matching every sibling form's
+    own immutable-discriminator-field convention — `severity`, unlike `category`, IS editable,
+    matching the backend's own DTO doc comment. `beforeValue`/`afterValue`/`recommendation`/
+    `decisionNotes` deliberately stay plain `<textarea>`s, not `RichTextEditor` — the backend
+    never sanitizes these fields (raw diff/version-string data, not prose), so this module was
+    never in scope for the 2026-08-22 rich-text standing rule. `targetModuleKey` is a `<select>`
+    sourced from `session.navigation`, mirroring `ReviewForm`'s/`ReadyForClaudeTaskForm`'s own
+    identical reasoning (`GET /authz/module-registry` is gated on a permission most roles lack);
+    `targetId`/`scanFindingId` are plain, client-side UUID-format-checked text inputs, not
+    pickers — no generic cross-module record-lookup capability exists in this app, and no
+    `dashboard-web` UI exists yet for Scan Center to pick a finding from. `ChangeRecordStatus
+Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, including both
+    terminal states (`rejected`/`verified`, confirmed via `window.confirm()` before submit) and
+    the `apply_failed` retry loop (`apply_failed -> applying`). The detail page's "Edit" link is
+    hidden, and the edit route itself redirects away, once a record leaves `detected`/
+    `under_review` (`EDITABLE_STATUSES`, mirrored from the backend's own identical set) — matching
+    Website Strategy Center's/Page Inventory's own terminal-state Edit-link-hiding precedent.
+    **Reviewed at light tier**, per this project's own 2026-08-27 "right-size the review
+    pipeline" standing rule — a small, frontend-only UI slice consuming an already-reviewed,
+    already-gated backend with **zero** backend changes in this diff (unlike several recent
+    sibling slices that also carried a paired rich-text-sanitization backend change). A direct
+    read-through pass verified the create/edit field contract against the real backend
+    `createChangeRecordSchema`/`updateChangeRecordSchema`, the status-actions transition table
+    against the real backend `TRANSITIONS` table byte-for-byte, the `targetModuleKey`/`targetId`
+    pairing invariant (mirrored client-side from the backend's own `refineTargetPairing`), the
+    terminal-state Edit-link hiding, and reuse of every established shared helper — **0
+    findings**. A separate security review was skipped per the same standing rule — no new
+    endpoint, no new sink, and the one plain-text free-text field set renders only via plain JSX
+    text (a `<pre>` block, never `dangerouslySetInnerHTML`). 1623/1623 `dashboard-web` unit tests
+    (unchanged — no new tests, matching the light-tier standard for this diff), typecheck/lint/
+    CSS-token-check (85 files)/`next build` (all 4 routes present)/prettier all clean. See
+    `docs/project-state/dashboard-web-change-center-approval-checklist.md`. **Required
+    second-role human review complete via the direct "gate it and push the branch" instruction**
+    — the approval checklist's own findings table served as the review artifact, since there were
+    no open findings of any kind on this branch. **The gate
+    (G4-dashboard-web-change-center) was then approved** — WebDesk Solution, decision CONFIRM,
+    approved commit `3a55e9d` on branch `dashboard-web-change-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-change-center`). **"Push the branch" was then separately requested and
+    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
+    or merging.**
 
 ## Recent decisions
 

@@ -1,17 +1,17 @@
 # `dashboard-web` Change Center UI — approval checklist
 
-| #   | Item                                      | Status                                                                                    |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| 1   | Built to explicit instruction              | ✅ "Start the dashboard-web UI for it" (Change Center)                                     |
-| 2   | Backend already reviewed/gated/merged      | ✅ PR #103, gate `G4-change-center`, live in production                                    |
-| 3   | Full validation clean                      | ✅ 1623/1623 `dashboard-web` unit tests, unchanged (no new tests — matching the light-tier standard for this diff's size) |
-| 4   | Typecheck clean                            | ✅ `@webdesk/shared-types`/`dashboard-web`                                                 |
-| 5   | Lint clean                                 | ✅ `eslint --max-warnings=0` (new files)                                                   |
-| 6   | CSS-token check clean                      | ✅ 85 CSS Module files                                                                     |
-| 7   | `next build` clean, all 4 routes present   | ✅ `/change-center`, `/new`, `/[recordId]`, `/[recordId]/edit`                              |
-| 8   | Prettier clean                             | ✅                                                                                          |
-| 9   | Documentation updated                      | ✅ This checklist; `CLAUDE.md` item + audit-log entry to follow the gate                    |
-| 10  | Exact branch/commit verified                | Branch `dashboard-web-change-center`, committed locally — not yet pushed at build time      |
+| #   | Item                                     | Status                                                                                                                    |
+| --- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Built to explicit instruction            | ✅ "Start the dashboard-web UI for it" (Change Center)                                                                    |
+| 2   | Backend already reviewed/gated/merged    | ✅ PR #103, gate `G4-change-center`, live in production                                                                   |
+| 3   | Full validation clean                    | ✅ 1623/1623 `dashboard-web` unit tests, unchanged (no new tests — matching the light-tier standard for this diff's size) |
+| 4   | Typecheck clean                          | ✅ `@webdesk/shared-types`/`dashboard-web`                                                                                |
+| 5   | Lint clean                               | ✅ `eslint --max-warnings=0` (new files)                                                                                  |
+| 6   | CSS-token check clean                    | ✅ 85 CSS Module files                                                                                                    |
+| 7   | `next build` clean, all 4 routes present | ✅ `/change-center`, `/new`, `/[recordId]`, `/[recordId]/edit`                                                            |
+| 8   | Prettier clean                           | ✅                                                                                                                        |
+| 9   | Documentation updated                    | ✅ This checklist; `CLAUDE.md` item + audit-log entry to follow the gate                                                  |
+| 10  | Exact branch/commit verified             | Branch `dashboard-web-change-center`, commit `3a55e9d` — pushed to `origin`                                               |
 
 ## Forbidden-actions check
 
@@ -86,7 +86,7 @@ kind on this branch to accept as tracked debt.
 
 **Gate:** `G4-dashboard-web-change-center` approved — WebDesk Solution, decision CONFIRM (clean
 pass, not an override, since the second-role review was already complete before the gate was
-requested), approved commit recorded on branch `dashboard-web-change-center`. See
+requested), approved commit `3a55e9d` on branch `dashboard-web-change-center`. See
 `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
 `G4-dashboard-web-change-center`).
 
