@@ -27,14 +27,16 @@ const labelStyle = {
 } as const;
 
 /**
- * A thin client wrapper around the Page Inventory list page's project-picker `<select>` — the
- * only reason this needs `"use client"` at all is to mirror `ProjectSwitcher.handleChange()`'s own
- * `document.cookie` write on selection (code-review finding, `dashboard-web-page-inventory`):
+ * A thin client wrapper around each project-scoped list page's own project-picker `<select>` —
+ * the only reason this needs `"use client"` at all is to mirror `ProjectSwitcher.handleChange()`'s
+ * own `document.cookie` write on selection (code-review finding, `dashboard-web-page-inventory`):
  * previously, choosing a project through THIS picker never updated `CURRENT_PROJECT_COOKIE`, so the
  * header switcher's own "current project" indicator could silently diverge from what a user had
- * just picked here. `?projectId=` in the URL remains the sole source of truth for every actual
- * fetch/mutation (confirmed with the user directly) — this cookie write is purely a UX
- * convenience, the same advisory-only role it already plays for `ProjectSwitcher`'s own picker.
+ * just picked here. Since 2026-09-02, `CURRENT_PROJECT_COOKIE` is the real fallback source of
+ * truth every project-scoped list page reads (an explicit `?projectId=` in the URL still wins when
+ * present) — this form only renders at all once that cookie is ALSO unset/stale, so writing it here
+ * keeps the header switcher in sync going forward rather than leaving it to silently diverge again
+ * on the very next page.
  */
 export function ProjectPickerForm({
   projects,

@@ -42,11 +42,11 @@ interface InternalLinkLibraryListPageProps {
 
 /**
  * Internal links are project-scoped (`internal-linking-library/projects/:projectId/links`), same
- * pattern as Page Inventory/Keyword & Entity Library — `?projectId=` is the source of truth
- * throughout this module, confirmed via those two modules' own already-established convention: the
- * header Project Switcher's `wds_current_project` cookie stays purely advisory, only used here to
- * PRE-SELECT the picker's default option, never to bypass it. When `?projectId=` is missing or
- * doesn't resolve to a real project, this page renders a project-picker prompt instead of a table.
+ * pattern as Page Inventory/Keyword & Entity Library. An explicit `?projectId=` wins when present;
+ * otherwise the header Project Switcher's `wds_current_project` cookie is used directly (its own
+ * `router.refresh()` on change keeps this page current live, per 2026-09-02's fix closing the
+ * "current project" propagation gap — no more per-page picker step duplicating the header). Only
+ * when NEITHER resolves to a real project does this page fall back to a project-picker prompt.
  *
  * Once a project is resolved, renders exactly what `GET .../links` returns and supports — the
  * filters the backend's own `listInternalLinksQuerySchema` accepts (`sourcePageId`/`targetPageId`/
@@ -67,23 +67,26 @@ export default async function InternalLinkLibraryListPage({
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  // The header Project Switcher's cookie is now the real fallback source of truth, not just a
+  // picker pre-fill — an explicit `?projectId=` still overrides it.
+  const cookieStore = await cookies();
+  const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+  const effectiveProjectId = projectIdParam ?? defaultProjectId;
 
   // Fired concurrently with the project-existence check below, not sequentially after it —
   // getInternalLinks() only needs the raw projectId string, not any field resolved from the
   // Project entity itself, mirroring getPages()'s/getKeywords()'s own identical fix.
   // tolerateDiscard() avoids an unhandled-rejection warning on the branch where project turns out
   // null and this promise is never awaited.
-  const linksPromise = projectIdParam
+  const linksPromise = effectiveProjectId
     ? tolerateDiscard(
-        getInternalLinks(parseInternalLinkLibrarySearchParams(projectIdParam, rawParams)),
+        getInternalLinks(parseInternalLinkLibrarySearchParams(effectiveProjectId, rawParams)),
       )
     : null;
 
-  const project = projectIdParam ? await getProject(projectIdParam) : null;
+  const project = effectiveProjectId ? await getProject(effectiveProjectId) : null;
 
   if (!project) {
-    const cookieStore = await cookies();
-    const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
     // Largest real page-size option (100) — the same bound every other picker in this app accepts,
     // not fixed in this pass. Sorted by name for a scannable picker.
     const { items: projects } = await getProjects({
@@ -135,9 +138,6 @@ export default async function InternalLinkLibraryListPage({
         title={`Internal Linking Library — ${project.name}`}
         contextActions={
           <>
-            <Link href={clearFiltersHref} style={{ fontSize: "0.875rem" }}>
-              Switch project
-            </Link>
             <Link
               href={withProjectId("/internal-linking-library/new", project.id)}
               style={primaryActionLinkStyle}

@@ -1302,6 +1302,20 @@
       "record": "docs/project-state/dashboard-web-technical-center-approval-checklist.md",
       "notes": "dashboard-web Technical Center UI -- closes this module's last named gap, following the backend's own gate (G4-technical-center, PR #108, merged and live in production). Built directly on the explicit \"Technical Center - Start Dashboard web UI\" instruction. This local checkout was 4 commits behind origin/main (the backend had already merged from another session) -- pulled and independently confirmed it live in production (dashboard-api's /health matched the merge commit, GET /technical-center/projects/:projectId/definitions returned a clean 401, not 404) before starting. File-for-file mirrors Scan Center's dashboard-web UI, the closest sibling (identical project-scoped 3-level definitions/runs/findings pipeline and TRANSITIONS tables). Six routes: definitions list (project picker, filters)/create/detail (with a Trigger run action)/edit, run detail (status actions with an inline findings-creation form embedded in the completed/partially_completed transition -- there is no standalone create route for technical_findings), finding detail (its own 4-state disposition status actions). New packages/shared-types additions (TechnicalCheckDefinition/TechnicalCheckRun/TechnicalFinding and their enums) mirror packages/database/src/technical-center/entities.ts exactly. target/environment/scheduleCron/errorSummary/finding description stay plain text, not RichTextEditor -- an explicit, documented exception to the 2026-08-22 rich-text standing rule, since the backend never sanitizes these fields as HTML, matching Scan Center's own identical precedent for the same field shapes. Independently re-verified by the orchestrating session, not trusted from the build agent's own report: typecheck (shared-types and dashboard-web) clean, eslint --max-warnings=0 + CSS-token-check (99 files) clean, 1823/1823 dashboard-web unit tests passing (52 new), next build clean with all 6 new routes present, prettier --check clean; both status-actions components' ALLOWED_TRANSITIONS tables read directly and diffed byte-for-byte against the real backend TRANSITIONS tables in technical-check-runs.service.ts/technical-findings.service.ts -- identical; every mutating fetch()/postMutation() call site read directly and confirmed matching the real controllers' routes/HTTP methods exactly (notably POST .../definitions/:id/update, not PATCH); the create/edit definition form read directly and confirmed publicId/checkType are correctly create-only. Reviewed at light tier per the 2026-08-27 standing rule -- a small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new endpoint -- 0 findings. Security review skipped per the same standing rule -- no new endpoint, no new RBAC/auth logic, no new sink. Required second-role human review complete via the direct \"Approve, gate it, and push the branch\" instruction -- the approval checklist's own findings summary served as the review artifact, since there were no open findings of any kind on this branch. This gate approval does not itself authorize opening a PR or merging.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-current-project-context-propagation",
+      "type": "qa-security-gate",
+      "scope": "current-project-context-propagation",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-02T00:00:00Z",
+      "approved_commit": "58e950a (branch fix-current-project-context-propagation)",
+      "record": "docs/project-state/current-project-context-propagation-fix-approval-checklist.md",
+      "notes": "Fix for the long-deferred current-project context propagation gap (item 13's gap 5), built directly after the user pointed at a live Technical Center screenshot and said the in-page project selector was useless since the header already has one. Investigation found the in-page picker only ever showed because sidebar-nav links carry no ?projectId=, and once a project WAS resolved, each page's own Switch project link was genuinely dead -- it silently pointed at the SAME project id, only ever clearing filters, never switching anything. Scope confirmed directly with the user via AskUserQuestion (Technical Center only vs. all 6 project-scoped modules) -- the user chose the broader fix; Page Workspace was added as a 7th/8th affected file since it shares the identical pattern. Two changes: ProjectSwitcher (the header) now calls router.refresh() after writing CURRENT_PROJECT_COOKIE so an on-screen project-scoped page updates live; and all eight pages (Page Inventory, Scan Center, Technical Center, Change Center, Internal Linking Library, Keyword & Entity Library's keywords and entities routes, Page Workspace) now resolve their project id as projectIdParam ?? defaultProjectId (an explicit ?projectId= still overrides) instead of requiring the URL param outright, with the dead Switch project link removed from the six pages that had one -- clearFiltersHref, which it reused, stays in place for the real Clear filters action. No backend change. Independently re-verified: typecheck/lint clean, 1823/1823 dashboard-web unit tests passing unchanged, next build clean, prettier clean; live-rendered in the Browser pane confirming all seven affected routes redirect an unauthenticated visitor cleanly with zero console errors. Reviewed at light tier per the 2026-08-27 standing rule -- a frontend-only routing/UX fix touching no new endpoint, RBAC, or sink -- 0 findings. No separate security review needed. This gate approval does not itself authorize opening a PR or merging.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -3465,7 +3479,16 @@
       "project_version_before": 126,
       "project_version_after": 127,
       "timestamp": "2026-09-02T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-current-project-context-propagation approved (WebDesk Solution, CONFIRM) for the current-project context propagation fix, approved commit 58e950a on branch fix-current-project-context-propagation. Closes item 13's long-deferred gap 5: the header Project Switcher's cookie is now the real fallback source of truth for 8 project-scoped dashboard-web pages, and a dead Switch project link was removed from 6 of them. Reviewed at light tier per the 2026-08-27 standing rule -- 0 findings. This gate approval does not itself authorize opening a PR or merging.",
+      "project_version_before": 127,
+      "project_version_after": 128,
+      "timestamp": "2026-09-02T00:00:00Z"
     }
   ],
-  "current_gate": "G4-dashboard-web-technical-center"
+  "current_gate": "G4-current-project-context-propagation"
 }

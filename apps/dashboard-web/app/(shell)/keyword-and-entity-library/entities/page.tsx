@@ -32,9 +32,9 @@ interface EntityLibraryListPageProps {
 /**
  * The Keyword & Entity Library module's secondary record — a lightweight, project-scoped reference
  * list with no approval workflow of its own (task package D3), so this list page has no status
- * column/filter, unlike the keywords list page. Same `?projectId=`-is-the-source-of-truth
- * convention as every other route in this module (see the keywords list page's own top doc
- * comment).
+ * column/filter, unlike the keywords list page. Same project-resolution convention as every other
+ * route in this module (see the keywords list page's own top doc comment): an explicit
+ * `?projectId=` wins, otherwise the header Project Switcher's cookie is used directly.
  */
 export default async function EntityLibraryListPage({ searchParams }: EntityLibraryListPageProps) {
   const session = await getServerSession();
@@ -44,16 +44,17 @@ export default async function EntityLibraryListPage({ searchParams }: EntityLibr
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  const cookieStore = await cookies();
+  const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+  const effectiveProjectId = projectIdParam ?? defaultProjectId;
 
-  const entitiesPromise = projectIdParam
-    ? tolerateDiscard(getEntities(parseEntityLibrarySearchParams(projectIdParam, rawParams)))
+  const entitiesPromise = effectiveProjectId
+    ? tolerateDiscard(getEntities(parseEntityLibrarySearchParams(effectiveProjectId, rawParams)))
     : null;
 
-  const project = projectIdParam ? await getProject(projectIdParam) : null;
+  const project = effectiveProjectId ? await getProject(effectiveProjectId) : null;
 
   if (!project) {
-    const cookieStore = await cookies();
-    const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
     const { items: projects } = await getProjects({
       search: null,
       status: null,
@@ -103,9 +104,6 @@ export default async function EntityLibraryListPage({ searchParams }: EntityLibr
         linkComponent={Link}
         contextActions={
           <>
-            <Link href={clearFiltersHref} style={{ fontSize: "0.875rem" }}>
-              Switch project
-            </Link>
             <Link
               href={withProjectId("/keyword-and-entity-library/entities/new", project.id)}
               style={primaryActionLinkStyle}

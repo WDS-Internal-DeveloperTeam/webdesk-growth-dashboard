@@ -30,6 +30,9 @@ interface PageWorkspaceListPageProps {
  * choose a page and see where each one stands in its delivery lifecycle. Filtering, classification
  * and SEO state all remain Page Inventory's job; duplicating them here would create two competing
  * page lists.
+ *
+ * Project resolution mirrors every other project-scoped module (fixed 2026-09-02): an explicit
+ * `?projectId=` wins, otherwise the header Project Switcher's cookie is used directly.
  */
 export default async function PageWorkspaceListPage({ searchParams }: PageWorkspaceListPageProps) {
   const session = await getServerSession();
@@ -39,19 +42,20 @@ export default async function PageWorkspaceListPage({ searchParams }: PageWorksp
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  const cookieStore = await cookies();
+  const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+  const effectiveProjectId = projectIdParam ?? defaultProjectId;
 
   // Fired concurrently with the project-existence check rather than after it, matching Page
   // Inventory's own precedent; tolerateDiscard() keeps the abandoned promise from surfacing an
   // unhandled rejection on the project-picker branch.
-  const pagesPromise = projectIdParam
-    ? tolerateDiscard(getPages(parsePageInventorySearchParams(projectIdParam, rawParams)))
+  const pagesPromise = effectiveProjectId
+    ? tolerateDiscard(getPages(parsePageInventorySearchParams(effectiveProjectId, rawParams)))
     : null;
 
-  const project = projectIdParam ? await getProject(projectIdParam) : null;
+  const project = effectiveProjectId ? await getProject(effectiveProjectId) : null;
 
   if (!project) {
-    const cookieStore = await cookies();
-    const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
     const { items: projects } = await getProjects({
       search: null,
       status: null,
