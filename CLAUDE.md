@@ -4135,8 +4135,77 @@ a22a6a820c694fe92c40b42ad967bdccf47fdf60`, confirming the exact merged commit is
     `dashboard-web`'s `/` correctly redirects (307) to `/home` for an unauthenticated visitor.
     **The Ready for Claude Queue module backend is now genuinely live in production.** No
     `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
-    matching every prior module's own backend-first precedent.
-71. **Scan Center module backend — built, reviewed, gated (2026-09-02).** Module #31, Wave 1 on the
+    matching every prior module's own backend-first precedent. **Update (2026-09-02): the
+    `dashboard-web` UI has since been built, code-reviewed, and merged — see item 71 below.**
+
+71. **`dashboard-web` Ready for Claude Queue UI — built, code-reviewed, pushed, and merged
+    ([PR #101](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/101),
+    merge commit `63dd50b0a36008c3f2cc81a219b4f4f0d3d194b5`); now genuinely live in production
+    (2026-09-02).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #99, item 70 above). Built directly on the explicit "start
+    dashboard web ui" instruction. Mirrors Review and Approval Center's structure (the closest
+    sibling — organization-wide, no `:projectId` route segment, a polymorphic `targetModuleKey`/
+    `targetId` reference sourced from `session.navigation`), plus the module's own bespoke 11-state
+    `TRANSITIONS` table, hand-mirrored in `ReadyForClaudeTaskStatusActions` with the required
+    `{status, expectedStatus}` CAS body (unlike `InternalLinkStatusActions`' `{status}`-only
+    shape). New `packages/shared-types` `ReadyForClaudeTask`/`Status`/`Priority` types;
+    `lib/ready-for-claude-queue-query.ts` (zero-non-type-import file, reuses
+    `moduleDisplayName`/`sortModulesForPicker` from `review-and-approval-center-query.ts` directly
+    rather than duplicating them) and `lib/ready-for-claude-queue.ts` (server fetch functions, plus
+    degrade-on-failure picker fetches for projects and other tasks as dependencies). Four routes
+    under `app/(shell)/ready-for-claude-queue/`. Every long-text field stays a plain `<textarea>` —
+    a deliberate, documented exception to the 2026-08-22 rich-text standing rule, since the backend
+    DTO stores these fields as unsanitized plain text on purpose (D8) and converting the frontend
+    alone without a paired backend sanitization change would be dishonest.
+    `productionApproval`/`productionApproverUserId`/`retryCount` are server-managed and shown
+    read-only on the detail page only, never form fields. "Edit" is hidden once a task reaches a
+    terminal status (`completed`/`cancelled`/`failed`), matching `WebsiteStrategyRecordDetail`'s
+    own precedent. Built by a background agent with a fully-specified prompt, then independently
+    re-verified in full by the orchestrating session — every validation command re-run fresh
+    rather than trusted from the agent's own report: typecheck, lint (0 warnings, CSS-token check),
+    1622/1622 `dashboard-web` unit tests, `next build` (all 4 routes present), prettier — all
+    clean. **Independent code review then ran** (this project's own `code-review` skill, medium
+    effort, 8-angle finder pass, 1-vote self-verification) — 6 candidates kept after dedup, **2
+    CONFIRMED and fixed**: most severe, a real data-loss bug independently found by 4 of the 8
+    finder angles — the Operator/Developer/Reviewer `UserPicker` fields always started unset on
+    edit (never resolved from the task's real `operatorUserId`/`developerUserId`/`reviewerUserId`),
+    so saving any unrelated field (e.g. Title) silently wiped all three assignments to `null` — the
+    exact bug class this project already found and fixed once for `ProjectForm`'s owner field
+    (PR #30). Fixed with the same `owner`/`ownerTouched` pattern: the edit page now resolves the
+    three ids via `getUsersByIds()` and passes them to the form, which seeds local state from them
+    and gates the submit payload behind a per-field `*Touched` flag so an untouched picker
+    preserves the existing assignment exactly (including an unresolvable id) rather than coercing
+    it to `null`; a new regression test proves the fix. Also fixed: the list page rendered the raw
+    `targetModuleKey` string instead of resolving it through `moduleDisplayName()`, already used
+    one row above it for the filter dropdown — a real, visible label mismatch between the filter
+    and the row. **4 findings left as accepted, tracked debt**, each matching an already-established
+    pattern elsewhere in this codebase: dependency-title resolution on the detail page issuing up
+    to 50 individual HTTP fetches instead of a batch lookup; a `getServerSession()` call not
+    parallelized with two independent picker fetches on the new-task page; a hand-rolled id-to-name
+    `Map` duplicating the shared `lib/resolve-ids-to-names.ts` helper; and 4 fields bypassing the
+    form's own `textField()` helper with an inline copy of its identical ternary. Re-validated:
+    1623/1623 `dashboard-web` unit tests (1 new), typecheck/lint/`next build`/prettier all clean.
+    No separate `security-review` skill run, per the 2026-08-27 "right-size the review pipeline"
+    standing rule — a frontend-only slice consuming an already-reviewed, already-gated backend with
+    no new endpoint or sink; every rendered URL (`prUrl`/`stagingUrl`) is guarded by the existing,
+    already-audited `isSafeHttpUrl()`. **Unlike every prior module this session, no explicit
+    second-role human review or gate decision was separately requested before merge** — "Push the
+    branch and open a PR," "Check CI status on the PR," and "Merge PR #101" were each given as
+    their own direct instructions in immediate succession, with the code review above as the only
+    review step actually run. All 14 CI checks were confirmed green (`gh pr checks 101`) before
+    merging with a real merge commit (not squash/rebase), matching every prior merge in this
+    project's history — merge commit `63dd50b0a36008c3f2cc81a219b4f4f0d3d194b5`. Both Vercel
+    projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+    Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort == 63dd50b`,
+    confirming the exact merged commit is what's serving; `GET /ready-for-claude-queue/tasks`
+    returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean
+    the module never actually deployed); and `dashboard-web`'s `/ready-for-claude-queue` correctly
+    redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Ready for
+    Claude Queue UI is now genuinely live in production**, closing out this slice's full
+    build-to-production arc — backend and now the full UI (list, detail, create/edit form, status
+    actions) are both live for the Ready for Claude Queue module.
+
+72. **Scan Center module backend — built, reviewed, gated (2026-09-02).** Module #31, Wave 1 on the
     dependency-computed roadmap — no dependencies. Built directly on the explicit "start scan
     center" instruction. Two genuine forks confirmed with the user first (`AskUserQuestion`):
     record-keeping only (no real scanner/crawler/WordPress-adapter infrastructure exists anywhere
@@ -7109,6 +7178,53 @@ c6d19fe552404169bfb43399d170a38786e93617`, confirming the exact merged commit is
   `G4-dashboard-web-knowledge-library`). **"Push the branch" was then separately requested and
   executed** — pushed to `origin`. This gate approval does not itself authorize opening a PR or
   merging.
+- `[2026-09-02]` **Built the `dashboard-web` UI for Ready for Claude Queue**, under the explicit
+  "Ready for Claude Queue - start dashboard web ui" instruction, closing this module's last named
+  gap (backend live since PR #99, item 70). Built by a background agent with a fully-specified
+  prompt mirroring Review and Approval Center's structure (closest sibling — organization-wide, a
+  polymorphic `targetModuleKey`/`targetId` reference) plus the module's own bespoke 11-state
+  `TRANSITIONS` table. Every validation command independently re-run by the orchestrating session
+  rather than trusted from the agent's own report — typecheck, lint, 1622/1622 unit tests,
+  `next build` (all 4 routes present), prettier all clean. Committed to branch
+  `dashboard-web-ready-for-claude-queue-ui`.
+- `[2026-09-02]` **Independent code review run on `dashboard-web-ready-for-claude-queue-ui`,
+  medium effort — 8-angle finder pass, then both CONFIRMED findings fixed.** 6 candidates kept
+  after dedup. Most severe, independently found by 4 of the 8 finder angles: the Operator/
+  Developer/Reviewer `UserPicker` fields on the edit form always started unset, never resolved
+  from the task's real assignment ids, so saving any unrelated field silently wiped all three
+  assignments to `null` — the exact data-loss bug class already found and fixed once for
+  `ProjectForm`'s owner field (PR #30). Fixed with the same `owner`/`ownerTouched` pattern: the
+  edit page now resolves the three ids via `getUsersByIds()` and passes them to the form, gated
+  behind a per-field `*Touched` flag so an untouched picker preserves the existing assignment; a
+  new regression test proves the fix. Also fixed: the list page rendered the raw `targetModuleKey`
+  instead of resolving it through `moduleDisplayName()`, already used one row above it for the
+  filter dropdown. 4 findings left as accepted, tracked debt, each matching an already-established
+  pattern elsewhere in this codebase (dependency-title N-fetch resolution, a session fetch not
+  parallelized with two independent picker fetches, a hand-rolled id-to-name map duplicating the
+  shared `lib/resolve-ids-to-names.ts` helper, and 4 fields bypassing the form's own `textField()`
+  helper). Re-validated: 1623/1623 `dashboard-web` unit tests (1 new), typecheck/lint/`next
+build`/prettier all clean. No separate security-review skill run, per the 2026-08-27 "right-size
+  the review pipeline" standing rule — a frontend-only slice with no new endpoint or sink.
+- `[2026-09-02]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-ready-for-claude-queue-ui` — pushed to `origin`, opened as
+  [PR #101](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/101).
+  **"Check CI status on the PR" was then separately requested** — all 14 checks confirmed green
+  (`gh pr checks 101`), including both Vercel preview deployments. **Unlike every prior module this
+  session, no explicit second-role human review or gate decision was separately requested before
+  merge** — these three instructions were given in immediate succession, with the code review
+  above as the only review step actually run.
+- `[2026-09-02]` **"Merge PR #101" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `63dd50b0a36008c3f2cc81a219b4f4f0d3d194b5`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitShaShort == 63dd50b`, confirming the exact
+  merged commit is what's serving; `GET /ready-for-claude-queue/tasks` returned a clean `401`
+  (route live, `SessionGuard` enforcing — not a `404`, which would mean the module never actually
+  deployed); and `dashboard-web`'s `/ready-for-claude-queue` correctly redirects (307) an
+  unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Ready for Claude Queue UI is
+  now genuinely live in production**, closing out this slice's full build-to-production arc —
+  backend and now the full UI (list, detail, create/edit form, status actions) are both live for
+  the Ready for Claude Queue module.
 
 ## Open client blockers
 
