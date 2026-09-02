@@ -1,5 +1,4 @@
-import { literal, Op } from "sequelize";
-import { escapeLikePattern } from "../auth/user.repository.js";
+import { literal } from "sequelize";
 import { getImportAndExportCenterModels } from "./models.js";
 import { toEntityWithIsoDates } from "./entity-mapping.js";
 import type { ExportRunEntity, ExportRunStatus } from "./entities.js";
@@ -12,10 +11,6 @@ type ExportRunContentFields = Omit<
 export interface ExportRunListFilter {
   readonly targetModuleKey?: string;
   readonly status?: ExportRunStatus;
-  /** Fuzzy match on `targetModuleKey` — kept for symmetry with every sibling module's own
-   *  `search` filter, even though `targetModuleKey` is a closed, module-registry-validated value
-   *  in practice (no free-text field exists on this table to search instead). */
-  readonly search?: string;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -67,6 +62,13 @@ export class ExportRunRepository {
     return instance ? toEntityWithIsoDates<ExportRunEntity>(instance) : null;
   }
 
+  // No fuzzy `search` filter on this table — `targetModuleKey` is a closed, module-registry-
+  // validated value with no genuine free-text field to search instead, unlike `import_templates`'s
+  // own `name`. A prior `search` filter fuzzy-matched this SAME `targetModuleKey` column, which
+  // silently clobbered the exact-match filter above whenever both were supplied together
+  // (independent review finding) — removed rather than patched, matching Review and Approval
+  // Center's own established precedent of keeping a closed-vocabulary `targetModuleKey` exact-
+  // match-only.
   async list(filter: ExportRunListFilter = {}): Promise<readonly ExportRunEntity[]> {
     const where: Record<string, unknown> = {};
     if (filter.targetModuleKey) {
@@ -74,9 +76,6 @@ export class ExportRunRepository {
     }
     if (filter.status) {
       where.status = filter.status;
-    }
-    if (filter.search) {
-      where.targetModuleKey = { [Op.iLike]: `%${escapeLikePattern(filter.search)}%` };
     }
 
     const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);

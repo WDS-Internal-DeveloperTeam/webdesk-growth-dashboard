@@ -55,7 +55,13 @@ export class ImportTemplatesService {
 
     try {
       await this.auditService.record({
-        eventType: "import_run",
+        // "data_change" — the same event type Persona Library's/Service Library's/Scan Center's
+        // own definition-shaped `create()` uses for a plain content record, NOT "import_run"
+        // (reserved for `import_runs` rows; this entity is `import_templates`, a distinct table
+        // with no corresponding `AuditEventType` of its own). Fixed after independent review found
+        // `entityType: "import_template"` alongside `eventType: "import_run"` on the same audit
+        // row was internally inconsistent.
+        eventType: "data_change",
         actorUserId,
         actorType: "human",
         entityType: "import_template",
@@ -91,8 +97,10 @@ export class ImportTemplatesService {
     patch: UpdateImportTemplateDto,
     actorUserId: string,
   ): Promise<ImportTemplateEntity> {
-    await this.findById(id);
-
+    // No separate existence pre-check — `templates.update()` is already a real atomic
+    // `UPDATE ... RETURNING` that returns `null` when no row matched, and that `null` is checked
+    // right below; a prior `findById()` call here was a redundant extra round trip on every edit
+    // (independent review finding).
     const updated = await this.templates.update(id, { ...patch, updatedBy: actorUserId });
     if (!updated) {
       throw new NotFoundException(`Import template not found: ${id}`);
@@ -100,7 +108,7 @@ export class ImportTemplatesService {
 
     try {
       await this.auditService.record({
-        eventType: "import_run",
+        eventType: "data_change",
         actorUserId,
         actorType: "human",
         entityType: "import_template",

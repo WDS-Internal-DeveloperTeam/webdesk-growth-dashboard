@@ -187,14 +187,23 @@ export class ImportRunsService {
       );
     }
 
-    // rows/runErrors are only accepted alongside a transition into dry_run_completed/importing —
-    // rejected outright on any other target status, mirroring ScanRunsService's own "findings with
-    // the wrong target status" precedent.
+    // rows/runErrors are only accepted alongside the run's ORIGINAL validating -> dry_run_completed
+    // or validating -> importing transition (the design doc's own explicit wording) — NOT the
+    // separate dry_run_completed -> importing "promote" transition, even though `importing` is
+    // itself in STATUSES_ACCEPTING_ROWS. Gating on target status alone would let a caller submit a
+    // SECOND, full rows payload when promoting an already-validated dry run, double-inserting
+    // `import_rows` for the same logical source rows with no unique constraint to catch it and
+    // silently doubling `total_rows`/`success_count`/`error_count`/`skipped_count` (independent
+    // review finding) — fixed by requiring the FROM status be `validating` too, which the real
+    // TRANSITIONS table above only ever allows on the two transitions this guard is meant to cover.
     const hasRowsPayload =
       (body.rows && body.rows.length > 0) || (body.runErrors && body.runErrors.length > 0);
-    if (hasRowsPayload && !STATUSES_ACCEPTING_ROWS.has(nextStatus)) {
+    if (
+      hasRowsPayload &&
+      !(run.status === "validating" && STATUSES_ACCEPTING_ROWS.has(nextStatus))
+    ) {
       throw new BadRequestException(
-        `rows/runErrors may only be supplied when transitioning to dry_run_completed or importing (got: ${nextStatus})`,
+        `rows/runErrors may only be supplied when transitioning from validating to dry_run_completed or importing (got: ${run.status} -> ${nextStatus})`,
       );
     }
 

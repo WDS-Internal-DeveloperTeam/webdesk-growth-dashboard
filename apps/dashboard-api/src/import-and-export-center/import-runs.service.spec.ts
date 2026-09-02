@@ -227,6 +227,18 @@ describe("ImportRunsService", () => {
       expect(runs.updateStatus).not.toHaveBeenCalled();
     });
 
+    it("rejects a rows payload on the dry_run_completed -> importing promote transition (would double-insert rows already submitted on validating -> dry_run_completed)", async () => {
+      runs.findById.mockResolvedValue(run({ status: "dry_run_completed", isDryRun: true }));
+      await expect(
+        svc.changeStatus(
+          "run-1",
+          { status: "importing", rows: [{ rowNumber: 1, status: "imported" }] },
+          "actor-1",
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(runs.updateStatus).not.toHaveBeenCalled();
+    });
+
     it("bulk-creates rows and recomputes counts when transitioning to importing", async () => {
       runs.findById.mockResolvedValue(run({ status: "validating", isDryRun: false }));
       runs.updateStatus.mockResolvedValue({

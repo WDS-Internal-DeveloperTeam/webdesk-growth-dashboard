@@ -61,7 +61,7 @@ describe("ImportTemplatesService", () => {
       const result = await svc.create(input, "actor-1");
       expect(result.targetModuleKey).toBe("keyword_and_entity_library");
       expect(auditService.record).toHaveBeenCalledWith(
-        expect.objectContaining({ eventType: "import_run", action: "create" }),
+        expect.objectContaining({ eventType: "data_change", action: "create" }),
       );
     });
 

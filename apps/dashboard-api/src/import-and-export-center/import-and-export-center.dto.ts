@@ -1,5 +1,26 @@
 import { z } from "zod";
 
+// Unlike every free-text field in this file (each carrying an explicit `.max()` character cap),
+// `z.record(z.unknown())` alone imposes no size limit at all on `columnMapping`/`filterCriteria`/
+// `rawData` — a caller could submit an arbitrarily large JSON object into JSONB storage, and with
+// `rows` capped at MAX_ROWS_PER_TRANSITION entries each carrying its own `rawData`, one request
+// could write megabytes of unvalidated JSON (independent review finding). Bounded by serialized
+// byte size, not object shape (none of these three fields has any real schema to impose).
+const MAX_JSON_FIELD_BYTES = 50_000;
+function boundedJsonObjectSchema(fieldLabel: string) {
+  return z
+    .record(z.unknown())
+    .refine((value) => Buffer.byteLength(JSON.stringify(value), "utf8") <= MAX_JSON_FIELD_BYTES, {
+      message: `${fieldLabel} must serialize to at most ${MAX_JSON_FIELD_BYTES} bytes`,
+    });
+}
+
+// Same safe-boolean-coercion fix (guards against `z.coerce.boolean()`'s truthy-string trap, where
+// `?isActive=false` would otherwise coerce to `true`) named the same way at least 9 sibling DTO
+// files already do (`operational-contacts.dto.ts`, `content-template-library.dto.ts`, etc.) —
+// named here too so a future grep for this pattern finds this file (independent review finding).
+const booleanQueryParam = z.enum(["true", "false"]).transform((value) => value === "true");
+
 // --- shared enums ---
 
 export const importDuplicateStrategySchema = z.enum(["skip", "overwrite", "create_new"]);
@@ -47,10 +68,7 @@ export const exportRunStatusSchema = z.enum([
 // Center's own `targetModuleKey` field.
 export const listImportTemplatesQuerySchema = z.object({
   targetModuleKey: z.string().min(1).max(100).optional(),
-  isActive: z
-    .enum(["true", "false"])
-    .transform((value) => value === "true")
-    .optional(),
+  isActive: booleanQueryParam.optional(),
   search: z.string().max(255).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
@@ -63,7 +81,7 @@ export const createImportTemplateSchema = z.object({
   targetModuleKey: z.string().min(1).max(100),
   // Free-form source-column -> target-field pairs — no schema imposed, since the target module's
   // own field shape varies.
-  columnMapping: z.record(z.unknown()).nullish(),
+  columnMapping: boundedJsonObjectSchema("columnMapping").nullish(),
   duplicateStrategyDefault: importDuplicateStrategySchema.optional(),
   fileFormat: importExportFileFormatSchema,
   isActive: z.boolean().optional(),
@@ -76,7 +94,7 @@ export type CreateImportTemplateDto = z.infer<typeof createImportTemplateSchema>
 export const updateImportTemplateSchema = z
   .object({
     name: z.string().min(1).max(255).optional(),
-    columnMapping: z.record(z.unknown()).nullish(),
+    columnMapping: boundedJsonObjectSchema("columnMapping").nullish(),
     duplicateStrategyDefault: importDuplicateStrategySchema.optional(),
     fileFormat: importExportFileFormatSchema.optional(),
     isActive: z.boolean().optional(),
@@ -118,7 +136,7 @@ export type CreateImportRunDto = z.infer<typeof createImportRunSchema>;
 export const importRowInputSchema = z.object({
   rowNumber: z.number().int().min(1),
   externalId: z.string().max(500).nullish(),
-  rawData: z.record(z.unknown()).nullish(),
+  rawData: boundedJsonObjectSchema("rawData").nullish(),
   status: importRowStatusSchema,
   resolution: importRowResolutionSchema.nullish(),
   errorMessage: z.string().max(20_000).nullish(),
@@ -169,10 +187,12 @@ export type ListImportErrorsQueryDto = z.infer<typeof listImportErrorsQuerySchem
 
 // --- export_runs ---
 
+// No `search` param — `targetModuleKey` is a closed, module-registry-validated value with no
+// genuine free-text field on `export_runs` to search instead (independent review finding; see
+// `ExportRunRepository.list()`'s own doc comment).
 export const listExportRunsQuerySchema = z.object({
   targetModuleKey: z.string().min(1).max(100).optional(),
   status: exportRunStatusSchema.optional(),
-  search: z.string().max(255).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
@@ -183,7 +203,7 @@ export const createExportRunSchema = z.object({
   targetModuleKey: z.string().min(1).max(100),
   // An opaque, caller-supplied filter description — no schema imposed, mirrors
   // `createImportTemplateSchema`'s own `columnMapping` reasoning.
-  filterCriteria: z.record(z.unknown()).nullish(),
+  filterCriteria: boundedJsonObjectSchema("filterCriteria").nullish(),
   format: importExportFileFormatSchema,
 });
 export type CreateExportRunDto = z.infer<typeof createExportRunSchema>;

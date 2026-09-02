@@ -355,3 +355,57 @@ concepts. Fixed by capturing `bulkCreate()`'s return value and correlating by ar
 assert the real `importRowId` value (`"row-2"`) instead of only `objectContaining({importRunId,
 message})`, which had let the bug pass silently — re-run and confirmed it fails against the
 pre-fix code and passes against the fix.
+
+### Independent code review (this project's own `code-review` skill, high effort, 8-angle finder
+pass, 1-vote verification)
+
+10 candidates surfaced after dedup, all kept in the final report (6 CONFIRMED, 4 PLAUSIBLE).
+**All 6 CONFIRMED findings fixed**:
+
+- **Most severe**: `ExportRunRepository.list()`'s fuzzy `search` filter silently overwrote the
+  exact-match `targetModuleKey` filter, both writing to the same `where.targetModuleKey` key —
+  independently found by 2 of the 8 finder angles. Fixed by removing `search` entirely from
+  `export_runs` (repository, `ExportRunListFilter`, `listExportRunsQuerySchema`) — matching Review
+  and Approval Center's own established precedent of keeping a closed-vocabulary `targetModuleKey`
+  exact-match-only, since `export_runs` has no genuine free-text field to search instead.
+- A real design gap: `rows`/`runErrors` were accepted on the `dry_run_completed -> importing`
+  "promote" transition as well as `validating`'s own two transitions, since the guard checked only
+  the TARGET status, not the full `(from, to)` pair — letting a caller legitimately submit a
+  SECOND, full rows payload when promoting an already-validated dry run, silently doubling
+  `total_rows`/`success_count`/`error_count`/`skipped_count` with no unique constraint to catch it.
+  Fixed by requiring `run.status === "validating"` in addition to target-status membership, matching
+  the design doc's own explicit wording ("submitted only alongside the run's own
+  `validating -> dry_run_completed`/`validating -> importing` transition"). A new regression test
+  proves a rows payload on `dry_run_completed -> importing` is now rejected with a 400.
+- `import_templates.create()`/`.update()` recorded audit events with `eventType: "import_run"`
+  instead of the correct `"data_change"` — the same event type Persona Library's/Service Library's/
+  Scan Center's own definition-shaped `create()`/`update()` methods already use, confirmed by
+  reading their actual audit calls — leaving `entityType: "import_template"` alongside
+  `eventType: "import_run"` internally inconsistent on the same audit row. Fixed; the one existing
+  test asserting the old value was updated to match.
+- `columnMapping`/`filterCriteria`/`rawData` (JSONB fields) had no size bound at all, unlike every
+  other free-text field in the same DTO file (each carrying an explicit `.max()`). Fixed with a new
+  shared `boundedJsonObjectSchema()` helper (a `.refine()` capping serialized byte size at 50,000),
+  applied to all three fields; 4 new regression tests in a new
+  `import-and-export-center.dto.spec.ts` file prove both the accept and reject paths.
+- `ImportTemplatesService.update()` called `this.findById(id)` purely to trigger a
+  `NotFoundException` before calling `this.templates.update(...)`, even though the repository's own
+  atomic `UPDATE ... RETURNING` already returns `null` on no match and the service already checks
+  that — a redundant extra round trip on every template edit. Fixed by removing the pre-check.
+- The `isActive` boolean query param used an unnamed inline
+  `z.enum(["true","false"]).transform(...)` instead of the named `booleanQueryParam` pattern at
+  least 9 sibling DTO files already use for the identical safe-boolean-coercion fix (guarding
+  against `z.coerce.boolean()`'s truthy-string trap). Fixed by extracting and naming it the same way.
+
+**4 PLAUSIBLE findings left as accepted, tracked debt**, each judged disproportionate to fix in a
+review-fix pass given the real severity: `countByStatus()`/`applyRowCounts()` being two repository
+methods only ever called together at one call site (a real but low-cost implicit contract);
+`findByPublicId()` being dead code on all three repositories (copied from the sibling template but
+never wired into `create()`, which relies solely on catching `isSequelizeUniqueConstraintError`
+instead); `hasRowsPayload` being computed once then the same non-empty checks re-derived separately
+right after (cosmetic); and the row-count recompute doing 3 sequential round trips where 2 would
+suffice if `applyRowCounts()` used `returning: true` to hand back the updated entity directly
+(a real but marginal efficiency gain).
+
+Re-validated after every fix: 1756/1756 `dashboard-api` unit tests (6 new), `tsc --noEmit` clean on
+both `@webdesk/database`/`dashboard-api`, `eslint --max-warnings=0` clean, `prettier --check` clean.
