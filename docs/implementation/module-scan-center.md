@@ -141,9 +141,125 @@ committed.
   no file filter) — run in the background; see the session's own final report for the confirmed
   result.
 
+### Independent code review
+
+This project's own `code-review` skill, high effort — 8 finder angles (3 correctness, 3 cleanup,
+altitude, CLAUDE.md conventions) run via parallel subagents, each candidate independently
+1-vote-verified. 30+ candidates surfaced across all 8 angles; after dedup, the following were
+CONFIRMED (multiple angles independently converging on several) and fixed:
+
+- **`errorSummary` null-clearing bug** (independently found by 3 finder angles) — `ScanRunsService
+.changeStatus()` passed `body.errorSummary ?? undefined` to the repository, collapsing an explicit
+  `errorSummary: null` (a caller clearing a stale error message on retry) into "field omitted," so
+  the repository's own `if (errorSummary !== undefined)` guard silently left the old message in
+  place. Fixed by passing `body.errorSummary` through as-is.
+- **N+1, non-atomic findings-batch insert** (independently found by 4 finder angles) —
+  `changeStatus()` created up to 500 findings in a sequential `for`-loop, one `INSERT` per row; a
+  mid-batch failure silently left however many rows had already committed while the rest were
+  lost, with only a server-side log line. Fixed by adding `ScanFindingRepository.bulkCreate()`
+  (a single `Model.bulkCreate()` statement) and switching `changeStatus()` to call it once — the
+  whole batch now commits atomically (all rows or none).
+- **Missing `pg_trgm` index on `scan_definitions.name`** — `ScanDefinitionRepository.list()`'s own
+  `search` filter does an `Op.iLike` match on `name`, but the migration never added the GIN trigram
+  index every sibling module's own `search`-filtered column gets. Fixed in migration `00103`.
+- **Missing composite index on `scan_evidence`** — `list()` filters on `scan_finding_id` then sorts
+  by `(created_at DESC, id ASC)`, but only a bare single-column index existed. Fixed with a
+  composite `(scan_finding_id, created_at, id)` index, matching every sibling table's own
+  WHERE+ORDER-BY-matching index in this same migration.
+- **`resolvedAt`/`resolvedBy` asymmetry** (independently found by 2 finder angles) —
+  `ScanFindingRepository.updateStatus()` only stamped these on a transition into `resolved`, never
+  `dismissed`, even though `ScanFindingsService.changeStatus()` passes `actorUserId` for both
+  terminal dispositions. Fixed to stamp on both — both are fully terminal in `TRANSITIONS` (no
+  outbound edge from either), so this can only ever fire once per row.
+- **Missing unique-constraint catch on `ScanEvidenceService.create()`** (found during the
+  orchestrating session's own independent re-verification, before the formal review ran) — every
+  sibling `create()` catches `isSequelizeUniqueConstraintError` and converts a duplicate `publicId`
+  race into a clean 400; this one didn't, so it would have surfaced as a raw 500. Fixed.
+- **Hand-rolled CAS-result unwrap duplicated twice more** — `ScanRunsService.changeStatus()` and
+  `ScanFindingsService.changeStatus()` both hand-copied the `if (outcome === "not_found") ... if
+(outcome === "conflict") ...` branching instead of using the already-shared `unwrapCasResult()`
+  helper (`apps/dashboard-api/src/common/cas-result.util.ts`, extracted during Ready for Claude
+  Queue's own review specifically to stop this exact duplication). Both switched to call it.
+- **`ScanDefinitionRepository`'s update type didn't exclude `scanType`** — immutability after
+  create was enforced only by the DTO/controller, not the repository's own type; a future direct
+  caller of `.update()` could silently mutate the discriminator field with no compile error. Fixed
+  by excluding `scanType` from `ScanDefinitionUpdateFields`.
+
+**Left as accepted, tracked debt**, each either matching an already-established pattern elsewhere
+in this codebase or a genuine, low-severity RBAC-model tradeoff inherent to the seeded `scans`
+group's own letters (no submit/approve exists to split by):
+
+- The same-status no-op short-circuit in both `changeStatus()` methods returns before the
+  authorization check runs — the byte-identical, already-accepted pattern `InternalLinksService
+.changeStatus()` has.
+- The authorization check in both `changeStatus()` methods runs after transition-validity/business-
+  rule validation, not before — matches the same established Internal Linking Library precedent.
+- `configure` (`M`, super_admin-only) is left entirely unused, including for `scan_definitions
+.isEnabled` (arguably a "governs whether this can run" concern that could fit `M` better than the
+  generic `edit` it's gated on today) — a real, documented RBAC-letters-vs-actual-concerns
+  tradeoff, not fixed since no established precedent exists for retrofitting a new split action
+  onto an already-seeded RBAC group without its own separate authorization.
+- `owner_growth_approver` can create a scan run (`create`) but can never transition it (`edit`) —
+  a real usability gap if the intended workflow is "the approver manages their own ad hoc scan,"
+  but the RBAC matrix itself is out of this module's scope to change.
+- The `scan_run` audit `eventType` doesn't differentiate creation from each of the 7 possible
+  status transitions the way `job_created`/`job_completed`/`job_failed`/... does for jobs — relies
+  entirely on the free-text `action` string instead. Matches Internal Linking Library's own
+  identical `data_change`/`approval`-plus-`action`-string approach, not a novel deviation.
+- Several duplication findings (the 11-value `SCAN_TYPE_VALUES` array copy-pasted between
+  `models.ts`/`scan-center.dto.ts`/`entities.ts`; `DEFAULT_LIST_LIMIT`/`MAX_LIST_LIMIT` redeclared
+  in all four repository files; the pagination-fragment duplicated 4× in the DTO file; the
+  `findById`+IDOR-check pattern hand-copied across the module's own 4 services) — all confirmed to
+  match this codebase's own repo-wide, already-established "don't extract until the 2nd+ occurrence
+  across DIFFERENT modules" precedent, not a new deviation this module introduces.
+- Two low-priority missing indexes (`scan_definitions(project_id, is_enabled)`,
+  `scan_runs(project_id, scan_definition_id)`) — both boolean/low-cardinality or currently-low-
+  volume filters, matching this codebase's own established restraint about not indexing every
+  possible filter combination.
+
+Re-validated after every fix: typecheck/lint/prettier clean across both packages; 26/26
+`dashboard-api` unit tests (2 updated for the `bulkCreate` switch); `packages/database` fully
+rebuilt and re-typechecked after each repository-layer change.
+
+### Security review
+
+Run separately from the code review — focused on IDOR scoping (every `findById()`/`list()`
+re-verifies `entity.projectId === projectId` from the route param before returning), RBAC decorator
+placement (method-level throughout, `OriginCheckGuard` on every mutating route), the dynamic
+per-transition `assertAllowed()` calls correctly threading `projectId` so project-scoped grants are
+honored, `Op.iLike` search filters using the shared `escapeLikePattern()`, no mass-assignment path
+for server-managed fields (`status`/`resolvedAt`/`resolvedBy`/`startedAt`/`completedAt`), and
+`scan_evidence.reference` validated via the shared `safeHttpUrlSchema`. **0 findings above
+threshold.**
+
+### Final validation (after both review passes)
+
+Everything re-run for real, not trusted from any earlier partial run — a full `pnpm build` in
+`packages/database` was required after each repository-layer fix (the `bulkCreate()` addition, the
+`resolvedAt`/`resolvedBy` fix, the `scanType`-exclusion type fix) since `dashboard-api` consumes the
+compiled `dist/` output, not `packages/database`'s TypeScript source directly.
+
+- `pnpm --filter @webdesk/database exec tsc --noEmit` — clean.
+- `pnpm --filter dashboard-api exec tsc --noEmit` — clean.
+- `pnpm --filter dashboard-api run lint` (`eslint src test --max-warnings=0`) — clean.
+- `pnpm exec prettier --check` on every touched file — clean (after one `--write` pass to fix
+  CRLF-driven formatting drift from the initial merge).
+- A real migration `up`/`down`/`down`/`up` round-trip against a fresh disposable database — clean
+  (104 migrations applied, including `00103`/`00104` with the two new indexes).
+- `pnpm --filter dashboard-api exec vitest run --config vitest.config.mts src/scan-center` —
+  **26/26** unit tests passing (2 updated for the `bulkCreate` switch).
+- Full `pnpm --filter dashboard-api exec vitest run --config vitest.config.mts` — **1691/1691**
+  unit tests passing (no regressions).
+- Full `pnpm --filter @webdesk/database exec vitest run --config vitest.integration.config.mts` —
+  **799/799** integration tests passing (no regressions; includes the 12 scan-center tests, both
+  atomic `COALESCE` stamping mechanisms proven directly, both CAS-conflict paths).
+- Full `pnpm --filter dashboard-api exec vitest run --config vitest.integration.config.mts` —
+  **788/788** e2e tests passing (no regressions; includes the 8 scan-center tests — full real-HTTP
+  lifecycle, RBAC/IDOR/project-scoping regressions, duplicate-`publicId` 400).
+
 ### Not yet done
 
-Not reviewed (independent code review, security review), not gated, not pushed, not merged — each
-its own separate, not-yet-requested next step, per this project's standing discipline. No
-`dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step, matching
-every prior module's own backend-first precedent.
+The required second-role human review and a gate decision have not yet run — each its own
+separate, not-yet-requested next step, per this project's standing discipline. Not pushed, not
+merged. No `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
+matching every prior module's own backend-first precedent.

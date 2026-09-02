@@ -113,6 +113,14 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
   await context.addIndex("scan_definitions", ["project_id", "scan_type"], {
     name: "scan_definitions_project_id_scan_type_idx",
   });
+  // Fuzzy-search support on name — ScanDefinitionRepository.list()'s own `search` filter does an
+  // `Op.iLike` match on this column, the same pattern as scan_findings_title_trgm_idx below/
+  // internal_links_anchor_trgm_idx/keywords_query_text_trgm_idx. `CREATE EXTENSION IF NOT EXISTS`
+  // is idempotent, so calling it again below (once per table that needs it) is safe.
+  await context.sequelize.query("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+  await context.sequelize.query(
+    "CREATE INDEX scan_definitions_name_trgm_idx ON scan_definitions USING gin (name gin_trgm_ops);",
+  );
 
   await context.createTable("scan_runs", {
     id: {
@@ -351,8 +359,13 @@ export async function up({ context }: { context: QueryInterface }): Promise<void
     name: "scan_evidence_public_id_unique",
     unique: true,
   });
-  await context.addIndex("scan_evidence", ["scan_finding_id"], {
-    name: "scan_evidence_scan_finding_id_idx",
+  // Composite, matching ScanEvidenceRepository.list()'s own WHERE + ORDER BY exactly (every list
+  // call filters on scan_finding_id, then sorts by created_at DESC, id ASC) — a bare
+  // scan_finding_id-only index (every sibling table in this migration gets a composite matching
+  // its own list() shape) would force a separate sort step once a finding accumulates more than a
+  // handful of evidence rows.
+  await context.addIndex("scan_evidence", ["scan_finding_id", "created_at", "id"], {
+    name: "scan_evidence_scan_finding_id_created_at_id_idx",
   });
   await context.addIndex("scan_evidence", ["project_id"], {
     name: "scan_evidence_project_id_idx",

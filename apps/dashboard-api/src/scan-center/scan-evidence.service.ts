@@ -1,9 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import type {
   ScanEvidenceEntity,
   ScanEvidenceListFilter,
   ScanEvidenceRepository,
 } from "@webdesk/database";
+import { isSequelizeUniqueConstraintError } from "@webdesk/validation";
 import { SCAN_EVIDENCE_REPOSITORY } from "./scan-center.constants.js";
 import type { CreateScanEvidenceDto } from "./scan-center.dto.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
@@ -31,16 +32,28 @@ export class ScanEvidenceService {
     // precedent for this exact shape.
     const finding = await this.findingsService.findById(findingId, projectId);
 
-    const created = await this.evidence.create({
-      projectId,
-      publicId: input.publicId,
-      scanFindingId: finding.id,
-      evidenceType: input.evidenceType,
-      reference: input.reference,
-      notes: input.notes,
-      capturedAt: input.capturedAt,
-      createdBy: actorUserId,
-    });
+    let created: ScanEvidenceEntity;
+    try {
+      created = await this.evidence.create({
+        projectId,
+        publicId: input.publicId,
+        scanFindingId: finding.id,
+        evidenceType: input.evidenceType,
+        reference: input.reference,
+        notes: input.notes,
+        capturedAt: input.capturedAt,
+        createdBy: actorUserId,
+      });
+    } catch (error) {
+      // `scan_evidence.public_id` is globally unique (migration 00103) — without this catch, a
+      // duplicate publicId would surface as a raw 500 instead of a clean 400, the same bug class
+      // already fixed once in ScanDefinitionsService.create()/ScanRunsService.create() (this
+      // service alone was missing it).
+      if (isSequelizeUniqueConstraintError(error)) {
+        throw new BadRequestException(`publicId already in use: ${input.publicId}`);
+      }
+      throw error;
+    }
 
     await this.auditService.record({
       eventType: "data_change",

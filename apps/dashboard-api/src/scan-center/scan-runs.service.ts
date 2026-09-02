@@ -1,11 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   ScanFindingRepository,
   ScanRunEntity,
@@ -24,6 +18,7 @@ import type { ChangeScanRunStatusDto, CreateScanRunDto } from "./scan-center.dto
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuthorizationService } from "../authz/authorization.service.js";
+import { unwrapCasResult } from "../common/cas-result.util.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { ScanDefinitionsService } from "./scan-definitions.service.js";
 
@@ -157,30 +152,32 @@ export class ScanRunsService {
       run.projectId,
     );
 
-    const result = await this.runs.updateStatus(
-      id,
-      run.status,
-      nextStatus,
-      body.errorSummary ?? undefined,
+    // `body.errorSummary` must be passed through AS-IS, not `?? undefined` — the repository's
+    // `updateStatus()` deliberately distinguishes `undefined` (leave the column untouched) from
+    // `null` (clear it) from a string (set it), per `changeScanRunStatusSchema`'s own `.nullish()`
+    // contract. `?? undefined` would collapse an explicit `errorSummary: null` (a caller clearing
+    // a stale error message on retry) into "field omitted," silently leaving the old message in
+    // place — 3 independent code-review finder angles converged on this exact bug.
+    const result = await this.runs.updateStatus(id, run.status, nextStatus, body.errorSummary);
+    const updatedRun = unwrapCasResult(
+      result,
+      () => `Scan run not found: ${id}`,
+      (entity) =>
+        `Scan run ${id} status changed concurrently (expected ${run.status}, now ${entity.status}) — reload and retry`,
     );
-    if (result.outcome === "not_found") {
-      throw new NotFoundException(`Scan run not found: ${id}`);
-    }
-    if (result.outcome === "conflict") {
-      throw new ConflictException(
-        `Scan run ${id} status changed concurrently (expected ${run.status}, now ${result.entity.status}) — reload and retry`,
-      );
-    }
 
     // Findings are created after the run's own status write has committed — sequential, not one
     // SQL transaction with it, matching this codebase's own accepted precedent for audit-write-
-    // after-commit ordering (InternalLinksService.changeStatus()'s own audit call). A failure here
-    // is logged clearly, not silently dropped, since it means real scan output never made it into
-    // the database even though the run itself is marked done.
+    // after-commit ordering (InternalLinksService.changeStatus()'s own audit call). Inserted via
+    // ScanFindingRepository.bulkCreate() — ONE statement, not a per-row loop — so up to 500
+    // findings (scanRunFindingInputSchema's own .max(500)) commit atomically: either all persist
+    // or none do, never a silently-partial batch. A failure here is still logged clearly, not
+    // silently dropped, since it means real scan output never made it into the database even
+    // though the run itself is marked done.
     if (body.findings && body.findings.length > 0) {
       try {
-        for (const finding of body.findings) {
-          await this.findings.create({
+        await this.findings.bulkCreate(
+          body.findings.map((finding) => ({
             projectId: run.projectId,
             // A finding has no natural caller-supplied identifier (there is no standalone create
             // route for scan_findings) — a fresh UUID-based publicId, always well within the
@@ -192,8 +189,8 @@ export class ScanRunsService {
             title: finding.title,
             description: finding.description,
             location: finding.location,
-          });
-        }
+          })),
+        );
       } catch (error) {
         console.error(
           `Scan run ${id} transitioned to ${nextStatus}, but creating its ${body.findings.length} finding(s) failed:`,
@@ -222,6 +219,6 @@ export class ScanRunsService {
       );
     }
 
-    return result.entity;
+    return updatedRun;
   }
 }

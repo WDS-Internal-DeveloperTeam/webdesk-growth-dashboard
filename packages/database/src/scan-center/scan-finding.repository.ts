@@ -51,6 +51,39 @@ export class ScanFindingRepository {
     return toEntityWithIsoDates<ScanFindingEntity>(instance);
   }
 
+  /** Inserts every row in one statement, atomically — used by `ScanRunsService.changeStatus()`
+   *  when a run transitions into `completed`/`partially_completed` with a real findings payload
+   *  (up to 500 rows per `scanRunFindingInputSchema`'s own `.max(500)`). Replaces a one-row-at-a-
+   *  time loop that was both up to 500 sequential round-trips AND non-atomic — a mid-batch failure
+   *  used to leave however many rows had already committed silently persisted while the rest were
+   *  lost, with only a server-side log line; `bulkCreate()` fails (and inserts nothing) or succeeds
+   *  as one unit. */
+  async bulkCreate(
+    inputs: readonly (Partial<ScanFindingContentFields> &
+      Pick<
+        ScanFindingContentFields,
+        "projectId" | "publicId" | "scanRunId" | "severity" | "title"
+      >)[],
+  ): Promise<readonly ScanFindingEntity[]> {
+    if (inputs.length === 0) {
+      return [];
+    }
+    const instances = await this.model.bulkCreate(
+      inputs.map((input) => ({
+        projectId: input.projectId,
+        publicId: input.publicId,
+        scanRunId: input.scanRunId,
+        category: input.category ?? null,
+        severity: input.severity,
+        title: input.title,
+        description: input.description ?? null,
+        location: input.location ?? null,
+        status: "open",
+      })),
+    );
+    return instances.map((instance) => toEntityWithIsoDates<ScanFindingEntity>(instance));
+  }
+
   async findById(id: string): Promise<ScanFindingEntity | null> {
     const instance = await this.model.findByPk(id);
     return instance ? toEntityWithIsoDates<ScanFindingEntity>(instance) : null;
@@ -85,9 +118,13 @@ export class ScanFindingRepository {
   }
 
   /** Atomic compare-and-swap on `(id, status)`, mirroring `ScanRunRepository.updateStatus()`'s own
-   *  pattern. Conditionally stamps `resolvedAt`/`resolvedBy` when `nextStatus === "resolved"`, via a
-   *  `COALESCE(resolved_at, NOW())` literal so a repeat transition back into `resolved` (e.g. via
-   *  `dismissed -> resolved`) never resets the original resolution timestamp. */
+   *  pattern. Conditionally stamps `resolvedAt`/`resolvedBy` when `nextStatus` is either terminal
+   *  disposition (`resolved` OR `dismissed`) — both are "someone closed this finding" outcomes
+   *  (`ScanFindingsService.changeStatus()` passes `actorUserId` for both), via a
+   *  `COALESCE(resolved_at, NOW())` literal so the timestamp is never reset once first set.
+   *  `resolvedBy` is a plain unconditional assignment on that same branch — safe because both
+   *  `resolved`/`dismissed` are fully terminal in `ScanFindingsService`'s own `TRANSITIONS` table
+   *  (no outbound edge from either), so this write can only ever happen once per row. */
   async updateStatus(
     id: string,
     expectedCurrentStatus: ScanFindingStatus,
@@ -95,7 +132,7 @@ export class ScanFindingRepository {
     resolvedBy: string | null,
   ): Promise<UpdateScanFindingStatusResult> {
     const values: Record<string, unknown> = { status: nextStatus };
-    if (nextStatus === "resolved") {
+    if (nextStatus === "resolved" || nextStatus === "dismissed") {
       values.resolvedAt = literal('COALESCE("resolved_at", NOW())');
       values.resolvedBy = resolvedBy;
     }

@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   ScanFindingEntity,
   ScanFindingListFilter,
@@ -16,6 +10,7 @@ import { SCAN_CENTER_MODULE_KEY, SCAN_FINDING_REPOSITORY } from "./scan-center.c
 import { AuditService } from "../audit/audit.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- real (value) import: NestJS constructor injection needs the class reference at runtime.
 import { AuthorizationService } from "../authz/authorization.service.js";
+import { unwrapCasResult } from "../common/cas-result.util.js";
 
 /** No transition is disallowed from `open`/`acknowledged` (a reviewer may move a finding directly
  *  between any of the three dispositional states, or back to `open` to reconsider it); `resolved`/
@@ -73,14 +68,12 @@ export class ScanFindingsService {
     );
 
     const result = await this.findings.updateStatus(id, finding.status, nextStatus, actorUserId);
-    if (result.outcome === "not_found") {
-      throw new NotFoundException(`Scan finding not found: ${id}`);
-    }
-    if (result.outcome === "conflict") {
-      throw new ConflictException(
-        `Scan finding ${id} status changed concurrently (expected ${finding.status}, now ${result.entity.status}) — reload and retry`,
-      );
-    }
+    const updatedFinding = unwrapCasResult(
+      result,
+      () => `Scan finding not found: ${id}`,
+      (entity) =>
+        `Scan finding ${id} status changed concurrently (expected ${finding.status}, now ${entity.status}) — reload and retry`,
+    );
 
     try {
       await this.auditService.record({
@@ -102,6 +95,6 @@ export class ScanFindingsService {
       );
     }
 
-    return result.entity;
+    return updatedFinding;
   }
 }

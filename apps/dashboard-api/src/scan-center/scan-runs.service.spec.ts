@@ -61,7 +61,7 @@ describe("ScanRunsService", () => {
     list: ReturnType<typeof vi.fn>;
     updateStatus: ReturnType<typeof vi.fn>;
   };
-  let findings: { create: ReturnType<typeof vi.fn> };
+  let findings: { bulkCreate: ReturnType<typeof vi.fn> };
   let definitions: { findById: ReturnType<typeof vi.fn> };
   let authorizationService: { assertAllowed: ReturnType<typeof vi.fn> };
   let auditService: { record: ReturnType<typeof vi.fn> };
@@ -69,7 +69,7 @@ describe("ScanRunsService", () => {
 
   beforeEach(() => {
     runs = { create: vi.fn(), findById: vi.fn(), list: vi.fn(), updateStatus: vi.fn() };
-    findings = { create: vi.fn() };
+    findings = { bulkCreate: vi.fn() };
     definitions = { findById: vi.fn().mockResolvedValue(definition()) };
     authorizationService = { assertAllowed: vi.fn() };
     auditService = { record: vi.fn() };
@@ -182,7 +182,7 @@ describe("ScanRunsService", () => {
         outcome: "updated",
         entity: run({ status: "completed", publicId: "RUN-1" }),
       });
-      findings.create.mockResolvedValue({ id: "finding-1" });
+      findings.bulkCreate.mockResolvedValue([{ id: "finding-1" }, { id: "finding-2" }]);
 
       await svc.changeStatus(
         "run-1",
@@ -197,14 +197,19 @@ describe("ScanRunsService", () => {
         "actor-1",
       );
 
-      expect(findings.create).toHaveBeenCalledTimes(2);
-      expect(findings.create).toHaveBeenCalledWith(
+      expect(findings.bulkCreate).toHaveBeenCalledTimes(1);
+      expect(findings.bulkCreate).toHaveBeenCalledWith([
         expect.objectContaining({
           projectId: PROJECT_ID,
           scanRunId: "run-1",
           severity: "critical",
         }),
-      );
+        expect.objectContaining({
+          projectId: PROJECT_ID,
+          scanRunId: "run-1",
+          severity: "low",
+        }),
+      ]);
     });
 
     it("does not fail the transition if finding creation throws (logged, not rethrown)", async () => {
@@ -213,7 +218,7 @@ describe("ScanRunsService", () => {
         outcome: "updated",
         entity: run({ status: "completed" }),
       });
-      findings.create.mockRejectedValue(new Error("db down"));
+      findings.bulkCreate.mockRejectedValue(new Error("db down"));
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       const result = await svc.changeStatus(

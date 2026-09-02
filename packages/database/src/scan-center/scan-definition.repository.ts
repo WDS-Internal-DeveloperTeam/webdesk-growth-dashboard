@@ -6,9 +6,16 @@ import type { ScanDefinitionEntity, ScanType } from "./entities.js";
 
 type ScanDefinitionContentFields = Omit<ScanDefinitionEntity, "id" | "createdAt" | "updatedAt">;
 
-/** `update()`'s patch shape — `projectId`/`publicId` are excluded, both immutable after create
- *  (mirrors `InternalLinkUpdateFields`'s own precedent). */
-type ScanDefinitionUpdateFields = Omit<ScanDefinitionContentFields, "projectId" | "publicId">;
+/** `update()`'s patch shape — `projectId`/`publicId`/`scanType` are all excluded, all three
+ *  immutable after create (mirrors `InternalLinkUpdateFields`'s own precedent). `scanType`
+ *  exclusion is enforced HERE at the type level, not just by `updateScanDefinitionSchema` omitting
+ *  it — a future direct caller of `ScanDefinitionRepository.update()` (a script, a different
+ *  service, a test helper) can't silently mutate this immutable discriminator field without a
+ *  compile error. */
+type ScanDefinitionUpdateFields = Omit<
+  ScanDefinitionContentFields,
+  "projectId" | "publicId" | "scanType"
+>;
 
 export interface ScanDefinitionListFilter {
   readonly projectId: string;
