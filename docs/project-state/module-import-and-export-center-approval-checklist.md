@@ -2,7 +2,8 @@
 
 **Status:** Code review complete (high-effort 8-angle finder pass — 10 candidates kept, 6
 CONFIRMED and fixed, 4 PLAUSIBLE left as accepted tracked debt). Security review complete (0
-findings above threshold). Awaiting required second-role human review and gate decision.
+findings above threshold). Required second-role human review complete. Gate approved
+(G4-import-and-export-center, CONFIRM).
 
 ## Completion condition
 
@@ -83,4 +84,17 @@ audit-trail content (no secret-shaped data in any `afterState`). **0 findings ab
 
 ## Sign-off
 
-_Pending._
+**Required second-role human review complete** via the direct "Approve as-is, gate it and push
+the branch" instruction — since every CONFIRMED finding across both the code review and security
+review was already fixed, the 4 open PLAUSIBLE code-review findings were accepted as tracked debt
+rather than sent back for another pass. This project's own approval checklist findings tables
+above served as the review artifact.
+
+**The gate (G4-import-and-export-center) was then approved** — WebDesk Solution, decision CONFIRM
+(a clean pass, not an override, since the second-role review was already complete before the gate
+was requested), approved commit `3158b96` on branch `module-import-and-export-center` — see
+`outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+`G4-import-and-export-center`).
+
+**This gate approval does not itself authorize opening a PR or merging** — each remains its own
+separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
