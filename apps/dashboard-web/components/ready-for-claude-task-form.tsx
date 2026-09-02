@@ -51,7 +51,20 @@ function toTaskOption(task: ReadyForClaudeTask): RelationshipOption {
 
 export type ReadyForClaudeTaskFormProps = (
   | { readonly mode: "create" }
-  | { readonly mode: "edit"; readonly taskId: string; readonly initial: ReadyForClaudeTask }
+  | {
+      readonly mode: "edit";
+      readonly taskId: string;
+      readonly initial: ReadyForClaudeTask;
+      /** Server-resolved `UserSummary` for `initial.operatorUserId`/`developerUserId`/
+       *  `reviewerUserId` — `null` covers both "not assigned" and "assigned but the id no longer
+       *  resolves" (disabled/removed) identically, mirroring `ProjectForm`'s own `owner`/
+       *  `ownerUserId` split (fixed once already for a single field there; this closes the
+       *  identical data-loss bug — code review found the picker always started unset on edit and
+       *  an untouched save wiped all three assignments to `null`). */
+      readonly operator: UserSummary | null;
+      readonly developer: UserSummary | null;
+      readonly reviewer: UserSummary | null;
+    }
 ) & {
   /** Already sorted alphabetically by display name (`sortModulesForPicker()`) — real backing data
    *  for the `targetModuleKey` field, sourced from `getServerSession()`'s own already-fetched
@@ -101,7 +114,10 @@ export type ReadyForClaudeTaskFormProps = (
  * not a picker — mirroring `ReviewForm`'s own identical reasoning (no generic cross-module
  * record-lookup capability exists anywhere in this app). `dependencies` is a real,
  * existence-validated `RelationshipPicker` against this same table, excluding the task's own id.
- * `operatorUserId`/`developerUserId`/`reviewerUserId` are three independent `UserPicker` fields.
+ * `operatorUserId`/`developerUserId`/`reviewerUserId` are three independent `UserPicker` fields,
+ * each seeded from a server-resolved `UserSummary` on edit and guarded by its own `*Touched` flag
+ * so an unrelated save never wipes an existing assignment — the same pattern `ProjectForm`'s own
+ * `owner`/`ownerTouched` already established for `ownerUserId`.
  * `prUrl`/`stagingUrl` are validated client-side via `isSafeHttpUrl()` before submit, mirroring
  * every other stored-URL field in this app's own defense-in-depth convention.
  *
@@ -128,9 +144,18 @@ export function ReadyForClaudeTaskForm(props: ReadyForClaudeTaskFormProps): Reac
   const [targetId, setTargetId] = useState(initial?.targetId ?? "");
   const [stage, setStage] = useState(initial?.stage ?? "");
   const [dependencies, setDependencies] = useState<readonly string[]>(initial?.dependencies ?? []);
-  const [operator, setOperator] = useState<UserSummary | null>(null);
-  const [developer, setDeveloper] = useState<UserSummary | null>(null);
-  const [reviewer, setReviewer] = useState<UserSummary | null>(null);
+  const [operator, setOperator] = useState<UserSummary | null>(
+    props.mode === "edit" ? props.operator : null,
+  );
+  const [operatorTouched, setOperatorTouched] = useState(false);
+  const [developer, setDeveloper] = useState<UserSummary | null>(
+    props.mode === "edit" ? props.developer : null,
+  );
+  const [developerTouched, setDeveloperTouched] = useState(false);
+  const [reviewer, setReviewer] = useState<UserSummary | null>(
+    props.mode === "edit" ? props.reviewer : null,
+  );
+  const [reviewerTouched, setReviewerTouched] = useState(false);
   const [featureBranch, setFeatureBranch] = useState(initial?.featureBranch ?? "");
   const [sourceCommit, setSourceCommit] = useState(initial?.sourceCommit ?? "");
   const [prId, setPrId] = useState(initial?.prId ?? "");
@@ -236,14 +261,39 @@ export function ReadyForClaudeTaskForm(props: ReadyForClaudeTaskFormProps): Reac
         stage: textField(stage),
         dependencies:
           dependencies.length > 0 ? dependencies : props.mode === "create" ? undefined : [],
-        operatorUserId: operator ? operator.id : props.mode === "create" ? undefined : null,
-        developerUserId: developer ? developer.id : props.mode === "create" ? undefined : null,
+        // If a picker was never touched, preserve the task's existing assignment exactly as it was
+        // — including an unresolvable id (disabled/removed account) — rather than coercing it to
+        // null just because the resolved display value happens to be null. Mirrors ProjectForm's
+        // own ownerTouched contract.
+        operatorUserId:
+          props.mode === "edit" && !operatorTouched
+            ? (props.initial.operatorUserId ?? null)
+            : operator
+              ? operator.id
+              : props.mode === "create"
+                ? undefined
+                : null,
+        developerUserId:
+          props.mode === "edit" && !developerTouched
+            ? (props.initial.developerUserId ?? null)
+            : developer
+              ? developer.id
+              : props.mode === "create"
+                ? undefined
+                : null,
         featureBranch: textField(featureBranch),
         sourceCommit: textField(sourceCommit),
         prId: textField(prId),
         prUrl: trimmedPrUrl === "" ? (props.mode === "create" ? undefined : null) : trimmedPrUrl,
         prStatus: textField(prStatus),
-        reviewerUserId: reviewer ? reviewer.id : props.mode === "create" ? undefined : null,
+        reviewerUserId:
+          props.mode === "edit" && !reviewerTouched
+            ? (props.initial.reviewerUserId ?? null)
+            : reviewer
+              ? reviewer.id
+              : props.mode === "create"
+                ? undefined
+                : null,
         codeReviewResult: textField(codeReviewResult),
         stagingCommit: textField(stagingCommit),
         stagingDeployment: textField(stagingDeployment),
@@ -540,22 +590,46 @@ export function ReadyForClaudeTaskForm(props: ReadyForClaudeTaskFormProps): Reac
           id="operatorUserId"
           label="Operator"
           value={operator}
-          onChange={setOperator}
-          helperText="Optional."
+          onChange={(value) => {
+            setOperator(value);
+            setOperatorTouched(true);
+          }}
+          helperText={
+            props.mode === "edit" && !operatorTouched && !operator && props.initial.operatorUserId
+              ? "This task has an assigned operator that could not be resolved (the account may be disabled or removed). The existing assignment will be kept as-is unless you search and select someone new."
+              : "Optional."
+          }
         />
         <UserPicker
           id="developerUserId"
           label="Developer"
           value={developer}
-          onChange={setDeveloper}
-          helperText="Optional."
+          onChange={(value) => {
+            setDeveloper(value);
+            setDeveloperTouched(true);
+          }}
+          helperText={
+            props.mode === "edit" &&
+            !developerTouched &&
+            !developer &&
+            props.initial.developerUserId
+              ? "This task has an assigned developer that could not be resolved (the account may be disabled or removed). The existing assignment will be kept as-is unless you search and select someone new."
+              : "Optional."
+          }
         />
         <UserPicker
           id="reviewerUserId"
           label="Reviewer"
           value={reviewer}
-          onChange={setReviewer}
-          helperText="Optional."
+          onChange={(value) => {
+            setReviewer(value);
+            setReviewerTouched(true);
+          }}
+          helperText={
+            props.mode === "edit" && !reviewerTouched && !reviewer && props.initial.reviewerUserId
+              ? "This task has an assigned reviewer that could not be resolved (the account may be disabled or removed). The existing assignment will be kept as-is unless you search and select someone new."
+              : "Optional."
+          }
         />
       </fieldset>
 

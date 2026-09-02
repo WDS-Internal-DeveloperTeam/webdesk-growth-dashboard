@@ -169,6 +169,9 @@ describe("ReadyForClaudeTaskForm", () => {
         mode="edit"
         taskId={TASK_ID}
         initial={taskFixture(TASK_ID)}
+        operator={null}
+        developer={null}
+        reviewer={null}
         modules={MODULES}
         projects={PROJECTS}
         otherTasks={OTHER_TASKS}
@@ -184,6 +187,9 @@ describe("ReadyForClaudeTaskForm", () => {
         mode="edit"
         taskId={TASK_ID}
         initial={taskFixture(TASK_ID)}
+        operator={null}
+        developer={null}
+        reviewer={null}
         modules={MODULES}
         projects={PROJECTS}
         otherTasks={OTHER_TASKS}
@@ -198,6 +204,9 @@ describe("ReadyForClaudeTaskForm", () => {
         mode="edit"
         taskId={TASK_ID}
         initial={taskFixture(TASK_ID)}
+        operator={null}
+        developer={null}
+        reviewer={null}
         modules={MODULES}
         projects={PROJECTS}
         otherTasks={OTHER_TASKS}
@@ -214,6 +223,9 @@ describe("ReadyForClaudeTaskForm", () => {
         mode="edit"
         taskId={OTHER_TASK_ID}
         initial={taskFixture(OTHER_TASK_ID)}
+        operator={null}
+        developer={null}
+        reviewer={null}
         modules={MODULES}
         projects={PROJECTS}
         otherTasks={[
@@ -289,6 +301,9 @@ describe("ReadyForClaudeTaskForm", () => {
         mode="edit"
         taskId={TASK_ID}
         initial={taskFixture(TASK_ID, { title: "Old title" })}
+        operator={null}
+        developer={null}
+        reviewer={null}
         modules={MODULES}
         projects={PROJECTS}
         otherTasks={OTHER_TASKS}
@@ -304,6 +319,42 @@ describe("ReadyForClaudeTaskForm", () => {
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(`/ready-for-claude-queue/${TASK_ID}`),
     );
+  });
+
+  it("edit mode: saving an unrelated field preserves an existing operator/developer/reviewer assignment instead of wiping it (regression — code review finding)", async () => {
+    global.fetch = vi.fn().mockResolvedValue(successResponse(TASK_ID)) as typeof fetch;
+    const OPERATOR_ID = "44444444-4444-4444-4444-444444444444";
+    const DEVELOPER_ID = "55555555-5555-5555-5555-555555555555";
+    const REVIEWER_ID = "66666666-6666-6666-6666-666666666666";
+
+    render(
+      <ReadyForClaudeTaskForm
+        mode="edit"
+        taskId={TASK_ID}
+        initial={taskFixture(TASK_ID, {
+          title: "Old title",
+          operatorUserId: OPERATOR_ID,
+          developerUserId: DEVELOPER_ID,
+          reviewerUserId: REVIEWER_ID,
+        })}
+        operator={{ id: OPERATOR_ID, displayName: "Op User", email: "op@example.com" }}
+        developer={{ id: DEVELOPER_ID, displayName: "Dev User", email: "dev@example.com" }}
+        reviewer={{ id: REVIEWER_ID, displayName: "Rev User", email: "rev@example.com" }}
+        modules={MODULES}
+        projects={PROJECTS}
+        otherTasks={OTHER_TASKS}
+      />,
+    );
+    // Touch only the Title field — never interact with any UserPicker.
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New title" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+    const [, options] = vi.mocked(global.fetch).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as Record<string, unknown>;
+    expect(body.operatorUserId).toBe(OPERATOR_ID);
+    expect(body.developerUserId).toBe(DEVELOPER_ID);
+    expect(body.reviewerUserId).toBe(REVIEWER_ID);
   });
 
   it("shows the backend's error message on a failed submit", async () => {

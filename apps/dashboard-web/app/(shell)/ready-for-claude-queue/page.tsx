@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReadyForClaudeTask } from "@webdesk/shared-types";
+import type { ModuleRegistrySummary, ReadyForClaudeTask } from "@webdesk/shared-types";
 import { ContentContainer, EmptyState, PageHeader, StatusBadge } from "@webdesk/ui";
 import { PageSizeSelect } from "@/components/page-size-select";
 import { primaryActionLinkStyle } from "@/lib/action-link-style";
@@ -267,7 +267,7 @@ export default async function ReadyForClaudeQueueListPage({
               </thead>
               <tbody>
                 {tasks.map((task) => (
-                  <TaskRow key={task.id} task={task} />
+                  <TaskRow key={task.id} task={task} modules={modules} />
                 ))}
               </tbody>
             </table>
@@ -320,8 +320,17 @@ export default async function ReadyForClaudeQueueListPage({
   );
 }
 
-function TaskRow({ task }: { readonly task: ReadyForClaudeTask }) {
+function TaskRow({
+  task,
+  modules,
+}: {
+  readonly task: ReadyForClaudeTask;
+  readonly modules: readonly ModuleRegistrySummary[];
+}) {
   const badge = readyForClaudeTaskStatusBadge(task.status);
+  const targetModule = task.targetModuleKey
+    ? modules.find((module) => module.key === task.targetModuleKey)
+    : null;
   return (
     <tr>
       <td style={listTableCellStyle}>
@@ -333,7 +342,9 @@ function TaskRow({ task }: { readonly task: ReadyForClaudeTask }) {
               color: "var(--webdesk-dashboard-color-foreground-muted)",
             }}
           >
-            {task.targetModuleKey}
+            {/* Falls back to the raw key if it doesn't resolve against `modules` (a module
+                deactivated/renamed since this task was created) rather than hiding it. */}
+            {targetModule ? moduleDisplayName(targetModule) : task.targetModuleKey}
           </div>
         ) : null}
       </td>

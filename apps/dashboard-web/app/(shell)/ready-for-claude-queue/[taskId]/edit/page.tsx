@@ -9,6 +9,7 @@ import {
   sortModulesForPicker,
 } from "@/lib/ready-for-claude-queue";
 import { getServerSession } from "@/lib/server-session";
+import { getUsersByIds } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,15 @@ export default async function EditReadyForClaudeTaskPage({
     notFound();
   }
 
+  const userIds = new Set<string>();
+  if (task.operatorUserId) userIds.add(task.operatorUserId);
+  if (task.developerUserId) userIds.add(task.developerUserId);
+  if (task.reviewerUserId) userIds.add(task.reviewerUserId);
+  const users = await getUsersByIds([...userIds]);
+  const operator = task.operatorUserId ? (users.get(task.operatorUserId) ?? null) : null;
+  const developer = task.developerUserId ? (users.get(task.developerUserId) ?? null) : null;
+  const reviewer = task.reviewerUserId ? (users.get(task.reviewerUserId) ?? null) : null;
+
   return (
     <ContentContainer>
       <PageHeader
@@ -64,6 +74,9 @@ export default async function EditReadyForClaudeTaskPage({
           mode="edit"
           taskId={task.id}
           initial={task}
+          operator={operator}
+          developer={developer}
+          reviewer={reviewer}
           modules={modules}
           projects={projects}
           otherTasks={otherTasks}
