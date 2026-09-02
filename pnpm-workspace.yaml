@@ -90,7 +90,11 @@ overrides:
   webpack: ">=5.104.1 <6.0.0"
   js-yaml: ">=4.3.1 <5.0.0"
   lodash: ">=4.17.24 <5.0.0"
-  qs: ">=6.15.2 <7.0.0"
+  # Floor raised 6.15.2 -> 6.16.0 (2026-09-02): GHSA-x5fp-wj9c-mxmx (array-limit bypass, patched
+  # >=6.15.4) and GHSA-4mjr-xmp4-gh2g (isBuffer-controlled DoS, patched >=6.16.0), both newly
+  # surfaced against the same qs range this override already pinned -- confirmed via `pnpm audit`
+  # directly, not assumed; the prior floor was one patch short of the second advisory's own fix.
+  qs: ">=6.16.0 <7.0.0"
   body-parser: ">=1.20.6 <2.0.0"
   uuid: ">=11.1.1 <12.0.0"
   vite: ">=6.4.3 <7.0.0"

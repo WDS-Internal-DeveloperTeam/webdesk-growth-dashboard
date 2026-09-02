@@ -4492,6 +4492,92 @@ Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, 
     executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
     or merging.**
 
+76. **Import and Export Center module backend — built, reviewed, gated, pushed (2026-09-02).**
+    Module #34, key `import_and_export_center`, built directly on the explicit "Start
+    Import/Export Center" instruction. Two genuine design forks confirmed with the user first
+    (`AskUserQuestion`): record-keeping mechanism only (no real file-parsing/schema-mapping/
+    write-to-target-table engine, matching the Scan Center/Ready for Claude Queue precedent) and
+    organization-wide scope (matching Business Knowledge Center/Service Library/Persona Library,
+    not project-scoped). Five tables (`import_templates`, `import_runs`, `import_rows`,
+    `import_errors`, `export_runs`, migrations `00107`/`00108`). Two RBAC groups per the real
+    seeded matrix: `imports` (a genuine two-tier submit/review/approve gate on `import_runs`
+    before validation/execution, mirroring Service Library's/Persona Library's/Website Strategy
+    Center's dynamic-per-transition-action pattern — the seeded `imports` group has real
+    submit/review/approve letters, unlike Scan Center's own uniform-`edit` `scans` group) and
+    `exports` (a simple `export`-gated 5-state pipeline, no `create` letter — creating an export
+    run IS the `export` action). `target_module_key` on both `import_templates`/`export_runs` is
+    validated against the real module registry via `AuthorizationService.isValidModuleKey()`,
+    mirroring Review and Approval Center's own `targetModuleKey` treatment.
+    `excludesConfidentialFields` on `export_runs` is a real, non-nullable, always-true-at-creation
+    column — the module registry's own `confidentialityLevel` note for this module ("export
+    excludes confidential fields unless separately authorized") shapes this field rather than a
+    redaction mechanism, since no confidential business fields exist on this module's own data.
+    Built by a background agent with a fully-specified prompt mirroring Scan Center's
+    repository/CAS pattern and Review and Approval Center's org-wide dynamic-per-transition-action
+    controller pattern, then independently re-verified in full by the orchestrating session —
+    every high-risk file read directly, every test suite re-run fresh, plus a real repository-layer
+    smoke test against a disposable local PostgreSQL 17 database (template version-increment, CAS
+    transitions with timestamp stamping, a real stale-CAS conflict, bulk row/error creation, the
+    `GROUP BY` count aggregate, count application) — all matched expected values. **One real
+    correctness bug found and fixed during this independent verification pass, before the formal
+    code review even ran**: row-specific errors weren't linked back to their created row's real
+    id, since the service discarded `ImportRowRepository.bulkCreate()`'s return value. **Independent
+    code review then ran** (this project's own `code-review` skill, high effort, 8-angle finder
+    pass via parallel subagents) — 10 candidates kept in the final report (6 CONFIRMED, 4
+    PLAUSIBLE), **all 6 CONFIRMED findings fixed**. Most severe:
+    `ExportRunRepository.list()`'s `search` filter silently overwrote the exact-match
+    `targetModuleKey` filter — both wrote to the same `where` key, found independently by 2 of 8
+    finder angles — fixed by removing `search` entirely from `export_runs` (no genuine free-text
+    field exists on that table), matching Review and Approval Center's own exact-match-only
+    precedent. Also fixed: a real double-submission gap where `rows`/`runErrors` could be
+    submitted twice for the same run (once on `validating -> dry_run_completed`, again on the
+    later `dry_run_completed -> importing` "promote" transition), silently doubling
+    `total_rows`/`success_count`/`error_count`/`skipped_count` with no unique constraint to catch
+    it — closed by requiring the FROM status be `validating` too, matching the design doc's own
+    explicit wording, with a new regression test proving the rejection; a wrong audit `eventType`
+    on `import_templates` (`"import_run"` instead of the correct `"data_change"`, the convention
+    every sibling definition-shaped module's own `create()`/`update()` uses, confirmed by reading
+    Persona Library's/Service Library's/Scan Center's own audit calls); an unbounded JSONB size on
+    `columnMapping`/`filterCriteria`/`rawData` (added a new shared `boundedJsonObjectSchema()`
+    helper, a 50,000-byte serialized-size cap, with 4 new regression tests); a redundant
+    existence-check round trip in `ImportTemplatesService.update()` before the repository's own
+    atomic `UPDATE ... RETURNING`; and an unnamed boolean-query-param pattern diverging from the
+    named `booleanQueryParam` convention at least 9 sibling DTO files already use. **4 PLAUSIBLE
+    findings left as accepted, tracked debt**, each judged disproportionate to fix in a
+    review-fix pass: `countByStatus()`/`applyRowCounts()` being two repository methods only ever
+    called together at one call site; a dead `findByPublicId()` method on all three repositories
+    (copied from the sibling template, never wired into any `create()`); `hasRowsPayload` computed
+    once then the same non-empty checks re-derived separately right after (cosmetic); and the
+    row-count recompute doing 3 sequential round trips where 2 would suffice with `returning: true`
+    on `applyRowCounts()`. **A separate `security-review` skill run then found 0 findings above
+    threshold** — confirmed method-level RBAC decorators throughout, `OriginCheckGuard` on every
+    mutating route, no SQL/`Op.iLike` injection surface beyond the one correctly-escaped search
+    filter (`import_templates`'s own `name` search), no mass-assignment path for any
+    server-managed field (`status`, the four row-count fields, `startedAt`/`completedAt`,
+    `templateVersion`, `version`, and specifically `excludesConfidentialFields`, confirmed
+    genuinely un-toggleable), correct IDOR scoping on the `import_rows`/`import_errors`
+    sub-resources (both `findById()` re-check the resolved row's own `importRunId` against the
+    URL's `:runId`), and no bypass path in the dynamic per-transition RBAC check (traced every
+    `TRANSITIONS` entry — no path reaches `approve` without `assertAllowed()` rejecting first).
+    Final numbers: 1756/1756 `dashboard-api` unit tests (6 new), a real migration up/down/down/up
+    round-trip against a disposable local PostgreSQL 17 database (108 executed, 0 pending),
+    `validate:module-registry` clean (43 modules, 21 permission groups), typecheck/lint/prettier
+    all clean. See `docs/implementation/module-import-and-export-center.md` and
+    `docs/project-state/module-import-and-export-center-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it and push the branch"
+    instruction** — the approval checklist's own findings tables served as the review artifact,
+    accepting the 4 open PLAUSIBLE code-review findings as tracked debt. **The gate
+    (G4-import-and-export-center) was then approved** — WebDesk Solution, decision CONFIRM (clean
+    pass, not an override, since the second-role review was already complete before the gate was
+    requested), approved commit `3158b96` on branch `module-import-and-export-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-import-and-export-center`). **"Push the branch" was then separately requested and
+    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
+    or merging** — each remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a
+    separate, not-yet-requested next step, matching every prior module's own backend-first
+    precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -7443,6 +7529,28 @@ build`/prettier all clean. No separate security-review skill run, per the 2026-0
   now genuinely live in production**, closing out this slice's full build-to-production arc —
   backend and now the full UI (list, detail, create/edit form, status actions) are both live for
   the Ready for Claude Queue module.
+- `[2026-09-02]` **Built the Import and Export Center module backend** (module #34), on the
+  explicit "Start Import/Export Center" instruction. Two genuine design forks confirmed with the
+  user first (`AskUserQuestion`): record-keeping mechanism only (matching Scan Center/Ready for
+  Claude Queue) and organization-wide scope. Full account in item 75 above and
+  `docs/implementation/module-import-and-export-center.md`.
+- `[2026-09-02]` **Independent code review run on `module-import-and-export-center`, high effort —
+  8-angle finder pass, then all 6 CONFIRMED findings fixed.** 10 candidates kept in the final
+  report. Most severe: `ExportRunRepository.list()`'s `search` filter silently overwrote the
+  exact-match `targetModuleKey` filter, and rows/errors could be double-submitted across the
+  `validating -> dry_run_completed` and `dry_run_completed -> importing` transitions. Also fixed a
+  wrong audit `eventType` on `import_templates`, an unbounded JSONB size on 3 fields, a redundant
+  existence-check round trip, and an unnamed boolean-query-param pattern. 4 PLAUSIBLE findings left
+  as accepted, tracked debt. See item 75 above for the full account.
+- `[2026-09-02]` **Security review run on `module-import-and-export-center`, separately from the
+  code review.** 0 findings above threshold — confirmed route guard coverage, no injection surface
+  beyond the one correctly-escaped search filter, no mass-assignment path for any server-managed
+  field (including `excludesConfidentialFields`, confirmed genuinely un-toggleable), correct IDOR
+  scoping on `import_rows`/`import_errors`, and no bypass in the dynamic per-transition RBAC check.
+- `[2026-09-02]` **Required second-role human review and the gate were both completed via the
+  direct "Approve as-is, gate it and push the branch" instruction.** Gate
+  `G4-import-and-export-center` approved (WebDesk Solution, CONFIRM), approved commit `3158b96` —
+  see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`. Branch pushed to `origin`.
 
 ## Open client blockers
 
