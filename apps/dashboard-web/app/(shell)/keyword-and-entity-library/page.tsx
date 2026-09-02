@@ -48,9 +48,11 @@ interface KeywordLibraryListPageProps {
  * their own routes under `/keyword-and-entity-library/entities`. Like Page Inventory, this module
  * is genuinely project-scoped (`keyword-and-entity-library/projects/:projectId/keywords`) — this
  * list page is the one place that has to establish which project before it can render anything
- * else. `?projectId=` is the source of truth throughout this module, mirroring Page Inventory's own
- * already-confirmed convention: the header Project Switcher's `wds_current_project` cookie stays
- * purely advisory, only used here to pre-select the picker's default option.
+ * else. An explicit `?projectId=` wins when present; otherwise the header Project Switcher's
+ * `wds_current_project` cookie is used directly (its own `router.refresh()` on change keeps this
+ * page current live, per 2026-09-02's fix closing the "current project" propagation gap — no more
+ * per-page picker step duplicating the header). Only when NEITHER resolves to a real project does
+ * this page fall back to a project-picker prompt.
  *
  * Renders exactly what `GET .../keywords` returns and supports — the filters the backend's own
  * `listKeywordsQuerySchema` accepts, and the columns named in the build instructions (query text,
@@ -70,21 +72,24 @@ export default async function KeywordLibraryListPage({
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  // The header Project Switcher's cookie is now the real fallback source of truth, not just a
+  // picker pre-fill — an explicit `?projectId=` still overrides it.
+  const cookieStore = await cookies();
+  const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+  const effectiveProjectId = projectIdParam ?? defaultProjectId;
 
   // Fired concurrently with the project-existence check below, not sequentially after it,
   // matching Page Inventory's own fixed ordering (code-review finding, `dashboard-web-page-
   // inventory`) — `getKeywords()` only needs the raw `projectId` string, not any field resolved
   // from the `Project` entity itself. `tolerateDiscard()` avoids an unhandled-rejection warning on
   // the branch where `project` turns out null and this promise is never awaited.
-  const keywordsPromise = projectIdParam
-    ? tolerateDiscard(getKeywords(parseKeywordLibrarySearchParams(projectIdParam, rawParams)))
+  const keywordsPromise = effectiveProjectId
+    ? tolerateDiscard(getKeywords(parseKeywordLibrarySearchParams(effectiveProjectId, rawParams)))
     : null;
 
-  const project = projectIdParam ? await getProject(projectIdParam) : null;
+  const project = effectiveProjectId ? await getProject(effectiveProjectId) : null;
 
   if (!project) {
-    const cookieStore = await cookies();
-    const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
     const { items: projects } = await getProjects({
       search: null,
       status: null,
@@ -135,9 +140,6 @@ export default async function KeywordLibraryListPage({
         title={`Keyword & Entity Library — ${project.name}`}
         contextActions={
           <>
-            <Link href={clearFiltersHref} style={{ fontSize: "0.875rem" }}>
-              Switch project
-            </Link>
             <Link
               href={withProjectId("/keyword-and-entity-library/entities", project.id)}
               style={{ fontSize: "0.875rem", alignSelf: "center" }}

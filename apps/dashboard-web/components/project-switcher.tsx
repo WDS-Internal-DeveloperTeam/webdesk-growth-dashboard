@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type { ProjectSummary } from "@webdesk/shared-types";
 import { CURRENT_PROJECT_COOKIE } from "@/lib/current-project";
@@ -25,14 +26,19 @@ const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 /**
  * Header project context switcher (`07_Low_Fidelity_Wireframes.md` §1's "Project Switcher"
  * placeholder — no interaction spec beyond the label existed before this). Selecting a project
- * only persists the choice to `CURRENT_PROJECT_COOKIE` for now; no other module reads it yet
- * (`docs/task-packages/module-projects-foundation.md` D7 flags wiring a real downstream project
- * context as separate, still-undesigned scope). A native `<select>` rather than a custom listbox —
- * fully keyboard/screen-reader accessible for free, and no approved visual design exists yet to
- * justify a bespoke control (Phase 1F's own "neutral foundations where visual detail isn't yet
- * approved" precedent, `docs/implementation/phase-1f-application-shell.md`).
+ * persists the choice to `CURRENT_PROJECT_COOKIE` and calls `router.refresh()` so any
+ * currently-viewed project-scoped page (Page Inventory, Scan Center, Technical Center, etc.)
+ * re-resolves against the new project immediately — this is now the real, single "current
+ * project" mechanism those pages read (`docs/task-packages/module-projects-foundation.md` D7's
+ * long-deferred downstream-context gap, closed 2026-09-02 after a duplicated, non-functional
+ * per-page "Switch project" link was found still hardcoding the OLD project id). A native
+ * `<select>` rather than a custom listbox — fully keyboard/screen-reader accessible for free, and
+ * no approved visual design exists yet to justify a bespoke control (Phase 1F's own "neutral
+ * foundations where visual detail isn't yet approved" precedent,
+ * `docs/implementation/phase-1f-application-shell.md`).
  */
 export function ProjectSwitcher({ projects, initialProjectId }: ProjectSwitcherProps): ReactNode {
+  const router = useRouter();
   // A cookie naming a project that's since been deleted, or that this caller can no longer see,
   // must not select a nonexistent <option> — falls back to "All projects" instead.
   const validInitialId =
@@ -58,6 +64,9 @@ export function ProjectSwitcher({ projects, initialProjectId }: ProjectSwitcherP
     setSelectedId(projectId);
     const expires = new Date(Date.now() + COOKIE_MAX_AGE_SECONDS * 1000).toUTCString();
     document.cookie = `${CURRENT_PROJECT_COOKIE}=${projectId}; path=/; expires=${expires}; SameSite=Lax`;
+    // Refresh so a project-scoped page currently on screen re-resolves against the new project
+    // right away, rather than only picking it up on the next unrelated navigation.
+    router.refresh();
   }
 
   return (

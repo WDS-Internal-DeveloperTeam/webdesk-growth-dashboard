@@ -457,7 +457,15 @@ cf507d7edc569dac4807cf456540e7412a1cfea8`, and `dashboard-web`'s `/` resolves (v
     blocker still holds (neither Business Knowledge Center nor Service Library ended up
     project-scoped — both are organization-wide), presented again (`AskUserQuestion`), and the
     user again chose to defer, recording it for later rather than building now — see the
-    2026-08-22 "Recent decisions" entry.**
+    2026-08-22 "Recent decisions" entry.** **Update (2026-09-02): gap (5) is now closed — see item
+    80 below and the 2026-09-02 "Recent decisions" entry. Prompted by direct user feedback on a
+    live Technical Center screenshot ("project selection is useless as we have already given the
+    project selection on the top bar"), not the design-prompt path originally expected. The header
+    Project Switcher's cookie is now the real fallback source of truth for every project-scoped
+    page (Page Inventory, Scan Center, Technical Center, Change Center, Internal Linking Library,
+    Keyword & Entity Library, Page Workspace), and a genuinely dead "Switch project" link (it
+    silently pointed at the SAME project id, only ever clearing filters) was removed from the six
+    pages that had one.**
 14. **User lookup capability + Project owner assignment — built, validated, code-reviewed,
     security-reviewed, second-role human reviewed, gated, merged, and live in production
     (2026-08-17).**
@@ -4750,8 +4758,10 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     `dashboard-web` UI existed yet as of this entry — see item 79 below for its own
     build-to-production arc.
 
-79. **`dashboard-web` Technical Center UI — built, reviewed, gated, pushed
-    (2026-09-02).** Closes this module's last named gap, following the backend's own
+79. **`dashboard-web` Technical Center UI — built, reviewed, gated, pushed, opened as
+    [PR #109](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/109),
+    and merged; now genuinely live in production (2026-09-02).** Closes this module's last named
+    gap, following the backend's own
     build-to-production arc (PR #108, item 78 above). Not started automatically — built directly
     on the explicit "Technical Center - Start Dashboard web UI" instruction. This local checkout
     was 4 commits behind `origin/main` (the backend had already merged from another session) —
@@ -4792,10 +4802,69 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     (G4-dashboard-web-technical-center) was then separately requested and approved** — WebDesk
     Solution, decision CONFIRM (clean pass, not an override), approved commit `dc39ba7` on branch
     `dashboard-web-technical-center` — see `outputs/webdesk-growth-dashboard/project.json`'s
-    `gates[]` (`current_gate` now `G4-dashboard-web-technical-center`). **"Push the branch" was
-    then separately requested and executed** — pushed to `origin`. **This gate approval does not
-    itself authorize opening a PR or merging** — each remains its own separate, not-yet-requested
-    authorization, per this project's standing "no auto-merge" rule.
+    `gates[]` (`current_gate` now `G4-dashboard-web-technical-center`). **"Push the branch" and
+    "Open a PR" were then separately requested and executed** — pushed to `origin`, opened as
+    [PR #109](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/109).
+    One CI check ("Database migration test") failed on the first run — confirmed unrelated to this
+    PR's diff (it touches only `apps/dashboard-web`/`packages/shared-types`, no migrations) via a
+    real `git diff --name-only` check against the base commit, a pre-existing flake in the shared
+    `packages/database` integration-test suite's own migration-name collision under concurrent
+    test files; re-ran the job and it passed clean, confirming the diagnosis. All 14 checks then
+    green. **"Merge PR #109" was then separately requested and executed** — merged with a real
+    merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+    commit `308becfee1b3cab18d67dd3d089d1d9641c04527`. `dashboard-api` auto-deployed on push to
+    `main` and was verified live directly — `/health` returned `build.commitShaShort == 308becf`,
+    confirming the exact merged commit is what's serving; and `dashboard-web`'s `/technical-center`
+    correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web`
+    Technical Center UI is now genuinely live in production**, closing out this slice's full
+    build-to-production arc — backend and now the full UI are both live for the Technical Center
+    module.
+
+80. **Current-project context propagation fix — built, reviewed, and gated; not yet pushed,
+    opened as a PR, or merged (2026-09-02).** Closes the long-deferred gap (5) from item 13's
+    Projects-module gap analysis — see the updated entry there for the full history of the two
+    prior deferrals (2026-08-20, 2026-08-22). Not started automatically — built directly after the
+    user pointed at a live Technical Center screenshot and said the in-page project selector was
+    "useless as we have already given the project selection on the top bar." Investigation
+    confirmed the complaint and found it was sharper than it first looked: the in-page picker only
+    ever showed because sidebar-nav links carry no `?projectId=` query param, regardless of what
+    the header already had selected — and once a project WAS resolved, the page's own "Switch
+    project" link turned out to be genuinely dead, silently pointing at the SAME project id (only
+    ever clearing filters, never switching anything). Scope confirmed directly with the user
+    (`AskUserQuestion`: fix Technical Center only, or all 6 project-scoped modules) — **the user
+    chose the broader fix**; Page Workspace was added as a 7th/8th affected file since it shares
+    the identical pattern and would have been left inconsistently un-fixed otherwise. Two changes:
+    (1) `ProjectSwitcher` (the header) now calls `router.refresh()` after writing
+    `CURRENT_PROJECT_COOKIE`, so any project-scoped page already on screen re-resolves against the
+    new project immediately; (2) all eight pages (Page Inventory, Scan Center, Technical Center,
+    Change Center, Internal Linking Library, Keyword & Entity Library's keywords and entities
+    routes, Page Workspace) now resolve their project id as `projectIdParam ?? defaultProjectId`
+    (an explicit `?projectId=` still overrides) instead of requiring the URL param outright — the
+    in-page picker now only renders when NEITHER the URL nor the cookie resolves to a real
+    project. The dead "Switch project" link was removed from the six pages that had one;
+    `clearFiltersHref`, which it reused, stays in place for the real "Clear filters" action.
+    `ProjectPickerForm`'s own doc comment was corrected — the cookie is no longer "purely
+    advisory." No backend change. See
+    `docs/implementation/current-project-context-propagation-fix.md` for the full account.
+    Independently re-verified: `pnpm --filter dashboard-web typecheck`/`lint` clean, 1823/1823
+    unit tests passing (unchanged — no test asserted on the removed link or old picker-first
+    behavior), `next build` clean, `prettier --check` clean; live-rendered in the Browser pane —
+    all seven affected routes redirect an unauthenticated visitor cleanly with zero console
+    errors (no local `dashboard-api`/database available in this environment, so the authenticated
+    success path wasn't visually confirmed, the same limitation several prior slices have noted).
+    **Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing
+    rule — a frontend-only routing/UX fix touching no new endpoint, RBAC, or sink; every page
+    already fetches through its own already-reviewed function, and only the origin of the
+    `projectId` string (URL vs. cookie) changes. A direct read-through pass covered the
+    empty-string cookie edge case (selecting "All projects" in the header correctly falls through
+    to the picker, not a broken fetch) and confirmed `clearFiltersHref` remains genuinely used on
+    every touched page after the dead-link removal — **0 findings**. No separate security review —
+    no new endpoint, no new sink, no auth-relevant code touched. See
+    `docs/project-state/current-project-context-propagation-fix-approval-checklist.md`. Required
+    second-role human review and a gate decision remain each their own separate, not-yet-requested
+    next step — this fix has not yet been pushed, opened as a PR, or merged, per this project's
+    standing "no
+    auto-merge" rule.
 
 ## Recent decisions
 

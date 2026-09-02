@@ -43,11 +43,12 @@ interface ChangeCenterListPageProps {
 
 /**
  * Change records are project-scoped (`change-center/projects/:projectId/records`), same pattern
- * as Internal Linking Library/Page Inventory/Keyword & Entity Library — `?projectId=` is the
- * source of truth throughout this module. The header Project Switcher's `wds_current_project`
- * cookie stays purely advisory, only used here to PRE-SELECT the picker's default option, never to
- * bypass it. When `?projectId=` is missing or doesn't resolve to a real project, this page renders
- * a project-picker prompt instead of a table.
+ * as Internal Linking Library/Page Inventory/Keyword & Entity Library. An explicit `?projectId=`
+ * wins when present; otherwise the header Project Switcher's `wds_current_project` cookie is used
+ * directly (its own `router.refresh()` on change keeps this page current live, per 2026-09-02's
+ * fix closing the "current project" propagation gap — no more per-page picker step duplicating
+ * the header). Only when NEITHER resolves to a real project does this page fall back to a
+ * project-picker prompt.
  *
  * Once a project is resolved, renders exactly what `GET .../records` returns and supports — the
  * filters the backend's own `listChangeRecordsQuerySchema` accepts (`category`/`severity`/
@@ -66,21 +67,26 @@ export default async function ChangeCenterListPage({ searchParams }: ChangeCente
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  // The header Project Switcher's cookie is now the real fallback source of truth, not just a
+  // picker pre-fill — an explicit `?projectId=` still overrides it.
+  const cookieStore = await cookies();
+  const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+  const effectiveProjectId = projectIdParam ?? defaultProjectId;
 
   // Fired concurrently with the project-existence check below, not sequentially after it —
   // getChangeRecords() only needs the raw projectId string, not any field resolved from the
   // Project entity itself, mirroring getInternalLinks()'s/getPages()'s own identical fix.
   // tolerateDiscard() avoids an unhandled-rejection warning on the branch where project turns out
   // null and this promise is never awaited.
-  const recordsPromise = projectIdParam
-    ? tolerateDiscard(getChangeRecords(parseChangeCenterSearchParams(projectIdParam, rawParams)))
+  const recordsPromise = effectiveProjectId
+    ? tolerateDiscard(
+        getChangeRecords(parseChangeCenterSearchParams(effectiveProjectId, rawParams)),
+      )
     : null;
 
-  const project = projectIdParam ? await getProject(projectIdParam) : null;
+  const project = effectiveProjectId ? await getProject(effectiveProjectId) : null;
 
   if (!project) {
-    const cookieStore = await cookies();
-    const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
     // Largest real page-size option (100) — the same bound every other picker in this app accepts,
     // not fixed in this pass. Sorted by name for a scannable picker.
     const { items: projects } = await getProjects({
@@ -132,9 +138,6 @@ export default async function ChangeCenterListPage({ searchParams }: ChangeCente
         title={`Change Center — ${project.name}`}
         contextActions={
           <>
-            <Link href={clearFiltersHref} style={{ fontSize: "0.875rem" }}>
-              Switch project
-            </Link>
             <Link
               href={withProjectId("/change-center/new", project.id)}
               style={primaryActionLinkStyle}

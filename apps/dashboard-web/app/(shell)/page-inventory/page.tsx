@@ -45,13 +45,13 @@ interface PageInventoryListPageProps {
 /**
  * Unlike every other module built so far, Page Inventory is genuinely project-scoped
  * (`page-inventory/projects/:projectId/pages`) — this list page is the one place in the app that
- * has to establish which project before it can render anything else. `?projectId=` is the source
- * of truth throughout this module (confirmed with the user directly): the header Project
- * Switcher's `wds_current_project` cookie stays purely advisory, only used here to PRE-SELECT the
- * picker's default option, never to bypass it. When `?projectId=` is missing or doesn't resolve to
- * a real project (`getProject()` returns `null` for both a malformed id and a genuine 404 — the
- * same "smallest honest reading" contract every sibling detail fetch already uses), this page
- * renders a project-picker prompt instead of a table.
+ * has to establish which project before it can render anything else. An explicit `?projectId=`
+ * wins when present; otherwise the header Project Switcher's `wds_current_project` cookie is used
+ * directly (its own `router.refresh()` on change keeps this page current live, per 2026-09-02's
+ * fix closing the "current project" propagation gap — no more per-page picker step duplicating the
+ * header). Only when NEITHER resolves to a real project (`getProject()` returns `null` for both a
+ * malformed id and a genuine 404 — the same "smallest honest reading" contract every sibling
+ * detail fetch already uses) does this page render a project-picker prompt instead of a table.
  *
  * Once a project is resolved, renders exactly what `GET .../pages` returns and supports — the
  * filters the backend's own `listPagesQuerySchema` accepts (search/pageType/workflowStage/
@@ -72,6 +72,11 @@ export default async function PageInventoryListPage({ searchParams }: PageInvent
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  // The header Project Switcher's cookie is now the real fallback source of truth, not just a
+  // picker pre-fill — an explicit `?projectId=` still overrides it.
+  const cookieStore = await cookies();
+  const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+  const effectiveProjectId = projectIdParam ?? defaultProjectId;
 
   // Fired concurrently with the project-existence check below, not sequentially after it
   // (code-review finding, `dashboard-web-page-inventory`) — `getPages()` only needs the raw
@@ -81,15 +86,13 @@ export default async function PageInventoryListPage({ searchParams }: PageInvent
   // threading a nullable value through every later reference. `tolerateDiscard()` avoids an
   // unhandled-rejection warning on the branch where `project` turns out null and this promise is
   // never awaited (the project-picker prompt renders instead, needing its own `getProjects()` call).
-  const pagesPromise = projectIdParam
-    ? tolerateDiscard(getPages(parsePageInventorySearchParams(projectIdParam, rawParams)))
+  const pagesPromise = effectiveProjectId
+    ? tolerateDiscard(getPages(parsePageInventorySearchParams(effectiveProjectId, rawParams)))
     : null;
 
-  const project = projectIdParam ? await getProject(projectIdParam) : null;
+  const project = effectiveProjectId ? await getProject(effectiveProjectId) : null;
 
   if (!project) {
-    const cookieStore = await cookies();
-    const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
     // Largest real page-size option (100) — the same bound every other picker in this app accepts
     // (`getServicesForPersonaPicker()`), not fixed in this pass. Sorted by name for a scannable
     // picker, unlike the Projects list page's own default `updatedAt`/`DESC` sort.
@@ -143,9 +146,6 @@ export default async function PageInventoryListPage({ searchParams }: PageInvent
         title={`Page Inventory — ${project.name}`}
         contextActions={
           <>
-            <Link href={clearFiltersHref} style={{ fontSize: "0.875rem" }}>
-              Switch project
-            </Link>
             <Link
               href={withProjectId("/page-inventory/new", project.id)}
               style={primaryActionLinkStyle}

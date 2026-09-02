@@ -40,12 +40,12 @@ interface ScanCenterListPageProps {
 /**
  * Unlike every organization-wide content-library module, Scan Center is genuinely project-scoped
  * (`scan-center/projects/:projectId/definitions`), same shape as Page Inventory/Keyword & Entity
- * Library/Internal Linking Library — this list page is where a project must first be resolved.
- * `?projectId=` is the source of truth throughout this module (matching every other project-scoped
- * module's own established convention): the header Project Switcher's `wds_current_project`
- * cookie stays purely advisory, only used here to PRE-SELECT the picker's default option, never to
- * bypass it. When `?projectId=` is missing or doesn't resolve to a real project, this page renders
- * a project-picker prompt instead of a table.
+ * Library/Internal Linking Library — this list page is where a project must first be resolved. An
+ * explicit `?projectId=` wins when present; otherwise the header Project Switcher's
+ * `wds_current_project` cookie is used directly (its own `router.refresh()` on change keeps this
+ * page current live, per 2026-09-02's fix closing the "current project" propagation gap — no more
+ * per-page picker step duplicating the header). Only when NEITHER resolves to a real project does
+ * this page fall back to a project-picker prompt.
  *
  * No approved wireframe exists for this module — the list page renders exactly what
  * `GET .../definitions` returns and supports (`scanType`/`isEnabled`/`search` filters), the
@@ -61,22 +61,25 @@ export default async function ScanCenterListPage({ searchParams }: ScanCenterLis
 
   const rawParams = await searchParams;
   const projectIdParam = firstValue(rawParams.projectId);
+  // The header Project Switcher's cookie is now the real fallback source of truth, not just a
+  // picker pre-fill — an explicit `?projectId=` still overrides it.
+  const cookieStore = await cookies();
+  const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
+  const effectiveProjectId = projectIdParam ?? defaultProjectId;
 
   // Fired concurrently with the project-existence check below, not sequentially after it —
   // matches `PageInventoryListPage`'s own established pattern. `tolerateDiscard()` avoids an
   // unhandled-rejection warning on the branch where `project` turns out null and this promise is
   // never awaited.
-  const definitionsPromise = projectIdParam
+  const definitionsPromise = effectiveProjectId
     ? tolerateDiscard(
-        getScanDefinitions(parseScanDefinitionsSearchParams(projectIdParam, rawParams)),
+        getScanDefinitions(parseScanDefinitionsSearchParams(effectiveProjectId, rawParams)),
       )
     : null;
 
-  const project = projectIdParam ? await getProject(projectIdParam) : null;
+  const project = effectiveProjectId ? await getProject(effectiveProjectId) : null;
 
   if (!project) {
-    const cookieStore = await cookies();
-    const defaultProjectId = cookieStore.get(CURRENT_PROJECT_COOKIE)?.value ?? null;
     const { items: projects } = await getProjects({
       search: null,
       status: null,
@@ -121,9 +124,6 @@ export default async function ScanCenterListPage({ searchParams }: ScanCenterLis
         title={`Scan Center — ${project.name}`}
         contextActions={
           <>
-            <Link href={clearFiltersHref} style={{ fontSize: "0.875rem" }}>
-              Switch project
-            </Link>
             <Link
               href={withProjectId("/scan-center/definitions/new", project.id)}
               style={primaryActionLinkStyle}
