@@ -2675,3 +2675,131 @@ export interface ExportRun {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * Technical Center (module `technical_center`) — a real pipeline across three project-scoped
+ * tables, mirroring Scan Center's own shape almost exactly: a `TechnicalCheckDefinition` describes
+ * WHAT to check (and how); a `TechnicalCheckRun` is one execution of a definition, progressing
+ * through the identical real status lifecycle Scan Center's own `ScanRunStatus` uses; a
+ * `TechnicalFinding` is a discrete issue surfaced by a completed/partially-completed run.
+ * Record-keeping only — no real linter/test-runner/scanner execution engine exists anywhere in
+ * this codebase yet, matching Scan Center's/Ready for Claude Queue's/Import and Export Center's
+ * own precedent for a mechanism with no execution engine yet. No `technical_evidence` table —
+ * unlike Scan Center, no genuine "supporting artifact" need was identified for this module's own
+ * findings. See `apps/dashboard-api/src/technical-center/technical-center.dto.ts`/
+ * `technical-center.constants.ts` and `packages/database/src/technical-center/entities.ts` for the
+ * full backend contract this mirrors.
+ */
+export type TechnicalCheckType =
+  | "coding_standards"
+  | "linting"
+  | "automated_tests"
+  | "coverage"
+  | "dependency_vulnerability"
+  | "wordpress_compatibility"
+  | "php_compatibility"
+  | "code_review"
+  | "security"
+  | "accessibility"
+  | "performance"
+  | "browser_compatibility"
+  | "visual_regression";
+
+export type TechnicalCheckMode = "manual" | "scheduled";
+
+/**
+ * A saved check configuration — what to check, and (optionally) on what schedule. Has no workflow
+ * of its own; only `isEnabled` toggles whether it may currently be run. `target` is deliberately
+ * plain free text, not URL-validated — a repository ref, a package name, or a "selected page" slug
+ * is not always a URL. `checkType` is create-only (immutable), mirroring every sibling module's
+ * own discriminator-field create-only contract.
+ */
+export interface TechnicalCheckDefinition {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly name: string;
+  readonly checkType: TechnicalCheckType;
+  readonly mode: TechnicalCheckMode;
+  readonly target: string | null;
+  readonly environment: string | null;
+  readonly scheduleCron: string | null;
+  readonly isEnabled: boolean;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
+ * A run's real 8-state lifecycle, mirroring `ScanRunStatus` byte-for-byte: `requested -> queued ->
+ * running ->` one of five terminal outcomes (`completed`/`partially_completed`/`failed`/
+ * `timed_out`/`cancelled`), plus direct-to-`cancelled` shortcuts from `requested`/`queued`/
+ * `running`. Every terminal state has no outbound transition. See
+ * `apps/dashboard-api/src/technical-center/technical-check-runs.service.ts`'s own `TRANSITIONS`
+ * table for the exact allowed edges.
+ */
+export type TechnicalCheckRunStatus =
+  | "requested"
+  | "queued"
+  | "running"
+  | "completed"
+  | "partially_completed"
+  | "failed"
+  | "timed_out"
+  | "cancelled";
+
+export type TechnicalCheckRunTriggerType = "manual" | "scheduled";
+
+/**
+ * One execution of a `TechnicalCheckDefinition`. `startedAt`/`completedAt` are server-stamped
+ * only, by the repository's own atomic conditional write — never accepted as caller input on the
+ * create route, never overwritten once first set. `errorSummary`/`findings` may only be supplied
+ * alongside a transition into `failed`/`timed_out` and `completed`/`partially_completed`
+ * respectively — there is no standalone create route for `TechnicalFinding`.
+ */
+export interface TechnicalCheckRun {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly technicalCheckDefinitionId: string;
+  readonly status: TechnicalCheckRunStatus;
+  readonly triggerType: TechnicalCheckRunTriggerType;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly errorSummary: string | null;
+  readonly requestedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export type TechnicalFindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+/** `open`/`acknowledged` may move to any of the three dispositional states (or back to `open` to
+ *  reconsider); `resolved`/`dismissed` are both terminal — findings, once disposed, are not
+ *  reopened in this pass. */
+export type TechnicalFindingStatus = "open" | "acknowledged" | "resolved" | "dismissed";
+
+/**
+ * A discrete issue surfaced by a run. `category` is plain free text (no canonical value list
+ * exists for this field — `checkType` on the parent definition already carries the real
+ * taxonomy). Created only as a side effect of a run transitioning to `completed`/
+ * `partially_completed` with a non-empty `findings` payload — there is no standalone create route
+ * for this table.
+ */
+export interface TechnicalFinding {
+  readonly id: string;
+  readonly projectId: string;
+  readonly publicId: string;
+  readonly technicalCheckRunId: string;
+  readonly category: string | null;
+  readonly severity: TechnicalFindingSeverity;
+  readonly title: string;
+  readonly description: string | null;
+  readonly location: string | null;
+  readonly status: TechnicalFindingStatus;
+  readonly resolvedBy: string | null;
+  readonly resolvedAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
