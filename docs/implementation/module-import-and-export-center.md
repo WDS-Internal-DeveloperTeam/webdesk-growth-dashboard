@@ -357,6 +357,7 @@ message})`, which had let the bug pass silently — re-run and confirmed it fail
 pre-fix code and passes against the fix.
 
 ### Independent code review (this project's own `code-review` skill, high effort, 8-angle finder
+
 pass, 1-vote verification)
 
 10 candidates surfaced after dedup, all kept in the final report (6 CONFIRMED, 4 PLAUSIBLE).
@@ -409,3 +410,21 @@ suffice if `applyRowCounts()` used `returning: true` to hand back the updated en
 
 Re-validated after every fix: 1756/1756 `dashboard-api` unit tests (6 new), `tsc --noEmit` clean on
 both `@webdesk/database`/`dashboard-api`, `eslint --max-warnings=0` clean, `prettier --check` clean.
+
+### Security review (this project's own `security-review` skill)
+
+Focused on the areas this module actually introduces: route guard coverage across all 5
+controllers, SQL/`Op.iLike` injection surface, mass-assignment on every server-managed field
+(`status`, `totalRows`/`successCount`/`errorCount`/`skippedCount`, `startedAt`/`completedAt`,
+`templateVersion`, `version`, and specifically `excludesConfidentialFields` on `export_runs` —
+confirmed there is genuinely no caller-controlled path to set it `false`), the dynamic
+per-transition RBAC action check in `import-runs.service.ts`'s `TRANSITIONS` table (traced every
+entry — no path reaches `approve` without `assertAllowed()` rejecting first), IDOR scoping on the
+`import_rows`/`import_errors` sub-resources (both `findById()` methods re-check the resolved row's
+own `importRunId` against the URL's `:runId` and 404 on a mismatch, on top of `list()`'s own
+repository-layer scoping), and audit-trail content (no secret-shaped data in any `afterState`).
+**0 findings above threshold.** Also independently confirmed `sourceFileReference`/
+`sourceChecksum`/`fileReference` are genuinely inert (never opened, fetched, or interpolated into
+a filesystem/HTTP call anywhere in this module — no SSRF/path-traversal surface) and that the new
+`boundedJsonObjectSchema()` size bound closes the JSONB write-amplification gap the code review
+found.
