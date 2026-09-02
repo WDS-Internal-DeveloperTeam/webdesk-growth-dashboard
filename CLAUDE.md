@@ -4369,7 +4369,8 @@ accepted`/`rejected`/`deferred`/`manual_merge_required` `→ applying → applie
     **The Change Center module backend is now genuinely live in production.** No `dashboard-web`
     UI exists yet for this module — a separate, not-yet-requested next step, matching every prior
     module's own backend-first precedent. **Update (2026-09-02): the `dashboard-web` UI has since
-    been built and gated — see item 74 below.**
+    been built, reviewed, gated, and merged — now genuinely live in production — see item 74
+    below.**
 
 74. **`dashboard-web` Change Center UI — built, reviewed, gated, pushed (2026-09-02).** Closes
     this module's last named gap, following the backend's own build-to-production arc (PR #103,
