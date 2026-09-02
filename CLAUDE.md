@@ -4860,11 +4860,17 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     to the picker, not a broken fetch) and confirmed `clearFiltersHref` remains genuinely used on
     every touched page after the dead-link removal — **0 findings**. No separate security review —
     no new endpoint, no new sink, no auth-relevant code touched. See
-    `docs/project-state/current-project-context-propagation-fix-approval-checklist.md`. Required
-    second-role human review and a gate decision remain each their own separate, not-yet-requested
-    next step — this fix has not yet been pushed, opened as a PR, or merged, per this project's
-    standing "no
-    auto-merge" rule.
+    `docs/project-state/current-project-context-propagation-fix-approval-checklist.md`.
+    **Required second-role human review complete via the direct "Approve, gate it, and push the
+    branch" instruction** — the findings summary above served as the review artifact, since there
+    were no open findings of any kind on this branch. **The gate
+    (G4-current-project-context-propagation) was then separately requested and approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override), approved commit `58e950a`
+    on branch `fix-current-project-context-propagation` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-current-project-context-propagation`). **This gate approval does not itself authorize
+    opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
+    per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
