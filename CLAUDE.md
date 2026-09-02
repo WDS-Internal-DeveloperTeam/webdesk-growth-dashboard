@@ -4602,8 +4602,102 @@ Actions` hand-mirrors the backend's real 10-state `TRANSITIONS` table verbatim, 
     `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
     **The Import and Export Center module backend is now genuinely live in production.** No
     `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
-    matching every prior module's own backend-first precedent.
-77. **Technical Center module backend — built, reviewed, gated; not yet pushed, opened as a PR,
+    matching every prior module's own backend-first precedent. **Update (2026-09-02): the
+    `dashboard-web` UI has since been built and gated — see item 77 below.**
+
+77. **`dashboard-web` Import and Export Center UI — built, reviewed, gated, merged
+    ([PR #107](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/107),
+    merge commit `cbc10ecaffb2b0b6e18e90556d5c8b2ee4bafaef`); now genuinely live in production
+    (2026-09-02).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #106, item 76 above). Built directly on the explicit
+    "Import/Export - Start the dashboard-web UI for it" instruction. No wireframe/spec exists for
+    this module's UI — a 9-route IA was designed directly against the real backend contract (the
+    DTOs/controllers/services were read first, not assumed): templates list (the module's home
+    view, filterable by `targetModuleKey`/`isActive`/`search`)/create/detail/edit, runs list
+    (filterable by `importTemplateId`/`status`)/detail (embeds a read-only rows/errors sub-list
+    plus the status-actions component), exports list (filterable by `targetModuleKey`/`status` —
+    deliberately no `search`, matching the backend's own `listExportRunsQuerySchema`, which has
+    none)/create/detail. Mirrors Scan Center's list-to-detail-with-a-create-action-to-run-
+    detail-with-embedded-row-creation shape (there being no standalone create route for
+    `import_rows`/`import_errors`, mirroring Scan Center's own `scan_findings` precedent) combined
+    with Ready for Claude Queue's organization-wide, `session.navigation`-backed target-module
+    picker pattern. New `packages/shared-types` additions
+    (`ImportDuplicateStrategy`/`ImportExportFileFormat`/`ImportTemplate`/`ImportRunStatus`/
+    `ImportRun`/`ImportRowStatus`/`ImportRowResolution`/`ImportRow`/`ImportError`/
+    `ExportRunStatus`/`ExportRun`) mirror
+    `packages/database/src/import-and-export-center/entities.ts` exactly.
+    `ImportRunStatusActions` computes its allowed-transition set as a function of
+    `(status, isDryRun)` rather than a static table, matching the backend's own real dry-run-aware
+    `TRANSITIONS` gating exactly (verified line-by-line against `import-runs.service.ts` — the
+    asymmetry that `validating -> dry_run_completed` is only legal when `isDryRun` and
+    `validating -> importing` only when it isn't) — and gates the `rows`/`runErrors` inline editor
+    on `fromStatus === "validating"` specifically, so the separate `dry_run_completed -> importing`
+    "promote" transition never offers it, matching the backend's own `hasRowsPayload` guard rather
+    than the target status alone. No `expectedStatus`/CAS field is sent in either
+    status-transition request body — confirmed directly against both DTOs (neither declares one),
+    correctly diverging from Ready for Claude Queue's own `{status, expectedStatus}` shape rather
+    than copying it blindly. Both JSON-shaped fields (`ImportTemplateForm`'s `columnMapping`,
+    `ExportRunForm`'s `filterCriteria`) and the rows editor's per-row `rawData` are parsed
+    client-side with a clear error before ever reaching `postMutation()`. `ExportRun.fileReference`
+    is rendered as a link only behind the existing `isSafeHttpUrl()` guard, matching every other
+    stored-URL field's convention in this app — the backend deliberately does not URL-validate this
+    field server-side. **A real bug was caught and fixed during the build's own test-writing pass**:
+    a `min`/`step` HTML constraint on two number inputs (the rows editor's Row #, the
+    export-completed `rowCount`) silently blocked native form submission on an invalid value,
+    meaning the component's own clearer JS-side error message would never show and a real submit
+    would silently no-op — both constraints removed in favor of the existing JS-side validation.
+    Built by a background agent with a fully-specified prompt (the exact backend contract, every
+    established `dashboard-web` convention to reuse, and pseudocode for the trickiest transition
+    logic spelled out in detail), then independently re-verified in full by the orchestrating
+    session — every high-risk file read directly (the status-actions transition logic, both
+    JSON-parsing form fields, the safe-URL guard), and every validation command re-run fresh rather
+    than trusted from the agent's own report: 1771/1771 `dashboard-web` unit tests (80 new, including
+    an exhaustive `allowedTargets(status, isDryRun)` test matrix), typecheck (`@webdesk/shared-types`
+    and `dashboard-web`)/`eslint --max-warnings=0`/CSS-token-check (95 files)/`next build` (all 9
+    new routes present)/`prettier --check` all clean. **Reviewed at light tier**, per the
+    2026-08-27 "right-size the review pipeline" standing rule — a frontend-only slice consuming an
+    already-reviewed, already-gated backend with no new endpoint. A direct read-through pass found
+    **0 blocking findings** and one non-blocking styling note (the run detail page's Rows/Errors
+    tables use their own local `th`/`td` style objects instead of the shared list-table styles,
+    left as-is). Security review skipped per the same standing rule — no new endpoint, no new RBAC
+    action, no new sink; every JSON value renders via `JSON.stringify()` inside a `<pre>`, never
+    `dangerouslySetInnerHTML`. See
+    `docs/project-state/dashboard-web-import-and-export-center-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it" instruction** — the
+    approval checklist's own findings summary served as the review artifact, since there were no
+    open blocking findings on this branch. **The gate
+    (G4-dashboard-web-import-and-export-center) was then approved** — WebDesk Solution, decision
+    CONFIRM (clean pass, not an override), approved commit `13c5933` on branch
+    `dashboard-web-import-and-export-center-ui` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-import-and-export-center`). **"Push the branch" and "Open a PR" were then
+    separately requested and executed** — pushed to `origin`, opened as
+    [PR #107](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/107). A
+    genuinely pre-existing, unrelated CI failure surfaced first ("Dependency vulnerability audit"
+    — 4 high `fast-uri` findings, GHSA-jqff-g426-hqxp/GHSA-fph4-wmhf-6fwf, plus 1 moderate
+    `@xmldom/xmldom` finding, GHSA-6gmq-8vp8-gcm6, confirmed byte-identical to `main` before the
+    fix, since this branch made zero lockfile/`package.json` changes) — fixed with a
+    `pnpm-workspace.yaml` override floor raise (`fast-uri` >=3.1.6, pulled in only via
+    `@nestjs/cli`'s own devDependency Angular schematics tooling; `@xmldom/xmldom` >=0.8.15, a
+    patch-version bump for mammoth's real runtime DOCX-preview dependency) — `pnpm audit` now
+    reports 0 known vulnerabilities, re-verified clean: `dashboard-api`'s full 1756/1756 unit suite
+    (unchanged count, confirming the xmldom bump didn't affect mammoth's DOCX parsing),
+    `dashboard-web`'s typecheck/lint/1771/1771 unit suite/production build, and `pnpm format`. All
+    14 CI checks then confirmed green. **"Merge PR #107" was then separately requested and
+    executed** — merged with a real merge commit (not squash/rebase), matching every prior merge
+    in this project's history — merge commit `cbc10ecaffb2b0b6e18e90556d5c8b2ee4bafaef`. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort ==
+cbc10ec`, confirming the exact merged commit is what's serving; `GET
+/import-and-export-center/templates` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s new `/import-and-export-center` route correctly redirects (307) an
+    unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Import and Export Center UI
+    is now genuinely live in production**, closing out this slice's full build-to-production
+    arc — backend and now the full UI (templates list/create/detail/edit, runs list/detail,
+    exports list/create/detail) are both live for the Import and Export Center module.
+
+78. **Technical Center module backend — built, reviewed, gated; not yet pushed, opened as a PR,
     or merged (2026-09-02).** Key `technical_center`, built directly on the explicit "start
     Technical Center and start the numbering for the migration from the 00109" instruction.
     Migrations `00109`/`00110` (`00107`/`00108` were reserved for the concurrently-built Import
@@ -7641,6 +7735,51 @@ build`/prettier all clean. No separate security-review skill run, per the 2026-0
   clean `401` (route live, `SessionGuard` enforcing — not a `404`); and `dashboard-web`'s `/`
   correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Import and Export
   Center module backend is now genuinely live in production.**
+- `[2026-09-02]` **Built the `dashboard-web` UI for Import and Export Center**, under the explicit
+  "Import/Export - Start the dashboard-web UI for it" instruction, closing this module's last
+  named gap following the backend's own build-to-production arc (PR #106). Full account in item
+  77 above. Built by a background agent with a fully-specified prompt embedding the full backend
+  contract and pseudocode for the trickiest transition logic (`ImportRunStatusActions`' dry-run-
+  aware `allowedTargets(status, isDryRun)`), then independently re-verified in full by the
+  orchestrating session — every high-risk file read directly, every validation command re-run
+  fresh: 1771/1771 `dashboard-web` unit tests (80 new), typecheck/lint/CSS-token-check/`next
+build`/prettier all clean. Committed to branch `dashboard-web-import-and-export-center-ui`
+  (commit `13c5933`) — not pushed to `origin` yet.
+- `[2026-09-02]` **Required second-role human review and the gate were both completed via the
+  direct "Approve as-is, gate it" instruction** — the approval checklist's own findings summary
+  (0 blocking findings, one non-blocking styling note) served as the review artifact. Gate
+  `G4-dashboard-web-import-and-export-center` approved — WebDesk Solution, decision CONFIRM,
+  approved commit `13c5933` on branch `dashboard-web-import-and-export-center-ui` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-import-and-export-center`). This gate approval does not itself authorize
+  pushing the branch, opening a PR, or merging.
+- `[2026-09-02]` **"Push the branch and open a PR" was separately requested and executed** on
+  `dashboard-web-import-and-export-center-ui` — pushed to `origin`, opened as
+  [PR #107](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/107). A
+  genuinely pre-existing CI failure surfaced ("Dependency vulnerability audit"), unrelated to this
+  branch's own diff (zero lockfile/`package.json` changes, confirmed via `git diff`) — 4 high
+  `fast-uri` findings (GHSA-jqff-g426-hqxp, GHSA-fph4-wmhf-6fwf) plus 1 moderate
+  `@xmldom/xmldom` finding (GHSA-6gmq-8vp8-gcm6). Fixed with a `pnpm-workspace.yaml` override
+  floor raise — `fast-uri` >=3.1.6 (pulled in only via `@nestjs/cli`'s own devDependency Angular
+  schematics tooling, confirmed via `pnpm why fast-uri`, never bundled into either app's runtime)
+  and `@xmldom/xmldom` >=0.8.15 (a patch-version bump for mammoth's real runtime DOCX-preview
+  dependency, confirmed via `pnpm why @xmldom/xmldom`). `pnpm audit` now reports 0 known
+  vulnerabilities. Re-verified clean: `dashboard-api`'s typecheck + full 1756/1756 unit suite
+  (unchanged count, confirming the xmldom bump didn't affect mammoth's DOCX parsing),
+  `dashboard-web`'s typecheck/lint/1771/1771 unit suite/production build, and `pnpm format`. All
+  14 CI checks then confirmed green.
+- `[2026-09-02]` **"Merge PR #107" was separately requested and executed.** Merged with a real
+  merge commit (not squash/rebase), matching every prior merge in this project's history — merge
+  commit `cbc10ecaffb2b0b6e18e90556d5c8b2ee4bafaef`. Both Vercel projects auto-deployed on push to
+  `main` and were verified live directly, not just via CI's own Vercel status check —
+  `dashboard-api`'s `/health` returned `build.commitShaShort ==
+cbc10ec`, confirming the exact merged commit is what's serving; `GET
+/import-and-export-center/templates` returned a clean `401` (route live, `SessionGuard`
+  enforcing — not a `404`, which would mean the module never actually deployed); and
+  `dashboard-web`'s new `/import-and-export-center` route correctly redirects (307) an
+  unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Import and Export Center UI is
+  now genuinely live in production**, closing out this slice's full build-to-production arc —
+  backend and now the full UI are both live for the Import and Export Center module.
 - `[2026-09-02]` **Built the Technical Center module backend** (key `technical_center`), under
   the explicit "start Technical Center and start the numbering for the migration from the 00109"
   instruction. Two design forks confirmed with the user first: a Scan-Center-style 3-level
