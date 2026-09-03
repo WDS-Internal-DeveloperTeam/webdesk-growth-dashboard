@@ -62,6 +62,17 @@ export class RolePermissionRepository {
   }
 
   /**
+   * Every global-scope (`project_id IS NULL`) grant across every role/module — the data source for
+   * the `users-roles-permissions` module's read-only permission-matrix viewer. Deliberately does
+   * not include project-scoped grants (D1 of that module's scope) — this is the "roles × modules ×
+   * actions" matrix `06_Roles_and_Permissions.md §3` itself describes, not a per-project view.
+   */
+  async listAllGlobalGrants(): Promise<readonly RolePermissionEntity[]> {
+    const rows = await this.model.findAll({ where: { projectId: null } });
+    return rows.map(toEntity);
+  }
+
+  /**
    * Every grant (global-scope, plus project-scoped when `projectId` is given) held by ANY of
    * `roleIds` — one query, not one per module/action, per task package §28's own "avoid N+1
    * permission queries" instruction. The primary input to `/me/capabilities` (task package §20).

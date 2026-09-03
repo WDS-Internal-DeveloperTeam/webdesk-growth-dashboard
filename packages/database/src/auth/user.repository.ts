@@ -4,6 +4,8 @@ import type { UserEntity } from "./entities.js";
 
 const DEFAULT_SEARCH_LIMIT = 20;
 const MAX_SEARCH_LIMIT = 200;
+const DEFAULT_LIST_LIMIT = 20;
+const MAX_LIST_LIMIT = 100;
 
 /** Escapes `%`, `_`, and the escape character itself so a literal substring search (e.g. an email
  *  fragment containing a real underscore) isn't reinterpreted by Postgres as a partial ILIKE
@@ -115,5 +117,63 @@ export class UserRepository {
       where: { id: { [Op.in]: ids }, accountStatus: "active" },
     });
     return rows.map((row) => toEntity(row));
+  }
+
+  /**
+   * Admin directory list (`users-roles-permissions` module) — deliberately NOT `search()` above:
+   * that method is picker-only and hardcodes `accountStatus: "active"`, since a picker should
+   * never offer a disabled/offboarded user. This one is an admin surface that must show every
+   * user regardless of status by default, and lets a caller filter to exactly one status when
+   * given. Returns the real total count (via `findAndCountAll`) alongside the page of rows, so a
+   * caller can render real pagination instead of a `limit+1`/"has more" heuristic.
+   */
+  async listAll(
+    filter: {
+      search?: string;
+      status?: "active" | "disabled";
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Promise<{ rows: readonly UserEntity[]; total: number }> {
+    const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+    const where = {
+      ...(filter.status ? { accountStatus: filter.status } : {}),
+      ...(filter.search
+        ? (() => {
+            const pattern = `%${escapeLikePattern(filter.search)}%`;
+            return {
+              [Op.or]: [
+                { email: { [Op.iLike]: pattern } },
+                { displayName: { [Op.iLike]: pattern } },
+              ],
+            };
+          })()
+        : {}),
+    };
+    const { rows, count } = await this.model.findAndCountAll({
+      where,
+      order: [["displayName", "ASC"]],
+      limit,
+      offset: filter.offset ?? 0,
+    });
+    return { rows: rows.map((row) => toEntity(row)), total: count };
+  }
+
+  /**
+   * Atomic update-and-return, mirroring `BrandLibraryRecordRepository.update()`'s own
+   * `returning: true` pattern — a single `UPDATE ... RETURNING` instead of a write followed by a
+   * separate re-fetch (a bug class this project's own code reviews have caught and fixed
+   * repeatedly). Returns `null` if no row with `id` exists, letting the caller decide whether that
+   * is a 404.
+   */
+  async updateStatus(id: string, status: "active" | "disabled"): Promise<UserEntity | null> {
+    const [affectedCount, affectedRows] = await this.model.update(
+      { accountStatus: status },
+      { where: { id }, returning: true },
+    );
+    if (affectedCount === 0 || !affectedRows[0]) {
+      return null;
+    }
+    return toEntity(affectedRows[0]);
   }
 }
