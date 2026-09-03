@@ -123,14 +123,27 @@ export class UsersDirectoryService {
    * that follows a real, already-committed state mutation.
    */
   async updateStatus(
-    userId: string,
+    rawUserId: string,
     targetStatus: "active" | "disabled",
-    actorUserId: string,
+    rawActorUserId: string,
   ): Promise<UserEntity> {
-    const target = await this.users.findById(userId);
+    const target = await this.users.findById(rawUserId);
     if (!target) {
-      throw new NotFoundException(`User not found: ${userId}`);
+      throw new NotFoundException(`User not found: ${rawUserId}`);
     }
+    // Postgres `uuid` columns compare case-insensitively, so every DB lookup above (and the
+    // write below) resolves correctly regardless of the case the caller sent — but the
+    // *in-memory* equality checks just below (self-targeting, sole-active-Super-Admin) do not,
+    // since JS `===` is case-sensitive. Using `target.id` (the canonical, DB-returned casing)
+    // instead of the raw path param from here on closes a real bypass: a caller submitting a
+    // case-swapped copy of their own id would otherwise fail both `approverId === actorId` in
+    // `SeparationOfDutiesService.assertDistinctActors()` and the `id !== userId` filter in
+    // `assertNotSoleActiveSuperAdmin()`, silently defeating the guards those two calls exist to
+    // enforce (security-review finding). `actorUserId` is always session-derived, already
+    // DB-canonical — lowercased here too so both sides of every comparison are on equal footing
+    // regardless of that assumption.
+    const userId = target.id;
+    const actorUserId = rawActorUserId.toLowerCase();
 
     if (targetStatus === "disabled") {
       await this.separationOfDuties.assertDistinctActors(
