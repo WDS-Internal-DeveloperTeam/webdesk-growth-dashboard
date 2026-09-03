@@ -3681,6 +3681,15 @@
       "project_version_before": 136,
       "project_version_after": 137,
       "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "production_migration_run",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "PR #117 (grant-notifications-view-permission) merged to main -- merge commit 2ec8c24dbe5bbd21a2bb4b8c95c5b922c624cfa6, verified live directly (dashboard-api /health matched the merge commit). Migration 00117-grant-notifications-view-to-super-admin.ts (renumbered from 00115 during a merge conflict with the concurrently-merged Help Center module, which had independently claimed 00115/00116) was then run against the real production database by the user themselves, same credential-handling discipline as every prior production migration, and confirmed directly (\"Ran the migration, all confirmed working now\"). The super_admin notifications_view grant is now genuinely live in production, closing out this slice's full build-to-production arc.",
+      "project_version_before": 137,
+      "project_version_after": 138,
+      "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
   "current_gate": "G4-grant-notifications-view-permission"

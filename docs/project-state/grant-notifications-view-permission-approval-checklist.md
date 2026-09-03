@@ -2,7 +2,10 @@
 
 **Status:** Built, fully validated. Reviewed (security-focused, RBAC change) — 0 findings.
 Required second-role human review complete. Gate `G4-grant-notifications-view-permission`
-approved (WebDesk Solution, CONFIRM). Pushed to `origin` — not yet opened as a PR or merged.
+approved (WebDesk Solution, CONFIRM). Merged
+([PR #117](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/117),
+merge commit `2ec8c24dbe5bbd21a2bb4b8c95c5b922c624cfa6`). Migration `00117` run against
+production by the user — **now genuinely live and confirmed working.**
 
 ## Completion condition
 
@@ -15,9 +18,9 @@ approved (WebDesk Solution, CONFIRM). Pushed to `origin` — not yet opened as a
 | 5   | Independent review complete                | ✅ Direct security-focused read-through (RBAC change — this project's standing rule reserves the full tier for these by default) — 0 findings                                      |
 | 6   | Security review                            | ✅ Folded into item 5 above — no application/enforcement code changed, purely additive seed data through the existing, unmodified `PermissionGuard`/`@RequirePermission` mechanism |
 | 7   | Known out-of-scope gaps flagged, not fixed | `notifications_configure` and every other role remain zero-seeded — explicitly declined for this request                                                                           |
-| 8   | Live-rendered / verified                   | Verified directly against a real local database (not production) — see the implementation doc's "Validation" section                                                               |
+| 8   | Live-rendered / verified                   | ✅ Verified live in production directly — `dashboard-api`'s `/health` matched the merge commit, and the user confirmed the migration ran and the grant is working                  |
 | 9   | Documentation updated                      | ✅ `docs/implementation/grant-notifications-view-permission.md`                                                                                                                    |
-| 10  | Exact branch/commit verified               | Branch `grant-notifications-view-permission`, commit `84831c8` (migration renumbered `00115`→`00117` during a merge with `main`) — pushed to `origin`                              |
+| 10  | Exact branch/commit verified               | Branch `grant-notifications-view-permission`, commit `265873d` (migration renumbered `00115`→`00117` during a merge with `main`) — merged via PR #117, merge commit `2ec8c24`      |
 
 ## Forbidden-actions check
 
@@ -45,8 +48,17 @@ open findings of any kind on this branch to accept as tracked debt.
 `grant-notifications-view-permission`. See `outputs/webdesk-growth-dashboard/project.json`'s
 `gates[]` (`current_gate` now `G4-grant-notifications-view-permission`).
 
-**Push:** Executed under the same combined instruction — pushed to `origin`. **This gate
-approval does not itself authorize opening a PR, merging, or running the migration against
-production** — each remains its own separate, not-yet-requested authorization, per this
-project's standing "no auto-merge" rule and standing credential-handling discipline (the user
-runs `pnpm --filter @webdesk/database run migrate` themselves after this is merged).
+**Push/PR/merge:** Pushed to `origin` under the same combined instruction. A real merge conflict
+against `main` then surfaced (Help Center's own concurrently-merged backend, PR #118, had
+independently claimed migration numbers `00115`/`00116`, colliding with this branch's own
+migration) — resolved by merging `origin/main` in, keeping both sides' `CLAUDE.md`/`project.json`
+content, and renumbering `00115` → `00117`, fully re-verified against fresh local disposable
+databases before pushing again. "Open a PR" was then separately requested and executed
+([PR #117](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/117)); all
+14 CI checks confirmed green; "Merge PR #117" was then separately requested and executed — merge
+commit `2ec8c24dbe5bbd21a2bb4b8c95c5b922c624cfa6`, verified live directly.
+
+**Production migration:** Migration `00117` was then run against the real production database by
+the user themselves, same credential-handling discipline as every prior production migration, and
+confirmed directly ("Ran the migration, all confirmed working now"). **The `super_admin`
+`notifications_view` grant is now genuinely live in production.**
