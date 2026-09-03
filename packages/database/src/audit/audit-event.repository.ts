@@ -1,4 +1,4 @@
-import type { Model } from "sequelize";
+import { Op, type Model } from "sequelize";
 import { getAuditModels } from "./models.js";
 import { AUDIT_RETENTION_CATEGORIES } from "./entities.js";
 import type {
@@ -8,6 +8,29 @@ import type {
   AuditEventEntity,
   AuditEventType,
 } from "./entities.js";
+
+/**
+ * Filter shape for `list()` — the Decision and Activity Log module's own query surface
+ * (`docs/implementation/module-decision-and-activity-log.md`). `eventTypes` is required, never
+ * defaulted here — this repository stays a generic, reusable list method; the caller (the
+ * module's own service) is responsible for applying its own default event-type allowlist before
+ * calling in, mirroring `AuditService.record()`'s own "the repository validates, the service
+ * decides defaults" split.
+ */
+export interface AuditEventListFilter {
+  readonly eventTypes: readonly AuditEventType[];
+  readonly projectId?: string;
+  readonly actorUserId?: string;
+  readonly entityType?: string;
+  readonly entityId?: string;
+  readonly createdAfter?: string;
+  readonly createdBefore?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+const DEFAULT_LIST_LIMIT = 20;
+const MAX_LIST_LIMIT = 100;
 
 function toEntity(instance: Model): AuditEventEntity {
   const json = instance.toJSON() as Record<string, unknown>;
@@ -127,6 +150,54 @@ export class AuditEventRepository {
       where: { actorUserId },
       order: [["createdAt", "DESC"]],
       limit,
+    });
+    return rows.map(toEntity);
+  }
+
+  /**
+   * A generic, human-friendly read over `audit_events` — the Decision and Activity Log module's
+   * own query surface (`docs/implementation/module-decision-and-activity-log.md`). Always scoped
+   * to `filter.eventTypes` (never returns the full ~35-value union) — the caller decides that
+   * list, this repository just enforces it as a real `WHERE` clause. Ordered newest-first,
+   * matching every other list-style read in this module (`findByEntity`/`findRecentByActor`
+   * above); paginated with the same `DEFAULT_LIST_LIMIT`/`MAX_LIST_LIMIT` clamp pattern
+   * `BusinessKnowledgeRecordRepository.list()`/`ProjectRepository.list()` already establish.
+   */
+  async list(filter: AuditEventListFilter): Promise<readonly AuditEventEntity[]> {
+    const where: Record<string, unknown> = {
+      eventType: { [Op.in]: [...filter.eventTypes] },
+    };
+    if (filter.projectId) {
+      where.projectId = filter.projectId;
+    }
+    if (filter.actorUserId) {
+      where.actorUserId = filter.actorUserId;
+    }
+    if (filter.entityType) {
+      where.entityType = filter.entityType;
+    }
+    if (filter.entityId) {
+      where.entityId = filter.entityId;
+    }
+    if (filter.createdAfter || filter.createdBefore) {
+      const range: Record<symbol, Date> = {};
+      if (filter.createdAfter) {
+        range[Op.gte] = new Date(filter.createdAfter);
+      }
+      if (filter.createdBefore) {
+        range[Op.lte] = new Date(filter.createdBefore);
+      }
+      where.createdAt = range;
+    }
+
+    const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+    const offset = filter.offset ?? 0;
+
+    const rows = await this.model.findAll({
+      where,
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset,
     });
     return rows.map(toEntity);
   }

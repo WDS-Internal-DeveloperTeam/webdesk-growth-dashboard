@@ -17,6 +17,7 @@ import { ChangeCenterModule } from "./change-center/change-center.module.js";
 import { ComponentLibraryModule } from "./component-library/component-library.module.js";
 import { ContentTemplateLibraryModule } from "./content-template-library/content-template-library.module.js";
 import { CorrelationIdMiddleware } from "./common/correlation-id.middleware.js";
+import { DecisionAndActivityLogModule } from "./decision-and-activity-log/decision-and-activity-log.module.js";
 import { DesignReferenceLibraryModule } from "./design-reference-library/design-reference-library.module.js";
 import { DesignReviewCenterModule } from "./design-review-center/design-review-center.module.js";
 import { DesignTokenLibraryModule } from "./design-token-library/design-token-library.module.js";
@@ -91,6 +92,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     ChangeCenterModule,
     ComponentLibraryModule,
     ContentTemplateLibraryModule,
+    DecisionAndActivityLogModule,
     DesignReferenceLibraryModule,
     DesignReviewCenterModule,
     DesignTokenLibraryModule,

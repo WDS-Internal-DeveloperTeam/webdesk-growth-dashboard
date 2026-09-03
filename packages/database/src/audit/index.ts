@@ -1,3 +1,3 @@
 export * from "./entities.js";
 export { getAuditModels, resetAuditModelsForTests, type AuditModels } from "./models.js";
-export { AuditEventRepository } from "./audit-event.repository.js";
+export { AuditEventRepository, type AuditEventListFilter } from "./audit-event.repository.js";
