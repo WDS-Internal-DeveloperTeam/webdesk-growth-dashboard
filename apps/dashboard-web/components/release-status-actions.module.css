@@ -1,0 +1,58 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.buttonRow {
+  composes: wrapper from "./status-actions.module.css";
+}
+
+.actionButton {
+  composes: actionButton from "./status-actions.module.css";
+}
+
+.terminalButton {
+  composes: terminalButton from "./status-actions.module.css";
+}
+
+.error {
+  composes: error from "./status-actions.module.css";
+}
+
+.field {
+  composes: field from "./form-fields.module.css";
+}
+
+.label {
+  composes: label from "./form-fields.module.css";
+}
+
+.helperText {
+  composes: helperText from "./form-fields.module.css";
+}
+
+.input {
+  composes: input from "./form-fields.module.css";
+}
+
+.textarea {
+  composes: textarea from "./form-fields.module.css";
+}
+
+.rollbackFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  max-width: 32rem;
+}
+
+.rollbackFieldsTitle {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  color: var(--webdesk-dashboard-color-foreground);
+  margin: 0;
+}

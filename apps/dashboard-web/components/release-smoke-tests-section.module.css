@@ -1,0 +1,89 @@
+/*
+ * Composes from `project-subresource-section.module.css` for the list/row/add-form shape, minus
+ * the edit-form/delete-button classes — `smoke_tests` has no update/delete route at all
+ * (append-only), mirroring `release-deployments-section.module.css`'s own identical shape. Adds
+ * `resultOk`/`resultFailed` color variants this list's own real 2-value `SmokeTestResult` benefits
+ * from.
+ */
+
+.list {
+  composes: list from "./project-subresource-section.module.css";
+}
+
+.row {
+  composes: row from "./project-subresource-section.module.css";
+}
+
+.rowMain {
+  composes: rowMain from "./project-subresource-section.module.css";
+}
+
+.primaryText {
+  composes: primaryText from "./project-subresource-section.module.css";
+}
+
+.secondaryText {
+  composes: secondaryText from "./project-subresource-section.module.css";
+}
+
+.resultOk {
+  color: var(--webdesk-dashboard-color-success);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+}
+
+.resultFailed {
+  color: var(--webdesk-dashboard-color-danger);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+}
+
+.addForm {
+  composes: addForm from "./project-subresource-section.module.css";
+}
+
+.addFormTitle {
+  composes: addFormTitle from "./project-subresource-section.module.css";
+}
+
+.fieldRow {
+  composes: fieldRow from "./project-subresource-section.module.css";
+}
+
+.field {
+  composes: field from "./project-subresource-section.module.css";
+}
+
+.label {
+  composes: label from "./project-subresource-section.module.css";
+}
+
+.helperText {
+  composes: helperText from "./project-subresource-section.module.css";
+}
+
+.input {
+  composes: input from "./project-subresource-section.module.css";
+}
+
+.select {
+  composes: select from "./project-subresource-section.module.css";
+}
+
+.textarea {
+  composes: textarea from "./project-subresource-section.module.css";
+}
+
+.formActions {
+  composes: formActions from "./project-subresource-section.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./project-subresource-section.module.css";
+}
+
+.error {
+  composes: error from "./project-subresource-section.module.css";
+}
+
+.muted {
+  composes: muted from "./project-subresource-section.module.css";
+}
