@@ -5169,7 +5169,97 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     full UI (list, detail, create/edit form, status actions, artifacts/approvals/deployments/
     smoke-tests/rollback sub-resource sections) are both live for the Release Center module.
 
-86. **`dashboard-web` Notification Center UI — built, reviewed, gated, merged
+86. **Help Center module backend — built, reviewed, and gated; pushed as its own branch,
+    not yet opened as a PR or merged (2026-09-03).** Module #38, key `help_center`, built
+    directly on the explicit "start help center" instruction. The spec gives only a topics list
+    (onboarding, project setup, WordPress publishing, review/approval, staging-to-production,
+    import/export, search/filtering, design libraries, Page Workspace, security/QA,
+    backup/rollback, FAQ, videos, known issues, feedback, version history), no field-level
+    schema — the same "topics-only" spec gap several sibling modules already hit. Three design
+    forks confirmed directly with the project owner first (`AskUserQuestion`): keep the seeded
+    `system_settings` RBAC group as-is (a real, deliberate limitation — only `super_admin`/
+    `owner_growth_approver` get any access at all, not even view, since the group carries no
+    grant for any of the other five roles), a single generic `help_articles` table with a
+    16-value `category` discriminator taken verbatim from the spec's own topic list, and no
+    approval workflow — a plain `isPublished`/`publishedAt` field pair instead of the standard
+    8-value `ArtifactApprovalStatus` lifecycle, the simplest content-library module built to
+    date. Migrations `00115`/`00116`. `content` is sanitized at write time via the shared,
+    already-audited `sanitizeRichTextHtml()`, wired ahead of the eventual `RichTextEditor` UI.
+    Built directly by the orchestrating session (not delegated to a background agent).
+    **Independent code review then ran** (this project's own `code-review` skill, medium effort,
+    8 finder angles run via parallel subagents, 1-vote self-verification) — 8 candidates
+    survived dedup, **all 8 CONFIRMED/PLAUSIBLE, all 8 fixed**. Most severe: `create()` never
+    stamped `publishedAt` when an article was created already published, contradicting the
+    entity's own documented "stamped on first publish" contract — fixed by stamping `NOW()`
+    directly on an already-published create. Also fixed: `update()`'s pre-fetch of the current
+    row created both an avoidable extra DB round trip and a stale-read audit-classification race
+    (two concurrent publishes could each log a "publish" event off the same stale "before" read)
+    — fixed by removing the pre-fetch entirely, unconditionally re-sanitizing `content` when
+    present (cheap and idempotent), and deriving the audit `eventType` purely from the caller's
+    own requested `isPublished` value rather than an observed transition; the audit `afterState`
+    for a plain content edit recorded only `isPublished`, dropping title/content changes from
+    the trail — fixed to record the real patch; `updateHelpArticleSchema` was hand-duplicated
+    from `createHelpArticleSchema` instead of derived via `.omit().partial()`, risking a
+    length-cap drift — fixed; no `.refine()` rejected a genuinely empty patch, letting a no-op
+    save still issue a real DB write and audit event — fixed; the `publishedAt` stamp-once
+    `COALESCE` was built via `fn()`/`col()`/`literal("NOW()")` composition, diverging from every
+    sibling repository's single `literal('COALESCE(...)')` idiom — fixed to match; and
+    `isPublished ?? false` defaulting was duplicated across both the service and the repository
+    — fixed by making the repository the sole owner of the default. Re-validated: 1852/1852
+    `dashboard-api` unit tests overall (21 new, all mocked-repository), typecheck/`nest build`/
+    `eslint --max-warnings=0`/`prettier --check`/`boundaries:check` all clean. **No separate
+    `security-review` skill run**, per the 2026-08-27 "right-size the review pipeline" standing
+    rule — reuses only already-vetted mechanisms (the shared sanitizer, existing
+    `PermissionGuard`/`OriginCheckGuard`/`RequirePermission` machinery, `escapeLikePattern()`)
+    with no new sink or endpoint class beyond standard CRUD; directly confirmed method-level RBAC
+    decorators throughout, `OriginCheckGuard` on both mutating routes, `category`'s immutability,
+    and no fabricated confidential-field mechanism (the module registry's own seeded
+    `confidentialityLevel` for `help_center` is `null`). **No local PostgreSQL instance was
+    available in this environment** — `validate:module-registry`, a real migration round-trip,
+    and any DB-backed integration/e2e test could not be run here, disclosed explicitly in
+    `docs/implementation/module-help-center.md` and the approval checklist rather than absorbed
+    silently; the migration content and repository stamp-once logic were read directly and
+    cross-checked against `content_templates`'/`knowledge_library_records`' own already-reviewed
+    equivalents. See `docs/implementation/module-help-center.md` and
+    `docs/project-state/module-help-center-approval-checklist.md`. **Required second-role human
+    review complete via the direct "Approve as-is, gate it, and push/PR" instruction** — the
+    approval checklist's own findings summary served as the review artifact, since there were no
+    open findings of any kind on this branch after the fix round. **The gate (G4-help-center) was
+    then approved** — WebDesk Solution, decision CONFIRM, approved commit `aa1e352` on branch
+    `module-help-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+    (`current_gate` now `G4-help-center`). **"Push the branch" was then executed as part of the
+    same combined instruction** — pushed to `origin`. **"Push the branch and open a PR" was
+    separately requested and executed** — opened as
+    [PR #118](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/118).
+    The PR initially showed no CI run at all (`mergeable_state: dirty`) — a real merge conflict
+    against `main` (two concurrent branches, Release Center's own live-verification doc commit
+    and the `dashboard-web` Notification Center UI, had merged since this branch started), which
+    silently prevents GitHub Actions from even creating a `pull_request` run rather than failing
+    a check. Resolved by merging `origin/main` in — only `CLAUDE.md`'s item numbering (both
+    branches independently claimed item 86) and `project.json`'s `gates[]`/`audit_log` arrays
+    conflicted (both sides' gate objects/audit entries kept, version counters re-sequenced 133→
+    136), fully re-verified after resolution (`@webdesk/shared-types` needed a fresh build for
+    `dashboard-web`'s typecheck to pick up the concurrently-merged Notification Center's new
+    exports — a stale-artifact false failure, not a real regression; 1852/1852 `dashboard-api` +
+    1928/1928 `dashboard-web` unit tests, typecheck/build/prettier all clean) before pushing
+    again. **All 14 CI checks then went green**, including the two DB-backed jobs (`Database
+migration test`, `Integration tests` — 832/832 `dashboard-api` e2e tests + 15/15
+    `dashboard-web` Playwright tests, both against a real disposable PostgreSQL 17 database) this
+    environment itself couldn't run, closing the disclosed gap. **"Merge PR #118" was then
+    separately requested and executed** — merged with a real merge commit (not squash/rebase),
+    matching every prior merge in this project's history — merge commit
+    `6a8cbcd52a67ae7432b27477afe9fa5ef085108e`. `dashboard-api` auto-deployed on push to `main`
+    and was verified live directly, not just via CI's own Vercel status check (the first `/health`
+    check returned a stale, edge-cached response for the PRIOR commit — a cache-busting query
+    param confirmed the real, current deployment) — `/health` returned `build.commitShaShort ==
+6a8cbcd`, confirming the exact merged commit is what's serving; `GET /help-center/articles`
+    returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean
+    the module never actually deployed); and `dashboard-web`'s `/` correctly redirects (307) an
+    unauthenticated visitor to `/auth/sign-in`. **The Help Center module backend is now genuinely
+    live in production.** No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
+
+87. **`dashboard-web` Notification Center UI — built, reviewed, gated, merged
     ([PR #116](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/116),
     merge commit `bcf706e81202972d861370fc510c4dda5e56539e`); now genuinely live in production
     (2026-09-03).**
@@ -5235,11 +5325,11 @@ bcf706e`, confirming the exact merged commit is what's serving; `GET /notificati
     never actually deployed); and `dashboard-web`'s `/notification-center` correctly redirects
     (307) an unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Notification
     Center UI is now genuinely live in production**, closing out this slice's full
-    build-to-production arc — with the flagged RBAC gap (item 87 below) still standing at the
+    build-to-production arc — with the flagged RBAC gap (item 88 below) still standing at the
     time of this merge.
 
-87. **Grant `super_admin` the `notifications_view` permission — built, reviewed, gated, pushed
-    (2026-09-03).** Closes the flagged, declined-scope RBAC gap from item 86 above:
+88. **Grant `super_admin` the `notifications_view` permission — built, reviewed, gated, pushed
+    (2026-09-03).** Closes the flagged, declined-scope RBAC gap from item 87 above:
     `notifications_view`/`notifications_configure` were left zero-seeded when the Notification
     Center backend/UI were built, so every route the UI calls 403'd for every real user. Not
     started automatically — built directly on the explicit "Grant a role notifications_view
@@ -5247,7 +5337,9 @@ bcf706e`, confirming the exact merged commit is what's serving; `GET /notificati
     (`AskUserQuestion`): **`super_admin`**, since it already holds every other `system_settings`
     action (`VCERM`) and is the role the one currently-provisioned production user holds.
     `notifications_configure` and every other role stay zero-seeded — explicitly declined for
-    this request. New migration `00115-grant-notifications-view-to-super-admin.ts` — grants only
+    this request. New migration `00117-grant-notifications-view-to-super-admin.ts` (renumbered
+    from `00115` during a merge with `main`, which had concurrently claimed `00115`/`00116` for the
+    unrelated Help Center module) — grants only
     work as a static migration in this system (`role_permissions` has no runtime HTTP mechanism
     to add a grant to a role; `RoleAssignmentController`/`Service` only assign/revoke a **user**
     to/from a role, never edit the role's own grants). The migration inserts one additive
@@ -5259,7 +5351,7 @@ DO NOTHING` against the real partial unique index — safely re-runnable; `down(
     through the existing, unmodified authorization mechanism. Verified against a real local
     disposable PostgreSQL 17 database (never production): a full 115-migration `up`, confirmed
     exactly one grant landed (no other role/action affected), then a `down`/`up` round-trip on
-    `00115` alone confirming the row disappears and reappears cleanly. 28/28
+    `00117` alone confirming the row disappears and reappears cleanly. 28/28
     `@webdesk/database` unit tests, typecheck/lint/prettier all clean. **This is a genuine
     RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline
     standing rule reserves for the full tier by default** — given a one-file,
@@ -8374,7 +8466,7 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   `NotificationService`/`NotificationsController`) — only the UI was missing. Two
   `AskUserQuestion` scope decisions confirmed first: dashboard-web UI only (declining a dedicated
   RBAC group/mark-in-development migration), and view-only list/detail exposing only the existing
-  `attempt-delivery` retry action. See CLAUDE.md item 86 above and
+  `attempt-delivery` retry action. See CLAUDE.md item 87 above and
   `docs/implementation/dashboard-web-notification-center.md` for the full account, including the
   flagged, declined-scope gap: `notifications_view`/`notifications_configure` are zero-seeded on
   every role today (Phase 1E's own original design), so this UI 403s for every current user until
@@ -8404,10 +8496,11 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   production**, closing out this slice's full build-to-production arc.
 - `[2026-09-03]` **Granted `super_admin` the `notifications_view` permission**, under the
   explicit "Grant a role notifications_view permission" instruction, closing the flagged RBAC gap
-  from the Notification Center UI (item 86). Target role confirmed directly (`AskUserQuestion`):
-  `super_admin`. See CLAUDE.md item 87 above and
+  from the Notification Center UI (item 87). Target role confirmed directly (`AskUserQuestion`):
+  `super_admin`. See CLAUDE.md item 88 above and
   `docs/implementation/grant-notifications-view-permission.md` for the full account — a single
-  additive migration (`00115`), no application code touched, verified against a real local
+  additive migration (`00117`, renumbered from `00115` during a merge with the concurrently-
+  merged Help Center module), no application code touched, verified against a real local
   disposable database (never production).
 - `[2026-09-03]` **Required second-role human review and the gate were both completed via the
   direct "Approve as-is, gate it, and push the branch" instruction.** This is a genuine

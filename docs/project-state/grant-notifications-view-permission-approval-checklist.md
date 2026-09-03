@@ -17,7 +17,7 @@ approved (WebDesk Solution, CONFIRM). Pushed to `origin` — not yet opened as a
 | 7   | Known out-of-scope gaps flagged, not fixed | `notifications_configure` and every other role remain zero-seeded — explicitly declined for this request                                                                           |
 | 8   | Live-rendered / verified                   | Verified directly against a real local database (not production) — see the implementation doc's "Validation" section                                                               |
 | 9   | Documentation updated                      | ✅ `docs/implementation/grant-notifications-view-permission.md`                                                                                                                    |
-| 10  | Exact branch/commit verified               | Branch `grant-notifications-view-permission`, commit `84831c8` — pushed to `origin`                                                                                                |
+| 10  | Exact branch/commit verified               | Branch `grant-notifications-view-permission`, commit `84831c8` (migration renumbered `00115`→`00117` during a merge with `main`) — pushed to `origin`                              |
 
 ## Forbidden-actions check
 
@@ -41,7 +41,7 @@ push the branch" instruction. The findings above served as the review artifact; 
 open findings of any kind on this branch to accept as tracked debt.
 
 **Gate:** `G4-grant-notifications-view-permission` approved — WebDesk Solution, decision CONFIRM
-(clean pass, not an override), approved commit `84831c8` on branch
+(clean pass, not an override), approved commit `84831c8` (migration renumbered `00115`→`00117` during a merge with `main`) on branch
 `grant-notifications-view-permission`. See `outputs/webdesk-growth-dashboard/project.json`'s
 `gates[]` (`current_gate` now `G4-grant-notifications-view-permission`).
 

@@ -17,7 +17,9 @@ request.
 
 ## As-built
 
-New migration `packages/database/src/migrations/00115-grant-notifications-view-to-super-admin.ts`.
+New migration `packages/database/src/migrations/00117-grant-notifications-view-to-super-admin.ts`
+(renumbered from `00115` during a merge with `main`, which had concurrently claimed migrations
+`00115`/`00116` for the unrelated Help Center module).
 Grants only work as a static migration in this system — `role_permissions` (migration `00011`) has
 no runtime HTTP mechanism to add a grant to a role (`RoleAssignmentController`/`Service` only
 assign/revoke a **user** to/from a role, never edit a role's own permission grants). The migration
@@ -38,10 +40,11 @@ Run against a real local disposable PostgreSQL 17 database (`webdesk_notif_grant
 after use — never against production; the standing convention is the user runs the real production
 migration themselves):
 
-- Full `migrate up` (all 115 migrations) — clean, `00115` applies without error.
+- Full `migrate up` (all 117 migrations, including the concurrently-merged Help Center's own
+  `00115`/`00116`) — clean, `00117` applies without error.
 - Verified exactly one row landed: `super_admin` / `system_settings` / `notifications_view` — no
   other role or action affected.
-- `migrate down` on `00115` alone, confirmed the row is gone (count 0), then `migrate up` again,
+- `migrate down` on `00117` alone, confirmed the row is gone (count 0), then `migrate up` again,
   confirmed it's back (count 1) — a clean down/up round-trip.
 - `pnpm --filter @webdesk/database typecheck` / `lint` — clean.
 - `pnpm --filter @webdesk/database test` — 28/28 unit tests passing (no test asserts on

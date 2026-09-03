@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-release-center",
+    "current_gate": "G4-help-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -1402,6 +1402,20 @@
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization, matching this project's established pattern for a combined instruction; opening a PR and merging remain their own separate, not-yet-requested authorizations."
     },
     {
+      "id": "G4-help-center",
+      "type": "qa-security-gate",
+      "scope": "module-help-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "aa1e352 (branch module-help-center)",
+      "record": "docs/project-state/module-help-center-approval-checklist.md",
+      "notes": "Help Center module #38 backend. A single generic help_articles table with a 16-value category discriminator taken verbatim from the canonical spec's own topic list, no approval workflow (plain isPublished/publishedAt only), organization-wide, reusing the already-seeded system_settings RBAC group verbatim -- confirmed directly with the project owner as a deliberate limitation (only super_admin/owner_growth_approver get any access at all). Migrations 00115/00116. Independent code review (medium effort, 8 finder angles) found 8 issues, all fixed -- most severe: create() never stamped publishedAt on an already-published article, and update()'s pre-fetch created a stale-read audit-classification race (resolved by removing the pre-fetch entirely and deriving the audit event purely from caller intent). No separate security review, per the 2026-08-27 right-size-the-review-pipeline standing rule -- reuses only already-vetted mechanisms (shared sanitizer, existing RBAC guards), no new sink. 1852/1852 dashboard-api unit tests overall (21 new). Disclosed gap: no local PostgreSQL instance in this environment, so validate:module-registry, a migration round-trip, and DB-backed integration/e2e tests could not be run here -- to be closed by CI/a later environment.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- approved together with push/PR authorization under one combined 'approve as-is, gate it, and push/PR' instruction, per this project's standing no-auto-merge rule allowing an explicit combined authorization when given together."
+    },
+    {
       "id": "G4-grant-notifications-view-permission",
       "type": "qa-security-gate",
       "scope": "grant-notifications-view-permission",
@@ -1412,7 +1426,7 @@
       "decided_at": "2026-09-03T00:00:00Z",
       "approved_commit": "84831c8 (branch grant-notifications-view-permission)",
       "record": "docs/project-state/grant-notifications-view-permission-approval-checklist.md",
-      "notes": "Grants super_admin the notifications_view action on the system_settings module -- closes the flagged, declined-scope gap from the dashboard-web Notification Center UI (item 86): notifications_view/notifications_configure were left zero-seeded when that backend/UI were built, so every route the UI calls 403'd for every real user. Not started automatically -- built directly on the explicit \"Grant a role notifications_view permission\" instruction, with the target role confirmed directly (AskUserQuestion): super_admin, since it already holds every other system_settings action (VCERM) and is the role the one currently-provisioned production user holds. notifications_configure and every other role stay zero-seeded, explicitly out of scope. New migration 00115-grant-notifications-view-to-super-admin.ts inserts one additive role_permissions row (resolved by joining on roles'/modules' real key columns, not a hardcoded id), guarded by ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL DO NOTHING against the real partial unique index, making it safely re-runnable; down() deletes only that exact (role, module, action) triple. No application/enforcement code changed -- PermissionGuard/@RequirePermission are unmodified; this is purely additive seed data through the existing, unmodified authorization mechanism. Verified against a real local disposable PostgreSQL 17 database (never production): a full 115-migration up, confirmed exactly one grant landed (no other role/action affected), then a migrate down/up round-trip on 00115 alone confirming the row disappears and reappears cleanly. 28/28 @webdesk/database unit tests, typecheck/lint/prettier all clean. This is a genuine RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline standing rule reserves for the full tier by default -- given a one-file, no-application-code-touched, additive-read-only-grant diff, a direct, careful security-focused read-through was judged proportionate rather than an 8-angle fan-out: confirmed the up() WHERE clause resolves to exactly one (role, module) pair, the ON CONFLICT target matches the real index (verified by running it twice in a row -- the second run stayed a no-op), down() is scoped to the exact triple (not a blanket delete), no application code changed, and no SQL-injection surface (every value is a static literal). 0 findings.",
+      "notes": "Grants super_admin the notifications_view action on the system_settings module -- closes the flagged, declined-scope gap from the dashboard-web Notification Center UI (item 87): notifications_view/notifications_configure were left zero-seeded when that backend/UI were built, so every route the UI calls 403'd for every real user. Not started automatically -- built directly on the explicit \"Grant a role notifications_view permission\" instruction, with the target role confirmed directly (AskUserQuestion): super_admin, since it already holds every other system_settings action (VCERM) and is the role the one currently-provisioned production user holds. notifications_configure and every other role stay zero-seeded, explicitly out of scope. New migration 00115-grant-notifications-view-to-super-admin.ts inserts one additive role_permissions row (resolved by joining on roles'/modules' real key columns, not a hardcoded id), guarded by ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL DO NOTHING against the real partial unique index, making it safely re-runnable; down() deletes only that exact (role, module, action) triple. No application/enforcement code changed -- PermissionGuard/@RequirePermission are unmodified; this is purely additive seed data through the existing, unmodified authorization mechanism. Verified against a real local disposable PostgreSQL 17 database (never production): a full 115-migration up, confirmed exactly one grant landed (no other role/action affected), then a migrate down/up round-trip on 00115 alone confirming the row disappears and reappears cleanly. 28/28 @webdesk/database unit tests, typecheck/lint/prettier all clean. This is a genuine RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline standing rule reserves for the full tier by default -- given a one-file, no-application-code-touched, additive-read-only-grant diff, a direct, careful security-focused read-through was judged proportionate rather than an 8-angle fan-out: confirmed the up() WHERE clause resolves to exactly one (role, module) pair, the ON CONFLICT target matches the real index (verified by running it twice in a row -- the second run stayed a no-op), down() is scoped to the exact triple (not a blanket delete), no application code changed, and no SQL-injection surface (every value is a static literal). Note: this migration was renumbered to 00117 during the merge with module-help-center, which had concurrently claimed migration numbers 00115/00116 for its own help_articles table. 0 findings.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations. This gate also does not authorize running the migration against the real production database -- that remains the user's own action, per this project's standing credential-handling discipline (the user runs pnpm --filter @webdesk/database run migrate themselves after the code is merged)."
     }
   ],
@@ -3642,12 +3656,30 @@
       "timestamp": "2026-09-03T00:00:00Z"
     },
     {
+      "action": "second_role_review_completed",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Required second-role human review (ADR-0010) complete for the Help Center module #38 backend, via the direct 'Approve as-is, gate it, and push/PR' instruction -- the approval checklist's own findings summary (0 open findings, all 8 code-review findings fixed) served as the review artifact rather than a separately published packet.",
+      "project_version_before": 134,
+      "project_version_after": 135,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
       "action": "gate_approved",
       "actor": "WebDesk Solution",
       "actor_type": "human",
-      "details": "Gate G4-grant-notifications-view-permission approved (WebDesk Solution, CONFIRM, \"Approve as-is\") for a new migration (00115) granting super_admin the notifications_view action on system_settings -- closes the zero-seeded RBAC gap flagged when the Notification Center UI shipped (item 86). Target role confirmed directly via AskUserQuestion. Purely additive seed data, no application code changed. Reviewed with a direct security-focused read-through (RBAC change, full-tier by default per the 2026-08-27 standing rule) -- 0 findings. Verified via a real migrate up/down/up round-trip against a local disposable database only, never production. This gate approval does not authorize opening a PR, merging, or running the migration against production -- each remains its own separate, not-yet-requested authorization.",
-      "project_version_before": 134,
-      "project_version_after": 135,
+      "details": "Gate G4-help-center approved (WebDesk Solution, CONFIRM) for the Help Center module #38 backend, approved commit aa1e352 on branch module-help-center. Single generic help_articles table, 16-value category discriminator, no approval workflow, reuses the seeded system_settings RBAC group verbatim (a deliberate, confirmed limitation). Independent code review found and fixed 8 issues; no separate security review needed per the standing right-size rule. Disclosed gap: no local PostgreSQL available to run DB-backed suites in this environment.",
+      "project_version_before": 135,
+      "project_version_after": 136,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-grant-notifications-view-permission approved (WebDesk Solution, CONFIRM, \"Approve as-is\") for a new migration (renumbered 00115->00117 during this merge, since Help Center's own concurrently-merged migrations claimed 00115/00116 first) granting super_admin the notifications_view action on system_settings -- closes the zero-seeded RBAC gap flagged when the Notification Center UI shipped (item 87). Target role confirmed directly via AskUserQuestion. Purely additive seed data, no application code changed. Reviewed with a direct security-focused read-through (RBAC change, full-tier by default per the 2026-08-27 standing rule) -- 0 findings. Verified via a real migrate up/down/up round-trip against a local disposable database only, never production. This gate approval does not authorize opening a PR, merging, or running the migration against production -- each remains its own separate, not-yet-requested authorization.",
+      "project_version_before": 136,
+      "project_version_after": 137,
       "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
