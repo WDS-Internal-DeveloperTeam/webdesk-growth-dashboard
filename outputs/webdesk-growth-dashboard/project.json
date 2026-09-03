@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-help-center",
+    "current_gate": "G4-dashboard-web-help-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -1414,6 +1414,20 @@
       "record": "docs/project-state/module-help-center-approval-checklist.md",
       "notes": "Help Center module #38 backend. A single generic help_articles table with a 16-value category discriminator taken verbatim from the canonical spec's own topic list, no approval workflow (plain isPublished/publishedAt only), organization-wide, reusing the already-seeded system_settings RBAC group verbatim -- confirmed directly with the project owner as a deliberate limitation (only super_admin/owner_growth_approver get any access at all). Migrations 00115/00116. Independent code review (medium effort, 8 finder angles) found 8 issues, all fixed -- most severe: create() never stamped publishedAt on an already-published article, and update()'s pre-fetch created a stale-read audit-classification race (resolved by removing the pre-fetch entirely and deriving the audit event purely from caller intent). No separate security review, per the 2026-08-27 right-size-the-review-pipeline standing rule -- reuses only already-vetted mechanisms (shared sanitizer, existing RBAC guards), no new sink. 1852/1852 dashboard-api unit tests overall (21 new). Disclosed gap: no local PostgreSQL instance in this environment, so validate:module-registry, a migration round-trip, and DB-backed integration/e2e tests could not be run here -- to be closed by CI/a later environment.",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- approved together with push/PR authorization under one combined 'approve as-is, gate it, and push/PR' instruction, per this project's standing no-auto-merge rule allowing an explicit combined authorization when given together."
+    },
+    {
+      "id": "G4-dashboard-web-help-center",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-help-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "e775dad (branch dashboard-web-help-center)",
+      "record": "docs/project-state/dashboard-web-help-center-approval-checklist.md",
+      "notes": "dashboard-web Help Center UI, closing this module's last named gap on top of the already-gated backend (G4-help-center, PR #118, merged and live). Four routes: list/detail/create/edit, mirroring Content Template Library's structure but simplified since Help Center has no approvalStatus at all. category is create-only; content uses RichTextEditor as this module's one required rich-text field; HelpCenterPublishActions toggles isPublished through the same generic update route the form uses, since no dedicated publish/unpublish RBAC action exists for the seeded system_settings group. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through pass verified the create/edit field contract against the real backend schemas, the publish-toggle payload shape, category immutability, and reuse of every established shared helper -- 0 findings. No separate security review -- no new endpoint/RBAC action/sink. 1964/1964 dashboard-web unit tests overall (36 new). Live-rendered in the Browser pane: all four routes confirmed to redirect an unauthenticated visitor cleanly, zero server errors.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- given directly as 'Approve as-is, gate it, and push the branch', pushing is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
     }
   ],
   "budget": {
@@ -3658,7 +3672,25 @@
       "project_version_before": 135,
       "project_version_after": 136,
       "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "second_role_review_completed",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Required second-role human review (ADR-0010) complete for the dashboard-web Help Center UI, via the direct 'Approve as-is, gate it, and push the branch' instruction -- the approval checklist's own findings summary (0 findings) served as the review artifact, since this slice was reviewed at light tier.",
+      "project_version_before": 136,
+      "project_version_after": 137,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-help-center approved (WebDesk Solution, CONFIRM) for the dashboard-web Help Center UI, approved commit e775dad on branch dashboard-web-help-center. Closes the module's last named gap on top of the already-gated, already-live backend (G4-help-center, PR #118). Reviewed at light tier -- 0 findings.",
+      "project_version_before": 137,
+      "project_version_after": 138,
+      "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
-  "current_gate": "G4-help-center"
+  "current_gate": "G4-dashboard-web-help-center"
 }

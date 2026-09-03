@@ -50,6 +50,14 @@ component.
 
 ## Sign-off
 
-**Pending** — required second-role human review (ADR-0010, the implementing agent cannot also be
-its own reviewer), a gate decision, and push/PR/merge authorization each remain separate,
-not-yet-requested next steps, per this project's standing "no auto-merge" rule.
+Required second-role human review, per ADR-0010 (the implementing agent cannot also be its own
+reviewer): **Approved as-is**, WebDesk Solution, 2026-09-03, via the direct "Approve as-is, gate
+it, and push the branch" instruction — the findings summary above (0 findings) served as the
+review artifact, since this slice was reviewed at light tier.
+
+Gate `G4-dashboard-web-help-center`: **CONFIRM** — WebDesk Solution, 2026-09-03, approved commit
+`e775dad` on branch `dashboard-web-help-center`.
+
+Push authorization was given together with the gate as one combined instruction — opening a PR and
+merge each remain their own separate, not-yet-requested authorization, per this project's standing
+"no auto-merge" rule.

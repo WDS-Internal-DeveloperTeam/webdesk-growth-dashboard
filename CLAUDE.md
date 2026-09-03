@@ -5313,7 +5313,7 @@ migration test`, `Integration tests` — 832/832 `dashboard-api` e2e tests + 15/
     opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
     per this project's standing "no auto-merge" rule.
 
-88. **`dashboard-web` Help Center UI — built, not yet reviewed/gated/pushed (2026-09-03).** Closes
+88. **`dashboard-web` Help Center UI — built, reviewed, gated, pushed (2026-09-03).** Closes
     this module's last named gap, built directly on the explicit "Start the dashboard-web UI for
     it" instruction, following the backend's own build-to-production arc (PR #118, merge commit
     `6a8cbcd`). No approved wireframe exists for this module — sections mirror
@@ -5351,9 +5351,16 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     tests overall (36 new). Live-rendered in the Browser pane: all four routes confirmed to
     redirect an unauthenticated visitor cleanly, zero server errors. See
     `docs/implementation/module-help-center.md`'s "As-built — `dashboard-web` UI" section and
-    `docs/project-state/dashboard-web-help-center-approval-checklist.md`. **Not yet reviewed by a
-    second role, gated, pushed, opened as a PR, or merged** — each remains its own separate,
-    not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    `docs/project-state/dashboard-web-help-center-approval-checklist.md`. **Required second-role
+    human review complete via the direct "Approve as-is, gate it, and push the branch"
+    instruction** — the approval checklist's own findings summary served as the review artifact,
+    since there were no open findings of any kind on this branch. **The gate
+    (G4-dashboard-web-help-center) was then approved** — WebDesk Solution, decision CONFIRM (clean
+    pass, not an override), approved commit `e775dad` on branch `dashboard-web-help-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-help-center`). **"Push the branch" was then executed under the same combined
+    instruction** — pushed to `origin`. **Opening a PR and merging remain separate,
+    not-yet-requested next steps**, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
