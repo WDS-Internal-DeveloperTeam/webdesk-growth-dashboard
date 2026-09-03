@@ -5169,7 +5169,10 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     full UI (list, detail, create/edit form, status actions, artifacts/approvals/deployments/
     smoke-tests/rollback sub-resource sections) are both live for the Release Center module.
 
-86. **`dashboard-web` Notification Center UI — built, reviewed, gated, pushed (2026-09-03).**
+86. **`dashboard-web` Notification Center UI — built, reviewed, gated, merged
+    ([PR #116](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/116),
+    merge commit `bcf706e81202972d861370fc510c4dda5e56539e`); now genuinely live in production
+    (2026-09-03).**
     View-only over the existing Phase 1E notification-record foundation (`notifications` table,
     `NotificationService`/`NotificationsController` with list/get/create/attempt-delivery routes —
     real SMTP delivery explicitly out of scope for this phase). Not started automatically — built
@@ -5219,9 +5222,67 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     `32be912` on branch `dashboard-web-notification-center` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-dashboard-web-notification-center`). **"Push the branch" was then executed under the same
-    combined instruction** — pushed to `origin`. **This gate approval does not itself authorize
-    opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
-    per this project's standing "no auto-merge" rule.
+    combined instruction** — pushed to `origin`. **"Open a PR" was then separately requested and
+    executed** — opened as
+    [PR #116](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/116),
+    all 14 CI checks confirmed green. **"Merge PR #116" was then separately requested and
+    executed** — merged with a real merge commit (not squash/rebase), matching every prior merge
+    in this project's history — merge commit `bcf706e81202972d861370fc510c4dda5e56539e`. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort ==
+bcf706e`, confirming the exact merged commit is what's serving; `GET /notifications` returned a
+    clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean the route
+    never actually deployed); and `dashboard-web`'s `/notification-center` correctly redirects
+    (307) an unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Notification
+    Center UI is now genuinely live in production**, closing out this slice's full
+    build-to-production arc — with the flagged RBAC gap (item 87 below) still standing at the
+    time of this merge.
+
+87. **Grant `super_admin` the `notifications_view` permission — built, reviewed, gated, pushed
+    (2026-09-03).** Closes the flagged, declined-scope RBAC gap from item 86 above:
+    `notifications_view`/`notifications_configure` were left zero-seeded when the Notification
+    Center backend/UI were built, so every route the UI calls 403'd for every real user. Not
+    started automatically — built directly on the explicit "Grant a role notifications_view
+    permission" instruction. Which role should receive the grant was confirmed directly
+    (`AskUserQuestion`): **`super_admin`**, since it already holds every other `system_settings`
+    action (`VCERM`) and is the role the one currently-provisioned production user holds.
+    `notifications_configure` and every other role stay zero-seeded — explicitly declined for
+    this request. New migration `00115-grant-notifications-view-to-super-admin.ts` — grants only
+    work as a static migration in this system (`role_permissions` has no runtime HTTP mechanism
+    to add a grant to a role; `RoleAssignmentController`/`Service` only assign/revoke a **user**
+    to/from a role, never edit the role's own grants). The migration inserts one additive
+    `role_permissions` row, resolved by joining on the roles'/modules' real `key` columns (not a
+    hardcoded id), guarded by `ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL
+DO NOTHING` against the real partial unique index — safely re-runnable; `down()` deletes only
+    that exact `(role, module, action)` triple. No application/enforcement code changed —
+    `PermissionGuard`/`@RequirePermission` are unmodified; this is purely additive seed data
+    through the existing, unmodified authorization mechanism. Verified against a real local
+    disposable PostgreSQL 17 database (never production): a full 115-migration `up`, confirmed
+    exactly one grant landed (no other role/action affected), then a `down`/`up` round-trip on
+    `00115` alone confirming the row disappears and reappears cleanly. 28/28
+    `@webdesk/database` unit tests, typecheck/lint/prettier all clean. **This is a genuine
+    RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline
+    standing rule reserves for the full tier by default** — given a one-file,
+    no-application-code-touched, additive-read-only-grant diff, a direct, careful
+    security-focused read-through was judged proportionate rather than an 8-angle fan-out:
+    confirmed the `up()` `WHERE` clause resolves to exactly one `(role, module)` pair, the `ON
+CONFLICT` target matches the real index (verified by running it twice in a row — the second run
+    stayed a no-op), `down()` is scoped to the exact triple (not a blanket delete), no
+    application code changed, and no SQL-injection surface (every value is a static literal). **0
+    findings.** See `docs/implementation/grant-notifications-view-permission.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it, and push the
+    branch" instruction** — the findings above served as the review artifact, since there were no
+    open findings of any kind on this branch. **The gate
+    (G4-grant-notifications-view-permission) was then approved** — WebDesk Solution, decision
+    CONFIRM (clean pass, not an override), approved commit `84831c8` on branch
+    `grant-notifications-view-permission` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-grant-notifications-view-permission`). **"Push the branch" was then executed under the
+    same combined instruction** — pushed to `origin`. **This gate approval does not itself
+    authorize opening a PR, merging, or running the migration against production** — each
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule and standing credential-handling discipline (the user runs
+    `pnpm --filter @webdesk/database run migrate` themselves after this is merged).
 
 ## Recent decisions
 
@@ -8327,6 +8388,39 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   then executed under the same combined instruction** — pushed to `origin`. This gate approval
   does not itself authorize opening a PR or merging — each remains its own separate,
   not-yet-requested authorization.
+- `[2026-09-03]` **"Open a PR" was separately requested and executed** on
+  `dashboard-web-notification-center` — opened as
+  [PR #116](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/116).
+  **"Check CI status on the PR" then confirmed all 14 checks green**, including both Vercel
+  preview deployments. **"Merge PR #116" was then separately requested and executed** — merged
+  with a real merge commit (not squash/rebase), matching every prior merge in this project's
+  history — merge commit `bcf706e81202972d861370fc510c4dda5e56539e`. Both Vercel projects
+  auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+  status check — `dashboard-api`'s `/health` returned `build.commitShaShort == bcf706e`,
+  confirming the exact merged commit is what's serving; `GET /notifications` returned a clean
+  `401` (route live, `SessionGuard` enforcing — not a `404`); and `dashboard-web`'s
+  `/notification-center` correctly redirects (307) an unauthenticated visitor to
+  `/auth/sign-in`. **The `dashboard-web` Notification Center UI is now genuinely live in
+  production**, closing out this slice's full build-to-production arc.
+- `[2026-09-03]` **Granted `super_admin` the `notifications_view` permission**, under the
+  explicit "Grant a role notifications_view permission" instruction, closing the flagged RBAC gap
+  from the Notification Center UI (item 86). Target role confirmed directly (`AskUserQuestion`):
+  `super_admin`. See CLAUDE.md item 87 above and
+  `docs/implementation/grant-notifications-view-permission.md` for the full account — a single
+  additive migration (`00115`), no application code touched, verified against a real local
+  disposable database (never production).
+- `[2026-09-03]` **Required second-role human review and the gate were both completed via the
+  direct "Approve as-is, gate it, and push the branch" instruction.** This is a genuine
+  RBAC/permission change, reserved for the full review tier by default per the 2026-08-27
+  standing rule — given a one-file, no-application-code-touched, additive-read-only-grant diff, a
+  direct security-focused read-through was judged proportionate (0 findings) rather than an
+  8-angle fan-out. Gate `G4-grant-notifications-view-permission` approved — WebDesk Solution,
+  decision CONFIRM, approved commit `84831c8` on branch `grant-notifications-view-permission` —
+  see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-grant-notifications-view-permission`). **"Push the branch" was then executed under the same
+  combined instruction** — pushed to `origin`. This gate approval does not itself authorize
+  opening a PR, merging, or running the migration against production — each remains its own
+  separate, not-yet-requested authorization.
 
 ## Open client blockers
 

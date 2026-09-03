@@ -1,7 +1,8 @@
 # Grant `notifications_view` to `super_admin` — Approval Checklist
 
-**Status:** Built, fully validated. Reviewed (security-focused, RBAC change) — 0 findings. Not
-yet gated, pushed, opened as a PR, or merged.
+**Status:** Built, fully validated. Reviewed (security-focused, RBAC change) — 0 findings.
+Required second-role human review complete. Gate `G4-grant-notifications-view-permission`
+approved (WebDesk Solution, CONFIRM). Pushed to `origin` — not yet opened as a PR or merged.
 
 ## Completion condition
 
@@ -16,7 +17,7 @@ yet gated, pushed, opened as a PR, or merged.
 | 7   | Known out-of-scope gaps flagged, not fixed | `notifications_configure` and every other role remain zero-seeded — explicitly declined for this request                                                                           |
 | 8   | Live-rendered / verified                   | Verified directly against a real local database (not production) — see the implementation doc's "Validation" section                                                               |
 | 9   | Documentation updated                      | ✅ `docs/implementation/grant-notifications-view-permission.md`                                                                                                                    |
-| 10  | Exact branch/commit verified               | Not yet on a pushed branch                                                                                                                                                         |
+| 10  | Exact branch/commit verified               | Branch `grant-notifications-view-permission`, commit `84831c8` — pushed to `origin`                                                                                                |
 
 ## Forbidden-actions check
 
@@ -35,9 +36,17 @@ account. **0 findings.**
 
 ## Sign-off
 
-**Required second-role human review:** Not yet requested.
+**Required second-role human review:** Complete — via the direct "Approve as-is, gate it, and
+push the branch" instruction. The findings above served as the review artifact; there were no
+open findings of any kind on this branch to accept as tracked debt.
 
-**Gate:** Not yet requested.
+**Gate:** `G4-grant-notifications-view-permission` approved — WebDesk Solution, decision CONFIRM
+(clean pass, not an override), approved commit `84831c8` on branch
+`grant-notifications-view-permission`. See `outputs/webdesk-growth-dashboard/project.json`'s
+`gates[]` (`current_gate` now `G4-grant-notifications-view-permission`).
 
-**Push/PR/merge:** Not yet requested — each remains its own separate, not-yet-requested
-authorization, per this project's standing "no auto-merge" rule.
+**Push:** Executed under the same combined instruction — pushed to `origin`. **This gate
+approval does not itself authorize opening a PR, merging, or running the migration against
+production** — each remains its own separate, not-yet-requested authorization, per this
+project's standing "no auto-merge" rule and standing credential-handling discipline (the user
+runs `pnpm --filter @webdesk/database run migrate` themselves after this is merged).
