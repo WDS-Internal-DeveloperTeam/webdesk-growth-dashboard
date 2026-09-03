@@ -230,3 +230,28 @@ projectId)` on every sub-resource read/write, the dynamic per-transition RBAC ga
 `productionApproverUserId`, and no raw-SQL string interpolation anywhere in
 `ReleaseRepository.updateStatus()`'s `literal()`/`fn()`/`col()` usage (only fixed column-name
 literals and a parameterized `actorUserId` argument).
+
+**Required second-role human review complete** — WebDesk Solution, "Approve as-is," 2026-09-03,
+accepting the 4 open tracked-debt findings. **The gate (G4-release-center) was then separately
+requested and approved** — WebDesk Solution, decision CONFIRM, approved commit `c562586` on branch
+`module-release-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+(`current_gate` now `G4-release-center`) and
+`docs/project-state/module-release-center-approval-checklist.md`'s "Sign-off" section. **"Push,
+open a PR, and merge" was then separately requested and executed** — pushed to `origin`, opened as
+[PR #112](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/112). A real
+merge conflict against `main` surfaced (Decision and Activity Log module #37, PR #111, had merged
+concurrently) — only `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`/`audit_log` arrays
+conflicted, resolved by keeping both sides' entries and re-sequencing version counters, fully
+re-verified against a fresh local disposable database before pushing again (114 migrations clean,
+1830/1830 `dashboard-api` unit tests, typecheck/lint/prettier all clean). All 14 CI checks then
+confirmed green. Merged with a real merge commit (not squash/rebase) — merge commit
+`87aac6b45104c9c84507f2e415256e31335a3f62`. Both Vercel projects auto-deployed on push to `main`
+and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+`/health` returned `build.commitShaShort == 87aac6b`, confirming the exact merged commit is what's
+serving; `GET /release-center/projects/:projectId/releases` returned a clean `401` (route live,
+`SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed); and
+`dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to `/auth/sign-in` for an
+unauthenticated visitor, confirming the session gate is intact. **The Release Center module
+backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this module —
+a separate, not-yet-requested next step, matching every prior module's own backend-first
+precedent.
