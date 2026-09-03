@@ -3076,3 +3076,43 @@ export interface Notification {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * Help Center (module #38, `help_center`) — a single generic `help_articles` table, mirrored here
+ * exactly from `packages/database/src/help-center/entities.ts`. The 16-value `category` list is
+ * taken verbatim from `03_Detailed_Module_Specifications.md §38`'s own topic list. No approval
+ * workflow — `isPublished`/`publishedAt` are a plain, ungoverned field pair (the simplest
+ * content-library module built to date), toggled through the ordinary update route rather than a
+ * dedicated publish/unpublish action, since the seeded `system_settings` RBAC group this module
+ * reuses carries no `P` (Publish/Unpublish) letter.
+ */
+export type HelpArticleCategory =
+  | "onboarding"
+  | "project_setup"
+  | "wordpress_publishing"
+  | "review_approval"
+  | "staging_to_production"
+  | "import_export"
+  | "search_filtering"
+  | "design_libraries"
+  | "page_workspace"
+  | "security_qa"
+  | "backup_rollback"
+  | "faq"
+  | "videos"
+  | "known_issues"
+  | "feedback"
+  | "version_history";
+
+export interface HelpArticle {
+  readonly id: string;
+  readonly category: HelpArticleCategory;
+  readonly title: string;
+  readonly content: string;
+  readonly isPublished: boolean;
+  readonly publishedAt: string | null;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
