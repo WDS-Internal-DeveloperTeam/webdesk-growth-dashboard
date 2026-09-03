@@ -64,15 +64,15 @@ mechanism for a light, backend-only query-surface module.
 
 Branch: `module-decision-and-activity-log`.
 
-**`packages/database`** (migrations `00111`/`00112`):
+**`packages/database`** (migrations `00113`/`00114`):
 
-- `00111-add-audit-events-event-type-created-at-index.ts` — a composite `(event_type, created_at)`
+- `00113-add-audit-events-event-type-created-at-index.ts` — a composite `(event_type, created_at)`
   index on `audit_events`, supporting this module's own primary query shape
   (`WHERE event_type IN (...) ORDER BY created_at DESC`). `audit_events` already had a
   single-column `event_type` index and a single-column `created_at` index (migration `00018`) plus
   a `(project_id, created_at)` composite (migration `00019`), but nothing covering `event_type`
   alongside `created_at` together — the exact shape this module's own list query needs.
-- `00112-mark-decision-and-activity-log-in-development.ts` — marks `module_registry.implementation_status`
+- `00114-mark-decision-and-activity-log-in-development.ts` — marks `module_registry.implementation_status`
   `in_development` for `decision_and_activity_log`, mirroring `00110-mark-technical-center-in-development.ts`'s
   own pattern exactly.
 - `packages/database/src/audit/audit-event.repository.ts` gained a new `list(filter)` method and a

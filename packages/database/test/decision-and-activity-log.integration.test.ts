@@ -8,7 +8,7 @@ import { buildMigrator } from "../src/migrate.js";
 /**
  * `AuditEventRepository.list()` — the Decision and Activity Log module's own query surface
  * (`docs/implementation/module-decision-and-activity-log.md`) — against a REAL, disposable
- * PostgreSQL database, including migration `00111`'s new `(event_type, created_at)` composite
+ * PostgreSQL database, including migration `00113`'s new `(event_type, created_at)` composite
  * index (existence checked directly, not just that queries still work without it).
  */
 describe("AuditEventRepository.list() — Decision and Activity Log query surface (real disposable database)", () => {
