@@ -1318,6 +1318,20 @@
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     },
     {
+      "id": "G4-decision-and-activity-log",
+      "type": "qa-security-gate",
+      "scope": "decision-and-activity-log",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "3b37fc2 (branch module-decision-and-activity-log)",
+      "record": "docs/project-state/module-decision-and-activity-log-approval-checklist.md",
+      "notes": "Decision and Activity Log module #37 backend -- a read-only, human-friendly query surface (GET /decision-and-activity-log/events) over the existing ADR-0017 audit_events table, not a new table. Closes the query HTTP surface gap phase-1e-audit-foundation.md itself deferred. Two design decisions confirmed directly with the project owner: reuse the existing system_settings RBAC group as-is, and filter server-side to the canonical spec's own named decision/activity event-type subset rather than the full audit_events vocabulary. Migrations 00113 (composite event_type/created_at index)/00114 (mark in_development), renumbered from 00111/00112 on explicit instruction. Independent code review (direct line-by-line read-through) found and fixed 1 confirmed finding -- AuditEventRepository.list() had no pagination tiebreaker for same-timestamp rows, the same bug class already fixed once in Persona Library's own review -- closed by adding id DESC as a secondary sort key. Security review found 0 findings above threshold -- confirmed the RBAC gate is real and narrow (system_settings:view held by only 2 of 7 seeded roles), every filter is applied through parameterized Sequelize queries, and the deliberate choice to leave beforeState/afterState unredacted matches already-accepted precedent elsewhere in this codebase. Re-verified: 838/838 packages/database integration tests, 1793/1793 dashboard-api unit tests, 7/7 module e2e tests, typecheck/lint/build/prettier all clean. No dashboard-web UI yet -- backend only.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
       "id": "G4-release-center",
       "type": "qa-security-gate",
       "scope": "release-center",
@@ -3507,9 +3521,18 @@
       "action": "gate_approved",
       "actor": "WebDesk Solution",
       "actor_type": "human",
-      "details": "Gate G4-release-center approved (WebDesk Solution, CONFIRM) for the Release Center module backend, approved commit c562586 on branch module-release-center. Six tables sourced from the canonical spec's own field list, a real 14-status Release workflow, project-scoped, inline dynamically-gated TRANSITIONS map reusing the seeded releases RBAC group verbatim. Independent code review (10 findings, 6 fixed -- most notably the release_approvals decision log could never record a rejection, and deployments/smoke-tests were missing a terminal-state write guard) and a separate security review (0 findings above threshold) both complete. Required second-role human review complete -- WebDesk Solution returned Approve as-is, accepting the 4 open tracked-debt findings. This gate approval does not itself authorize pushing the branch, opening a PR, or merging.",
+      "details": "Gate G4-decision-and-activity-log approved (WebDesk Solution, CONFIRM) for the Decision and Activity Log module #37 backend, approved commit 3b37fc2 on branch module-decision-and-activity-log. A read-only query surface over the existing audit_events table, gated on the already-seeded system_settings RBAC group, scoped to a documented decision/activity event-type allowlist. Migrations 00113/00114. Independent code review found and fixed 1 pagination-tiebreaker bug; security review found 0 findings above threshold. This gate approval does not itself authorize opening a PR or merging.",
       "project_version_before": 128,
       "project_version_after": 129,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-release-center approved (WebDesk Solution, CONFIRM) for the Release Center module backend, approved commit c562586 on branch module-release-center. Six tables sourced from the canonical spec's own field list, a real 14-status Release workflow, project-scoped, inline dynamically-gated TRANSITIONS map reusing the seeded releases RBAC group verbatim. Independent code review (10 findings, 6 fixed -- most notably the release_approvals decision log could never record a rejection, and deployments/smoke-tests were missing a terminal-state write guard) and a separate security review (0 findings above threshold) both complete. Required second-role human review complete -- WebDesk Solution returned Approve as-is, accepting the 4 open tracked-debt findings. This gate approval does not itself authorize pushing the branch, opening a PR, or merging.",
+      "project_version_before": 129,
+      "project_version_after": 130,
       "timestamp": "2026-09-03T00:00:00Z"
     }
   ],

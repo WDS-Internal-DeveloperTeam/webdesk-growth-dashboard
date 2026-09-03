@@ -3,6 +3,7 @@ import { AUDIT_RETENTION_CATEGORIES } from "@webdesk/database";
 import type {
   AuditActorType,
   AuditEventEntity,
+  AuditEventListFilter,
   AuditEventRepository,
   AuditEventType,
 } from "@webdesk/database";
@@ -201,5 +202,17 @@ export class AuditService {
       legalHold: input.legalHold ?? false,
       legalHoldReason: input.legalHoldReason ?? null,
     });
+  }
+
+  /**
+   * A narrow, read-only delegation to `AuditEventRepository.list()` — the Decision and Activity
+   * Log module's own query surface calls this rather than being handed the repository directly,
+   * matching this project's own established preference for narrow delegating methods over broad
+   * cross-module repository exports (e.g. `ServicesService.existingServiceIds()`,
+   * `PagesService.existsInProject()`). `AuditModule` still exports only `AuditService`, never
+   * `AUDIT_EVENT_REPOSITORY` itself.
+   */
+  async list(filter: AuditEventListFilter): Promise<readonly AuditEventEntity[]> {
+    return this.events.list(filter);
   }
 }

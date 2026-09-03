@@ -4872,6 +4872,55 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
     per this project's standing "no auto-merge" rule.
 
+81. **Decision and Activity Log module backend — built, reviewed, and gated; pushed
+    (2026-09-03).** Module #37, `decision_and_activity_log`. Not started automatically — built
+    directly on the explicit "start Decision & Activity Log and numbering the migration from
+    00113" instruction. A read-only, human-friendly query surface (`GET
+/decision-and-activity-log/events`) over the existing, already-live ADR-0017 `audit_events`
+    table — not a new table, not a new write path — closing the "query HTTP surface" gap
+    `docs/task-packages/phase-1e-audit-foundation.md` itself deferred. Two design decisions
+    confirmed directly with the project owner first (`AskUserQuestion`): reuse the existing,
+    already-seeded `system_settings` RBAC group as-is (held by only `super_admin`/
+    `owner_growth_approver`, verified against the real seed) rather than a new dedicated
+    permission group; and filter server-side to the canonical spec's own named decision/activity
+    event-type subset (`approval`/`rejection`/`revision_requested`/`publish`/`unpublish`/
+    `release`/`rollback`/`backup`/`restore`/`security_exception`/`scan_run`/`import_run`/
+    `export_run`/`git_sync`/`data_change`/`project_status_changed`) rather than exposing the full
+    ~35-value `audit_events.event_type` vocabulary — module #43's own audit/system-health
+    territory (login/session/permission-change/job/notification/contact/health-check plumbing
+    events) is deliberately excluded, with the exact mapping reasoning recorded in
+    `decision-and-activity-log.constants.ts`'s own doc comment. Migrations `00113`/`00114`
+    (renumbered from `00111`/`00112` on explicit instruction to reserve those numbers for other
+    concurrent work) — a composite `(event_type, created_at)` index on `audit_events`, and marking
+    the module `in_development`. Built by a background agent with a fully-specified prompt, then
+    independently re-verified in full by the orchestrating session — every high-risk file read
+    directly, every test suite re-run against a real local disposable PostgreSQL 17 database, not
+    trusted from the agent's own report. **Independent code review** (a direct line-by-line
+    read-through, given the diff's manageable size) found and fixed 1 confirmed finding —
+    `AuditEventRepository.list()` had no pagination tiebreaker for rows sharing an identical
+    `createdAt`, the same bug class already found and fixed once in this project's own Persona
+    Library `list()` review — closed by adding `id DESC` as a secondary sort key. **Security
+    review** found 0 findings above threshold — confirmed the RBAC gate is real and narrow, every
+    filter is applied through parameterized Sequelize queries (no injection surface), `eventType`
+    is validated against a closed Zod enum, and the deliberate choice to leave `beforeState`/
+    `afterState` unredacted matches already-accepted precedent from several already-shipped
+    modules' own write-side audit calls, not a new exposure this diff introduces. Final numbers:
+    838/838 `packages/database` integration tests, 1793/1793 `dashboard-api` unit tests, 7/7
+    module e2e tests, typecheck/lint/build/prettier all clean. **Required second-role human review
+    complete via the direct "Approve as-is, gate it and push the branch" instruction** — the
+    approval checklist's own findings tables served as the review artifact, since there were no
+    open findings of any kind on this branch. **The gate (G4-decision-and-activity-log) was then
+    separately approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override),
+    approved commit `3b37fc2` on branch `module-decision-and-activity-log` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-decision-and-activity-log`) and
+    `docs/project-state/module-decision-and-activity-log-approval-checklist.md`'s "Sign-off"
+    section. **"Push the branch" was then separately requested and executed** — pushed to
+    `origin`. **This gate approval does not itself authorize opening a PR or merging** — each
+    remains its own separate, not-yet-requested authorization, per this project's standing
+    "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
