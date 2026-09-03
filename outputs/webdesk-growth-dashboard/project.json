@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-release-center",
+    "current_gate": "G4-help-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -1400,6 +1400,20 @@
       "record": "docs/project-state/dashboard-web-notification-center-approval-checklist.md",
       "notes": "dashboard-web Notification Center UI -- closes this module's last named gap against the Phase 1E notification-record foundation (notifications table, NotificationService/NotificationsController with list/get/create/attempt-delivery routes, real SMTP delivery explicitly out of scope for this phase). Not started automatically -- built directly on the explicit \"start notification center\" instruction, with two AskUserQuestion scope decisions confirmed first: dashboard-web UI only (reuse the existing backend as-is, no new RBAC group or mark-in-development migration) and view-only list/detail, exposing only the existing attempt-delivery retry action. New packages/shared-types Notification/NotificationSeverity/NotificationDeliveryState, mirroring NotificationEntity exactly. lib/notification-center-query.ts/lib/notification-center.ts mirror the established zero-non-type-import-file split closest to Decision and Activity Log's own pattern. NotificationRetryAction is the one client mutation this UI allows, self-hiding once deliveryState is outside queued/retrying or retryEligible is false. Two routes: list (delivery-state/type/project filters, offset pagination) and detail (Identity/Recipient/Delivery/Related record/Status sections). Known, pre-existing gap flagged, not fixed (declined scope): notifications_view/notifications_configure are zero-seeded on every role today (a deliberate Phase 1E design, not introduced by this branch), so every route this UI calls will 403 for every current user until a role is granted the permission or a dedicated RBAC group is seeded. Reviewed at light tier per the 2026-08-27 right-size-the-review-pipeline standing rule -- a small frontend-only slice consuming an already-reviewed, already-gated backend with no new endpoint, no new RBAC action, no new sink; a direct read-through pass found 0 findings. Security review skipped per the same standing rule. 1928/1928 dashboard-web unit tests passing (32 new); typecheck clean across shared-types/dashboard-web/dashboard-api/dashboard-worker; eslint --max-warnings=0 + CSS-token check (105 files) clean; next build clean with both new routes present; prettier clean -- all independently re-run by the orchestrating session, not trusted from a background agent.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization, matching this project's established pattern for a combined instruction; opening a PR and merging remain their own separate, not-yet-requested authorizations."
+    },
+    {
+      "id": "G4-help-center",
+      "type": "qa-security-gate",
+      "scope": "module-help-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "aa1e352 (branch module-help-center)",
+      "record": "docs/project-state/module-help-center-approval-checklist.md",
+      "notes": "Help Center module #38 backend. A single generic help_articles table with a 16-value category discriminator taken verbatim from the canonical spec's own topic list, no approval workflow (plain isPublished/publishedAt only), organization-wide, reusing the already-seeded system_settings RBAC group verbatim -- confirmed directly with the project owner as a deliberate limitation (only super_admin/owner_growth_approver get any access at all). Migrations 00115/00116. Independent code review (medium effort, 8 finder angles) found 8 issues, all fixed -- most severe: create() never stamped publishedAt on an already-published article, and update()'s pre-fetch created a stale-read audit-classification race (resolved by removing the pre-fetch entirely and deriving the audit event purely from caller intent). No separate security review, per the 2026-08-27 right-size-the-review-pipeline standing rule -- reuses only already-vetted mechanisms (shared sanitizer, existing RBAC guards), no new sink. 1852/1852 dashboard-api unit tests overall (21 new). Disclosed gap: no local PostgreSQL instance in this environment, so validate:module-registry, a migration round-trip, and DB-backed integration/e2e tests could not be run here -- to be closed by CI/a later environment.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- approved together with push/PR authorization under one combined 'approve as-is, gate it, and push/PR' instruction, per this project's standing no-auto-merge rule allowing an explicit combined authorization when given together."
     }
   ],
   "budget": {
@@ -3626,7 +3640,25 @@
       "project_version_before": 133,
       "project_version_after": 134,
       "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "second_role_review_completed",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Required second-role human review (ADR-0010) complete for the Help Center module #38 backend, via the direct 'Approve as-is, gate it, and push/PR' instruction -- the approval checklist's own findings summary (0 open findings, all 8 code-review findings fixed) served as the review artifact rather than a separately published packet.",
+      "project_version_before": 134,
+      "project_version_after": 135,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-help-center approved (WebDesk Solution, CONFIRM) for the Help Center module #38 backend, approved commit aa1e352 on branch module-help-center. Single generic help_articles table, 16-value category discriminator, no approval workflow, reuses the seeded system_settings RBAC group verbatim (a deliberate, confirmed limitation). Independent code review found and fixed 8 issues; no separate security review needed per the standing right-size rule. Disclosed gap: no local PostgreSQL available to run DB-backed suites in this environment.",
+      "project_version_before": 135,
+      "project_version_after": 136,
+      "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
-  "current_gate": "G4-dashboard-web-notification-center"
+  "current_gate": "G4-help-center"
 }
