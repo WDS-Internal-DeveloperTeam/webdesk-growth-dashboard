@@ -5169,6 +5169,71 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     full UI (list, detail, create/edit form, status actions, artifacts/approvals/deployments/
     smoke-tests/rollback sub-resource sections) are both live for the Release Center module.
 
+86. **Help Center module backend — built, reviewed, and gated; pushed as its own branch,
+    not yet opened as a PR or merged (2026-09-03).** Module #38, key `help_center`, built
+    directly on the explicit "start help center" instruction. The spec gives only a topics list
+    (onboarding, project setup, WordPress publishing, review/approval, staging-to-production,
+    import/export, search/filtering, design libraries, Page Workspace, security/QA,
+    backup/rollback, FAQ, videos, known issues, feedback, version history), no field-level
+    schema — the same "topics-only" spec gap several sibling modules already hit. Three design
+    forks confirmed directly with the project owner first (`AskUserQuestion`): keep the seeded
+    `system_settings` RBAC group as-is (a real, deliberate limitation — only `super_admin`/
+    `owner_growth_approver` get any access at all, not even view, since the group carries no
+    grant for any of the other five roles), a single generic `help_articles` table with a
+    16-value `category` discriminator taken verbatim from the spec's own topic list, and no
+    approval workflow — a plain `isPublished`/`publishedAt` field pair instead of the standard
+    8-value `ArtifactApprovalStatus` lifecycle, the simplest content-library module built to
+    date. Migrations `00115`/`00116`. `content` is sanitized at write time via the shared,
+    already-audited `sanitizeRichTextHtml()`, wired ahead of the eventual `RichTextEditor` UI.
+    Built directly by the orchestrating session (not delegated to a background agent).
+    **Independent code review then ran** (this project's own `code-review` skill, medium effort,
+    8 finder angles run via parallel subagents, 1-vote self-verification) — 8 candidates
+    survived dedup, **all 8 CONFIRMED/PLAUSIBLE, all 8 fixed**. Most severe: `create()` never
+    stamped `publishedAt` when an article was created already published, contradicting the
+    entity's own documented "stamped on first publish" contract — fixed by stamping `NOW()`
+    directly on an already-published create. Also fixed: `update()`'s pre-fetch of the current
+    row created both an avoidable extra DB round trip and a stale-read audit-classification race
+    (two concurrent publishes could each log a "publish" event off the same stale "before" read)
+    — fixed by removing the pre-fetch entirely, unconditionally re-sanitizing `content` when
+    present (cheap and idempotent), and deriving the audit `eventType` purely from the caller's
+    own requested `isPublished` value rather than an observed transition; the audit `afterState`
+    for a plain content edit recorded only `isPublished`, dropping title/content changes from
+    the trail — fixed to record the real patch; `updateHelpArticleSchema` was hand-duplicated
+    from `createHelpArticleSchema` instead of derived via `.omit().partial()`, risking a
+    length-cap drift — fixed; no `.refine()` rejected a genuinely empty patch, letting a no-op
+    save still issue a real DB write and audit event — fixed; the `publishedAt` stamp-once
+    `COALESCE` was built via `fn()`/`col()`/`literal("NOW()")` composition, diverging from every
+    sibling repository's single `literal('COALESCE(...)')` idiom — fixed to match; and
+    `isPublished ?? false` defaulting was duplicated across both the service and the repository
+    — fixed by making the repository the sole owner of the default. Re-validated: 1852/1852
+    `dashboard-api` unit tests overall (21 new, all mocked-repository), typecheck/`nest build`/
+    `eslint --max-warnings=0`/`prettier --check`/`boundaries:check` all clean. **No separate
+    `security-review` skill run**, per the 2026-08-27 "right-size the review pipeline" standing
+    rule — reuses only already-vetted mechanisms (the shared sanitizer, existing
+    `PermissionGuard`/`OriginCheckGuard`/`RequirePermission` machinery, `escapeLikePattern()`)
+    with no new sink or endpoint class beyond standard CRUD; directly confirmed method-level RBAC
+    decorators throughout, `OriginCheckGuard` on both mutating routes, `category`'s immutability,
+    and no fabricated confidential-field mechanism (the module registry's own seeded
+    `confidentialityLevel` for `help_center` is `null`). **No local PostgreSQL instance was
+    available in this environment** — `validate:module-registry`, a real migration round-trip,
+    and any DB-backed integration/e2e test could not be run here, disclosed explicitly in
+    `docs/implementation/module-help-center.md` and the approval checklist rather than absorbed
+    silently; the migration content and repository stamp-once logic were read directly and
+    cross-checked against `content_templates`'/`knowledge_library_records`' own already-reviewed
+    equivalents. See `docs/implementation/module-help-center.md` and
+    `docs/project-state/module-help-center-approval-checklist.md`. **Required second-role human
+    review complete via the direct "Approve as-is, gate it, and push/PR" instruction** — the
+    approval checklist's own findings summary served as the review artifact, since there were no
+    open findings of any kind on this branch after the fix round. **The gate (G4-help-center) was
+    then approved** — WebDesk Solution, decision CONFIRM, approved commit `aa1e352` on branch
+    `module-help-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+    (`current_gate` now `G4-help-center`). **"Push the branch" was then executed as part of the
+    same combined instruction** — pushed to `origin`. **Opening a PR and merging remain separate,
+    not-yet-completed next steps** — the disclosed no-local-database gap should be closed by a
+    real CI run (a real disposable database) before merge. No `dashboard-web` UI exists yet for
+    this module — a separate, not-yet-requested next step, matching every prior module's own
+    backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full

@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-dashboard-web-release-center",
+    "current_gate": "G4-help-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -1386,6 +1386,20 @@
       "record": "docs/project-state/fix-decision-and-activity-log-limit-cap-approval-checklist.md",
       "notes": "Fixed a live production bug reported directly by the user: selecting the 100-row page size (or applying a filter while it was selected) on /decision-and-activity-log rendered the app's generic 'Something went wrong' error screen. Root cause: dashboard-web's list pages request pageSize + 1 rows to detect a next page -- at the largest 100-row page size that's limit=101, but listDecisionAndActivityLogEventsQuerySchema's own limit field was capped at .max(100), the only list-query schema in the codebase capped there instead of 200, where every one of the other ~45 list-query DTOs leaves headroom for exactly this pattern. Fixed by raising the cap to .max(200), matching every sibling module exactly -- a one-line change. Replaced the DTO spec's 'rejects a limit above 100' test with two tests proving both sides of the real boundary (101 now succeeds, 201 still rejected). Reviewed at light tier -- a one-line schema-cap fix bringing an outlier module in line with an already-reviewed sibling convention, 0 findings. Re-validated: 9/9 DTO unit tests, 4/4 service unit tests, 7/7 module e2e tests, 832/832 dashboard-api e2e/integration tests overall (no regression), all against a real disposable PostgreSQL 17 database; typecheck/lint/prettier all clean.",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- given directly as an urgent same-session fix to a bug the user just reported live, matching this project's established pattern for fixing an actively-broken already-shipped feature."
+    },
+    {
+      "id": "G4-help-center",
+      "type": "qa-security-gate",
+      "scope": "module-help-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "aa1e352 (branch module-help-center)",
+      "record": "docs/project-state/module-help-center-approval-checklist.md",
+      "notes": "Help Center module #38 backend. A single generic help_articles table with a 16-value category discriminator taken verbatim from the canonical spec's own topic list, no approval workflow (plain isPublished/publishedAt only), organization-wide, reusing the already-seeded system_settings RBAC group verbatim -- confirmed directly with the project owner as a deliberate limitation (only super_admin/owner_growth_approver get any access at all). Migrations 00115/00116. Independent code review (medium effort, 8 finder angles) found 8 issues, all fixed -- most severe: create() never stamped publishedAt on an already-published article, and update()'s pre-fetch created a stale-read audit-classification race (resolved by removing the pre-fetch entirely and deriving the audit event purely from caller intent). No separate security review, per the 2026-08-27 right-size-the-review-pipeline standing rule -- reuses only already-vetted mechanisms (shared sanitizer, existing RBAC guards), no new sink. 1852/1852 dashboard-api unit tests overall (21 new). Disclosed gap: no local PostgreSQL instance in this environment, so validate:module-registry, a migration round-trip, and DB-backed integration/e2e tests could not be run here -- to be closed by CI/a later environment.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- approved together with push/PR authorization under one combined 'approve as-is, gate it, and push/PR' instruction, per this project's standing no-auto-merge rule allowing an explicit combined authorization when given together."
     }
   ],
   "budget": {
@@ -3603,7 +3617,25 @@
       "project_version_before": 132,
       "project_version_after": 133,
       "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "second_role_review_completed",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Required second-role human review (ADR-0010) complete for the Help Center module #38 backend, via the direct 'Approve as-is, gate it, and push/PR' instruction -- the approval checklist's own findings summary (0 open findings, all 8 code-review findings fixed) served as the review artifact rather than a separately published packet.",
+      "project_version_before": 133,
+      "project_version_after": 134,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-help-center approved (WebDesk Solution, CONFIRM) for the Help Center module #38 backend, approved commit aa1e352 on branch module-help-center. Single generic help_articles table, 16-value category discriminator, no approval workflow, reuses the seeded system_settings RBAC group verbatim (a deliberate, confirmed limitation). Independent code review found and fixed 8 issues; no separate security review needed per the standing right-size rule. Disclosed gap: no local PostgreSQL available to run DB-backed suites in this environment.",
+      "project_version_before": 134,
+      "project_version_after": 135,
+      "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
-  "current_gate": "G4-dashboard-web-release-center"
+  "current_gate": "G4-help-center"
 }

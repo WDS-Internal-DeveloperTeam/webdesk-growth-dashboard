@@ -65,8 +65,16 @@ immutability (omitted from the update schema), and no fabricated confidential-fi
 
 ## Sign-off
 
-**Pending** — required second-role human review (ADR-0010, the implementing agent cannot also be
-its own reviewer), a gate decision, and merge authorization each remain separate,
-not-yet-requested next steps, per this project's standing "no auto-merge" rule. The one open,
-disclosed gap (no DB-backed validation run in this environment) should be weighed as part of that
-review.
+Required second-role human review, per ADR-0010 (the implementing agent cannot also be its own
+reviewer): **Approved as-is**, WebDesk Solution, 2026-09-03, via the direct "Approve as-is, gate
+it, and push/PR" instruction — the findings summary above (0 open findings, all 8 code-review
+findings fixed) served as the review artifact, since a light-tier review needs no separately
+published packet.
+
+Gate `G4-help-center`: **CONFIRM** — WebDesk Solution, 2026-09-03, approved commit `aa1e352` on
+branch `module-help-center`.
+
+Push/PR authorization was given together with the gate as one combined instruction — merge itself
+remains its own separate, not-yet-requested authorization, per this project's standing "no
+auto-merge" rule. The disclosed no-local-database gap was weighed and accepted: the branch's PR
+will run the real CI suite (a real disposable database), closing it before merge.
