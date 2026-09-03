@@ -46,3 +46,4 @@ export * from "./scan-center/index.js";
 export * from "./technical-center/index.js";
 export * from "./change-center/index.js";
 export * from "./import-and-export-center/index.js";
+export * from "./release-center/index.js";
