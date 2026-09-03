@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-help-center",
+    "current_gate": "G4-dashboard-web-help-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -1428,6 +1428,20 @@
       "record": "docs/project-state/grant-notifications-view-permission-approval-checklist.md",
       "notes": "Grants super_admin the notifications_view action on the system_settings module -- closes the flagged, declined-scope gap from the dashboard-web Notification Center UI (item 87): notifications_view/notifications_configure were left zero-seeded when that backend/UI were built, so every route the UI calls 403'd for every real user. Not started automatically -- built directly on the explicit \"Grant a role notifications_view permission\" instruction, with the target role confirmed directly (AskUserQuestion): super_admin, since it already holds every other system_settings action (VCERM) and is the role the one currently-provisioned production user holds. notifications_configure and every other role stay zero-seeded, explicitly out of scope. New migration 00115-grant-notifications-view-to-super-admin.ts inserts one additive role_permissions row (resolved by joining on roles'/modules' real key columns, not a hardcoded id), guarded by ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL DO NOTHING against the real partial unique index, making it safely re-runnable; down() deletes only that exact (role, module, action) triple. No application/enforcement code changed -- PermissionGuard/@RequirePermission are unmodified; this is purely additive seed data through the existing, unmodified authorization mechanism. Verified against a real local disposable PostgreSQL 17 database (never production): a full 115-migration up, confirmed exactly one grant landed (no other role/action affected), then a migrate down/up round-trip on 00115 alone confirming the row disappears and reappears cleanly. 28/28 @webdesk/database unit tests, typecheck/lint/prettier all clean. This is a genuine RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline standing rule reserves for the full tier by default -- given a one-file, no-application-code-touched, additive-read-only-grant diff, a direct, careful security-focused read-through was judged proportionate rather than an 8-angle fan-out: confirmed the up() WHERE clause resolves to exactly one (role, module) pair, the ON CONFLICT target matches the real index (verified by running it twice in a row -- the second run stayed a no-op), down() is scoped to the exact triple (not a blanket delete), no application code changed, and no SQL-injection surface (every value is a static literal). Note: this migration was renumbered to 00117 during the merge with module-help-center, which had concurrently claimed migration numbers 00115/00116 for its own help_articles table. 0 findings.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations. This gate also does not authorize running the migration against the real production database -- that remains the user's own action, per this project's standing credential-handling discipline (the user runs pnpm --filter @webdesk/database run migrate themselves after the code is merged)."
+    },
+    {
+      "id": "G4-dashboard-web-help-center",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-help-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "e775dad (branch dashboard-web-help-center)",
+      "record": "docs/project-state/dashboard-web-help-center-approval-checklist.md",
+      "notes": "dashboard-web Help Center UI, closing this module's last named gap on top of the already-gated backend (G4-help-center, PR #118, merged and live). Four routes: list/detail/create/edit, mirroring Content Template Library's structure but simplified since Help Center has no approvalStatus at all. category is create-only; content uses RichTextEditor as this module's one required rich-text field; HelpCenterPublishActions toggles isPublished through the same generic update route the form uses, since no dedicated publish/unpublish RBAC action exists for the seeded system_settings group. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through pass verified the create/edit field contract against the real backend schemas, the publish-toggle payload shape, category immutability, and reuse of every established shared helper -- 0 findings. No separate security review -- no new endpoint/RBAC action/sink. 1964/1964 dashboard-web unit tests overall (36 new). Live-rendered in the Browser pane: all four routes confirmed to redirect an unauthenticated visitor cleanly, zero server errors.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- given directly as 'Approve as-is, gate it, and push the branch', pushing is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
     },
     {
       "id": "G4-users-roles-permissions",
@@ -3706,12 +3720,30 @@
       "timestamp": "2026-09-03T00:00:00Z"
     },
     {
+      "action": "second_role_review_completed",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Required second-role human review (ADR-0010) complete for the dashboard-web Help Center UI, via the direct 'Approve as-is, gate it, and push the branch' instruction -- the approval checklist's own findings summary (0 findings) served as the review artifact, since this slice was reviewed at light tier.",
+      "project_version_before": 138,
+      "project_version_after": 139,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-help-center approved (WebDesk Solution, CONFIRM) for the dashboard-web Help Center UI, approved commit e775dad on branch dashboard-web-help-center. Closes the module's last named gap on top of the already-gated, already-live backend (G4-help-center, PR #118). Reviewed at light tier -- 0 findings.",
+      "project_version_before": 139,
+      "project_version_after": 140,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
       "action": "gate_approved",
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "details": "Gate G4-users-roles-permissions approved (WebDesk Solution, CONFIRM, \"Approve as-is\") for the Users, Roles and Permissions module backend -- a user directory (list/search/detail/activate-deactivate) plus a read-only global RBAC permission-matrix viewer, over the already-built Phase 1D RBAC core. Independent code review fixed 9 of 10 findings (most severe: missing malformed-UUID guard, a limit cap repeating a documented prior incident, no last-active-super_admin lockout guard); 1 RBAC-granularity finding left as tracked debt per the roadmap's own no-RBAC-redesign instruction. Security review found and fixed 1 HIGH finding: a case-sensitivity bypass of both the self-deactivation and last-active-super_admin guards. Verified via a real migration round-trip against a local disposable database only. Branch pushed to origin under this same combined instruction; opening a PR and merging remain separate, not-yet-requested authorizations.",
-      "project_version_before": 138,
-      "project_version_after": 139,
+      "project_version_before": 140,
+      "project_version_after": 141,
       "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
