@@ -65,9 +65,7 @@ describe("parseDecisionAndActivityLogSearchParams", () => {
   });
 
   it("falls back to null for an event type outside this module's own allowlist instead of passing it through", () => {
-    expect(
-      parseDecisionAndActivityLogSearchParams({ eventType: "login" }).eventType,
-    ).toBeNull();
+    expect(parseDecisionAndActivityLogSearchParams({ eventType: "login" }).eventType).toBeNull();
     expect(
       parseDecisionAndActivityLogSearchParams({ eventType: "not_a_real_type" }).eventType,
     ).toBeNull();
