@@ -123,3 +123,66 @@ choice over the alternative of widening `AuditModule`'s exports to include the r
 Every command below was actually run in this session against a real local disposable PostgreSQL 17
 database (`webdesk_dal_dev`), and the exact pass/fail counts recorded reflect real output, not
 assumptions.
+
+## As-built — `dashboard-web` UI
+
+Closes this module's last named gap, following the backend's own build-to-production arc
+(PR #111, merge commit `9a5ef065f81ba8b4a978cb3d04fd29b84900f7dc`). Built directly on the explicit
+"Decision and Activity Log - Start the dashboard-web UI for it" instruction. No approved
+wireframe/screen spec exists for this module — renders exactly what `GET
+/decision-and-activity-log/events` returns and supports (an `eventType`, `entityType`, `entityId`,
+`actorUserId`, `projectId` filter, a `from`/`to` date range, and offset pagination), matching
+every sibling module's own "smallest honest reading" precedent for an unsourced screen.
+
+**No detail page and no create/edit form** — this module is a pure read-only query surface over
+the existing, immutable `audit_events` table (no write path exists anywhere in it —
+`AuditService.record()` remains the sole writer, called by other modules' own services). A single
+list route (`/decision-and-activity-log`, the module registry's own seeded `route` value) is the
+entire UI.
+
+New `packages/shared-types`: `AuditEventType`/`AuditActorType`/`AuditEvent` — mirror
+`packages/database/src/audit/entities.ts`'s own `AuditEventEntity` shape exactly (the FULL
+~40-value `AuditEventType` union, not just this module's own 16-value allowlist, since a stray/
+legacy row outside the allowlist should still typecheck if it were ever returned).
+`lib/decision-and-activity-log-query.ts` (zero-non-type-import file — query parsing, href
+building, and the module's own event-type allowlist/label map, hand-mirrored from
+`apps/dashboard-api/src/decision-and-activity-log/decision-and-activity-log.constants.ts`'s
+`DECISION_AND_ACTIVITY_LOG_EVENT_TYPES`, the same approach every sibling module's own `-query.ts`
+file uses for its own enum) and `lib/decision-and-activity-log.ts` (the server-side fetch function)
+mirror `lib/review-and-approval-center-query.ts`/`lib/review-and-approval-center.ts`'s own split —
+the closest sibling (an organization-wide, filter-heavy list page with no project-scoping and no
+sub-resources).
+
+Deliberately narrows the backend's own richer query contract to the smallest honest UI: the
+backend's `eventType` accepts a repeated array; this UI offers a single-value `<select>` (no
+sibling list page in this app offers a real multi-select filter widget yet). `from`/`to` are plain
+`<input type="date">` fields, converted to UTC start-of-day/end-of-day ISO datetimes at request
+time rather than at parse time, so the raw date string round-trips cleanly through the URL/form
+`defaultValue`. `actorUserId`/`projectId` are plain, client-side UUID-format-checked text inputs
+(no picker — an org-wide actor/project lookup capability doesn't exist as a filter widget
+anywhere else in this app either), each degrading to "no filter applied" rather than round-tripping
+a garbled value to the backend on an invalid shape. Each row's `before`/`after` state (when
+present) renders via a `<details>`/`<summary>` disclosure — zero client JS, matching Website
+Strategy Center's own version-history disclosure precedent — rather than a dedicated detail page,
+since an audit event has no lifecycle of its own to navigate to. Actor names are resolved via the
+existing `getUsersByIds()` (degrades to the raw id on a 403/404, matching every sibling module's
+own roster-resolution precedent) rather than a new lookup mechanism.
+
+**Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a
+small, frontend-only UI slice (plus additive shared-types only) consuming an already-reviewed,
+already-gated backend with no new endpoint. A direct read-through pass verified the filter
+contract against the real backend `listDecisionAndActivityLogEventsQuerySchema` (event-type
+allowlist enforcement, UUID validation, length caps), the `from`/`to` UTC-boundary conversion, the
+actor/project UUID-format short-circuit before either is ever sent to the backend, and reuse of
+every established shared helper (`list-filter-styles.ts`, `list-table-styles.ts`, `pagination.ts`,
+`search-params.ts`, `uuid.ts`, `format-timestamp.ts`, `users.ts`) — **0 findings**. A separate
+security review was skipped per the same standing rule — no new endpoint, no new RBAC action, no
+new sink; `before`/`after` state renders via `JSON.stringify()` inside a `<pre>`, never
+`dangerouslySetInnerHTML`.
+
+18 new `dashboard-web` unit tests (query parsing, href building, label mapping, and the fetch
+function's URL construction, UUID-shape short-circuiting, and pagination trim), 1841/1841 overall;
+typecheck clean across `@webdesk/shared-types`/`dashboard-web`/`dashboard-api`/`dashboard-worker`
+(the additive shared-types change), `eslint --max-warnings=0` + CSS-token check (99 files) clean,
+`next build` clean with the new route present, `prettier --check` clean — all independently
+re-run by the orchestrating session.
