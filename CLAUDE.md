@@ -5400,7 +5400,10 @@ CONFLICT` target matches the real index (verified by running it twice in a row �
     real `super_admin` session can now view the Notification Center; `notifications_configure`
     and every other role remain zero-seeded, unchanged.
 
-89. **`dashboard-web` Help Center UI — built, reviewed, gated, pushed (2026-09-03).** Closes
+89. **`dashboard-web` Help Center UI — built, reviewed, gated, merged
+    ([PR #119](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/119),
+    merge commit `b67bb6093707a96e8af91122ec1cd16b0ab0cb5e`); now genuinely live in production
+    (2026-09-03).** Closes
     this module's last named gap, built directly on the explicit "Start the dashboard-web UI for
     it" instruction, following the backend's own build-to-production arc (PR #118, merge commit
     `6a8cbcd`). No approved wireframe exists for this module — sections mirror
@@ -5446,8 +5449,30 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     pass, not an override), approved commit `e775dad` on branch `dashboard-web-help-center` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-dashboard-web-help-center`). **"Push the branch" was then executed under the same combined
-    instruction** — pushed to `origin`. **Opening a PR and merging remain separate,
-    not-yet-requested next steps**, per this project's standing "no auto-merge" rule.
+    instruction** — pushed to `origin`. A real merge conflict against `main` surfaced immediately
+    after (the concurrently-merged `grant-notifications-view-permission` branch, PR #117, had
+    landed in the meantime) — only `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`/
+    `audit_log` arrays conflicted, resolved by keeping both sides' entries and re-sequencing
+    version counters (135→140), fully re-verified (typecheck across `dashboard-web`/
+    `dashboard-api`/`dashboard-worker`, 1852/1852 + 1964/1964 unit tests, prettier all clean) before
+    pushing again. **"Open a PR" was then separately requested and executed** — opened as
+    [PR #119](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/119), all
+    14 CI checks confirmed green (Integration tests took ~5m15s — genuinely still running each
+    poll, not hung, confirmed via `startedAt` timestamps). **"Merge PR #119" was then separately
+    requested and executed** — merged with a real merge commit (not squash/rebase), matching every
+    prior merge in this project's history — merge commit
+    `b67bb6093707a96e8af91122ec1cd16b0ab0cb5e`. Both Vercel projects auto-deployed on push to `main`
+    and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitShaShort == b67bb60` (the first check hit a
+    stale edge-cached response for the prior commit, ruled out via a cache-busting query param and
+    repeated checks — the deployment itself took a few minutes to roll out), confirming the exact
+    merged commit is what's serving; `GET /help-center/articles` returned a clean `401` (route
+    live, `SessionGuard` enforcing — not a `404`, which would mean the route never actually
+    deployed); and `dashboard-web`'s `/help-center` correctly redirects (307) an unauthenticated
+    visitor to `/auth/sign-in`. **The `dashboard-web` Help Center UI is now genuinely live in
+    production**, closing out this slice's full build-to-production arc — backend and now the full
+    UI (list, detail, create/edit form, publish/unpublish toggle) are both live for the Help
+    Center module.
 
 ## Recent decisions
 
