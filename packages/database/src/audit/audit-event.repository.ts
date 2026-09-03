@@ -195,7 +195,13 @@ export class AuditEventRepository {
 
     const rows = await this.model.findAll({
       where,
-      order: [["createdAt", "DESC"]],
+      // `id` as a tiebreaker keeps offset pagination stable when two rows share the exact same
+      // `createdAt` (plausible for events written in the same transaction/burst) — the identical
+      // gap Persona Library's own `list()` review already found and fixed once in this codebase.
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "DESC"],
+      ],
       limit,
       offset,
     });
