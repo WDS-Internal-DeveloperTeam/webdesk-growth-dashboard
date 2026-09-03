@@ -17,7 +17,7 @@
     "host_target": "vercel",
     "data_sensitivity": "high",
     "stage": "development",
-    "current_gate": "G4-technical-center",
+    "current_gate": "G4-release-center",
     "status": "active",
     "client": {
       "name": "WebDesk Solution",
@@ -1316,6 +1316,20 @@
       "record": "docs/project-state/current-project-context-propagation-fix-approval-checklist.md",
       "notes": "Fix for the long-deferred current-project context propagation gap (item 13's gap 5), built directly after the user pointed at a live Technical Center screenshot and said the in-page project selector was useless since the header already has one. Investigation found the in-page picker only ever showed because sidebar-nav links carry no ?projectId=, and once a project WAS resolved, each page's own Switch project link was genuinely dead -- it silently pointed at the SAME project id, only ever clearing filters, never switching anything. Scope confirmed directly with the user via AskUserQuestion (Technical Center only vs. all 6 project-scoped modules) -- the user chose the broader fix; Page Workspace was added as a 7th/8th affected file since it shares the identical pattern. Two changes: ProjectSwitcher (the header) now calls router.refresh() after writing CURRENT_PROJECT_COOKIE so an on-screen project-scoped page updates live; and all eight pages (Page Inventory, Scan Center, Technical Center, Change Center, Internal Linking Library, Keyword & Entity Library's keywords and entities routes, Page Workspace) now resolve their project id as projectIdParam ?? defaultProjectId (an explicit ?projectId= still overrides) instead of requiring the URL param outright, with the dead Switch project link removed from the six pages that had one -- clearFiltersHref, which it reused, stays in place for the real Clear filters action. No backend change. Independently re-verified: typecheck/lint clean, 1823/1823 dashboard-web unit tests passing unchanged, next build clean, prettier clean; live-rendered in the Browser pane confirming all seven affected routes redirect an unauthenticated visitor cleanly with zero console errors. Reviewed at light tier per the 2026-08-27 standing rule -- a frontend-only routing/UX fix touching no new endpoint, RBAC, or sink -- 0 findings. No separate security review needed. This gate approval does not itself authorize opening a PR or merging.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
+    },
+    {
+      "id": "G4-release-center",
+      "type": "qa-security-gate",
+      "scope": "release-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "c562586 (branch module-release-center)",
+      "record": "docs/project-state/module-release-center-approval-checklist.md",
+      "notes": "Release Center module backend (key release_center, module #35 on the Recommended Module Roadmap) -- built directly on the explicit \"Start Release Center\" instruction. Three design forks confirmed with the user via AskUserQuestion before building: an inline, dynamically-gated TRANSITIONS map (chosen) over routing through Review and Approval Center, since the seeded releases RBAC group carries real submit/review/approve/release+rollback letters directly, matching Service Library/Persona Library/Website Strategy Center/Case Study Studio's own precedent; project-scoped (chosen) over organization-wide; and build now with no literal FK into Technical Center (chosen), moot in practice since Technical Center merged during this build. Six tables sourced directly from the canonical spec's own 10-item field list (releases, release_artifacts, release_approvals, deployments, smoke_tests, rollback_records), implementing the real 14-status Release workflow (05_Workflow_State_Machines.md section 10). Reuses the already-seeded releases RBAC permission group verbatim -- no new RBAC migration. Migrations 00111/00112. Built by a background agent mirroring Technical Center (project-scoped controller/RBAC wiring) and Case Study Studio (inline dynamic-per-transition-action workflow plus approvals-log sub-resource) as literal templates, then independently re-verified in full against a real local disposable PostgreSQL 17 database -- migration up/down/up round-trip clean, packages/database integration tests, dashboard-api e2e tests, and unit tests all independently re-run and confirmed passing, not trusted from the agent's own report. Independent code review (high effort, 8-angle finder pass via 8 parallel agents) surfaced 10 findings (6 CONFIRMED, 4 PLAUSIBLE), all 6 CONFIRMED fixed: deployments/smoke-tests had no terminal-state guard on create() at all (fabricate a governance record against an already-locked release) -- closed with a shared RELEASE_TERMINAL_STATUSES constant; the release_approvals decision log hardcoded decision to the literal approved, so rejected/hotfix_required were structurally unreachable and a real rejection was never logged -- fixed by restructuring the transition map's approvalStage into a bundled approvalLog {stage, decision} present only on transitions that represent a real governance decision; the same restructuring closed a related type-safety gap; four sub-resource repositories hand-typed their create() input instead of deriving via Omit from the entity -- fixed; five speculative project-scoped indexes with no matching query shape -- removed (the rollback_records uniqueness-constraint index was kept). 4 PLAUSIBLE findings left as accepted, tracked debt, each verified to match an already-shipped sibling module's own identical pattern: a check-then-act race on content update()/artifact remove() with no CAS (matches CaseStudyRepository.update()); no correction path for a mistaken rollback (rolled_back has zero outbound transitions -- a real but disproportionate-to-fix design limitation); the same-status no-op in changeStatus() returning before the RBAC check (matches ScanRunsService/TechnicalCheckRunsService/CaseStudiesService); and RELEASE_CENTER_MODULE_KEY's misleading name (matches TECHNICAL_CENTER_MODULE_KEY's own already-established naming shape). Re-validated after every fix: 37/37 dashboard-api unit tests (6 new), 20/20 packages/database integration tests, 11/11 dashboard-api e2e tests, a fresh migration round-trip, validate:module-registry unaffected, typecheck/lint/prettier clean, pnpm audit 0 vulnerabilities. A separate security review then found 0 findings above threshold -- confirmed method-level RBAC decorators throughout, OriginCheckGuard on every mutating route, ParseUUIDPipe on every route param, correct IDOR scoping via ReleasesService.findById(id, projectId) on every sub-resource read/write, the dynamic per-transition RBAC gate runs before every mutating branch, prUrl validated via the shared safeHttpUrlSchema, no mass-assignment path for status or any server-stamped column, and no raw-SQL string interpolation in the CAS literal()/fn()/col() usage. A review packet (published as a Claude artifact -- code review + security review findings, fixes, and validation evidence, with a decision section) was prepared for the required second-role human review, since the implementing agent cannot also be its own reviewer (ADR-0010). WebDesk Solution reviewed it and returned Approve as-is, accepting the 4 open tracked-debt findings. This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -3488,7 +3502,16 @@
       "project_version_before": 127,
       "project_version_after": 128,
       "timestamp": "2026-09-02T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-release-center approved (WebDesk Solution, CONFIRM) for the Release Center module backend, approved commit c562586 on branch module-release-center. Six tables sourced from the canonical spec's own field list, a real 14-status Release workflow, project-scoped, inline dynamically-gated TRANSITIONS map reusing the seeded releases RBAC group verbatim. Independent code review (10 findings, 6 fixed -- most notably the release_approvals decision log could never record a rejection, and deployments/smoke-tests were missing a terminal-state write guard) and a separate security review (0 findings above threshold) both complete. Required second-role human review complete -- WebDesk Solution returned Approve as-is, accepting the 4 open tracked-debt findings. This gate approval does not itself authorize pushing the branch, opening a PR, or merging.",
+      "project_version_before": 128,
+      "project_version_after": 129,
+      "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
-  "current_gate": "G4-current-project-context-propagation"
+  "current_gate": "G4-release-center"
 }

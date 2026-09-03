@@ -99,8 +99,8 @@ Required second-role human review, per ADR-0010 (the implementing agent cannot a
 reviewer): **Approved as-is**, WebDesk Solution, 2026-09-03 — accepting the 4 open tracked-debt
 findings.
 
-Gate `G4-release-center`: **CONFIRM** — WebDesk Solution, 2026-09-03, approved commit (pending
-final commit hash) on branch `module-release-center`.
+Gate `G4-release-center`: **CONFIRM** — WebDesk Solution, 2026-09-03, approved commit `c562586` on
+branch `module-release-center`.
 
 This gate approval does not itself authorize pushing the branch, opening a PR, or merging — each
 remains its own separate, not-yet-requested authorization, per this project's standing "no
