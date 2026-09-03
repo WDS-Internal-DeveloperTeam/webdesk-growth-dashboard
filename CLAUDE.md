@@ -5474,7 +5474,9 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     UI (list, detail, create/edit form, publish/unpublish toggle) are both live for the Help
     Center module.
 
-90. **Users, Roles and Permissions module backend — built, reviewed, gated, pushed
+90. **Users, Roles and Permissions module backend — built, reviewed, gated, merged
+    ([PR #120](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/120),
+    merge commit `7d354e9c1319035f3028c135b3a548089468fd2d`); now genuinely live in production
     (2026-09-03).** Module registry key `users_roles_permissions`, built directly on the explicit
     "start Users / Roles / Permissions" instruction. The canonical roadmap for this exact module
     says: "Phase 1D already built the RBAC core. Build/administer the UI here; do not redesign
@@ -5532,9 +5534,25 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     pass, not an override), approved commit `3ced25b` on branch `module-users-roles-permissions` —
     see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-users-roles-permissions`). **"Push the branch" was then executed under the same combined
-    instruction** — pushed to `origin`. This gate approval does not itself authorize opening a PR
-    or merging — each remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule.
+    instruction** — pushed to `origin`. **"Open a PR and merge it" was then separately requested
+    and executed** — opened as
+    [PR #120](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/120). A
+    real merge conflict against `main` surfaced first (the concurrently-merged `dashboard-web`
+    Help Center UI, PR #119, had landed while this branch was in review) — `CLAUDE.md`'s item
+    numbering and `project.json`'s `gates[]`/`audit_log` arrays conflicted, resolved by keeping
+    both sides' content and re-sequencing, fully re-verified (typecheck/lint/1852 `dashboard-api`
+    unit tests all clean) before pushing again. All 14 CI checks then confirmed green. Merged
+    with a real merge commit (not squash/rebase), matching every prior merge in this project's
+    history — merge commit `7d354e9c1319035f3028c135b3a548089468fd2d`. Both Vercel projects
+    auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+    status check — `dashboard-api`'s `/health` returned `build.commitSha ==
+7d354e9c1319035f3028c135b3a548089468fd2d`, confirming the exact merged commit is what's serving;
+    `GET /users-roles-and-permissions/users` and `GET /users-roles-and-permissions/matrix` both
+    returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean
+    the module never actually deployed); and `dashboard-web`'s `/` resolves for an unauthenticated
+    visitor. **The Users, Roles and Permissions module backend is now genuinely live in
+    production.** No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
 
 ## Recent decisions
 
@@ -8736,6 +8754,17 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
   `G4-users-roles-permissions`). Branch pushed to `origin` under the same combined instruction.
   This gate approval does not itself authorize opening a PR or merging.
+- `[2026-09-03]` **"Open a PR and merge it" was separately requested and executed** on
+  `module-users-roles-permissions` — opened as
+  [PR #120](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/120). A
+  real merge conflict against `main` surfaced (the concurrently-merged `dashboard-web` Help
+  Center UI, PR #119, had landed while this branch was in review) — resolved by keeping both
+  sides' `CLAUDE.md`/`project.json` content and re-sequencing, fully re-verified before pushing
+  again. All 14 CI checks confirmed green, then merged with a real merge commit (not squash/
+  rebase) — `7d354e9c1319035f3028c135b3a548089468fd2d`. Both Vercel projects auto-deployed and
+  were verified live directly — `dashboard-api`'s `/health` matched the merge commit, and both
+  `GET /users-roles-and-permissions/users`/`matrix` returned a clean `401`. **The Users, Roles
+  and Permissions module backend is now genuinely live in production.**
 
 ## Open client blockers
 
