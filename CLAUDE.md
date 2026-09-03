@@ -5259,7 +5259,10 @@ migration test`, `Integration tests` — 832/832 `dashboard-api` e2e tests + 15/
     live in production.** No `dashboard-web` UI exists yet for this module — a separate,
     not-yet-requested next step, matching every prior module's own backend-first precedent.
 
-87. **`dashboard-web` Notification Center UI — built, reviewed, gated, pushed (2026-09-03).**
+87. **`dashboard-web` Notification Center UI — built, reviewed, gated, merged
+    ([PR #116](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/116),
+    merge commit `bcf706e81202972d861370fc510c4dda5e56539e`); now genuinely live in production
+    (2026-09-03).**
     View-only over the existing Phase 1E notification-record foundation (`notifications` table,
     `NotificationService`/`NotificationsController` with list/get/create/attempt-delivery routes —
     real SMTP delivery explicitly out of scope for this phase). Not started automatically — built
@@ -5309,11 +5312,95 @@ migration test`, `Integration tests` — 832/832 `dashboard-api` e2e tests + 15/
     `32be912` on branch `dashboard-web-notification-center` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-dashboard-web-notification-center`). **"Push the branch" was then executed under the same
-    combined instruction** — pushed to `origin`. **This gate approval does not itself authorize
-    opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
-    per this project's standing "no auto-merge" rule.
+    combined instruction** — pushed to `origin`. **"Open a PR" was then separately requested and
+    executed** — opened as
+    [PR #116](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/116),
+    all 14 CI checks confirmed green. **"Merge PR #116" was then separately requested and
+    executed** — merged with a real merge commit (not squash/rebase), matching every prior merge
+    in this project's history — merge commit `bcf706e81202972d861370fc510c4dda5e56539e`. Both
+    Vercel projects auto-deployed on push to `main` and were verified live directly, not just via
+    CI's own Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort ==
+bcf706e`, confirming the exact merged commit is what's serving; `GET /notifications` returned a
+    clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean the route
+    never actually deployed); and `dashboard-web`'s `/notification-center` correctly redirects
+    (307) an unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Notification
+    Center UI is now genuinely live in production**, closing out this slice's full
+    build-to-production arc — with the flagged RBAC gap (item 88 below) still standing at the
+    time of this merge.
 
-88. **`dashboard-web` Help Center UI — built, reviewed, gated, pushed (2026-09-03).** Closes
+88. **Grant `super_admin` the `notifications_view` permission — built, reviewed, gated, merged
+    ([PR #117](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/117),
+    merge commit `2ec8c24dbe5bbd21a2bb4b8c95c5b922c624cfa6`); migration run against production —
+    now genuinely closed (2026-09-03).** Closes the flagged, declined-scope RBAC gap from item 87
+    above:
+    `notifications_view`/`notifications_configure` were left zero-seeded when the Notification
+    Center backend/UI were built, so every route the UI calls 403'd for every real user. Not
+    started automatically — built directly on the explicit "Grant a role notifications_view
+    permission" instruction. Which role should receive the grant was confirmed directly
+    (`AskUserQuestion`): **`super_admin`**, since it already holds every other `system_settings`
+    action (`VCERM`) and is the role the one currently-provisioned production user holds.
+    `notifications_configure` and every other role stay zero-seeded — explicitly declined for
+    this request. New migration `00117-grant-notifications-view-to-super-admin.ts` (renumbered
+    from `00115` during a merge with `main`, which had concurrently claimed `00115`/`00116` for the
+    unrelated Help Center module) — grants only
+    work as a static migration in this system (`role_permissions` has no runtime HTTP mechanism
+    to add a grant to a role; `RoleAssignmentController`/`Service` only assign/revoke a **user**
+    to/from a role, never edit the role's own grants). The migration inserts one additive
+    `role_permissions` row, resolved by joining on the roles'/modules' real `key` columns (not a
+    hardcoded id), guarded by `ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL
+DO NOTHING` against the real partial unique index — safely re-runnable; `down()` deletes only
+    that exact `(role, module, action)` triple. No application/enforcement code changed —
+    `PermissionGuard`/`@RequirePermission` are unmodified; this is purely additive seed data
+    through the existing, unmodified authorization mechanism. Verified against a real local
+    disposable PostgreSQL 17 database (never production): a full 115-migration `up`, confirmed
+    exactly one grant landed (no other role/action affected), then a `down`/`up` round-trip on
+    `00117` alone confirming the row disappears and reappears cleanly. 28/28
+    `@webdesk/database` unit tests, typecheck/lint/prettier all clean. **This is a genuine
+    RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline
+    standing rule reserves for the full tier by default** — given a one-file,
+    no-application-code-touched, additive-read-only-grant diff, a direct, careful
+    security-focused read-through was judged proportionate rather than an 8-angle fan-out:
+    confirmed the `up()` `WHERE` clause resolves to exactly one `(role, module)` pair, the `ON
+CONFLICT` target matches the real index (verified by running it twice in a row — the second run
+    stayed a no-op), `down()` is scoped to the exact triple (not a blanket delete), no
+    application code changed, and no SQL-injection surface (every value is a static literal). **0
+    findings.** See `docs/implementation/grant-notifications-view-permission.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it, and push the
+    branch" instruction** — the findings above served as the review artifact, since there were no
+    open findings of any kind on this branch. **The gate
+    (G4-grant-notifications-view-permission) was then approved** — WebDesk Solution, decision
+    CONFIRM (clean pass, not an override), approved commit `84831c8` on branch
+    `grant-notifications-view-permission` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-grant-notifications-view-permission`). **"Push the branch" was then executed under the
+    same combined instruction** — pushed to `origin`. **"Open a PR" was then separately requested
+    and executed** — opened as
+    [PR #117](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/117). A
+    real merge conflict against `main` surfaced first (Help Center's own backend, PR #118, had
+    merged concurrently, and had independently claimed migration numbers `00115`/`00116` — the
+    exact numbers this branch's own migration used) — resolved by keeping both sides'
+    `CLAUDE.md` item-numbering/`project.json` `gates[]`/`audit_log` content and re-sequencing, AND
+    by renumbering this branch's own migration `00115` → `00117` to close the real collision the
+    conflict markers alone wouldn't have surfaced, fully re-verified against fresh local
+    disposable PostgreSQL 17 databases (a clean 117-migration round-trip, the grant landing
+    correctly, 1852/1852 `dashboard-api` + 1928/1928 `dashboard-web` unit tests, 832/832
+    `dashboard-api` e2e tests across all 44 files) before pushing again. **"Check CI status on the
+    PR" then confirmed all 14 checks green**, including both Vercel preview deployments. **"Merge
+    PR #117" was then separately requested and executed** — merged with a real merge commit (not
+    squash/rebase), matching every prior merge in this project's history — merge commit
+    `2ec8c24dbe5bbd21a2bb4b8c95c5b922c624cfa6`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitShaShort == 2ec8c24`, confirming the exact
+    merged commit is what's serving; and both `/notifications` and `/notification-center`
+    responded correctly for an unauthenticated visitor (`401`/`307`). **Migration `00117` was
+    then run against the real production database** — the user ran it themselves, same
+    credential-handling discipline as every prior production migration, and confirmed directly
+    ("Ran the migration, all confirmed working now"). **The `notifications_view` grant is now
+    genuinely live in production, closing out this slice's full build-to-production arc** — a
+    real `super_admin` session can now view the Notification Center; `notifications_configure`
+    and every other role remain zero-seeded, unchanged.
+
+89. **`dashboard-web` Help Center UI — built, reviewed, gated, pushed (2026-09-03).** Closes
     this module's last named gap, built directly on the explicit "Start the dashboard-web UI for
     it" instruction, following the backend's own build-to-production arc (PR #118, merge commit
     `6a8cbcd`). No approved wireframe exists for this module — sections mirror
@@ -8452,7 +8539,7 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   `NotificationService`/`NotificationsController`) — only the UI was missing. Two
   `AskUserQuestion` scope decisions confirmed first: dashboard-web UI only (declining a dedicated
   RBAC group/mark-in-development migration), and view-only list/detail exposing only the existing
-  `attempt-delivery` retry action. See CLAUDE.md item 86 above and
+  `attempt-delivery` retry action. See CLAUDE.md item 87 above and
   `docs/implementation/dashboard-web-notification-center.md` for the full account, including the
   flagged, declined-scope gap: `notifications_view`/`notifications_configure` are zero-seeded on
   every role today (Phase 1E's own original design), so this UI 403s for every current user until
@@ -8466,6 +8553,76 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   then executed under the same combined instruction** — pushed to `origin`. This gate approval
   does not itself authorize opening a PR or merging — each remains its own separate,
   not-yet-requested authorization.
+- `[2026-09-03]` **"Open a PR" was separately requested and executed** on
+  `dashboard-web-notification-center` — opened as
+  [PR #116](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/116).
+  **"Check CI status on the PR" then confirmed all 14 checks green**, including both Vercel
+  preview deployments. **"Merge PR #116" was then separately requested and executed** — merged
+  with a real merge commit (not squash/rebase), matching every prior merge in this project's
+  history — merge commit `bcf706e81202972d861370fc510c4dda5e56539e`. Both Vercel projects
+  auto-deployed on push to `main` and were verified live directly, not just via CI's own Vercel
+  status check — `dashboard-api`'s `/health` returned `build.commitShaShort == bcf706e`,
+  confirming the exact merged commit is what's serving; `GET /notifications` returned a clean
+  `401` (route live, `SessionGuard` enforcing — not a `404`); and `dashboard-web`'s
+  `/notification-center` correctly redirects (307) an unauthenticated visitor to
+  `/auth/sign-in`. **The `dashboard-web` Notification Center UI is now genuinely live in
+  production**, closing out this slice's full build-to-production arc.
+- `[2026-09-03]` **Granted `super_admin` the `notifications_view` permission**, under the
+  explicit "Grant a role notifications_view permission" instruction, closing the flagged RBAC gap
+  from the Notification Center UI (item 87). Target role confirmed directly (`AskUserQuestion`):
+  `super_admin`. See CLAUDE.md item 88 above and
+  `docs/implementation/grant-notifications-view-permission.md` for the full account — a single
+  additive migration (`00117`, renumbered from `00115` during a merge with the concurrently-
+  merged Help Center module), no application code touched, verified against a real local
+  disposable database (never production).
+- `[2026-09-03]` **Required second-role human review and the gate were both completed via the
+  direct "Approve as-is, gate it, and push the branch" instruction.** This is a genuine
+  RBAC/permission change, reserved for the full review tier by default per the 2026-08-27
+  standing rule — given a one-file, no-application-code-touched, additive-read-only-grant diff, a
+  direct security-focused read-through was judged proportionate (0 findings) rather than an
+  8-angle fan-out. Gate `G4-grant-notifications-view-permission` approved — WebDesk Solution,
+  decision CONFIRM, approved commit `84831c8` on branch `grant-notifications-view-permission` —
+  see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-grant-notifications-view-permission`). **"Push the branch" was then executed under the same
+  combined instruction** — pushed to `origin`. This gate approval does not itself authorize
+  opening a PR, merging, or running the migration against production — each remains its own
+  separate, not-yet-requested authorization.
+- `[2026-09-03]` **"Open a PR" was separately requested and executed** on
+  `grant-notifications-view-permission` — opened as
+  [PR #117](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/117). A
+  CI-monitor event then reported a failing "Integration tests" check —
+  `test/notifications.e2e-spec.ts` asserted a real `super_admin` session gets `403` on
+  `GET /notifications`, an assertion the migration in this same PR intentionally invalidates.
+  Fixed by updating the test to expect `200` (the new intentional behavior); verified 44/44
+  `dashboard-api` e2e test files / 832/832 tests passing against a real disposable database,
+  committed, and pushed.
+- `[2026-09-03]` **A second CI-monitor event then reported a real merge conflict against
+  `main`.** Help Center's own backend (PR #118) had merged concurrently and independently claimed
+  migration numbers `00115`/`00116` — the same numbers this branch's own migration used. Fetched
+  and merged `origin/main` in (never rebased); resolved `CLAUDE.md`'s item numbering and
+  `project.json`'s `gates[]`/`audit_log` conflicts by keeping both sides' content and
+  re-sequencing, and separately caught and fixed the real migration-number collision by
+  renumbering `00115` → `00117` and updating every reference to it — the conflict markers alone
+  would not have surfaced this, since two files with the same numeric prefix but different names
+  don't conflict at the git level. Fully re-verified against fresh local disposable PostgreSQL 17
+  databases: a clean 117-migration round-trip (no duplicate-number collision, a stale compiled
+  `dist/` artifact from before the rename was found and cleared along the way), the grant landing
+  correctly, typecheck clean across `@webdesk/database`/`dashboard-api`/`dashboard-web`/
+  `dashboard-worker`, 1852/1852 `dashboard-api` unit tests, 1928/1928 `dashboard-web` unit tests,
+  832/832 `dashboard-api` e2e tests (44/44 files), prettier clean. Pushed again.
+- `[2026-09-03]` **"Check CI status on the PR" confirmed all 14 checks green** on PR #117,
+  including both Vercel preview deployments. **"Merge PR #117" was then separately requested and
+  executed** — merged with a real merge commit (not squash/rebase), matching every prior merge in
+  this project's history — merge commit `2ec8c24dbe5bbd21a2bb4b8c95c5b922c624cfa6`. Both Vercel
+  projects auto-deployed on push to `main` and were verified live directly, not just via CI's own
+  Vercel status check — `dashboard-api`'s `/health` returned `build.commitShaShort == 2ec8c24`,
+  confirming the exact merged commit is what's serving; and both `/notifications`/
+  `/notification-center` responded correctly for an unauthenticated visitor (`401`/`307`).
+- `[2026-09-03]` **Migration `00117` was run against the real production database** — the user
+  ran it themselves, same credential-handling discipline as every prior production migration, and
+  confirmed directly ("Ran the migration, all confirmed working now"). **The `super_admin`
+  `notifications_view` grant is now genuinely live in production**, closing out this slice's full
+  build-to-production arc.
 
 ## Open client blockers
 
