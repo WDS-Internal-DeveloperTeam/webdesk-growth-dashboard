@@ -5,7 +5,11 @@ import type { UserEntity } from "./entities.js";
 const DEFAULT_SEARCH_LIMIT = 20;
 const MAX_SEARCH_LIMIT = 200;
 const DEFAULT_LIST_LIMIT = 20;
-const MAX_LIST_LIMIT = 100;
+// 200, not 100: dashboard-web list pages request pageSize + 1 (up to 101 at the largest 100-row
+// page size) to detect a next page — matches every sibling list-query schema's own 200 ceiling
+// (see users-roles-permissions.dto.ts's own doc comment for the real production incident this
+// mismatch already caused once, on the Decision and Activity Log module).
+const MAX_LIST_LIMIT = 200;
 
 /** Escapes `%`, `_`, and the escape character itself so a literal substring search (e.g. an email
  *  fragment containing a real underscore) isn't reinterpreted by Postgres as a partial ILIKE
@@ -152,7 +156,14 @@ export class UserRepository {
     };
     const { rows, count } = await this.model.findAndCountAll({
       where,
-      order: [["displayName", "ASC"]],
+      // `id` is a secondary sort key so ties on `displayName` don't shift order between two
+      // separate paginated queries — the same tiebreaker fix already applied to
+      // `ContentTemplateRepository.list()`/`PersonaRepository`/`ServiceRepository` for an
+      // identical, previously-fixed bug class in this codebase's history.
+      order: [
+        ["displayName", "ASC"],
+        ["id", "ASC"],
+      ],
       limit,
       offset: filter.offset ?? 0,
     });
@@ -165,11 +176,29 @@ export class UserRepository {
    * separate re-fetch (a bug class this project's own code reviews have caught and fixed
    * repeatedly). Returns `null` if no row with `id` exists, letting the caller decide whether that
    * is a 404.
+   *
+   * `expectedStatus` is an optional CAS guard, mirroring `ContentTemplateRepository.update()`'s/
+   * `PageRepository.update()`'s own `expectedApprovalStatus`/`expectedWorkflowStage` parameter
+   * (a previously-fixed bug class in this codebase): without it, `UsersDirectoryService
+   * .updateStatus()` reads the target's current status into application memory before writing,
+   * but the actual write here would still be unconditional — a concurrent status change landing
+   * between that read and this write could silently overwrite it. When given, the caller gets
+   * back `null` for BOTH "no such row" and "the row's status no longer matches what was read" —
+   * the service distinguishes the two using its own earlier `findById()` result, matching the
+   * established convention.
    */
-  async updateStatus(id: string, status: "active" | "disabled"): Promise<UserEntity | null> {
+  async updateStatus(
+    id: string,
+    status: "active" | "disabled",
+    expectedStatus?: "active" | "disabled",
+  ): Promise<UserEntity | null> {
+    const where: Record<string, unknown> = { id };
+    if (expectedStatus) {
+      where.accountStatus = expectedStatus;
+    }
     const [affectedCount, affectedRows] = await this.model.update(
       { accountStatus: status },
-      { where: { id }, returning: true },
+      { where, returning: true },
     );
     if (affectedCount === 0 || !affectedRows[0]) {
       return null;

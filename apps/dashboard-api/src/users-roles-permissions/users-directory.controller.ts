@@ -6,6 +6,7 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -65,7 +66,7 @@ export class UsersDirectoryController {
     summary: "Get a single user's full detail — every role assignment, global and project-scoped",
   })
   async getUserDetail(
-    @Param("userId") userId: string,
+    @Param("userId", new ParseUUIDPipe()) userId: string,
     @Req() req: UsersRolesPermissionsRequest,
   ): Promise<ApiSuccessResponse<UserDetail>> {
     const detail = await this.usersDirectory.getUserDetail(userId);
@@ -85,7 +86,7 @@ export class UsersDirectoryController {
       "An actor may never deactivate their own account.",
   })
   async updateStatus(
-    @Param("userId") userId: string,
+    @Param("userId", new ParseUUIDPipe()) userId: string,
     @Body(new ZodValidationPipe(updateUserStatusSchema)) body: UpdateUserStatusDto,
     @Req() req: UsersRolesPermissionsRequest,
   ): Promise<ApiSuccessResponse<UserEntity>> {

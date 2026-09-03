@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   RoleRepository,
   UserEntity,
@@ -10,8 +10,13 @@ import { USER_REPOSITORY } from "../auth/config/auth.constants.js";
 import { SessionService } from "../auth/session/session.service.js";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as SessionService above.
 import { AuditService } from "../audit/audit.service.js";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- same reason as SessionService above.
+import { SeparationOfDutiesService } from "../auth/common/separation-of-duties.service.js";
 import { ROLE_REPOSITORY, USER_ROLE_REPOSITORY } from "../authz/authz.constants.js";
 import type { ListUsersQueryDto } from "./users-roles-permissions.dto.js";
+
+/** The seeded role key this module's last-active-Super-Admin lockout guard checks against. */
+const SUPER_ADMIN_ROLE_KEY = "super_admin";
 
 export interface UserRoleAssignmentSummary {
   readonly roleId: string;
@@ -42,6 +47,7 @@ export class UsersDirectoryService {
     @Inject(ROLE_REPOSITORY) private readonly roles: RoleRepository,
     private readonly sessionService: SessionService,
     private readonly auditService: AuditService,
+    private readonly separationOfDuties: SeparationOfDutiesService,
   ) {}
 
   async listUsers(
@@ -89,13 +95,27 @@ export class UsersDirectoryService {
   }
 
   /**
-   * Activates or deactivates a user. Rejects self-deactivation outright (a real safety rule
-   * preventing self-lockout — a caller can always deactivate someone else, never themselves) with
-   * a clean `BadRequestException` rather than letting it silently succeed and strand the actor
-   * with no way to reverse their own change. On a real transition to `disabled`, also revokes every
-   * existing session for the target user (`"admin-forced"`, mirroring
-   * `RoleAssignmentService.assignRole()`'s own session-revocation-on-role-change precedent) so a
-   * deactivated account can't keep operating on an outstanding session.
+   * Activates or deactivates a user. Rejects self-deactivation outright via
+   * `SeparationOfDutiesService.assertDistinctActors()` — the same reusable primitive
+   * `RoleAssignmentService.assertNotSelfTargeting()` already uses for the identical "actor can't
+   * target themselves" shape, rather than a hand-rolled equality check — so a denial also
+   * automatically records a `security_exception` audit event and throws the same
+   * `ForbiddenException` (403) every other self-targeting denial in this codebase does, instead of
+   * a one-off `BadRequestException` (400). Also rejects deactivating the last remaining active
+   * Super Admin (`assertNotSoleActiveSuperAdmin()` below) — a real, easily-triggered lockout risk.
+   * Only self-activation stays unguarded — reactivating your own already-disabled account isn't
+   * the same self-targeting risk (you can't be mid-request revoking your own live session while
+   * also restoring it).
+   *
+   * On a real transition to `disabled`, also revokes every existing session for the target user
+   * (`"admin-forced"`, mirroring `RoleAssignmentService.assignRole()`'s own
+   * session-revocation-on-role-change precedent) so a deactivated account can't keep operating on
+   * an outstanding session.
+   *
+   * `UserRepository.updateStatus()`'s CAS guard (`expectedStatus`, set to the status just read via
+   * `findById()`) means a `null` result here can only mean a concurrent write raced this one — the
+   * row was already confirmed to exist a moment ago — so it's reported as a `ConflictException`
+   * (409), not the misleading `NotFoundException` a "row doesn't exist" case would need.
    *
    * The `audit_events` write is best-effort: wrapped in try/catch and only `console.error`'d on
    * failure, never rolled back or retried — the byte-identical, already-accepted pattern
@@ -111,14 +131,21 @@ export class UsersDirectoryService {
     if (!target) {
       throw new NotFoundException(`User not found: ${userId}`);
     }
-    if (actorUserId === userId && targetStatus === "disabled") {
-      throw new BadRequestException("Cannot deactivate your own account.");
+
+    if (targetStatus === "disabled") {
+      await this.separationOfDuties.assertDistinctActors(
+        actorUserId,
+        userId,
+        "user deactivation actor",
+        { entityType: "user", entityId: userId, retentionCategory: "approval-audit-7y" },
+      );
+      await this.assertNotSoleActiveSuperAdmin(userId);
     }
 
     const beforeStatus = target.accountStatus;
-    const updated = await this.users.updateStatus(userId, targetStatus);
+    const updated = await this.users.updateStatus(userId, targetStatus, beforeStatus);
     if (!updated) {
-      throw new NotFoundException(`User not found: ${userId}`);
+      throw new ConflictException(`User ${userId}'s status changed concurrently — please retry.`);
     }
 
     if (updated.accountStatus === "disabled") {
@@ -145,5 +172,37 @@ export class UsersDirectoryService {
     }
 
     return updated;
+  }
+
+  /**
+   * Guards against deactivating the last remaining active Super Admin account. This module is the
+   * first HTTP-reachable path that makes that lockout trivially easy to trigger — the pre-existing
+   * `RoleAssignmentService.revokeRole()` has the identical unaddressed gap at the role-revocation
+   * layer (revoking a user's last `super_admin` grant leaves the same organization-wide lockout
+   * risk), left unfixed here as a separate, out-of-scope concern for a fix round on this module.
+   *
+   * The expensive "who else holds this role" lookup (2 more queries) only runs once the target is
+   * confirmed to actually hold `super_admin` at global scope — a cheap membership check first
+   * (resolving the role's id, then checking it against the target's own global role-id list) means
+   * deactivating any non-admin user pays only that lightweight check, not the full lookup.
+   */
+  private async assertNotSoleActiveSuperAdmin(userId: string): Promise<void> {
+    const superAdminRole = await this.roles.findByKey(SUPER_ADMIN_ROLE_KEY);
+    if (!superAdminRole) {
+      // Defensive only — the role is always seeded; nothing to guard if it somehow doesn't exist.
+      return;
+    }
+    const targetGlobalRoleIds = await this.userRoles.findRoleIdsForUser(userId);
+    if (!targetGlobalRoleIds.includes(superAdminRole.id)) {
+      return;
+    }
+    const holderIds = await this.userRoles.findUserIdsForGlobalRole(superAdminRole.id);
+    const otherHolderIds = holderIds.filter((id) => id !== userId);
+    // UserRepository.findByIds() already filters to accountStatus: "active" — exactly the
+    // "still-active other holder" check this guard needs, no separate status filter required.
+    const otherActiveHolders = await this.users.findByIds(otherHolderIds);
+    if (otherActiveHolders.length === 0) {
+      throw new ConflictException("Cannot deactivate the last active Super Admin account.");
+    }
   }
 }
