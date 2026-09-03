@@ -4916,10 +4916,25 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     `G4-decision-and-activity-log`) and
     `docs/project-state/module-decision-and-activity-log-approval-checklist.md`'s "Sign-off"
     section. **"Push the branch" was then separately requested and executed** — pushed to
-    `origin`. **This gate approval does not itself authorize opening a PR or merging** — each
-    remains its own separate, not-yet-requested authorization, per this project's standing
-    "no auto-merge" rule. No `dashboard-web` UI exists yet for this module — a separate,
-    not-yet-requested next step, matching every prior module's own backend-first precedent.
+    `origin`. **"Open a PR and merge it" was then separately requested and executed** — opened as
+    [PR #111](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/111),
+    waited for all 14 CI checks to go green, then merged with a real merge commit (not squash/
+    rebase), matching every prior merge in this project's history — merge commit
+    `9a5ef065f81ba8b4a978cb3d04fd29b84900f7dc`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+9a5ef065f81ba8b4a978cb3d04fd29b84900f7dc`, confirming the exact merged commit is what's serving;
+    `GET /decision-and-activity-log/events` returned a clean `401` (route live, `SessionGuard`
+    enforcing — not a `404`, which would mean the module never actually deployed); and
+    `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
+    **The production database schema is NOT yet migrated through `00114`** — a `migrate:status`
+    check the user ran themselves came back listing only migrations through `00110`, with no
+    mention of `00113`/`00114` at all (not even as pending), meaning the checkout that command ran
+    from predates this module's merge and doesn't have those migration files yet; a real
+    `migrate:status` run needs to happen from a checkout that includes them before the actual
+    `migrate` command can apply them. No `dashboard-web` UI exists yet for this module — a
+    separate, not-yet-requested next step, matching every prior module's own backend-first
+    precedent.
 
 ## Recent decisions
 
