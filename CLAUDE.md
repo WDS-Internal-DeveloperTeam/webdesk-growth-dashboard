@@ -4933,10 +4933,111 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     pulling `main`, a second `migrate:status` check (a genuinely read-only command — "Status-only
     run. Nothing was changed") confirmed all 114 migrations executed, 0 pending. **The Decision
     and Activity Log module backend is now genuinely live in production, with its schema change
-    also applied.** No `dashboard-web` UI exists yet for this module — a separate,
-    not-yet-requested next step, matching every prior module's own backend-first precedent.
+    also applied.** **Update (2026-09-03): the `dashboard-web` UI has since been built and
+    gated — see item 82 below.**
 
-82. **Release Center module backend — built, reviewed, gated, merged
+82. **`dashboard-web` Decision and Activity Log UI — built, reviewed, gated, merged
+    ([PR #113](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/113),
+    merge commit `be74483b3b09b21bdb73bc54de0a0c19fdfdbc99`); now genuinely live in production
+    (2026-09-03).** Closes
+    this module's last named gap, following the backend's own build-to-production arc (PR #111).
+    Not started automatically — built directly on the explicit "Decision and Activity Log - Start
+    the dashboard-web UI for it" instruction. A single, organization-wide, read-only list page
+    (`/decision-and-activity-log`, the module registry's own seeded `route` value) over `GET
+/decision-and-activity-log/events` — **no detail page and no create/edit form exist**, since this
+    module is a pure read-only query surface with no write path of its own
+    (`AuditService.record()` remains the sole writer, called by other modules' own services).
+    Filters for event type (a single-value `<select>` over this module's own 16-value allowlist —
+    no sibling list page in this app offers a real multi-select filter widget yet), entity
+    type/id, actor user id, project id, and a from/to date range, plus offset pagination.
+    New `packages/shared-types` `AuditEventType`/`AuditActorType`/`AuditEvent` mirror
+    `packages/database/src/audit/entities.ts`'s own `AuditEventEntity` shape exactly (the FULL
+    ~40-value `AuditEventType` union, not just this module's own 16-value allowlist, so a stray/
+    legacy row outside the allowlist would still typecheck if ever returned).
+    `lib/decision-and-activity-log-query.ts`/`lib/decision-and-activity-log.ts` mirror Review and
+    Approval Center's own zero-non-type-import-file split — the closest sibling (organization-wide,
+    filter-heavy, no project scoping, no sub-resources). `actorUserId`/`projectId` are plain,
+    client-side UUID-format-checked text inputs (no picker exists for either anywhere in this app
+    as a filter widget), each degrading to "no filter applied" on an invalid shape rather than
+    round-tripping a garbled value that would 400 the whole page; `from`/`to` are plain `<input
+type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at request time,
+    not at parse time, so the raw date string round-trips cleanly through the URL/form
+    `defaultValue`. Each row's `before`/`after` audit state (when present) renders via a
+    `<details>`/`<summary>` disclosure — zero client JS, matching Website Strategy Center's own
+    version-history disclosure precedent — rather than a dedicated detail page, since an audit
+    event has no lifecycle of its own to navigate to. Actor names resolve via the existing
+    `getUsersByIds()` (degrades to the raw id on a 403/404, matching every sibling module's own
+    roster-resolution precedent). **Reviewed at light tier**, per the 2026-08-27 "right-size the
+    review pipeline" standing rule — a small, frontend-only slice (plus additive shared-types
+    only) consuming an already-reviewed, already-gated backend with no new endpoint. A direct
+    read-through pass verified the filter contract against the real backend
+    `listDecisionAndActivityLogEventsQuerySchema`, the UTC-boundary date conversion, the UUID-shape
+    short-circuit before either `actorUserId`/`projectId` is ever sent to the backend, and reuse of
+    every established shared helper — **0 findings**. A separate security review was skipped per
+    the same standing rule — no new endpoint, no new RBAC action, no new sink; `before`/`after`
+    state renders via `JSON.stringify()` inside a `<pre>`, never `dangerouslySetInnerHTML`. 18 new
+    `dashboard-web` unit tests, 1841/1841 overall; typecheck clean across `@webdesk/shared-types`
+    (built)/`dashboard-web`/`dashboard-api`/`dashboard-worker` (the additive shared-types change);
+    `eslint --max-warnings=0` + CSS-token check (99 files) clean; `next build` clean with the new
+    route present; `prettier --check` clean — all independently re-run by the orchestrating
+    session. See `docs/implementation/module-decision-and-activity-log.md`'s "As-built —
+    `dashboard-web` UI" section and
+    `docs/project-state/dashboard-web-decision-and-activity-log-approval-checklist.md`. **Required
+    second-role human review and the gate were both completed via the direct "Approve, gate it,
+    and push/PR/merge" instruction** — the approval checklist's own findings summary (0 findings)
+    served as the review artifact. **The gate (G4-dashboard-web-decision-and-activity-log) was
+    then approved** — WebDesk Solution, decision CONFIRM, approved commit `932708a` on branch
+    `dashboard-web-decision-and-activity-log` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-decision-and-activity-log`). **"Push the branch," "Open a PR," and "Merge"
+    were then each executed under the same combined instruction** — pushed to `origin`, opened as
+    [PR #113](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/113),
+    all 14 CI checks green (one initial "Formatting validation" failure — an unformatted new test
+    file — found and fixed before the checks re-ran clean), then merged with a real merge commit
+    (not squash/rebase), matching every prior merge in this project's history — merge commit
+    `be74483b3b09b21bdb73bc54de0a0c19fdfdbc99`. `dashboard-api` auto-deployed on push to `main` and
+    was verified live directly, not just via CI's own Vercel status check — `/health` returned
+    `build.commitShaShort == be74483`, confirming the exact merged commit is what's serving; and
+    `dashboard-web`'s `/decision-and-activity-log` correctly redirected (307) an unauthenticated
+    visitor to `/auth/sign-in`. **The `dashboard-web` Decision and Activity Log UI was then
+    genuinely live in production** — closing out this slice's full build-to-production arc, until
+    a real bug surfaced the same day, see item 83 below.
+
+83. **Fix: Decision and Activity Log `limit` cap causing a live "Something went wrong" error —
+    built, reviewed, gated, merged
+    (2026-09-03).** Not started automatically — the user
+    reported directly, with a screenshot, that applying a filter on the just-shipped
+    `/decision-and-activity-log` page rendered the app's generic error screen. Diagnosed directly:
+    `dashboard-web`'s list pages universally request `pageSize + 1` rows to detect a next page
+    (`getDecisionAndActivityLogEvents()` sends `limit: pageSize + 1`) — at the largest 100-row
+    `PAGE_SIZE_OPTIONS` value that's `limit=101`, but
+    `listDecisionAndActivityLogEventsQuerySchema`'s own `limit` field was capped at `.max(100)` —
+    **the only list-query schema in this entire ~46-module codebase capped there**, every one of
+    the others already at `.max(200)` specifically to leave headroom for this exact pattern (a
+    real bug this session's own build introduced by not checking that convention against the
+    sibling schemas it was otherwise mirroring). A `limit=101` request failed Zod validation with
+    a clean 400, and `getDecisionAndActivityLogEvents()` throws on any non-OK response by design
+    (this page's entire content IS the event list), producing exactly the error screen the user
+    saw. Fixed with a one-line change — the cap raised to `.max(200)`, matching every sibling
+    module exactly — plus replacing the DTO spec's "rejects a limit above 100" test with two tests
+    proving both sides of the real boundary (101 now succeeds, 201 still rejected, so the cap
+    itself stays real and enforced, not removed). See
+    `docs/implementation/module-decision-and-activity-log.md`'s "Incident — `limit` cap too low
+    for the largest page size" section. **Reviewed at light tier** — a one-line schema-cap fix
+    bringing an outlier module in line with an already-reviewed sibling convention, no new
+    endpoint/RBAC action/sink — **0 findings**; no separate security review. Re-validated against
+    a real disposable local PostgreSQL 17 database: 9/9 DTO unit tests (2 new/updated), 4/4
+    service unit tests, 7/7 module e2e tests, 832/832 `dashboard-api` e2e/integration tests
+    overall (no regression), typecheck/lint/prettier all clean. See
+    `docs/project-state/fix-decision-and-activity-log-limit-cap-approval-checklist.md`. **Gate
+    (G4-fix-decision-and-activity-log-limit-cap) approved** — WebDesk Solution, decision CONFIRM,
+    given directly in response to the user's own live bug report on the just-shipped feature — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-fix-decision-and-activity-log-limit-cap`). **The fix was then pushed, opened as a PR, and
+    merged the same session, given the active user-facing bug** — see the corresponding
+    2026-09-03 "Recent decisions" entry below for the exact PR/merge-commit record.
+
+84. **Release Center module backend — built, reviewed, gated, merged
     ([PR #112](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/112),
     merge commit `87aac6b45104c9c84507f2e415256e31335a3f62`); now genuinely live in production
     (2026-09-03).** Module #35 on the Recommended Module Roadmap, key `release_center`. Three
@@ -4984,12 +5085,12 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     actually deployed); and `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to
     `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
     Release Center module backend is now genuinely live in production.** No `dashboard-web` UI
-    existed yet for this module at the time — see item 83 below for its own build-to-production
+    existed yet for this module at the time — see item 85 below for its own build-to-production
     arc.
 
-83. **`dashboard-web` Release Center UI — built, reviewed, gated, and pushed
+85. **`dashboard-web` Release Center UI — built, reviewed, gated, and pushed
     (2026-09-03).** Closes this module's last named gap, following the backend's own
-    build-to-production arc (PR #112, item 82 above). Built directly on the explicit "Release
+    build-to-production arc (PR #112, item 84 above). Built directly on the explicit "Release
     Center - Start the dashboard-web UI for it" instruction. No approved wireframe/screen spec
     exists for this module — fields mirror `createReleaseSchema`/`updateReleaseSchema`/
     `changeReleaseStatusSchema`/the four sub-resource create DTOs directly, matching every
@@ -8107,17 +8208,23 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   (`current_gate` now `G4-technical-center`). Not yet pushed to `origin`, opened as a PR, or
   merged — each remains its own separate, not-yet-requested authorization.
 - `[2026-09-03]` **Release Center module #35 backend and `dashboard-web` UI both built,
-  reviewed, gated; the backend merged and live, the UI gated and pushed.** See CLAUDE.md items
-  82–83 above for the full account: a real 14-status/23-edge workflow, six tables (`releases`
-  plus five child sub-resources), reuses the seeded `releases` RBAC group verbatim. Backend
-  merged via [PR #112](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/112)
-  and verified live in production. The `dashboard-web` UI (list/create/detail/edit, plus
-  artifacts/approvals/deployments/smoke-tests/rollback sub-resource sections) was reviewed at
-  light tier (0 findings — the frontend's transition table was independently diffed edge-for-edge
-  against the real backend `TRANSITIONS` map, 23/23 match), gated
-  (`G4-dashboard-web-release-center`, WebDesk Solution, CONFIRM, approved commit `a3e86c4`), and
-  pushed to `origin` on branch `dashboard-web-release-center` — opening a PR and merging remain
-  separate, not-yet-requested next steps.
+  reviewed, gated; the backend merged and live, the UI gated, pushed, and opened as a PR.** See
+  CLAUDE.md items 84–85 above for the full account: a real 14-status/23-edge workflow, six
+  tables (`releases` plus five child sub-resources), reuses the seeded `releases` RBAC group
+  verbatim. Backend merged via
+  [PR #112](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/112) and
+  verified live in production. The `dashboard-web` UI (list/create/detail/edit, plus artifacts/
+  approvals/deployments/smoke-tests/rollback sub-resource sections) was reviewed at light tier
+  (0 findings — the frontend's transition table was independently diffed edge-for-edge against
+  the real backend `TRANSITIONS` map, 23/23 match), gated (`G4-dashboard-web-release-center`,
+  WebDesk Solution, CONFIRM, approved commit `a3e86c4`), pushed to `origin`, and opened as
+  [PR #115](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/115).
+  Merging main into the branch surfaced a real conflict — `packages/shared-types/src/index.ts`
+  (two independent new type blocks appended at the same point, both kept) and
+  `project.json`'s own `gates[]`/`audit_log` arrays (both sides' entries kept, version counters
+  re-sequenced) — since Decision and Activity Log's own `dashboard-web` UI (PR #113) and its
+  limit-cap fix (PR #114) had both merged concurrently. Merge authorization remains a separate,
+  not-yet-requested next step.
 
 ## Open client blockers
 

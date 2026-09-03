@@ -24,7 +24,7 @@ export const listDecisionAndActivityLogEventsQuerySchema = z.object({
   entityId: z.string().min(1).max(128).optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
 export type ListDecisionAndActivityLogEventsQueryDto = z.infer<

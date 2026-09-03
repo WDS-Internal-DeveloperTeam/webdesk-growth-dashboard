@@ -2954,3 +2954,89 @@ export interface RollbackRecord {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * The Decision and Activity Log module (module #37,
+ * `docs/implementation/module-decision-and-activity-log.md`) — a read-only, human-friendly query
+ * view over the existing ADR-0017 `audit_events` table, not a new table of its own. Mirrors
+ * `packages/database/src/audit/entities.ts`'s `AuditEventEntity`/`AuditEventType`/`AuditActorType`
+ * exactly, but only the module's own real event-type allowlist (`DECISION_AND_ACTIVITY_LOG_EVENT_TYPES`
+ * in both `apps/dashboard-api/src/decision-and-activity-log/decision-and-activity-log.constants.ts`
+ * and this package's `lib/decision-and-activity-log-query.ts`, kept in sync by hand — the same
+ * approach every sibling module's own `-query.ts` file uses for its own enum) — `AuditEventType`
+ * here is the FULL union (dashboard-web narrows it further with its own smaller literal list, not
+ * a separate type), since a stray/legacy row outside this module's own allowlist should still
+ * typecheck if it were ever returned.
+ */
+export type AuditEventType =
+  | "login"
+  | "login_rejected"
+  | "logout"
+  | "session_revoked"
+  | "permission_change"
+  | "confidential_field_access_change"
+  | "user_activation"
+  | "user_deactivation"
+  | "data_change"
+  | "approval"
+  | "rejection"
+  | "revision_requested"
+  | "publish"
+  | "unpublish"
+  | "release"
+  | "rollback"
+  | "backup"
+  | "restore"
+  | "retention_run"
+  | "security_exception"
+  | "scan_run"
+  | "import_run"
+  | "export_run"
+  | "git_sync"
+  | "webhook_processed"
+  | "job_created"
+  | "job_completed"
+  | "job_failed"
+  | "job_retry_requested"
+  | "job_cancellation_requested"
+  | "retention_hold_created"
+  | "retention_hold_released"
+  | "notification_created"
+  | "notification_delivery_outcome"
+  | "operational_contact_created"
+  | "operational_contact_updated"
+  | "system_health_check_recorded"
+  | "emergency_admin_login"
+  | "account_recovery_request"
+  | "account_recovery_decision"
+  | "project_status_changed";
+
+export type AuditActorType = "human" | "system" | "service_account";
+
+/** Append-only — no `updatedAt` exists on this table at all. */
+export interface AuditEvent {
+  readonly id: string;
+  readonly eventType: AuditEventType;
+  readonly eventCategory: string;
+  readonly actorUserId: string | null;
+  readonly actorType: AuditActorType;
+  readonly sessionId: string | null;
+  readonly projectId: string | null;
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly entityVersion: number | null;
+  readonly action: string;
+  readonly beforeState: Record<string, unknown> | null;
+  readonly afterState: Record<string, unknown> | null;
+  readonly reason: string | null;
+  readonly relatedGateOrApprovalId: string | null;
+  readonly gitCommitSha: string | null;
+  readonly correlationId: string | null;
+  readonly sourceApplication: string;
+  readonly environment: string;
+  readonly confidentialityClassification: string;
+  readonly retentionCategory: string;
+  readonly legalHold: boolean;
+  readonly legalHoldReason: string | null;
+  readonly createdAt: string;
+}
