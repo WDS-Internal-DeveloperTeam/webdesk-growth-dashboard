@@ -1,0 +1,70 @@
+/* Mirrors `case-study-approvals-section.module.css` — the closest existing precedent for a
+ * read-only, append-only approval-decision list in this app. Adds real decision-color variants
+ * (`decisionApproved`/`decisionRejected`/`decisionHotfix`) that sibling file's own plain
+ * `.decision` class doesn't have, since this module's own 3-value `ReleaseApprovalDecision`
+ * vocabulary (approved/rejected/hotfix_required) benefits from being visually distinct at a
+ * glance in a list that can otherwise mix all three. */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: var(--webdesk-dashboard-space-sm) var(--webdesk-dashboard-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.rowHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+}
+
+.badge {
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+  color: var(--webdesk-dashboard-color-foreground);
+}
+
+.decisionApproved {
+  color: var(--webdesk-dashboard-color-success);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+}
+
+.decisionRejected {
+  color: var(--webdesk-dashboard-color-danger);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+}
+
+.decisionHotfix {
+  color: var(--webdesk-dashboard-color-warning);
+  font-weight: var(--webdesk-dashboard-font-weight-medium);
+}
+
+.meta {
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  font-size: var(--webdesk-dashboard-font-size-xs);
+}
+
+.notes {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.muted {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0;
+}

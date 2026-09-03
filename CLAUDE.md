@@ -5037,6 +5037,115 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     merged the same session, given the active user-facing bug** — see the corresponding
     2026-09-03 "Recent decisions" entry below for the exact PR/merge-commit record.
 
+84. **Release Center module backend — built, reviewed, gated, merged
+    ([PR #112](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/112),
+    merge commit `87aac6b45104c9c84507f2e415256e31335a3f62`); now genuinely live in production
+    (2026-09-03).** Module #35 on the Recommended Module Roadmap, key `release_center`. Three
+    design forks confirmed with the project owner first (`AskUserQuestion`): an inline,
+    dynamically-gated `TRANSITIONS` map (chosen) over routing through Review and Approval Center,
+    since the seeded `releases` RBAC group carries real submit/review/approve/release+rollback
+    letters directly, matching Service Library's/Persona Library's/Website Strategy Center's/Case
+    Study Studio's own precedent; project-scoped (chosen) over organization-wide; and build now
+    with no literal FK into Technical Center (chosen), moot in practice since Technical Center
+    merged during this build. Six tables sourced directly from the canonical spec's own 10-item
+    field list (`releases`, `release_artifacts`, `release_approvals`, `deployments`,
+    `smoke_tests`, `rollback_records`), implementing the real 14-status Release workflow
+    (`05_Workflow_State_Machines.md §10`). Reuses the already-seeded `releases` RBAC permission
+    group verbatim — no new RBAC migration. Migrations `00111`/`00112`. Built by a background
+    agent mirroring Technical Center (project-scoped controller/RBAC wiring) and Case Study
+    Studio (inline dynamic-per-transition-action workflow plus approvals-log sub-resource) as
+    literal templates, then independently re-verified in full against a real local disposable
+    PostgreSQL 17 database — migration up/down/up round-trip clean, `packages/database`
+    integration tests, `dashboard-api` e2e tests, and unit tests all independently re-run and
+    confirmed passing. **Independent code review** (high effort, 8-angle finder pass) surfaced
+    10 findings (6 CONFIRMED, 4 PLAUSIBLE), all 6 CONFIRMED fixed — most severe: the
+    `release_approvals` decision log hardcoded `decision` to the literal `"approved"`, so
+    `rejected`/`hotfix_required` were structurally unreachable and a real rejection was never
+    logged — fixed by restructuring the transition map's `approvalStage` into a bundled
+    `approvalLog: {stage, decision}` present only on transitions representing a real governance
+    decision; also fixed a missing terminal-state guard on `deployments`/`smoke-tests`
+    `create()` (closed with a shared `RELEASE_TERMINAL_STATUSES` constant), 4 hand-typed
+    repository input types, and 5 speculative indexes with no matching query shape. 4 PLAUSIBLE
+    findings left as accepted, tracked debt, each matching an already-shipped sibling module's
+    own identical pattern. **Security review found 0 findings above threshold.** **Required
+    second-role human review complete** — WebDesk Solution, "Approve as-is," 2026-09-03,
+    accepting the 4 open tracked-debt findings. **The gate (G4-release-center) was then
+    separately approved** — WebDesk Solution, decision CONFIRM, approved commit `c562586` on
+    branch `module-release-center` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]`. **"Push, open a PR, and merge" was then separately requested and executed** —
+    pushed to `origin`, opened as PR #112. A real merge conflict against `main` surfaced
+    (Decision and Activity Log module #37, PR #111, had merged concurrently) — only
+    `project.json`'s `gates[]`/`audit_log` arrays conflicted, resolved by keeping both sides'
+    entries and re-sequencing, fully re-verified (114 migrations clean, 1830/1830 `dashboard-api`
+    unit tests) before pushing again; all 14 CI checks then green. Both Vercel projects
+    auto-deployed on push to `main` and were verified live directly — `dashboard-api`'s
+    `/health` returned `build.commitShaShort == 87aac6b`, confirming the exact merged commit is
+    what's serving; `GET /release-center/projects/:projectId/releases` returned a clean `401`
+    (route live, `SessionGuard` enforcing — not a `404`, which would mean the module never
+    actually deployed); and `dashboard-web`'s `/` resolves (via the intermediate `/home` hop) to
+    `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact. **The
+    Release Center module backend is now genuinely live in production.** No `dashboard-web` UI
+    existed yet for this module at the time — see item 85 below for its own build-to-production
+    arc.
+
+85. **`dashboard-web` Release Center UI — built, reviewed, gated, and pushed
+    (2026-09-03).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #112, item 84 above). Built directly on the explicit "Release
+    Center - Start the dashboard-web UI for it" instruction. No approved wireframe/screen spec
+    exists for this module — fields mirror `createReleaseSchema`/`updateReleaseSchema`/
+    `changeReleaseStatusSchema`/the four sub-resource create DTOs directly, matching every
+    sibling module's own "smallest honest reading" precedent for an unsourced screen. Four
+    routes under `app/(shell)/release-center/` (list — project-scoped, header-cookie fallback,
+    per the 2026-09-02 current-project-propagation fix; create; detail; edit). The detail page
+    composes six sections: Identity/Assignees (`assignedDeveloperUserId`/
+    `assignedReviewerUserId`/`productionApproverUserId`, resolved via `getUsersByIds()`),
+    Content (`notes`/`hotfixReason`, plain text), `ReleaseStatusActions` (the real
+    14-status/23-edge workflow, hand-mirrored from `ReleasesService`'s own `TRANSITIONS` map,
+    with `reason`/`rolledBackSha`/optional `replacementReleaseId` fields that render and gate
+    submission only when `rolled_back` is a legal target), `ReleaseArtifactsSection` (add/list/
+    real-HTTP-`DELETE`, client-side validated against the backend's own `repoOwnerOrName`
+    regex), `ReleaseApprovalsSection` (read-only, most-recent-first), `ReleaseDeploymentsSection`/
+    `ReleaseSmokeTestsSection` (append-only add/list), and a rollback-record block (read-only,
+    renders only when `GET .../rollback` returns a row). `notes`/`hotfixReason`/status-transition
+    `notes`/`reason` all stay plain `<textarea>`s, not `RichTextEditor` — an explicit, documented
+    exception to the 2026-08-22 standing rich-text rule, since the backend DTOs explicitly state
+    these fields are "deliberately plain, unsanitized text," and no paired backend sanitization
+    change was made (out of scope for a frontend-only branch). New `packages/shared-types`
+    additions (`Release`/`ReleaseArtifact`/`ReleaseApproval`/`Deployment`/`SmokeTest`/
+    `RollbackRecord` and their enums) mirror `packages/database/src/release-center/entities.ts`
+    exactly. The two assignee `UserPicker` fields on `ReleaseForm` use the established owner/
+    `*Touched` data-loss-prevention pattern (`ProjectForm`'s/`ReadyForClaudeTaskForm`'s own
+    precedent). Built by a background agent with a fully-specified prompt naming Technical
+    Center's list page and Case Study Studio's bespoke status-actions component as the literal
+    structural templates, then independently re-verified in full by the orchestrating session —
+    every high-risk file read directly (the full 23-edge `TRANSITIONS` map diffed edge-for-edge
+    against the real backend map, every mutating `fetch()` call site diffed against the real
+    controller routes/HTTP verbs — notably `POST .../releases/:id/update`, not `PATCH`, and a
+    real `DELETE .../artifacts/:artifactId`), and every validation command re-run fresh: typecheck
+    (`@webdesk/shared-types`/`dashboard-web`/`dashboard-api`/`dashboard-worker` all clean),
+    `eslint --max-warnings=0` + CSS-token-check (105 files) clean, 1878/1878 `dashboard-web` unit
+    tests passing, `next build` clean with all 4 new routes present, `prettier --check` clean
+    (found and fixed one formatting drift). **Reviewed at light tier**, per the 2026-08-27
+    "right-size the review pipeline" standing rule — a small, frontend-only UI slice consuming an
+    already-reviewed, already-gated backend with no new endpoint. A direct read-through pass
+    verified the create/edit field contract, the 23-edge transition table byte-for-byte, the
+    artifact sub-resource's client-side validation against the real backend regex, the
+    route/HTTP-method shapes, the assignee-picker data-loss guards, terminal-state edit-blocking
+    (matches `EDIT_BLOCKED_STATUSES` exactly), and the field-treatment exception against the
+    backend's own DTO comments — **0 findings**. Security review skipped per the same standing
+    rule — no new endpoint, no new RBAC/auth logic, no new sink. See
+    `docs/project-state/dashboard-web-release-center-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it and push the
+    branch" instruction** — the approval checklist's own findings summary served as the review
+    artifact, since there were no open findings of any kind on this branch. **The gate
+    (G4-dashboard-web-release-center) was then approved** — WebDesk Solution, decision CONFIRM,
+    approved commit `a3e86c4` on branch `dashboard-web-release-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-release-center`). **"Push the branch" was then separately requested and
+    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
+    or merging** — each remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -8098,6 +8207,24 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   `module-technical-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
   (`current_gate` now `G4-technical-center`). Not yet pushed to `origin`, opened as a PR, or
   merged — each remains its own separate, not-yet-requested authorization.
+- `[2026-09-03]` **Release Center module #35 backend and `dashboard-web` UI both built,
+  reviewed, gated; the backend merged and live, the UI gated, pushed, and opened as a PR.** See
+  CLAUDE.md items 84–85 above for the full account: a real 14-status/23-edge workflow, six
+  tables (`releases` plus five child sub-resources), reuses the seeded `releases` RBAC group
+  verbatim. Backend merged via
+  [PR #112](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/112) and
+  verified live in production. The `dashboard-web` UI (list/create/detail/edit, plus artifacts/
+  approvals/deployments/smoke-tests/rollback sub-resource sections) was reviewed at light tier
+  (0 findings — the frontend's transition table was independently diffed edge-for-edge against
+  the real backend `TRANSITIONS` map, 23/23 match), gated (`G4-dashboard-web-release-center`,
+  WebDesk Solution, CONFIRM, approved commit `a3e86c4`), pushed to `origin`, and opened as
+  [PR #115](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/115).
+  Merging main into the branch surfaced a real conflict — `packages/shared-types/src/index.ts`
+  (two independent new type blocks appended at the same point, both kept) and
+  `project.json`'s own `gates[]`/`audit_log` arrays (both sides' entries kept, version counters
+  re-sequenced) — since Decision and Activity Log's own `dashboard-web` UI (PR #113) and its
+  limit-cap fix (PR #114) had both merged concurrently. Merge authorization remains a separate,
+  not-yet-requested next step.
 
 ## Open client blockers
 

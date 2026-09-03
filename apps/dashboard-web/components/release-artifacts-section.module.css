@@ -1,0 +1,76 @@
+/*
+ * Composes from `project-subresource-section.module.css` for the list/row/add-form/delete shape —
+ * `release_artifacts` has create/list/delete but no update route, so this composes the delete
+ * classes (unlike `scan-evidence-section.module.css`, which has neither). That shared base file is
+ * itself fully generic (no Projects-specific values inside it) despite its `project-` filename
+ * prefix — flagged here, not silently worked around with a duplicate file, same as
+ * `page-urls-section.module.css`'s/`claim-sources-section.module.css`'s own identical note.
+ */
+
+.list {
+  composes: list from "./project-subresource-section.module.css";
+}
+
+.row {
+  composes: row from "./project-subresource-section.module.css";
+}
+
+.rowMain {
+  composes: rowMain from "./project-subresource-section.module.css";
+}
+
+.rowActions {
+  composes: rowActions from "./project-subresource-section.module.css";
+}
+
+.deleteButton {
+  composes: deleteButton from "./project-subresource-section.module.css";
+}
+
+.primaryText {
+  composes: primaryText from "./project-subresource-section.module.css";
+}
+
+.secondaryText {
+  composes: secondaryText from "./project-subresource-section.module.css";
+}
+
+.addForm {
+  composes: addForm from "./project-subresource-section.module.css";
+}
+
+.addFormTitle {
+  composes: addFormTitle from "./project-subresource-section.module.css";
+}
+
+.fieldRow {
+  composes: fieldRow from "./project-subresource-section.module.css";
+}
+
+.field {
+  composes: field from "./project-subresource-section.module.css";
+}
+
+.label {
+  composes: label from "./project-subresource-section.module.css";
+}
+
+.input {
+  composes: input from "./project-subresource-section.module.css";
+}
+
+.formActions {
+  composes: formActions from "./project-subresource-section.module.css";
+}
+
+.submitButton {
+  composes: submitButton from "./project-subresource-section.module.css";
+}
+
+.error {
+  composes: error from "./project-subresource-section.module.css";
+}
+
+.muted {
+  composes: muted from "./project-subresource-section.module.css";
+}
