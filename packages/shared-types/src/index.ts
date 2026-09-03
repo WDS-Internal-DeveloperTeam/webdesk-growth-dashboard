@@ -3040,3 +3040,39 @@ export interface AuditEvent {
   readonly legalHoldReason: string | null;
   readonly createdAt: string;
 }
+
+/**
+ * Notification Center (module #43, `notification_center`) — a `dashboard-web` view over the
+ * Phase 1E `notifications` table (`packages/database/src/notifications/entities.ts`'s
+ * `NotificationEntity`, mirrored here exactly). Real SMTP delivery is explicitly out of scope for
+ * this phase (`UnconfiguredNotificationDeliveryAdapter` always rejects), so every notification
+ * created today eventually settles into `retrying`/`permanently_failed` — the UI must show this
+ * honestly, never imply a real send succeeded.
+ */
+export type NotificationSeverity = "critical" | "high" | "medium" | "low";
+
+export type NotificationDeliveryState =
+  "queued" | "sent_to_smtp" | "accepted" | "failed" | "retrying" | "permanently_failed";
+
+export interface Notification {
+  readonly id: string;
+  readonly notificationType: string;
+  readonly severity: NotificationSeverity;
+  readonly operationalArea: string | null;
+  readonly projectId: string | null;
+  readonly recipientUserId: string | null;
+  readonly recipientContactId: string | null;
+  readonly subject: string;
+  readonly bodyReference: string | null;
+  readonly deliveryState: NotificationDeliveryState;
+  readonly attemptCount: number;
+  readonly lastAttemptAt: string | null;
+  readonly failureSummary: string | null;
+  readonly retryEligible: boolean;
+  readonly correlationId: string | null;
+  readonly relatedEntityType: string | null;
+  readonly relatedEntityId: string | null;
+  readonly retentionCategory: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
