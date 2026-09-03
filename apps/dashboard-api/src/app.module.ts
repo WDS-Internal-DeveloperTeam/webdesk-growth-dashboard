@@ -38,6 +38,7 @@ import { PortfolioLibraryModule } from "./portfolio-library/portfolio-library.mo
 import { ProjectsModule } from "./projects/projects.module.js";
 import { ProofAndClaimsLibraryModule } from "./proof-and-claims-library/proof-and-claims-library.module.js";
 import { ReadyForClaudeQueueModule } from "./ready-for-claude-queue/ready-for-claude-queue.module.js";
+import { ReleaseCenterModule } from "./release-center/release-center.module.js";
 import { RetentionModule } from "./retention/retention.module.js";
 import { ReviewAndApprovalCenterModule } from "./review-and-approval-center/review-and-approval-center.module.js";
 import { ScanCenterModule } from "./scan-center/scan-center.module.js";
@@ -112,6 +113,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     ProjectsModule,
     ProofAndClaimsLibraryModule,
     ReadyForClaudeQueueModule,
+    ReleaseCenterModule,
     RetentionModule,
     ReviewAndApprovalCenterModule,
     ScanCenterModule,
