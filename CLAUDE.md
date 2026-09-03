@@ -5400,6 +5400,55 @@ CONFLICT` target matches the real index (verified by running it twice in a row �
     real `super_admin` session can now view the Notification Center; `notifications_configure`
     and every other role remain zero-seeded, unchanged.
 
+89. **`dashboard-web` Help Center UI — built, reviewed, gated, pushed (2026-09-03).** Closes
+    this module's last named gap, built directly on the explicit "Start the dashboard-web UI for
+    it" instruction, following the backend's own build-to-production arc (PR #118, merge commit
+    `6a8cbcd`). No approved wireframe exists for this module — sections mirror
+    `03_Detailed_Module_Specifications.md §38`'s own field grouping (Identity, Content, Status),
+    matching every prior unsourced-screen module's own "smallest honest reading" precedent.
+    File-for-file mirrors Content Template Library's UI structure (the closest sibling — a real
+    `isPublished` mechanism), simplified further since Help Center has no `approvalStatus` at all.
+    New `packages/shared-types` `HelpArticleCategory`/`HelpArticle`, mirroring
+    `packages/database/src/help-center/entities.ts` exactly. `lib/help-center-query.ts`/
+    `lib/help-center.ts` mirror `lib/content-template-library-query.ts`/`lib/content-template-
+library.ts`'s own zero-non-type-import-file split. `category` is create-only (shown read-only
+    on edit); `content` uses `RichTextEditor` per the 2026-08-22 standing rule — this module's one
+    REQUIRED rich-text field, checked client-side via `isEmptyRichTextHtml()` before submit
+    (mirroring `ProofAndClaimsLibraryForm`'s own `claim` field, this app's only other required
+    rich-text field). `HelpCenterPublishActions` is genuinely simpler than every sibling
+    `*PublishActions` component — no `approvalStatus` to gate against, no dedicated `/publish`/
+    `unpublish` routes (the seeded `system_settings` RBAC group carries no `P` letter at all), so
+    `isPublished` is a plain field toggled through the same generic `POST .../:id/update` route
+    the create/edit form itself uses, and — with no terminal/archived state either — neither
+    transition ever needs a `window.confirm()`. Uses the shared `useSyncedState()` hook from the
+    start. Four routes under `app/(shell)/help-center/` at the module registry's own seeded
+    `route` field. Built directly by the orchestrating session (not delegated to a background
+    agent). **Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline"
+    standing rule — a small, frontend-only UI slice consuming an already-reviewed, already-gated
+    backend with no new endpoint. A direct read-through pass verified the create/edit field
+    contract against the real backend `createHelpArticleSchema`/`updateHelpArticleSchema`, the
+    publish-toggle payload shape against the real backend route and its non-empty-patch guard,
+    `category`'s immutability, and reuse of every established shared helper — **0 findings**. No
+    separate security review — no new endpoint, no new RBAC action, no new sink; the one rich-text
+    render site routes exclusively through the existing, already-audited `SanitizedRichText`
+    component. Re-validated: `@webdesk/shared-types` build clean, `dashboard-web`/`dashboard-api`/
+    `dashboard-worker` typecheck clean, `eslint --max-warnings=0` clean (one pre-existing,
+    unrelated warning confirmed via `git stash`), CSS-token-check clean (107 files), `next build`
+    clean with all 4 new routes present, `prettier --check` clean, 1964/1964 `dashboard-web` unit
+    tests overall (36 new). Live-rendered in the Browser pane: all four routes confirmed to
+    redirect an unauthenticated visitor cleanly, zero server errors. See
+    `docs/implementation/module-help-center.md`'s "As-built — `dashboard-web` UI" section and
+    `docs/project-state/dashboard-web-help-center-approval-checklist.md`. **Required second-role
+    human review complete via the direct "Approve as-is, gate it, and push the branch"
+    instruction** — the approval checklist's own findings summary served as the review artifact,
+    since there were no open findings of any kind on this branch. **The gate
+    (G4-dashboard-web-help-center) was then approved** — WebDesk Solution, decision CONFIRM (clean
+    pass, not an override), approved commit `e775dad` on branch `dashboard-web-help-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-help-center`). **"Push the branch" was then executed under the same combined
+    instruction** — pushed to `origin`. **Opening a PR and merging remain separate,
+    not-yet-requested next steps**, per this project's standing "no auto-merge" rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full

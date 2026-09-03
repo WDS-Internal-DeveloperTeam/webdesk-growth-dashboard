@@ -122,3 +122,63 @@ noted for themselves. The migration content, RBAC decorator placement, and repos
 logic were all read directly and cross-checked against `content_templates`'/`knowledge_library_
 records`' own already-reviewed equivalents rather than assumed. This gap should be closed by
 running the DB-backed suites against a real disposable database before merge.
+
+## As-built — `dashboard-web` UI
+
+Closes this module's last named gap, built directly on the explicit "Start the dashboard-web UI
+for it" instruction, following the backend's own build-to-production arc (PR #118, merge commit
+`6a8cbcd`). No approved wireframe exists for this module — sections mirror
+`03_Detailed_Module_Specifications.md §38`'s own field grouping (Identity, Content, Status),
+matching every prior unsourced-screen module's own "smallest honest reading" precedent. File-for-
+file mirrors Content Template Library's UI structure (the closest sibling — a real `isPublished`
+mechanism), simplified further since Help Center has no `approvalStatus` at all.
+
+New `packages/shared-types` `HelpArticleCategory`/`HelpArticle`, mirroring
+`packages/database/src/help-center/entities.ts` exactly.
+`lib/help-center-query.ts`/`lib/help-center.ts` mirror `lib/content-template-library-query.ts`/
+`lib/content-template-library.ts`'s own zero-non-type-import-file split. `category` is create-only
+(shown read-only on edit); `content` uses `RichTextEditor` per the 2026-08-22 standing rule — this
+module's one REQUIRED rich-text field, checked client-side via `isEmptyRichTextHtml()` before
+submit (mirroring `ProofAndClaimsLibraryForm`'s own `claim` field, this app's only other required
+rich-text field).
+
+`HelpCenterPublishActions` is genuinely simpler than every sibling `*PublishActions` component
+(`ContentTemplatePublishActions`/`DesignReferenceLibraryPublishActions`): there is no
+`approvalStatus` to gate publish against and no dedicated `/publish`/`unpublish` routes — the
+seeded `system_settings` RBAC group carries no `P` letter at all — so `isPublished` is a plain
+field toggled through the same generic `POST .../:id/update` route the create/edit form itself
+uses. No terminal/archived state exists either, so unlike `ContentTemplatePublishActions`'s own
+irreversible-unpublish confirmation, neither transition here ever needs a `window.confirm()`. Uses
+the shared `useSyncedState()` hook from the start (this project's own 2026-08-27 standing
+convention for every module built after that date).
+
+Four routes under `app/(shell)/help-center/` (list, detail, create, edit) at the module registry's
+own seeded `route` field (`/help-center`).
+
+### Validation
+
+Independently re-run: `@webdesk/shared-types` build clean; `dashboard-web`/`dashboard-api`/
+`dashboard-worker` typecheck clean; `eslint --max-warnings=0` clean (one pre-existing, unrelated
+warning in `scripts/check-css-tokens.mjs`, confirmed via `git stash` to predate this branch); CSS
+token check clean (107 files); `next build` clean with all 4 new routes present; `prettier --check`
+clean; 1964/1964 `dashboard-web` unit tests overall (36 new), 1852/1852 `dashboard-api` unit tests
+(unaffected). Live-rendered in the Browser pane against a local dev server: all four routes
+(`/help-center`, `/help-center/new`, `/help-center/:id`, `/help-center/:id/edit`) confirmed to
+redirect an unauthenticated visitor to `/auth/sign-in` cleanly, zero server errors (one stale
+console error from before a local `.env.local` was configured was ruled out via a fresh navigation
+and server-log check, not a real defect). No local `dashboard-api` was available in this
+environment, so the authenticated success-path rendering (the form, the publish toggle) wasn't
+visually confirmed — the same limitation several prior slices in this session have noted for
+themselves.
+
+**Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a
+small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new
+endpoint. A direct read-through pass verified the create/edit field contract against the real
+backend `createHelpArticleSchema`/`updateHelpArticleSchema`, the publish-toggle payload shape
+against the real backend `update()` route, `category`'s immutability (omitted from the update
+schema and the edit form), and reuse of every established shared helper
+(`postMutation`/`isEmptyRichTextHtml`/`findOverLongRichTextField`/`useSyncedState`/
+`detail-section-styles`/`list-filter-styles`/`list-table-styles`/`SanitizedRichText`) — **0
+findings**. No separate security review — no new backend endpoint, no new RBAC action, no new
+sink; the one rich-text render site routes exclusively through the existing, already-audited
+`SanitizedRichText` component.
