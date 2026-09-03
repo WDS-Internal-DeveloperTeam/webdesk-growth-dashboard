@@ -1,4 +1,4 @@
-import { Op, col, fn, literal } from "sequelize";
+import { Op, literal } from "sequelize";
 import { escapeLikePattern } from "../auth/user.repository.js";
 import { getHelpCenterModels } from "./models.js";
 import { toEntityWithIsoDates } from "./entity-mapping.js";
@@ -15,13 +15,16 @@ export interface HelpArticleListFilter {
 }
 
 /** The content fields a caller may set on create — `category`/`title`/`content` required,
- *  `isPublished` optional (defaults to `false`). Excludes `id`/`publishedAt`/`createdBy`/
- *  `updatedBy`/`createdAt`/`updatedAt`, all server-managed. */
+ *  `isPublished` optional (defaults to `false`, resolved by the repository, the sole owner of
+ *  this default — code-review finding: previously duplicated in both the service and here).
+ *  Excludes `id`/`publishedAt`/`createdBy`/`updatedBy`/`createdAt`/`updatedAt`, all
+ *  server-managed. */
 type HelpArticleCreateFields = Pick<HelpArticleEntity, "category" | "title" | "content"> &
   Partial<Pick<HelpArticleEntity, "isPublished">>;
 
 /** `category` is additionally excluded from the update shape — create-only, mirroring every
- *  sibling module's discriminator-field convention. */
+ *  sibling module's discriminator-field convention. `publishedAt` is never accepted here — it is
+ *  entirely repository-managed (see `update()`'s own doc comment). */
 type HelpArticleUpdateFields = Partial<
   Pick<HelpArticleEntity, "title" | "content" | "isPublished" | "updatedBy">
 >;
@@ -36,14 +39,23 @@ const MAX_LIST_LIMIT = 200;
 export class HelpArticleRepository {
   private readonly model = getHelpCenterModels().HelpArticle;
 
+  /**
+   * `publishedAt` is stamped directly (a plain `NOW()`, not a `COALESCE`) when the article is
+   * created already published — a fresh row has no prior `publishedAt` to preserve, unlike
+   * `update()`'s stamp-once contract (code-review finding: this was previously left `null` on
+   * create even when `isPublished: true`, contradicting the entity's own "stamped on first
+   * transition to published" doc comment).
+   */
   async create(
     input: HelpArticleCreateFields & { createdBy?: string | null },
   ): Promise<HelpArticleEntity> {
+    const isPublished = input.isPublished ?? false;
     const instance = await this.model.create({
       category: input.category,
       title: input.title,
       content: input.content,
-      isPublished: input.isPublished ?? false,
+      isPublished,
+      publishedAt: isPublished ? new Date() : null,
       createdBy: input.createdBy ?? null,
       updatedBy: input.createdBy ?? null,
     });
@@ -83,20 +95,20 @@ export class HelpArticleRepository {
 
   /**
    * Content update, including toggling `isPublished` — a plain field, not a governed workflow
-   * transition (this module has no approval status to interact with). `publishedAt` is
-   * server-stamped atomically as part of the same `UPDATE`: when the patch sets
-   * `isPublished: true`, it's written as `COALESCE(published_at, NOW())` via a Postgres `fn()`
-   * literal (bound as a real parameterized argument, not string-interpolated), so a first publish
-   * stamps the real time while a repeat publish leaves the original stamp untouched — the same
-   * "stamp once" contract `content_templates.published_at`/`internal_links.implemented_at` already
-   * establish, done here without a separate dedicated publish/unpublish action since none is
-   * seeded for this module's RBAC group. `undefined`/omitted `isPublished` never touches
-   * `publishedAt` at all.
+   * transition (this module has no approval status to interact with, and no dedicated
+   * publish/unpublish RBAC action exists for the seeded `system_settings` group). Deliberately
+   * takes no pre-fetched "current" state — the atomic `COALESCE(published_at, NOW())` write
+   * (a single `literal()` SQL string, matching `content_templates.published_at`'s/
+   * `internal_links.implemented_at`'s own established idiom exactly — code-review finding: a
+   * prior `fn()`/`col()`/`literal("NOW()")` composition was functionally equivalent but diverged
+   * from every sibling repository's spelling of this pattern) means a first publish stamps the
+   * real time while a repeat publish leaves the original stamp untouched, entirely at the SQL
+   * layer, with no read-then-write race window and no extra round trip to determine it.
    */
   async update(id: string, patch: HelpArticleUpdateFields): Promise<HelpArticleEntity | null> {
     const values: Record<string, unknown> = { ...patch };
     if (patch.isPublished === true) {
-      values.publishedAt = fn("COALESCE", col("published_at"), literal("NOW()"));
+      values.publishedAt = literal('COALESCE("published_at", NOW())');
     }
 
     const [affectedCount, affectedRows] = await this.model.update(values, {

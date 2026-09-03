@@ -51,10 +51,17 @@ export const createHelpArticleSchema = z.object({
 export type CreateHelpArticleDto = z.infer<typeof createHelpArticleSchema>;
 
 // `category` is deliberately never accepted here — create-only, matching every sibling module's
-// discriminator-field convention.
-export const updateHelpArticleSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  content: z.string().min(1).max(CONTENT_MAX_LENGTH).optional(),
-  isPublished: z.boolean().optional(),
-});
+// discriminator-field convention. Derived via `.omit().partial()` from `createHelpArticleSchema`
+// rather than hand-duplicated (code-review finding: a hand-duplicated copy risks a length-cap
+// silently drifting out of sync between the two schemas, mirroring Content Template Library's own
+// already-fixed `updateContentTemplateSchema` precedent). A `.refine()` rejects a genuinely empty
+// patch with a clean 400 rather than letting a no-op save still issue a real DB write and audit
+// event (code-review finding, mirroring Content Template Library's/Persona Library's own empty-
+// patch guard).
+export const updateHelpArticleSchema = createHelpArticleSchema
+  .omit({ category: true })
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided to update a help article",
+  });
 export type UpdateHelpArticleDto = z.infer<typeof updateHelpArticleSchema>;

@@ -18,11 +18,13 @@ export class HelpArticlesService {
   ) {}
 
   async create(input: CreateHelpArticleDto, actorUserId: string): Promise<HelpArticleEntity> {
+    // `isPublished`'s `?? false` default is the repository's own responsibility, not
+    // re-duplicated here (code-review finding).
     const created = await this.articles.create({
       category: input.category,
       title: input.title,
       content: sanitizeRichTextHtml(input.content),
-      isPublished: input.isPublished ?? false,
+      isPublished: input.isPublished,
       createdBy: actorUserId,
     });
 
@@ -55,40 +57,48 @@ export class HelpArticlesService {
   /**
    * Content update, including toggling `isPublished` — a plain field on this module (no approval
    * workflow, no dedicated publish/unpublish RBAC action exists for the seeded `system_settings`
-   * group), gated only on `edit`. `content` is re-sanitized only when the patch actually changes
-   * it, mirroring `sanitizeNullableRichTextIfChanged()`'s own skip-if-unchanged optimization for a
-   * field whose value is required rather than nullable.
+   * group), gated only on `edit`. Deliberately does NOT pre-fetch the current row (code-review
+   * finding: an earlier version did, purely to skip re-sanitizing unchanged content and to diff
+   * `isPublished` against its prior value — both real DB round trip + a stale-read race, since two
+   * concurrent requests could both observe the same "before" state and each classify their own
+   * write as a fresh publish/unpublish). `content` is unconditionally re-sanitized when present
+   * (sanitization is cheap and idempotent — safe to re-run on already-sanitized HTML), and the
+   * audit `eventType` is derived purely from the caller's own requested `isPublished` value rather
+   * than an observed transition — an `isPublished: true` patch is always an honest "this caller
+   * requested a publish," whether or not the article happened to already be published (the
+   * repository's own atomic `COALESCE` still guarantees `publishedAt` is stamped at most once
+   * regardless of how many "publish" requests land).
    */
   async update(
     id: string,
     patch: UpdateHelpArticleDto,
     actorUserId: string,
   ): Promise<HelpArticleEntity> {
-    const current = await this.findById(id);
-
-    const { content: patchedContent, ...restOfPatch } = patch;
-    const shouldReplaceContent = patchedContent !== undefined && patchedContent !== current.content;
-
     const updated = await this.articles.update(id, {
-      ...restOfPatch,
-      ...(shouldReplaceContent ? { content: sanitizeRichTextHtml(patchedContent) } : {}),
+      title: patch.title,
+      content: patch.content !== undefined ? sanitizeRichTextHtml(patch.content) : undefined,
+      isPublished: patch.isPublished,
       updatedBy: actorUserId,
     });
     if (!updated) {
       throw new NotFoundException(`Help article not found: ${id}`);
     }
 
-    const justPublished = patch.isPublished === true && !current.isPublished;
-    const justUnpublished = patch.isPublished === false && current.isPublished;
+    const eventType =
+      patch.isPublished === true
+        ? "publish"
+        : patch.isPublished === false
+          ? "unpublish"
+          : "data_change";
     try {
       await this.auditService.record({
-        eventType: justPublished ? "publish" : justUnpublished ? "unpublish" : "data_change",
+        eventType,
         actorUserId,
         actorType: "human",
         entityType: "help_article",
         entityId: id,
-        action: justPublished ? "publish" : justUnpublished ? "unpublish" : "update",
-        afterState: { isPublished: updated.isPublished },
+        action: eventType === "data_change" ? "update" : eventType,
+        afterState: { ...patch },
         retentionCategory: "audit-7y",
       });
     } catch (error) {

@@ -64,6 +64,15 @@ describe("HelpArticlesService", () => {
       expect(passedContent).toContain("<p>Safe</p>");
     });
 
+    it("does not default isPublished itself, leaving that to the repository", async () => {
+      articles.create.mockResolvedValue(article());
+
+      await svc.create({ category: "onboarding", title: "T", content: "<p>C</p>" }, "actor-1");
+
+      const passedInput = articles.create.mock.calls[0]![0] as { isPublished?: boolean };
+      expect(passedInput.isPublished).toBeUndefined();
+    });
+
     it("records a data_change audit event", async () => {
       articles.create.mockResolvedValue(article());
 
@@ -83,29 +92,16 @@ describe("HelpArticlesService", () => {
   });
 
   describe("update", () => {
-    it("throws NotFoundException when the underlying update finds no row", async () => {
-      articles.findById.mockResolvedValue(article());
+    it("throws NotFoundException when the underlying update finds no row, without pre-fetching", async () => {
       articles.update.mockResolvedValue(null);
 
       await expect(svc.update("article-1", { title: "New" }, "actor-1")).rejects.toThrow(
         NotFoundException,
       );
+      expect(articles.findById).not.toHaveBeenCalled();
     });
 
-    it("does not re-sanitize content that is unchanged from the current value", async () => {
-      const current = article({ content: "<p>Same</p>" });
-      articles.findById.mockResolvedValue(current);
-      articles.update.mockResolvedValue(current);
-
-      await svc.update("article-1", { content: "<p>Same</p>" }, "actor-1");
-
-      const patch = articles.update.mock.calls[0]![1] as Record<string, unknown>;
-      expect(patch).not.toHaveProperty("content");
-    });
-
-    it("sanitizes content that changed from the current value", async () => {
-      const current = article({ content: "<p>Old</p>" });
-      articles.findById.mockResolvedValue(current);
+    it("sanitizes content whenever it is provided in the patch", async () => {
       articles.update.mockResolvedValue(article({ content: "<p>New</p>" }));
 
       await svc.update("article-1", { content: "<p>New</p><script>x</script>" }, "actor-1");
@@ -114,8 +110,16 @@ describe("HelpArticlesService", () => {
       expect(patch.content).toBe("<p>New</p>");
     });
 
-    it("records a publish audit event when isPublished flips false -> true", async () => {
-      articles.findById.mockResolvedValue(article({ isPublished: false }));
+    it("leaves content untouched (undefined) when the patch omits it", async () => {
+      articles.update.mockResolvedValue(article());
+
+      await svc.update("article-1", { title: "New" }, "actor-1");
+
+      const patch = articles.update.mock.calls[0]![1] as Record<string, unknown>;
+      expect(patch.content).toBeUndefined();
+    });
+
+    it("records a publish audit event whenever the patch requests isPublished: true", async () => {
       articles.update.mockResolvedValue(article({ isPublished: true }));
 
       await svc.update("article-1", { isPublished: true }, "actor-1");
@@ -125,8 +129,7 @@ describe("HelpArticlesService", () => {
       );
     });
 
-    it("records an unpublish audit event when isPublished flips true -> false", async () => {
-      articles.findById.mockResolvedValue(article({ isPublished: true }));
+    it("records an unpublish audit event whenever the patch requests isPublished: false", async () => {
       articles.update.mockResolvedValue(article({ isPublished: false }));
 
       await svc.update("article-1", { isPublished: false }, "actor-1");
@@ -137,8 +140,7 @@ describe("HelpArticlesService", () => {
     });
 
     it("records a plain data_change audit event for an ordinary content edit", async () => {
-      articles.findById.mockResolvedValue(article({ isPublished: true }));
-      articles.update.mockResolvedValue(article({ isPublished: true, title: "New" }));
+      articles.update.mockResolvedValue(article({ title: "New" }));
 
       await svc.update("article-1", { title: "New" }, "actor-1");
 
@@ -147,8 +149,17 @@ describe("HelpArticlesService", () => {
       );
     });
 
+    it("records the real patch as the audit afterState, not just isPublished", async () => {
+      articles.update.mockResolvedValue(article({ title: "New" }));
+
+      await svc.update("article-1", { title: "New" }, "actor-1");
+
+      expect(auditService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ afterState: { title: "New" } }),
+      );
+    });
+
     it("does not throw when the audit write itself fails", async () => {
-      articles.findById.mockResolvedValue(article());
       articles.update.mockResolvedValue(article({ title: "New" }));
       auditService.record.mockRejectedValue(new Error("audit down"));
 
