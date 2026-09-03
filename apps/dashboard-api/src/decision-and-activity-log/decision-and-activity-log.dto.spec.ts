@@ -47,8 +47,14 @@ describe("listDecisionAndActivityLogEventsQuerySchema", () => {
     expect(result.success && result.data.offset).toBe(10);
   });
 
-  it("rejects a limit above 100", () => {
+  it("accepts a limit of 101 — one row past dashboard-web's largest 100-row page size, the +1 'has a next page' pagination trick every sibling list page uses", () => {
     const result = listDecisionAndActivityLogEventsQuerySchema.safeParse({ limit: "101" });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.limit).toBe(101);
+  });
+
+  it("rejects a limit above 200 — matching every sibling module's own list-query cap", () => {
+    const result = listDecisionAndActivityLogEventsQuerySchema.safeParse({ limit: "201" });
     expect(result.success).toBe(false);
   });
 

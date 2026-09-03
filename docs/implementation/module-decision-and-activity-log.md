@@ -186,3 +186,28 @@ typecheck clean across `@webdesk/shared-types`/`dashboard-web`/`dashboard-api`/`
 (the additive shared-types change), `eslint --max-warnings=0` + CSS-token check (99 files) clean,
 `next build` clean with the new route present, `prettier --check` clean — all independently
 re-run by the orchestrating session.
+
+## Incident — `limit` cap too low for the largest page size, fixed same day (2026-09-03)
+
+**Reported by the user directly**: selecting the 100-row page size (or applying a filter while it
+was already selected) on the live `/decision-and-activity-log` page rendered the app's generic
+"Something went wrong" error screen.
+
+**Root cause**: `dashboard-web`'s list pages all use the same "request one row past the chosen
+page size" technique to detect whether a next page exists (`getDecisionAndActivityLogEvents()`
+sends `limit: pageSize + 1`) — with the largest `PAGE_SIZE_OPTIONS` value (100), that's
+`limit=101`. `listDecisionAndActivityLogEventsQuerySchema`'s own `limit` field was capped at
+`.max(100)` — the ONLY list-query schema in this entire codebase capped there; every one of the
+other ~45 list-query DTOs caps `limit` at `.max(200)` specifically to leave headroom for this
+exact `pageSize + 1` pattern. A `limit=101` request therefore failed Zod validation with a clean
+400, and `getDecisionAndActivityLogEvents()` throws on any non-OK response (by design — this
+page's entire content IS the event list, so a fetch failure must surface as a real error rather
+than degrade silently) — which is exactly what the user saw.
+
+**Fixed**: raised `decision-and-activity-log.dto.ts`'s `limit` cap from `.max(100)` to `.max(200)`,
+matching every sibling module's own convention exactly — a one-line change. The DTO spec's own
+"rejects a limit above 100" test was replaced with two tests: one proving 101 (the real boundary
+this bug hit) now succeeds, and one proving 201 is still rejected, so the cap itself stays real and
+enforced. Re-validated: 9/9 DTO unit tests, 4/4 service unit tests, 7/7 module e2e tests (real
+disposable PostgreSQL 17 database), 832/832 `dashboard-api` e2e/integration tests overall (no
+regression), typecheck/lint/prettier all clean.

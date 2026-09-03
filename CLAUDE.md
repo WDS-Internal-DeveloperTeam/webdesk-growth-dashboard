@@ -4936,7 +4936,10 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     also applied.** **Update (2026-09-03): the `dashboard-web` UI has since been built and
     gated — see item 82 below.**
 
-82. **`dashboard-web` Decision and Activity Log UI — built, reviewed, gated (2026-09-03).** Closes
+82. **`dashboard-web` Decision and Activity Log UI — built, reviewed, gated, merged
+    ([PR #113](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/113),
+    merge commit `be74483b3b09b21bdb73bc54de0a0c19fdfdbc99`); now genuinely live in production
+    (2026-09-03).** Closes
     this module's last named gap, following the backend's own build-to-production arc (PR #111).
     Not started automatically — built directly on the explicit "Decision and Activity Log - Start
     the dashboard-web UI for it" instruction. A single, organization-wide, read-only list page
@@ -4986,7 +4989,53 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     then approved** — WebDesk Solution, decision CONFIRM, approved commit `932708a` on branch
     `dashboard-web-decision-and-activity-log` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
-    `G4-dashboard-web-decision-and-activity-log`).
+    `G4-dashboard-web-decision-and-activity-log`). **"Push the branch," "Open a PR," and "Merge"
+    were then each executed under the same combined instruction** — pushed to `origin`, opened as
+    [PR #113](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/113),
+    all 14 CI checks green (one initial "Formatting validation" failure — an unformatted new test
+    file — found and fixed before the checks re-ran clean), then merged with a real merge commit
+    (not squash/rebase), matching every prior merge in this project's history — merge commit
+    `be74483b3b09b21bdb73bc54de0a0c19fdfdbc99`. `dashboard-api` auto-deployed on push to `main` and
+    was verified live directly, not just via CI's own Vercel status check — `/health` returned
+    `build.commitShaShort == be74483`, confirming the exact merged commit is what's serving; and
+    `dashboard-web`'s `/decision-and-activity-log` correctly redirected (307) an unauthenticated
+    visitor to `/auth/sign-in`. **The `dashboard-web` Decision and Activity Log UI was then
+    genuinely live in production** — closing out this slice's full build-to-production arc, until
+    a real bug surfaced the same day, see item 83 below.
+
+83. **Fix: Decision and Activity Log `limit` cap causing a live "Something went wrong" error —
+    built, reviewed, gated, merged
+    (2026-09-03).** Not started automatically — the user
+    reported directly, with a screenshot, that applying a filter on the just-shipped
+    `/decision-and-activity-log` page rendered the app's generic error screen. Diagnosed directly:
+    `dashboard-web`'s list pages universally request `pageSize + 1` rows to detect a next page
+    (`getDecisionAndActivityLogEvents()` sends `limit: pageSize + 1`) — at the largest 100-row
+    `PAGE_SIZE_OPTIONS` value that's `limit=101`, but
+    `listDecisionAndActivityLogEventsQuerySchema`'s own `limit` field was capped at `.max(100)` —
+    **the only list-query schema in this entire ~46-module codebase capped there**, every one of
+    the others already at `.max(200)` specifically to leave headroom for this exact pattern (a
+    real bug this session's own build introduced by not checking that convention against the
+    sibling schemas it was otherwise mirroring). A `limit=101` request failed Zod validation with
+    a clean 400, and `getDecisionAndActivityLogEvents()` throws on any non-OK response by design
+    (this page's entire content IS the event list), producing exactly the error screen the user
+    saw. Fixed with a one-line change — the cap raised to `.max(200)`, matching every sibling
+    module exactly — plus replacing the DTO spec's "rejects a limit above 100" test with two tests
+    proving both sides of the real boundary (101 now succeeds, 201 still rejected, so the cap
+    itself stays real and enforced, not removed). See
+    `docs/implementation/module-decision-and-activity-log.md`'s "Incident — `limit` cap too low
+    for the largest page size" section. **Reviewed at light tier** — a one-line schema-cap fix
+    bringing an outlier module in line with an already-reviewed sibling convention, no new
+    endpoint/RBAC action/sink — **0 findings**; no separate security review. Re-validated against
+    a real disposable local PostgreSQL 17 database: 9/9 DTO unit tests (2 new/updated), 4/4
+    service unit tests, 7/7 module e2e tests, 832/832 `dashboard-api` e2e/integration tests
+    overall (no regression), typecheck/lint/prettier all clean. See
+    `docs/project-state/fix-decision-and-activity-log-limit-cap-approval-checklist.md`. **Gate
+    (G4-fix-decision-and-activity-log-limit-cap) approved** — WebDesk Solution, decision CONFIRM,
+    given directly in response to the user's own live bug report on the just-shipped feature — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-fix-decision-and-activity-log-limit-cap`). **The fix was then pushed, opened as a PR, and
+    merged the same session, given the active user-facing bug** — see the corresponding
+    2026-09-03 "Recent decisions" entry below for the exact PR/merge-commit record.
 
 ## Recent decisions
 
