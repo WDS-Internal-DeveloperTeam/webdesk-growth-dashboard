@@ -255,3 +255,77 @@ unauthenticated visitor, confirming the session gate is intact. **The Release Ce
 backend is now genuinely live in production.** No `dashboard-web` UI exists yet for this module —
 a separate, not-yet-requested next step, matching every prior module's own backend-first
 precedent.
+
+## `dashboard-web` UI
+
+Closes this module's last named gap, following the backend's own build-to-production arc (PR #112
+above). Built directly on the explicit "Release Center - Start the dashboard-web UI for it"
+instruction. No approved wireframe/screen spec exists for this module — fields mirror
+`createReleaseSchema`/`updateReleaseSchema`/`changeReleaseStatusSchema`/the four sub-resource
+create DTOs directly, matching every sibling module's own "smallest honest reading" precedent for
+an unsourced screen.
+
+Four routes under `app/(shell)/release-center/`: list (project-scoped, header-cookie fallback per
+the 2026-09-02 current-project-propagation fix), create, detail, edit. The detail page composes
+six sections: Identity/Assignees (`assignedDeveloperUserId`/`assignedReviewerUserId`/
+`productionApproverUserId`, resolved via `getUsersByIds()`), Content (`notes`/`hotfixReason`,
+plain text), `ReleaseStatusActions` (the real 14-status/23-edge workflow, hand-mirrored from
+`ReleasesService`'s own `TRANSITIONS` map, with `reason`/`rolledBackSha`/optional
+`replacementReleaseId` fields that render and gate submission only when `rolled_back` is a legal
+target), `ReleaseArtifactsSection` (add/list/real-HTTP-`DELETE`, client-side validated against the
+backend's own `repoOwnerOrName` regex), `ReleaseApprovalsSection` (read-only, most-recent-first),
+`ReleaseDeploymentsSection`/`ReleaseSmokeTestsSection` (append-only add/list), and a
+rollback-record block (read-only, renders only when `GET .../rollback` returns a row).
+
+`notes`/`hotfixReason`/status-transition `notes`/`reason` all stay plain `<textarea>`s, not
+`RichTextEditor` — an explicit, documented exception to the 2026-08-22 standing rich-text rule,
+since the backend DTOs explicitly state these fields are "deliberately plain, unsanitized text,"
+and no paired backend sanitization change was made (out of scope for a frontend-only branch). New
+`packages/shared-types` additions (`Release`/`ReleaseArtifact`/`ReleaseApproval`/`Deployment`/
+`SmokeTest`/`RollbackRecord` and their enums) mirror `packages/database/src/release-center/entities.ts`
+exactly. The two assignee `UserPicker` fields on `ReleaseForm` use the established owner/
+`*Touched` data-loss-prevention pattern.
+
+Built by a background agent with a fully-specified prompt naming Technical Center's list page and
+Case Study Studio's bespoke status-actions component as the literal structural templates, then
+independently re-verified in full by the orchestrating session — the full 23-edge `TRANSITIONS`
+map diffed edge-for-edge against the real backend map (23/23 match), every mutating `fetch()` call
+site diffed against the real controller routes/HTTP verbs (notably `POST .../releases/:id/update`,
+not `PATCH`, and a real `DELETE .../artifacts/:artifactId`), typecheck/lint (`--max-warnings=0`)/
+CSS-token-check (105 files)/1878 unit tests/production build (all 4 routes present)/prettier all
+independently re-run and confirmed clean.
+
+**Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a
+small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new
+endpoint. A direct read-through pass found **0 findings**. Security review skipped per the same
+standing rule — no new endpoint, no new RBAC/auth logic, no new sink. See
+`docs/project-state/dashboard-web-release-center-approval-checklist.md`. **Required second-role
+human review complete via the direct "Approve as-is, gate it and push the branch" instruction** —
+the approval checklist's own findings summary served as the review artifact. **The gate
+(G4-dashboard-web-release-center) was then approved** — WebDesk Solution, decision CONFIRM,
+approved commit `a3e86c4` on branch `dashboard-web-release-center`.
+
+**"Open a PR" was then separately requested and executed** — opened as
+[PR #115](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/115). A real
+merge conflict against `main` surfaced (Decision and Activity Log's own `dashboard-web` UI, PR
+#113, and its limit-cap fix, PR #114, had both merged concurrently) — `packages/shared-types/src/index.ts`
+(two independent new type blocks appended at the same point, both kept) and `project.json`'s own
+`gates[]`/`audit_log` arrays conflicted, resolved by keeping both sides' entries and
+re-sequencing version counters, fully re-verified (typecheck across all four packages, lint,
+1896/1896 `dashboard-web` unit tests, production build with both `/release-center` and
+`/decision-and-activity-log` routes present, prettier) before pushing again. All 14 CI checks then
+confirmed green.
+
+**"Merge PR #115" was then separately requested and executed** — merged with a real merge commit
+(not squash/rebase), matching every prior merge in this project's history — merge commit
+`24baf6559ebacc79e590e556f20b8e226113b616`. Both Vercel projects auto-deployed on push to `main`
+and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+`/health` returned `build.commitSha == 24baf6559ebacc79e590e556f20b8e226113b616`, confirming the
+exact merged commit is what's serving; `GET /release-center/projects/:projectId/releases` returned
+a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean the route
+never actually deployed); and `dashboard-web`'s `/release-center` correctly redirects (307) an
+unauthenticated visitor to `/auth/sign-in`. **The `dashboard-web` Release Center UI is now
+genuinely live in production**, closing out this slice's full build-to-production arc — backend
+and now the full UI (list, detail, create/edit form, status actions, artifacts/approvals/
+deployments/smoke-tests/rollback sub-resource sections) are both live for the Release Center
+module.

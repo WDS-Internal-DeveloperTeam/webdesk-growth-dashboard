@@ -5088,7 +5088,9 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     existed yet for this module at the time — see item 85 below for its own build-to-production
     arc.
 
-85. **`dashboard-web` Release Center UI — built, reviewed, gated, and pushed
+85. **`dashboard-web` Release Center UI — built, reviewed, gated, merged
+    ([PR #115](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/115),
+    merge commit `24baf6559ebacc79e590e556f20b8e226113b616`); now genuinely live in production
     (2026-09-03).** Closes this module's last named gap, following the backend's own
     build-to-production arc (PR #112, item 84 above). Built directly on the explicit "Release
     Center - Start the dashboard-web UI for it" instruction. No approved wireframe/screen spec
@@ -5142,9 +5144,30 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     approved commit `a3e86c4` on branch `dashboard-web-release-center` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-dashboard-web-release-center`). **"Push the branch" was then separately requested and
-    executed** — pushed to `origin`. **This gate approval does not itself authorize opening a PR
-    or merging** — each remains its own separate, not-yet-requested authorization, per this
-    project's standing "no auto-merge" rule.
+    executed** — pushed to `origin`. **"Open a PR" was then separately requested and executed** —
+    opened as
+    [PR #115](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/115). A
+    real merge conflict against `main` surfaced first (Decision and Activity Log's own
+    `dashboard-web` UI, PR #113, and its limit-cap fix, PR #114, had both merged concurrently) —
+    `packages/shared-types/src/index.ts` (two independent new type blocks appended at the same
+    point, both kept) and `project.json`'s own `gates[]`/`audit_log` arrays conflicted, resolved
+    by keeping both sides' entries and re-sequencing version counters, fully re-verified
+    (typecheck across all four packages, lint, 1896/1896 `dashboard-web` unit tests, production
+    build with both `/release-center` and `/decision-and-activity-log` routes present, prettier)
+    before pushing again. All 14 CI checks then confirmed green. **"Merge PR #115" was then
+    separately requested and executed** — merged with a real merge commit (not squash/rebase),
+    matching every prior merge in this project's history — merge commit
+    `24baf6559ebacc79e590e556f20b8e226113b616`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+24baf6559ebacc79e590e556f20b8e226113b616`, confirming the exact merged commit is what's serving;
+    `GET /release-center/projects/:projectId/releases` returned a clean `401` (route live,
+    `SessionGuard` enforcing — not a `404`, which would mean the route never actually deployed);
+    and `dashboard-web`'s `/release-center` correctly redirects (307) an unauthenticated visitor
+    to `/auth/sign-in`. **The `dashboard-web` Release Center UI is now genuinely live in
+    production**, closing out this slice's full build-to-production arc — backend and now the
+    full UI (list, detail, create/edit form, status actions, artifacts/approvals/deployments/
+    smoke-tests/rollback sub-resource sections) are both live for the Release Center module.
 
 ## Recent decisions
 
@@ -8208,23 +8231,28 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   (`current_gate` now `G4-technical-center`). Not yet pushed to `origin`, opened as a PR, or
   merged — each remains its own separate, not-yet-requested authorization.
 - `[2026-09-03]` **Release Center module #35 backend and `dashboard-web` UI both built,
-  reviewed, gated; the backend merged and live, the UI gated, pushed, and opened as a PR.** See
-  CLAUDE.md items 84–85 above for the full account: a real 14-status/23-edge workflow, six
-  tables (`releases` plus five child sub-resources), reuses the seeded `releases` RBAC group
-  verbatim. Backend merged via
+  reviewed, gated, and merged — both genuinely live in production.** See CLAUDE.md items 84–85
+  above for the full account: a real 14-status/23-edge workflow, six tables (`releases` plus five
+  child sub-resources), reuses the seeded `releases` RBAC group verbatim. Backend merged via
   [PR #112](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/112) and
   verified live in production. The `dashboard-web` UI (list/create/detail/edit, plus artifacts/
   approvals/deployments/smoke-tests/rollback sub-resource sections) was reviewed at light tier
   (0 findings — the frontend's transition table was independently diffed edge-for-edge against
   the real backend `TRANSITIONS` map, 23/23 match), gated (`G4-dashboard-web-release-center`,
   WebDesk Solution, CONFIRM, approved commit `a3e86c4`), pushed to `origin`, and opened as
-  [PR #115](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/115).
-  Merging main into the branch surfaced a real conflict — `packages/shared-types/src/index.ts`
-  (two independent new type blocks appended at the same point, both kept) and
-  `project.json`'s own `gates[]`/`audit_log` arrays (both sides' entries kept, version counters
-  re-sequenced) — since Decision and Activity Log's own `dashboard-web` UI (PR #113) and its
-  limit-cap fix (PR #114) had both merged concurrently. Merge authorization remains a separate,
-  not-yet-requested next step.
+  [PR #115](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/115). A
+  real merge conflict against `main` surfaced first — `packages/shared-types/src/index.ts` (two
+  independent new type blocks appended at the same point, both kept) and `project.json`'s own
+  `gates[]`/`audit_log` arrays (both sides' entries kept, version counters re-sequenced) — since
+  Decision and Activity Log's own `dashboard-web` UI (PR #113) and its limit-cap fix (PR #114)
+  had both merged concurrently. Fully re-verified after resolution, all 14 CI checks green,
+  **"Merge PR #115" was then separately requested and executed** — merge commit
+  `24baf6559ebacc79e590e556f20b8e226113b616`. Both Vercel projects auto-deployed and were
+  verified live directly — `dashboard-api`'s `/health` returned `build.commitSha ==
+24baf6559ebacc79e590e556f20b8e226113b616`, `GET /release-center/projects/:projectId/releases`
+  returned a clean `401` (not a `404`), and `dashboard-web`'s `/release-center` correctly
+  redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Release Center module —
+  backend and `dashboard-web` UI — is now genuinely live in production.**
 
 ## Open client blockers
 
