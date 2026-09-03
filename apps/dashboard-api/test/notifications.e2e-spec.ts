@@ -26,10 +26,16 @@ import { NotificationsModule } from "../src/notifications/notifications.module.j
 /**
  * Request-level coverage for the Phase 1E notification-foundation HTTP
  * surface — against a REAL disposable PostgreSQL database, same pattern as
- * ../test/jobs.e2e-spec.ts. Proves deny-by-default for real:
- * `notifications_view`/`notifications_configure` have ZERO
- * `role_permissions` rows seeded (docs/task-packages/phase-1e-notification-foundation.md
- * §6), so even a `super_admin` session is correctly denied here.
+ * ../test/jobs.e2e-spec.ts. Proves deny-by-default for real, then proves the
+ * one real grant this system holds actually opens the gate it names:
+ * `notifications_view` was granted to `super_admin` by migration
+ * `00115-grant-notifications-view-to-super-admin.ts` (closing the
+ * declined-scope RBAC gap flagged in
+ * `docs/implementation/dashboard-web-notification-center.md`), so a real
+ * `super_admin` session is now correctly allowed to list notifications.
+ * `notifications_configure` remains ZERO-seeded
+ * (docs/task-packages/phase-1e-notification-foundation.md §6) — even a
+ * `super_admin` session is still correctly denied create/attempt-delivery.
  * State-machine behavior is already covered by unit tests against a fake
  * delivery adapter and by packages/database's real-database integration
  * suite; this file confirms the NestJS module graph resolves with
@@ -128,9 +134,9 @@ describe("Phase 1E notifications endpoints (e2e, real disposable database)", () 
     await request(app.getHttpServer()).get("/notifications").expect(401);
   });
 
-  it("denies a real super_admin session with 403 — notifications_view has zero seeded grants", async () => {
+  it("allows a real super_admin session — notifications_view was granted by migration 00115", async () => {
     const cookie = await cookieForNewSession(superAdminUserId);
-    await request(app.getHttpServer()).get("/notifications").set("Cookie", cookie).expect(403);
+    await request(app.getHttpServer()).get("/notifications").set("Cookie", cookie).expect(200);
   });
 
   it("denies notification creation with 403 — notifications_configure has zero seeded grants", async () => {
