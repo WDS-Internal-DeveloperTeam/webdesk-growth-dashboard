@@ -5234,6 +5234,60 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     this module — a separate, not-yet-requested next step, matching every prior module's own
     backend-first precedent.
 
+87. **`dashboard-web` Notification Center UI — built, reviewed, gated, pushed (2026-09-03).**
+    View-only over the existing Phase 1E notification-record foundation (`notifications` table,
+    `NotificationService`/`NotificationsController` with list/get/create/attempt-delivery routes —
+    real SMTP delivery explicitly out of scope for this phase). Not started automatically — built
+    directly on the explicit "start notification center" instruction, with two `AskUserQuestion`
+    scope decisions confirmed first: dashboard-web UI only (reuse the existing backend as-is, no
+    new RBAC group or mark-in-development migration) and view-only list/detail, exposing only the
+    existing `attempt-delivery` retry action. New `packages/shared-types`
+    `Notification`/`NotificationSeverity`/`NotificationDeliveryState` (not previously exported —
+    the controller imports `@webdesk/database`'s own `NotificationEntity` directly, which
+    `dashboard-web` can't). `lib/notification-center-query.ts`/`lib/notification-center.ts` mirror
+    Decision and Activity Log's own zero-non-type-import-file split — the closest sibling
+    (organization-wide, filter-heavy, read-only). `NotificationRetryAction` is the one client
+    mutation this UI allows — self-hides once `deliveryState` is outside `queued`/`retrying` or
+    `retryEligible` is `false`; submits a no-body `POST .../attempt-delivery` via `postMutation()`.
+    Two routes under `app/(shell)/notification-center/`: list (delivery-state/type/project
+    filters, offset pagination) and `[notificationId]` detail (Identity/Recipient/Delivery/
+    Related record/Status sections — the smallest honest reading of the backend's own field
+    grouping, no approved wireframe exists for this module). **Known, pre-existing gap flagged,
+    not fixed (declined scope)**: `notifications_view`/`notifications_configure` are, per the
+    backend controller's own doc comment, "zero-seeded actions" on the `system_settings` RBAC
+    group — no role currently holds either grant, so every route this UI calls will 403 for every
+    real user today, including Super Admin, until a role is granted the permission (via the
+    existing role-assignment UI) or a dedicated `notification_center` permission group is seeded.
+    This is Phase 1E's own original design, not a defect this branch introduces — the same
+    "deliberately zero-seeded, not a bug" shape already accepted for `view_confidential`/
+    `edit_confidential` elsewhere in this codebase. 1928/1928 `dashboard-web` unit tests passing
+    (32 new: 22 lib/query, 10 component), typecheck clean across `@webdesk/shared-types`/
+    `dashboard-web`/`dashboard-api`/`dashboard-worker`, `eslint --max-warnings=0` + CSS-token-check
+    (105 files) clean, `next build` clean with both new routes present, `prettier --check` clean —
+    all independently re-run by the orchestrating session. See
+    `docs/implementation/dashboard-web-notification-center.md`. **Reviewed at light tier**, per
+    the 2026-08-27 "right-size the review pipeline" standing rule — a small, frontend-only UI
+    slice consuming an already-reviewed, already-gated backend with no new endpoint, no new RBAC
+    action, no new sink. A direct read-through pass verified the retry button's `RETRYABLE_STATES`
+    set against `NotificationService.attemptDelivery()`'s own guard exactly, the malformed-id/404
+    degrade-to-`null` contract, failure isolation on the list fetch (propagates to the nearest
+    `error.tsx`, matching every sibling module's own precedent), and the UUID-shape check on the
+    `projectId` filter — **0 findings**. Security review skipped per the same standing rule — no
+    new endpoint, no new sink; every rendered field is already-authenticated backend data
+    rendered as plain JSX text, never `dangerouslySetInnerHTML`. See
+    `docs/project-state/dashboard-web-notification-center-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it, and push the
+    branch" instruction** — the approval checklist's own findings table served as the review
+    artifact, since there were no open findings of any kind on this branch beyond the flagged,
+    declined-scope RBAC gap above. **The gate (G4-dashboard-web-notification-center) was then
+    approved** — WebDesk Solution, decision CONFIRM (clean pass, not an override), approved commit
+    `32be912` on branch `dashboard-web-notification-center` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-notification-center`). **"Push the branch" was then executed under the same
+    combined instruction** — pushed to `origin`. **This gate approval does not itself authorize
+    opening a PR or merging** — each remains its own separate, not-yet-requested authorization,
+    per this project's standing "no auto-merge" rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -8318,6 +8372,26 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   returned a clean `401` (not a `404`), and `dashboard-web`'s `/release-center` correctly
   redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Release Center module —
   backend and `dashboard-web` UI — is now genuinely live in production.**
+- `[2026-09-03]` **Built the `dashboard-web` Notification Center UI**, under the explicit "start
+  notification center" instruction. Investigation first found the backend record-keeping
+  foundation already existed from Phase 1E (`notifications` table, a full
+  `NotificationService`/`NotificationsController`) — only the UI was missing. Two
+  `AskUserQuestion` scope decisions confirmed first: dashboard-web UI only (declining a dedicated
+  RBAC group/mark-in-development migration), and view-only list/detail exposing only the existing
+  `attempt-delivery` retry action. See CLAUDE.md item 86 above and
+  `docs/implementation/dashboard-web-notification-center.md` for the full account, including the
+  flagged, declined-scope gap: `notifications_view`/`notifications_configure` are zero-seeded on
+  every role today (Phase 1E's own original design), so this UI 403s for every current user until
+  a role is granted the permission.
+- `[2026-09-03]` **Required second-role human review and the gate were both completed via the
+  direct "Approve as-is, gate it, and push the branch" instruction.** Reviewed at light tier
+  (0 findings) per the 2026-08-27 standing rule. Gate `G4-dashboard-web-notification-center`
+  approved — WebDesk Solution, decision CONFIRM, approved commit `32be912` on branch
+  `dashboard-web-notification-center` — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` (`current_gate` now `G4-dashboard-web-notification-center`). **"Push the branch" was
+  then executed under the same combined instruction** — pushed to `origin`. This gate approval
+  does not itself authorize opening a PR or merging — each remains its own separate,
+  not-yet-requested authorization.
 
 ## Open client blockers
 

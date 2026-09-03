@@ -1388,6 +1388,20 @@
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- given directly as an urgent same-session fix to a bug the user just reported live, matching this project's established pattern for fixing an actively-broken already-shipped feature."
     },
     {
+      "id": "G4-dashboard-web-notification-center",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-notification-center",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "32be912 (branch dashboard-web-notification-center)",
+      "record": "docs/project-state/dashboard-web-notification-center-approval-checklist.md",
+      "notes": "dashboard-web Notification Center UI -- closes this module's last named gap against the Phase 1E notification-record foundation (notifications table, NotificationService/NotificationsController with list/get/create/attempt-delivery routes, real SMTP delivery explicitly out of scope for this phase). Not started automatically -- built directly on the explicit \"start notification center\" instruction, with two AskUserQuestion scope decisions confirmed first: dashboard-web UI only (reuse the existing backend as-is, no new RBAC group or mark-in-development migration) and view-only list/detail, exposing only the existing attempt-delivery retry action. New packages/shared-types Notification/NotificationSeverity/NotificationDeliveryState, mirroring NotificationEntity exactly. lib/notification-center-query.ts/lib/notification-center.ts mirror the established zero-non-type-import-file split closest to Decision and Activity Log's own pattern. NotificationRetryAction is the one client mutation this UI allows, self-hiding once deliveryState is outside queued/retrying or retryEligible is false. Two routes: list (delivery-state/type/project filters, offset pagination) and detail (Identity/Recipient/Delivery/Related record/Status sections). Known, pre-existing gap flagged, not fixed (declined scope): notifications_view/notifications_configure are zero-seeded on every role today (a deliberate Phase 1E design, not introduced by this branch), so every route this UI calls will 403 for every current user until a role is granted the permission or a dedicated RBAC group is seeded. Reviewed at light tier per the 2026-08-27 right-size-the-review-pipeline standing rule -- a small frontend-only slice consuming an already-reviewed, already-gated backend with no new endpoint, no new RBAC action, no new sink; a direct read-through pass found 0 findings. Security review skipped per the same standing rule. 1928/1928 dashboard-web unit tests passing (32 new); typecheck clean across shared-types/dashboard-web/dashboard-api/dashboard-worker; eslint --max-warnings=0 + CSS-token check (105 files) clean; next build clean with both new routes present; prettier clean -- all independently re-run by the orchestrating session, not trusted from a background agent.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization, matching this project's established pattern for a combined instruction; opening a PR and merging remain their own separate, not-yet-requested authorizations."
+    },
+    {
       "id": "G4-help-center",
       "type": "qa-security-gate",
       "scope": "module-help-center",
@@ -3619,12 +3633,21 @@
       "timestamp": "2026-09-03T00:00:00Z"
     },
     {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-notification-center approved (WebDesk Solution, CONFIRM, \"Approve as-is\") for the dashboard-web Notification Center UI -- a view-only list/detail UI over the existing Phase 1E notifications backend, plus the existing attempt-delivery retry action. Reviewed at light tier per the 2026-08-27 standing rule -- 0 findings; security review skipped per the same rule. Flagged, not fixed: notifications_view/notifications_configure are zero-seeded on every role today (pre-existing Phase 1E design), so this UI will 403 for every current user until a role is granted the permission -- declined as out of scope for this branch. 1928/1928 dashboard-web unit tests passing (32 new). This gate approval does not itself authorize opening a PR or merging.",
+      "project_version_before": 133,
+      "project_version_after": 134,
+      "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
       "action": "second_role_review_completed",
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "details": "Required second-role human review (ADR-0010) complete for the Help Center module #38 backend, via the direct 'Approve as-is, gate it, and push/PR' instruction -- the approval checklist's own findings summary (0 open findings, all 8 code-review findings fixed) served as the review artifact rather than a separately published packet.",
-      "project_version_before": 133,
-      "project_version_after": 134,
+      "project_version_before": 134,
+      "project_version_after": 135,
       "timestamp": "2026-09-03T00:00:00Z"
     },
     {
@@ -3632,8 +3655,8 @@
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "details": "Gate G4-help-center approved (WebDesk Solution, CONFIRM) for the Help Center module #38 backend, approved commit aa1e352 on branch module-help-center. Single generic help_articles table, 16-value category discriminator, no approval workflow, reuses the seeded system_settings RBAC group verbatim (a deliberate, confirmed limitation). Independent code review found and fixed 8 issues; no separate security review needed per the standing right-size rule. Disclosed gap: no local PostgreSQL available to run DB-backed suites in this environment.",
-      "project_version_before": 134,
-      "project_version_after": 135,
+      "project_version_before": 135,
+      "project_version_after": 136,
       "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
