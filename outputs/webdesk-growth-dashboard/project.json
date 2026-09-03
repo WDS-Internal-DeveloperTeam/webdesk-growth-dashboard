@@ -1428,6 +1428,20 @@
       "record": "docs/project-state/grant-notifications-view-permission-approval-checklist.md",
       "notes": "Grants super_admin the notifications_view action on the system_settings module -- closes the flagged, declined-scope gap from the dashboard-web Notification Center UI (item 87): notifications_view/notifications_configure were left zero-seeded when that backend/UI were built, so every route the UI calls 403'd for every real user. Not started automatically -- built directly on the explicit \"Grant a role notifications_view permission\" instruction, with the target role confirmed directly (AskUserQuestion): super_admin, since it already holds every other system_settings action (VCERM) and is the role the one currently-provisioned production user holds. notifications_configure and every other role stay zero-seeded, explicitly out of scope. New migration 00115-grant-notifications-view-to-super-admin.ts inserts one additive role_permissions row (resolved by joining on roles'/modules' real key columns, not a hardcoded id), guarded by ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL DO NOTHING against the real partial unique index, making it safely re-runnable; down() deletes only that exact (role, module, action) triple. No application/enforcement code changed -- PermissionGuard/@RequirePermission are unmodified; this is purely additive seed data through the existing, unmodified authorization mechanism. Verified against a real local disposable PostgreSQL 17 database (never production): a full 115-migration up, confirmed exactly one grant landed (no other role/action affected), then a migrate down/up round-trip on 00115 alone confirming the row disappears and reappears cleanly. 28/28 @webdesk/database unit tests, typecheck/lint/prettier all clean. This is a genuine RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline standing rule reserves for the full tier by default -- given a one-file, no-application-code-touched, additive-read-only-grant diff, a direct, careful security-focused read-through was judged proportionate rather than an 8-angle fan-out: confirmed the up() WHERE clause resolves to exactly one (role, module) pair, the ON CONFLICT target matches the real index (verified by running it twice in a row -- the second run stayed a no-op), down() is scoped to the exact triple (not a blanket delete), no application code changed, and no SQL-injection surface (every value is a static literal). Note: this migration was renumbered to 00117 during the merge with module-help-center, which had concurrently claimed migration numbers 00115/00116 for its own help_articles table. 0 findings.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations. This gate also does not authorize running the migration against the real production database -- that remains the user's own action, per this project's standing credential-handling discipline (the user runs pnpm --filter @webdesk/database run migrate themselves after the code is merged)."
+    },
+    {
+      "id": "G4-users-roles-permissions",
+      "type": "qa-security-gate",
+      "scope": "module-users-roles-permissions",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "3ced25b (branch module-users-roles-permissions)",
+      "record": "docs/project-state/module-users-roles-permissions-approval-checklist.md",
+      "notes": "Users, Roles and Permissions module backend (registry key users_roles_permissions) -- a real user directory (list/search every status, per-user detail with all role assignments, activate/deactivate) plus a read-only global RBAC permission-matrix viewer (7 roles x 21 modules), layered on the already-built Phase 1D RBAC core per the canonical roadmap's own \"administer the UI, do not redesign authorization architecture\" instruction. No new tables -- reuses users/user_roles/roles/role_permissions/module_registry. Migration 00118 marks the module in_development; migration 00119 adds pg_trgm indexes for the new admin directory search. Independent code review (high effort, 8-angle finder pass) found 10 candidates, 9 fixed -- most severe: no malformed-UUID guard, the limit cap at 100 instead of the established 200 convention (repeating a real prior production incident), and no guard against deactivating the last active super_admin. 1 left as deliberate, tracked debt: reusing the users_roles:edit action for both role assignment and account deactivation, since splitting it means a new RBAC seed migration, out of scope per the roadmap's own no-redesign instruction. Security review (full tier, given the authentication-adjacent surface) found 1 HIGH finding, fixed: the self-deactivation and last-active-super_admin guards both compared the raw, attacker-suppliable userId path param via case-sensitive equality against DB-sourced ids, while ParseUUIDPipe doesn't canonicalize case and Postgres uuid columns compare case-insensitively -- letting a caller bypass both guards with a case-swapped copy of their own id. Fixed by canonicalizing to the DB-returned id for every subsequent comparison. Verified: a real 119-migration round-trip against a local disposable database (both trigram indexes confirmed present), typecheck/lint/prettier all clean, 1852/1852 dashboard-api unit tests passing. Backend only -- no dashboard-web UI yet, matching every prior module's own precedent.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
     }
   ],
   "budget": {
@@ -3690,7 +3704,16 @@
       "project_version_before": 137,
       "project_version_after": 138,
       "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-users-roles-permissions approved (WebDesk Solution, CONFIRM, \"Approve as-is\") for the Users, Roles and Permissions module backend -- a user directory (list/search/detail/activate-deactivate) plus a read-only global RBAC permission-matrix viewer, over the already-built Phase 1D RBAC core. Independent code review fixed 9 of 10 findings (most severe: missing malformed-UUID guard, a limit cap repeating a documented prior incident, no last-active-super_admin lockout guard); 1 RBAC-granularity finding left as tracked debt per the roadmap's own no-RBAC-redesign instruction. Security review found and fixed 1 HIGH finding: a case-sensitivity bypass of both the self-deactivation and last-active-super_admin guards. Verified via a real migration round-trip against a local disposable database only. Branch pushed to origin under this same combined instruction; opening a PR and merging remain separate, not-yet-requested authorizations.",
+      "project_version_before": 138,
+      "project_version_after": 139,
+      "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
-  "current_gate": "G4-grant-notifications-view-permission"
+  "current_gate": "G4-users-roles-permissions"
 }
