@@ -4933,8 +4933,60 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     pulling `main`, a second `migrate:status` check (a genuinely read-only command — "Status-only
     run. Nothing was changed") confirmed all 114 migrations executed, 0 pending. **The Decision
     and Activity Log module backend is now genuinely live in production, with its schema change
-    also applied.** No `dashboard-web` UI exists yet for this module — a separate,
-    not-yet-requested next step, matching every prior module's own backend-first precedent.
+    also applied.** **Update (2026-09-03): the `dashboard-web` UI has since been built and
+    gated — see item 82 below.**
+
+82. **`dashboard-web` Decision and Activity Log UI — built, reviewed, gated (2026-09-03).** Closes
+    this module's last named gap, following the backend's own build-to-production arc (PR #111).
+    Not started automatically — built directly on the explicit "Decision and Activity Log - Start
+    the dashboard-web UI for it" instruction. A single, organization-wide, read-only list page
+    (`/decision-and-activity-log`, the module registry's own seeded `route` value) over `GET
+/decision-and-activity-log/events` — **no detail page and no create/edit form exist**, since this
+    module is a pure read-only query surface with no write path of its own
+    (`AuditService.record()` remains the sole writer, called by other modules' own services).
+    Filters for event type (a single-value `<select>` over this module's own 16-value allowlist —
+    no sibling list page in this app offers a real multi-select filter widget yet), entity
+    type/id, actor user id, project id, and a from/to date range, plus offset pagination.
+    New `packages/shared-types` `AuditEventType`/`AuditActorType`/`AuditEvent` mirror
+    `packages/database/src/audit/entities.ts`'s own `AuditEventEntity` shape exactly (the FULL
+    ~40-value `AuditEventType` union, not just this module's own 16-value allowlist, so a stray/
+    legacy row outside the allowlist would still typecheck if ever returned).
+    `lib/decision-and-activity-log-query.ts`/`lib/decision-and-activity-log.ts` mirror Review and
+    Approval Center's own zero-non-type-import-file split — the closest sibling (organization-wide,
+    filter-heavy, no project scoping, no sub-resources). `actorUserId`/`projectId` are plain,
+    client-side UUID-format-checked text inputs (no picker exists for either anywhere in this app
+    as a filter widget), each degrading to "no filter applied" on an invalid shape rather than
+    round-tripping a garbled value that would 400 the whole page; `from`/`to` are plain `<input
+type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at request time,
+    not at parse time, so the raw date string round-trips cleanly through the URL/form
+    `defaultValue`. Each row's `before`/`after` audit state (when present) renders via a
+    `<details>`/`<summary>` disclosure — zero client JS, matching Website Strategy Center's own
+    version-history disclosure precedent — rather than a dedicated detail page, since an audit
+    event has no lifecycle of its own to navigate to. Actor names resolve via the existing
+    `getUsersByIds()` (degrades to the raw id on a 403/404, matching every sibling module's own
+    roster-resolution precedent). **Reviewed at light tier**, per the 2026-08-27 "right-size the
+    review pipeline" standing rule — a small, frontend-only slice (plus additive shared-types
+    only) consuming an already-reviewed, already-gated backend with no new endpoint. A direct
+    read-through pass verified the filter contract against the real backend
+    `listDecisionAndActivityLogEventsQuerySchema`, the UTC-boundary date conversion, the UUID-shape
+    short-circuit before either `actorUserId`/`projectId` is ever sent to the backend, and reuse of
+    every established shared helper — **0 findings**. A separate security review was skipped per
+    the same standing rule — no new endpoint, no new RBAC action, no new sink; `before`/`after`
+    state renders via `JSON.stringify()` inside a `<pre>`, never `dangerouslySetInnerHTML`. 18 new
+    `dashboard-web` unit tests, 1841/1841 overall; typecheck clean across `@webdesk/shared-types`
+    (built)/`dashboard-web`/`dashboard-api`/`dashboard-worker` (the additive shared-types change);
+    `eslint --max-warnings=0` + CSS-token check (99 files) clean; `next build` clean with the new
+    route present; `prettier --check` clean — all independently re-run by the orchestrating
+    session. See `docs/implementation/module-decision-and-activity-log.md`'s "As-built —
+    `dashboard-web` UI" section and
+    `docs/project-state/dashboard-web-decision-and-activity-log-approval-checklist.md`. **Required
+    second-role human review and the gate were both completed via the direct "Approve, gate it,
+    and push/PR/merge" instruction** — the approval checklist's own findings summary (0 findings)
+    served as the review artifact. **The gate (G4-dashboard-web-decision-and-activity-log) was
+    then approved** — WebDesk Solution, decision CONFIRM, approved commit `932708a` on branch
+    `dashboard-web-decision-and-activity-log` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-decision-and-activity-log`).
 
 ## Recent decisions
 

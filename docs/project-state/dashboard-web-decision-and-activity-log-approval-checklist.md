@@ -70,7 +70,7 @@ published. **Approved as-is**, WebDesk Solution, 2026-09-03 — no open
 findings of any kind on this branch.
 
 Gate `G4-dashboard-web-decision-and-activity-log`: **CONFIRM** — WebDesk
-Solution, 2026-09-03, approved commit (recorded at push time) on branch
+Solution, 2026-09-03, approved commit `932708a` on branch
 `dashboard-web-decision-and-activity-log`.
 
 "Push the branch," "Open a PR," and "Merge" were then each separately
