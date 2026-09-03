@@ -4927,14 +4927,14 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
     `GET /decision-and-activity-log/events` returned a clean `401` (route live, `SessionGuard`
     enforcing — not a `404`, which would mean the module never actually deployed); and
     `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
-    **The production database schema is NOT yet migrated through `00114`** — a `migrate:status`
-    check the user ran themselves came back listing only migrations through `00110`, with no
-    mention of `00113`/`00114` at all (not even as pending), meaning the checkout that command ran
-    from predates this module's merge and doesn't have those migration files yet; a real
-    `migrate:status` run needs to happen from a checkout that includes them before the actual
-    `migrate` command can apply them. No `dashboard-web` UI exists yet for this module — a
-    separate, not-yet-requested next step, matching every prior module's own backend-first
-    precedent.
+    **The production database schema is now confirmed migrated through `00114`** — a first
+    `migrate:status` check the user ran came back listing only migrations through `00110`, with
+    no mention of `00113`/`00114` at all, since that checkout predated this module's merge; after
+    pulling `main`, a second `migrate:status` check (a genuinely read-only command — "Status-only
+    run. Nothing was changed") confirmed all 114 migrations executed, 0 pending. **The Decision
+    and Activity Log module backend is now genuinely live in production, with its schema change
+    also applied.** No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
 
 ## Recent decisions
 
