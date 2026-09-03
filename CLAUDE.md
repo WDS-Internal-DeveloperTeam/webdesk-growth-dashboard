@@ -5228,11 +5228,36 @@ type="date">` fields converted to UTC start-of-day/end-of-day ISO datetimes at r
     then approved** — WebDesk Solution, decision CONFIRM, approved commit `aa1e352` on branch
     `module-help-center` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
     (`current_gate` now `G4-help-center`). **"Push the branch" was then executed as part of the
-    same combined instruction** — pushed to `origin`. **Opening a PR and merging remain separate,
-    not-yet-completed next steps** — the disclosed no-local-database gap should be closed by a
-    real CI run (a real disposable database) before merge. No `dashboard-web` UI exists yet for
-    this module — a separate, not-yet-requested next step, matching every prior module's own
-    backend-first precedent.
+    same combined instruction** — pushed to `origin`. **"Push the branch and open a PR" was
+    separately requested and executed** — opened as
+    [PR #118](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/118).
+    The PR initially showed no CI run at all (`mergeable_state: dirty`) — a real merge conflict
+    against `main` (two concurrent branches, Release Center's own live-verification doc commit
+    and the `dashboard-web` Notification Center UI, had merged since this branch started), which
+    silently prevents GitHub Actions from even creating a `pull_request` run rather than failing
+    a check. Resolved by merging `origin/main` in — only `CLAUDE.md`'s item numbering (both
+    branches independently claimed item 86) and `project.json`'s `gates[]`/`audit_log` arrays
+    conflicted (both sides' gate objects/audit entries kept, version counters re-sequenced 133→
+    136), fully re-verified after resolution (`@webdesk/shared-types` needed a fresh build for
+    `dashboard-web`'s typecheck to pick up the concurrently-merged Notification Center's new
+    exports — a stale-artifact false failure, not a real regression; 1852/1852 `dashboard-api` +
+    1928/1928 `dashboard-web` unit tests, typecheck/build/prettier all clean) before pushing
+    again. **All 14 CI checks then went green**, including the two DB-backed jobs (`Database
+migration test`, `Integration tests` — 832/832 `dashboard-api` e2e tests + 15/15
+    `dashboard-web` Playwright tests, both against a real disposable PostgreSQL 17 database) this
+    environment itself couldn't run, closing the disclosed gap. **"Merge PR #118" was then
+    separately requested and executed** — merged with a real merge commit (not squash/rebase),
+    matching every prior merge in this project's history — merge commit
+    `6a8cbcd52a67ae7432b27477afe9fa5ef085108e`. `dashboard-api` auto-deployed on push to `main`
+    and was verified live directly, not just via CI's own Vercel status check (the first `/health`
+    check returned a stale, edge-cached response for the PRIOR commit — a cache-busting query
+    param confirmed the real, current deployment) — `/health` returned `build.commitShaShort ==
+6a8cbcd`, confirming the exact merged commit is what's serving; `GET /help-center/articles`
+    returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`, which would mean
+    the module never actually deployed); and `dashboard-web`'s `/` correctly redirects (307) an
+    unauthenticated visitor to `/auth/sign-in`. **The Help Center module backend is now genuinely
+    live in production.** No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
 
 87. **`dashboard-web` Notification Center UI — built, reviewed, gated, pushed (2026-09-03).**
     View-only over the existing Phase 1E notification-record foundation (`notifications` table,
