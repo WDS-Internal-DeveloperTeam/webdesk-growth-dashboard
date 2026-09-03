@@ -1358,6 +1358,20 @@
       "record": "docs/project-state/dashboard-web-decision-and-activity-log-approval-checklist.md",
       "notes": "dashboard-web Decision and Activity Log UI -- closes this module's last named gap, following the backend's own build-to-production arc (PR #111). A single organization-wide, read-only list page (/decision-and-activity-log) over GET /decision-and-activity-log/events -- no detail page, no create/edit form, since the module has no write path of its own. New packages/shared-types AuditEvent/AuditEventType/AuditActorType mirror the database entity exactly. lib/decision-and-activity-log-query.ts/lib/decision-and-activity-log.ts mirror Review and Approval Center's own zero-non-type-import-file split. Deliberately narrows the backend's richer query contract to the smallest honest UI: a single-value eventType select (no sibling list page offers real multi-select yet), plain UUID-format-checked text inputs for actorUserId/projectId (no picker), and from/to as plain date inputs converted to UTC start/end-of-day ISO datetimes at request time. Each row's before/after audit state renders via a details/summary disclosure, zero client JS. Reviewed at light tier per the 2026-08-27 right-size-the-review-pipeline standing rule -- a small frontend-only slice consuming an already-reviewed, already-gated backend with no new endpoint; a direct read-through pass found 0 findings. A separate security review was skipped per the same standing rule. 18 new dashboard-web unit tests, 1841/1841 overall; typecheck clean across shared-types/dashboard-web/dashboard-api/dashboard-worker; eslint --max-warnings=0 + CSS-token check (99 files) clean; next build clean with the new route present; prettier clean -- all independently re-run by the orchestrating session.",
       "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- each was separately requested and executed under one combined 'approve, gate it, and push/PR/merge' instruction, per this project's standing no-auto-merge rule allowing an explicit combined authorization when given together."
+    },
+    {
+      "id": "G4-fix-decision-and-activity-log-limit-cap",
+      "type": "qa-security-gate",
+      "scope": "fix-decision-and-activity-log-limit-cap",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-03T00:00:00Z",
+      "approved_commit": "d2e56e7 (branch fix-decision-and-activity-log-limit-cap)",
+      "record": "docs/project-state/fix-decision-and-activity-log-limit-cap-approval-checklist.md",
+      "notes": "Fixed a live production bug reported directly by the user: selecting the 100-row page size (or applying a filter while it was selected) on /decision-and-activity-log rendered the app's generic 'Something went wrong' error screen. Root cause: dashboard-web's list pages request pageSize + 1 rows to detect a next page -- at the largest 100-row page size that's limit=101, but listDecisionAndActivityLogEventsQuerySchema's own limit field was capped at .max(100), the only list-query schema in the codebase capped there instead of 200, where every one of the other ~45 list-query DTOs leaves headroom for exactly this pattern. Fixed by raising the cap to .max(200), matching every sibling module exactly -- a one-line change. Replaced the DTO spec's 'rejects a limit above 100' test with two tests proving both sides of the real boundary (101 now succeeds, 201 still rejected). Reviewed at light tier -- a one-line schema-cap fix bringing an outlier module in line with an already-reviewed sibling convention, 0 findings. Re-validated: 9/9 DTO unit tests, 4/4 service unit tests, 7/7 module e2e tests, 832/832 dashboard-api e2e/integration tests overall (no regression), all against a real disposable PostgreSQL 17 database; typecheck/lint/prettier all clean.",
+      "scope_excludes": "This gate approval does not itself authorize pushing the branch, opening a PR, or merging in isolation -- given directly as an urgent same-session fix to a bug the user just reported live, matching this project's established pattern for fixing an actively-broken already-shipped feature."
     }
   ],
   "budget": {
@@ -3557,7 +3571,16 @@
       "project_version_before": 130,
       "project_version_after": 131,
       "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-fix-decision-and-activity-log-limit-cap approved (WebDesk Solution, CONFIRM) fixing a live bug the user reported directly: the 100-row page size on /decision-and-activity-log 400'd against the module's own limit schema (capped at 100 instead of 200, the only outlier among ~45 sibling list-query schemas). Raised the cap to 200. Reviewed at light tier, 0 findings. Re-validated 9/9 DTO tests, 7/7 module e2e tests, 832/832 dashboard-api e2e/integration tests overall.",
+      "project_version_before": 131,
+      "project_version_after": 132,
+      "timestamp": "2026-09-03T00:00:00Z"
     }
   ],
-  "current_gate": "G4-dashboard-web-decision-and-activity-log"
+  "current_gate": "G4-fix-decision-and-activity-log-limit-cap"
 }
