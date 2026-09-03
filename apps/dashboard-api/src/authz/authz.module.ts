@@ -52,7 +52,17 @@ import { NavigationController } from "./navigation.controller.js";
   // Deliberately does NOT export USER_ROLE_REPOSITORY — a consumer needing "who holds role R for
   // project P" goes through RoleAssignmentService.findUserIdsForRoleInProject() instead, which
   // exposes only that one read rather than the write-capable repository itself (code-review
-  // finding, `module-projects-backend-closeout` branch).
-  exports: [AuthorizationService, PermissionGuard, RoleAssignmentService, ROLE_REPOSITORY],
+  // finding, `module-projects-backend-closeout` branch). CatalogService exported so the "Users,
+  // Roles and Permissions" module's permission-matrix viewer can reuse its already-correct
+  // `{id,key,name}` module-summary mapping instead of re-querying `ModuleRepository`/hand-mapping
+  // it a second time (code-review finding, `module-users-roles-permissions` branch) — it's
+  // already read-only, the same reasoning that already justified exporting `RoleAssignmentService`.
+  exports: [
+    AuthorizationService,
+    PermissionGuard,
+    RoleAssignmentService,
+    CatalogService,
+    ROLE_REPOSITORY,
+  ],
 })
 export class AuthzModule {}

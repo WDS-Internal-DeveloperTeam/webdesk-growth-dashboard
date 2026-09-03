@@ -51,6 +51,20 @@ export class UserRoleRepository {
     return rows.map((row) => row.get("userId") as string);
   }
 
+  /**
+   * The inverse of `findUserIdsForRoleInProject` for global scope — every user id holding
+   * `roleId` at `project_id IS NULL` (never a project-scoped grant, which doesn't represent
+   * organization-wide membership in the role). Used by `UsersDirectoryService`'s last-active-
+   * Super-Admin lockout guard.
+   */
+  async findUserIdsForGlobalRole(roleId: string): Promise<readonly string[]> {
+    const rows = await this.model.findAll({
+      where: { roleId, projectId: null },
+      attributes: ["userId"],
+    });
+    return rows.map((row) => row.get("userId") as string);
+  }
+
   async listForUser(userId: string): Promise<readonly UserRoleEntity[]> {
     const rows = await this.model.findAll({ where: { userId } });
     return rows.map(toEntity);

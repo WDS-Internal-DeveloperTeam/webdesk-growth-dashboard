@@ -5474,6 +5474,68 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     UI (list, detail, create/edit form, publish/unpublish toggle) are both live for the Help
     Center module.
 
+90. **Users, Roles and Permissions module backend — built, reviewed, gated, pushed
+    (2026-09-03).** Module registry key `users_roles_permissions`, built directly on the explicit
+    "start Users / Roles / Permissions" instruction. The canonical roadmap for this exact module
+    says: "Phase 1D already built the RBAC core. Build/administer the UI here; do not redesign
+    authorization architecture." Scope confirmed directly with the project owner
+    (`AskUserQuestion`, among three options): **grant viewer + user directory** — a real user
+    directory (list/search every account status, not just active; per-user detail with every role
+    assignment, global and project-scoped; activate/deactivate a user), plus a read-only global
+    permission-matrix viewer (7 roles × 21 modules, global-scope grants only). Explicitly declined:
+    new role types, permission-grant editing (the matrix stays migration-seeded), MFA/session
+    management, confidential-field-access editing. No new tables — reuses `users`/`user_roles`/
+    `roles`/`role_permissions`/`module_registry` entirely; migration `00118` marks the module
+    `in_development`, migration `00119` adds `pg_trgm` trigram indexes on `users.email`/
+    `display_name` for the new admin search. Built by a background agent with a fully-specified
+    prompt (every reusable repository/service to mirror named explicitly — `RoleAssignmentService`,
+    `SessionService.revokeAllForUser()`, `AuditService`'s existing `user_activation`/
+    `user_deactivation` event types), then independently re-verified by the orchestrating session
+    — RBAC decorator placement (method-level, never class-level) read directly, typecheck/lint/
+    1852/1852 `dashboard-api` unit tests confirmed clean. **Independent code review then ran**
+    (this project's own `code-review` skill, high effort, 8-angle finder pass, 1-vote
+    verification) — 10 candidates kept, **9 fixed**: most severe, no malformed-UUID guard on
+    either `:userId` route (fixed with `ParseUUIDPipe`), `limit` capped at 100 instead of the
+    established 200 convention (the exact bug class that already caused a real production
+    incident on the Decision and Activity Log module — fixed, plus a new `offset` cap), and no
+    guard against deactivating the last active `super_admin` (fixed with a new
+    `assertNotSoleActiveSuperAdmin()` check, explicitly noting `RoleAssignmentService.revokeRole()`
+    has the identical unaddressed gap at the role-revocation layer, left unfixed there as
+    out-of-scope). Also fixed: the self-deactivation guard rewired through the shared
+    `SeparationOfDutiesService.assertDistinctActors()` instead of a hand-rolled check (restoring a
+    consistent 403 + audit trail); a read-then-write race in `updateStatus()` closed with a CAS
+    (`expectedStatus`) parameter; `PermissionMatrixService` deduplicated to reuse
+    `RoleAssignmentService`/`CatalogService` instead of re-implementing their role/module mapping;
+    a missing `pg_trgm` index; a missing pagination tiebreaker. **1 finding left as deliberate,
+    tracked debt**: reusing the `users_roles:edit` action for both role assignment and account
+    deactivation conflates two different-severity operations under one grant — splitting it means
+    a new RBAC seed migration, out of scope per this module's own "do not redesign" instruction.
+    **A separate `security-review` skill run then found 1 HIGH finding, fixed**: both the
+    self-deactivation guard and the last-active-`super_admin` guard compared the raw,
+    attacker-suppliable `:userId` path parameter against DB-sourced ids via case-sensitive
+    `===`/`!==`, while `ParseUUIDPipe` validates UUID format case-insensitively without
+    canonicalizing case, and Postgres `uuid` columns compare case-insensitively at the DB layer —
+    a caller could submit a case-swapped copy of their own id and have the write land on their own
+    row while both in-memory guards silently failed to recognize the match, deterministically
+    bypassing self-deactivation protection and, for a sole active `super_admin`, the lockout guard
+    too. Fixed by canonicalizing to `target.id` (the DB-returned casing) for every subsequent
+    comparison/call in `updateStatus()`. Re-validated after every fix round: a real 119-migration
+    round-trip against a local disposable PostgreSQL 17 database (both trigram indexes and the
+    `in_development` status confirmed present), typecheck/lint (`--max-warnings=0`)/prettier all
+    clean, 1852/1852 `dashboard-api` unit tests passing (no regression — this build adds no new
+    unit test files, per its own first-pass scope backed by an already-thorough review round). See
+    `docs/project-state/module-users-roles-permissions-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it, and push the branch"
+    instruction** — WebDesk Solution, "Approve as-is," accepting the 1 open RBAC-granularity
+    finding as tracked debt, no other disputes raised. **The gate
+    (G4-users-roles-permissions) was then approved** — WebDesk Solution, decision CONFIRM (clean
+    pass, not an override), approved commit `3ced25b` on branch `module-users-roles-permissions` —
+    see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-users-roles-permissions`). **"Push the branch" was then executed under the same combined
+    instruction** — pushed to `origin`. This gate approval does not itself authorize opening a PR
+    or merging — each remains its own separate, not-yet-requested authorization, per this
+    project's standing "no auto-merge" rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -8648,6 +8710,32 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   confirmed directly ("Ran the migration, all confirmed working now"). **The `super_admin`
   `notifications_view` grant is now genuinely live in production**, closing out this slice's full
   build-to-production arc.
+- `[2026-09-03]` **Built the Users, Roles and Permissions module backend**, on the explicit "start
+  Users / Roles / Permissions" instruction. The canonical roadmap for this exact module says not
+  to redesign the already-built Phase 1D RBAC core — scope confirmed directly with the user
+  (`AskUserQuestion`): a real user directory (list/search all statuses, per-user role-assignment
+  detail, activate/deactivate) plus a read-only global permission-matrix viewer. No new tables.
+  See item 89 above and `docs/project-state/module-users-roles-permissions-approval-checklist.md`
+  for the full account.
+- `[2026-09-03]` **Independent code review run on `module-users-roles-permissions`, then 9 of 10
+  confirmed findings fixed.** High effort, 8-angle finder pass — most severe: no malformed-UUID
+  guard, `limit` capped at 100 instead of the established 200 convention (repeating a documented
+  real production incident), and no guard against deactivating the last active `super_admin`. 1
+  RBAC-granularity finding left as tracked debt (splitting the `edit` action means a new RBAC seed
+  migration, out of scope per the roadmap's own no-redesign instruction).
+- `[2026-09-03]` **Security review run on `module-users-roles-permissions`, separately from the
+  code review — 1 HIGH finding, fixed.** Both the self-deactivation and last-active-`super_admin`
+  guards compared the raw `:userId` path param via case-sensitive equality against DB-sourced ids,
+  while `ParseUUIDPipe` doesn't canonicalize case and Postgres compares UUIDs case-insensitively —
+  a caller could bypass both guards with a case-swapped copy of their own id. Fixed by
+  canonicalizing to the DB-returned id for every subsequent comparison.
+- `[2026-09-03]` **Required second-role human review and the gate were both completed via the
+  direct "Approve as-is, gate it, and push the branch" instruction.** Gate
+  `G4-users-roles-permissions` approved — WebDesk Solution, decision CONFIRM, approved commit
+  `3ced25b` on branch `module-users-roles-permissions` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-users-roles-permissions`). Branch pushed to `origin` under the same combined instruction.
+  This gate approval does not itself authorize opening a PR or merging.
 
 ## Open client blockers
 

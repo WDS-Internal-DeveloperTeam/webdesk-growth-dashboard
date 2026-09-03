@@ -49,6 +49,7 @@ import { WireframeLibraryModule } from "./wireframe-library/wireframe-library.mo
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
 import { UsersModule } from "./users/users.module.js";
+import { UsersRolesPermissionsModule } from "./users-roles-permissions/users-roles-permissions.module.js";
 import { WebsiteStrategyCenterModule } from "./website-strategy-center/website-strategy-center.module.js";
 import { WorkflowAndTaskTemplateLibraryModule } from "./workflow-and-task-template-library/workflow-and-task-template-library.module.js";
 import { API_VERSION } from "./version.js";
@@ -125,6 +126,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     ServiceLibraryModule,
     SystemOperationsModule,
     UsersModule,
+    UsersRolesPermissionsModule,
     WebsiteStrategyCenterModule,
     WorkflowAndTaskTemplateLibraryModule,
   ],
