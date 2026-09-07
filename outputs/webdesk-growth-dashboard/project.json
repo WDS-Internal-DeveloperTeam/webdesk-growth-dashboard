@@ -1484,6 +1484,20 @@
       "record": "docs/project-state/module-system-settings-approval-checklist.md",
       "notes": "System Settings module backend -- module key system_settings, already seeded in module_registry (migration 00035), no dependencies, no confidentiality mechanism. Scope confirmed directly with the project owner (AskUserQuestion): owns only the genuinely unowned settings -- file limits, Git rules, backup rules, escalation SLAs, documentation rules, environments, default statuses/categories/taxonomies -- since retention, contacts, and scan schedules already have their own dedicated, already-live tables elsewhere. Single generic system_settings table with an immutable settingType discriminator, a bounded JSONB value column, key unique per (settingType, key) via a real composite DB index, and an isActive toggle gated on the configure RBAC action (not edit) via a real atomic compare-and-swap, orthogonal to the edit-gated content update -- mirroring Brand Library's structure, the closest sibling. Reuses the already-seeded system_settings RBAC group verbatim; the review (R) action is deliberately left unwired. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through of every file where a real defect class has previously shipped in this codebase (RBAC decorator placement, CAS races, unique-constraint TOCTOU handling, both packages/database barrel exports, the pagination cap) -- 0 findings. 1872/1872 dashboard-api unit tests (20 new), 28/28 packages/database unit tests, 22/22 module-system-settings.integration.test.ts, 21/21 system-settings.e2e-spec.ts, the full 45-file packages/database integration suite (880/880) and dashboard-api e2e suite (853/853), all independently re-run by the orchestrating session against a fresh local disposable PostgreSQL 17 database, not trusted from the build agent's own report. A real migration down/down/up/up round-trip (121 migrations), validate:module-registry (43 modules, 21 permission groups, unaffected), and pnpm audit (0 vulnerabilities) were also independently re-run.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
+    },
+    {
+      "id": "G4-audit-logs-and-system-health",
+      "type": "qa-security-gate",
+      "scope": "module-audit-logs-and-system-health",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-07T00:00:00Z",
+      "approved_commit": "ae66ece (branch module-audit-logs-and-system-health)",
+      "record": "docs/project-state/module-audit-logs-and-system-health-approval-checklist.md",
+      "notes": "Audit Logs and System Health module backend -- module key audit_logs_and_system_health, already seeded in module_registry (migration 00035), no dependencies. Scope confirmed directly with the project owner (AskUserQuestion): a read-only query surface over the existing audit_events table, filtered to the exact complement Decision and Activity Log's own doc comment already names as this module's territory (25 event types) -- no new tables; does not re-expose jobs/system-events/ system-health under this module's own route prefix, since those already have real, live endpoints elsewhere; webhook status/backups/storage/application errors stay explicitly out of scope, since no mechanism for any of them exists anywhere in this codebase yet. Mirrors Decision and Activity Log file-for-file, reuses the already-seeded system_settings RBAC group verbatim -- no new RBAC migration. Migration 00122 marks the module in_development -- the only schema change. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through of every file (RBAC decorator placement, the DTO's allowlist-enforcement Zod enum, the service's default- to-allowlist behavior, the migration, the e2e coverage) -- 0 findings. Independently re-verified programmatically that the 25-value event-type list is an exact, non-overlapping complement of Decision and Activity Log's own 16-value list against the real 41-value AuditEventType union (41 = 16 + 25, zero overlap, zero gap). 1885/1885 dashboard-api unit tests, 8/8 audit-logs-and-system-health.e2e-spec.ts in isolation, the full 46-file dashboard-api e2e/integration suite (861/861), a real migration down/up round-trip (122 migrations, no collision with System Settings' own 00120/00121), validate:module-registry (43 modules, 21 permission groups, unaffected), pnpm audit (0 vulnerabilities) -- all independently re-run by the orchestrating session against a real local disposable PostgreSQL 17 database, not trusted from the build agent's own report. A real working-directory collision with a concurrent session (building System Settings on the same checkout) was found and resolved mid-build -- only this module's own files were committed, the other session's in-progress work was left untouched on disk.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- opening a PR and merging remain their own separate, not-yet-requested authorizations, per this project's standing 'no auto-merge' rule."
     }
   ],
   "budget": {
@@ -3809,7 +3823,16 @@
       "project_version_before": 144,
       "project_version_after": 145,
       "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-audit-logs-and-system-health approved (CONFIRM) for the Audit Logs and System Health module backend -- a read-only query surface over audit_events, filtered to the exact complement Decision and Activity Log's own doc comment already names as this module's territory, reusing the already-seeded system_settings RBAC group verbatim. Reviewed at light tier per the 2026-08-27 standing rule (0 findings). Approved commit ae66ece on branch module-audit-logs-and-system-health, via the direct 'yes, review at light tier and gate it' instruction.",
+      "project_version_before": 145,
+      "project_version_after": 146,
+      "timestamp": "2026-09-07T00:00:00Z"
     }
   ],
-  "current_gate": "G4-system-settings"
+  "current_gate": "G4-audit-logs-and-system-health"
 }

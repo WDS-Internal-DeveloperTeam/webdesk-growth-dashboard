@@ -5674,6 +5674,64 @@ bb14f12e4d7bd6ce167142d500dee4c7697dd490`, confirming the exact merged commit is
     No `dashboard-web` UI exists yet for this module — a separate, not-yet-requested next step,
     matching every prior module's own backend-first precedent.
 
+93. **Audit Logs and System Health module backend — built, reviewed, gated (2026-09-07).** Module
+    key `audit_logs_and_system_health`, already seeded in `module_registry` (migration `00035`),
+    the last unbuilt module on the Recommended Module Roadmap. Built directly on the explicit
+    "number the migration from 00122" instruction, with the target module confirmed directly
+    first (`AskUserQuestion`). This module overlaps heavily with infrastructure already built —
+    `system-events`/`system-health/components`/`system-health/status`
+    (`system-operations.controller.ts`) and `jobs`/`jobs/:id`/`retry`/`cancel`
+    (`jobs.controller.ts`) already have real, live HTTP routes, and Decision and Activity Log
+    (module #37) already exposes the "decision/activity" half of `audit_events`, with its own doc
+    comment explicitly naming the complementary 25-value event-type set as this module's own
+    territory. **The user chose "query surface only, over already-existing data"** — this backend
+    pass adds exactly one thing: a read-only query endpoint over `audit_events`, filtered to that
+    25-value complement, mirroring Decision and Activity Log's own module file-for-file. Does
+    **not** re-expose `jobs`/`system-events`/`system-health` under this module's own route
+    prefix — those already have real endpoints elsewhere; a future `dashboard-web` UI pass can
+    call multiple existing endpoints. Webhook status, backups, storage, and application errors
+    stay explicitly out of scope — no mechanism for any of them exists anywhere in this codebase
+    yet. No new table, no new RBAC migration — reuses the already-seeded `system_settings` group
+    verbatim (same group as System Settings/Integrations/Decision and Activity Log). Migration
+    `00122` marks the module `in_development` — the only schema change. Built by a background
+    agent with a fully-specified prompt mirroring Decision and Activity Log file-for-file, then
+    independently re-verified in full by the orchestrating session. **A real working-directory
+    collision occurred and was resolved mid-build**: this checkout was shared concurrently with a
+    separate session building System Settings — the background agent's own defensive "preserve
+    WIP" auto-commit swept up both sessions' uncommitted changes; resolved by verifying the
+    commit's contents matched this build's own files byte-for-byte, soft-resetting to unstage
+    everything, then committing only this module's own files (leaving
+    `packages/shared-types/src/index.ts`, the other session's `system-settings-*` dashboard-web
+    files, and a pre-existing untracked `scripts/migrate-production.sh` completely untouched).
+    `main` (now including the merged System Settings PR #122) was then merged into this branch,
+    with the expected `CLAUDE.md`/`project.json` conflicts resolved by keeping both sides'
+    content. Every claim independently re-verified against a real local disposable PostgreSQL 17
+    database, not trusted from the build agent's own report: 1885/1885 `dashboard-api` unit
+    tests, 8/8 `audit-logs-and-system-health.e2e-spec.ts` in isolation, the full 46-file
+    `dashboard-api` e2e/integration suite (861/861 — two transient flaky partial-failure runs from
+    back-to-back heavy suite runs were investigated and a clean re-run confirmed no real
+    regression), a real migration down/up round-trip (122 migrations, no collision with System
+    Settings' own `00120`/`00121`), `validate:module-registry` (43 modules, 21 permission groups,
+    unaffected), `pnpm audit` (0 vulnerabilities), typecheck/lint (`--max-warnings=0`)/prettier
+    all clean. One documented discrepancy found and corrected: the scope doc had said "24-value
+    complement" — the real, independently-verified partition is 25 values (`41 = 16 + 25`, zero
+    overlap, zero gap); using 24 would have silently orphaned `account_recovery_decision`.
+    **Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing
+    rule — a direct read-through of every file (RBAC decorator placement, the DTO's
+    allowlist-enforcement Zod enum, the service's default-to-allowlist behavior, the constants
+    file's mapping rationale, the migration, the e2e coverage) found **0 findings**. No separate
+    security review — no new endpoint class beyond standard read-only CRUD, no mutation surface
+    at all. See `docs/implementation/module-audit-logs-and-system-health.md` and
+    `docs/project-state/module-audit-logs-and-system-health-approval-checklist.md`. **Required
+    second-role human review complete via the direct "yes, review at light tier and gate it"
+    instruction** — the approval checklist's own findings summary (0 findings) served as the
+    review artifact. **The gate (G4-audit-logs-and-system-health) was then approved** — WebDesk
+    Solution, decision CONFIRM (clean pass, not an override), approved commit `ae66ece` on branch
+    `module-audit-logs-and-system-health` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-audit-logs-and-system-health`). **This gate approval does
+    not itself authorize pushing the branch, opening a PR, or merging** — each remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
@@ -8957,6 +9015,51 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   was verified live directly — `/health` matched the merge commit, and `GET
 /system-settings/settings` returned a clean `401`. **The System Settings module backend is now
   genuinely live in production.**
+- `[2026-09-07]` **Built the Audit Logs and System Health module backend**, under the explicit
+  "number the migration from 00122" instruction, with the target module confirmed directly first
+  (`AskUserQuestion`) — the last unbuilt module on the Recommended Module Roadmap. Scoped to
+  "query surface only, over already-existing data" (`AskUserQuestion`) — a read-only endpoint over
+  `audit_events`, filtered to the exact 25-value complement Decision and Activity Log's own doc
+  comment already names as this module's territory, mirroring that module file-for-file. No new
+  table, reuses the already-seeded `system_settings` RBAC group verbatim. See item 93 above and
+  `docs/implementation/module-audit-logs-and-system-health.md` for the full account.
+- `[2026-09-07]` **A real working-directory collision with a concurrent session (building System
+  Settings on the same checkout) was discovered and resolved.** A background build agent's own
+  defensive "preserve WIP" auto-commit had swept up both sessions' uncommitted changes when the
+  other session checked out this branch mid-build. Investigated via `git status`/`git branch
+--show-current`/`git reflog`; resolved by verifying the auto-commit's contents matched this
+  build's own files byte-for-byte, then committing only this module's own files — leaving
+  `packages/shared-types/src/index.ts`, the other session's `system-settings-*` dashboard-web
+  files, and a pre-existing untracked `scripts/migrate-production.sh` completely untouched on
+  disk for that session to handle.
+- `[2026-09-07]` **Independently re-verified `module-audit-logs-and-system-health`, not trusted
+  from the build agent's own report.** Merged `main` (now including the merged System Settings
+  PR #122) into this branch, resolving the expected `CLAUDE.md`/`project.json` conflicts by
+  keeping both sides' content. Re-ran every claim fresh against a real local disposable
+  PostgreSQL 17 database: 1885/1885 `dashboard-api` unit tests, 8/8
+  `audit-logs-and-system-health.e2e-spec.ts` in isolation, the full 46-file `dashboard-api`
+  e2e/integration suite (861/861 — two transient flaky partial-failure runs were investigated and
+  a clean re-run confirmed no real regression), a migration down/up round-trip (122 migrations, no
+  collision with System Settings' own `00120`/`00121`), `validate:module-registry` (43 modules, 21
+  permission groups, unaffected), `pnpm audit` (0 vulnerabilities), typecheck/lint/prettier all
+  clean. Independently re-verified programmatically that the 25-value event-type list is an exact,
+  non-overlapping complement of Decision and Activity Log's own list against the real 41-value
+  `AuditEventType` union.
+- `[2026-09-07]` **Reviewed at light tier, per the 2026-08-27 "right-size the review pipeline"
+  standing rule** — a direct read-through of every file (RBAC decorator placement, the DTO's
+  allowlist-enforcement Zod enum, the service's default-to-allowlist behavior, the constants
+  file's mapping rationale, the migration, the e2e coverage) found **0 findings**. No separate
+  security review — no new endpoint class beyond standard read-only CRUD, no mutation surface at
+  all. See `docs/project-state/module-audit-logs-and-system-health-approval-checklist.md`.
+- `[2026-09-07]` **Required second-role human review complete for
+  `module-audit-logs-and-system-health`, via the direct "yes, review at light tier and gate it"
+  instruction** — the approval checklist's own findings summary (0 findings) served as the review
+  artifact. **The gate (G4-audit-logs-and-system-health) was then approved** — WebDesk Solution,
+  decision CONFIRM (clean pass, not an override), approved commit `ae66ece` on branch
+  `module-audit-logs-and-system-health` — see `outputs/webdesk-growth-dashboard/project.json`'s
+  `gates[]` (`current_gate` now `G4-audit-logs-and-system-health`). This gate approval does not
+  itself authorize pushing the branch, opening a PR, or merging — each remains its own separate,
+  not-yet-requested authorization.
 
 ## Open client blockers
 
