@@ -1542,6 +1542,20 @@
       "scope_excludes": "This gate approval does not itself authorize a production deployment beyond the merge itself -- given under the combined \"gate it, push, open PR, and merge\" instruction, all four steps are executed together under that explicit combined authorization."
     },
     {
+      "id": "G4-dashboard-web-audit-logs-and-system-health",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-audit-logs-and-system-health",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-07T00:00:00Z",
+      "approved_commit": "c3d590c1c9d7981afb2d96ef172d69344ef79cf7 (branch dashboard-web-audit-logs-and-system-health)",
+      "record": "docs/project-state/dashboard-web-audit-logs-and-system-health-approval-checklist.md",
+      "notes": "dashboard-web Audit Logs and System Health UI, closing this module's last named gap on top of the already-gated, already-live backend (G4-audit-logs-and-system-health, PR #126). A single, organization-wide, read-only list page (/audit-logs-and-system-health) over GET /audit-logs-and-system-health/events -- no detail page, no create/edit form, mirroring Decision and Activity Log's own dashboard-web UI file-for-file. No new packages/shared-types needed. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through pass verified the filter contract against the real backend query schema, UUID-shape short-circuiting, the from/to UTC-boundary conversion, and confirmed the backend's own limit cap is .max(200) (not the too-low .max(100) that caused a real production incident on Decision and Activity Log) -- 0 findings. Security review skipped -- no new endpoint, no new RBAC action, no new sink. 18 new dashboard-web unit tests, 2097/2097 overall; typecheck clean across dashboard-web/dashboard-api/dashboard-worker, eslint --max-warnings=0 + CSS-token check (114 files) clean, next build clean with the new route present, prettier --check clean.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing 'no auto-merge' rule."
+    },
+    {
       "id": "G4-grant-notifications-view-owner-growth-approver",
       "type": "qa-security-gate",
       "scope": "grant-notifications-view-owner-growth-approver",
@@ -3962,12 +3976,30 @@
       "timestamp": "2026-09-07T00:00:00Z"
     },
     {
+      "action": "built dashboard-web UI for Audit Logs and System Health",
+      "actor": "Claude",
+      "actor_type": "agent",
+      "details": "Built directly on the explicit 'start Audit Logs and System Health dashboard-web UI' instruction, closing this module's last named gap on top of the already-gated, already-live backend (G4-audit-logs-and-system-health, PR #126). A single, organization-wide, read-only list page (/audit-logs-and-system-health) over GET /audit-logs-and-system-health/events -- no detail page, no create/edit form, mirroring Decision and Activity Log's own dashboard-web UI file-for-file. No new packages/shared-types needed -- AuditEventType/AuditActorType/AuditEvent already exist from Decision and Activity Log's own UI build. Verified the backend's own limit cap is .max(200), giving headroom for the pageSize+1 pagination technique, so the identical bug class that caused a real production incident on Decision and Activity Log's .max(100) cap is not repeated here. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through pass verified the filter contract against the real backend query schema, UUID-shape short-circuiting on actorUserId/projectId, the from/to UTC-boundary conversion, and reuse of every established shared helper -- 0 findings. Security review skipped -- no new endpoint, no new RBAC action, no new sink. 18 new dashboard-web unit tests, 2097/2097 overall; typecheck clean across dashboard-web/dashboard-api/dashboard-worker (after rebuilding a stale @webdesk/shared-types dist left over from a concurrently-merged sibling PR), eslint --max-warnings=0 + CSS-token check (114 files) clean, next build clean with the new route present, prettier --check clean. Committed on branch dashboard-web-audit-logs-and-system-health.",
+      "project_version_before": 154,
+      "project_version_after": 155,
+      "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "approved gate G4-dashboard-web-audit-logs-and-system-health for dashboard-web-audit-logs-and-system-health -- decision: CONFIRM",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-audit-logs-and-system-health approved (WebDesk Solution, CONFIRM) for the dashboard-web Audit Logs and System Health UI -- clean pass, not an override. Requested and completed via the direct 'Approve as-is, gate it, and push the branch' instruction; the approval checklist's own findings summary (0 findings) served as the review artifact, per the 2026-08-27 light-tier review standing rule. See docs/project-state/dashboard-web-audit-logs-and-system-health-approval-checklist.md for the full record.",
+      "project_version_before": 155,
+      "project_version_after": 156,
+      "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
       "action": "gate_approved",
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "details": "Gate G4-grant-notifications-view-owner-growth-approver approved (WebDesk Solution, CONFIRM, \"Approve as-is\") for a new migration (00125-grant-notifications-view-to-owner-growth-approver.ts) granting owner_growth_approver the notifications_view action on system_settings -- widens the Notification Center RBAC grant beyond super_admin (G4-grant-notifications-view-permission), closing another slice of the zero-seeded gap flagged when that UI shipped (item 87). Target role confirmed directly via AskUserQuestion after presenting four possible next steps for the module. Purely additive seed data, no application code changed. Reviewed with a direct security-focused read-through (RBAC change, full-tier by default per the 2026-08-27 standing rule) -- 0 findings. Verified via a real migrate up/down/up round-trip against a local disposable database only, never production. This gate approval does not authorize opening a PR, merging, or running the migration against production -- pushing the branch is executed alongside it per the combined instruction.",
-      "project_version_before": 154,
-      "project_version_after": 155,
+      "project_version_before": 156,
+      "project_version_after": 157,
       "timestamp": "2026-09-07T00:00:00Z"
     },
     {
@@ -3975,8 +4007,8 @@
       "actor": "WebDesk Solution",
       "actor_type": "human",
       "details": "Branch grant-notifications-view-owner-growth-approver pushed to origin under the same combined \"Approve as-is, gate it, and push the branch\" instruction. Not yet opened as a PR or merged -- each remains its own separate, not-yet-requested authorization, per this project's standing \"no auto-merge\" rule. Running the migration against production also remains the user's own action, per this project's standing credential-handling discipline.",
-      "project_version_before": 155,
-      "project_version_after": 156,
+      "project_version_before": 157,
+      "project_version_after": 158,
       "timestamp": "2026-09-07T00:00:00Z"
     }
   ],
