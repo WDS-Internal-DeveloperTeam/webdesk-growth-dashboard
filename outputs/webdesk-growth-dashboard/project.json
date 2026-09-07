@@ -1498,6 +1498,20 @@
       "record": "docs/project-state/module-integrations-approval-checklist.md",
       "notes": "Integrations module backend (registry key integrations, module #41) -- record-keeping-only status/config tracking for GitHub/WordPress/Vercel Blob/PostgreSQL/SMTP/Sentry/uptime/vulnerability-scan integrations. Four tables (integrations, integration_environments, webhook_events, secret_metadata), reusing the seeded system_settings RBAC group verbatim, migrations 00122/00123 (renumbered from 00120/00121 after merging origin/main, which had concurrently claimed those numbers for the System Settings module). Independent code review (high effort, 8-angle finder pass) found 10 candidates (3 CONFIRMED, 7 PLAUSIBLE); 8 fixed -- most severe: two sub-resource list routes had no pagination wiring at all, an unbounded findAll with a dead, already-written query schema, fixed with real limit/offset support and 2 new e2e regression tests. Security review (full tier, a new RBAC-gated endpoint class) found 0 findings above threshold. 2 findings left as accepted, tracked debt (a pre-existing repo-wide RBAC-action-naming inconsistency; an already-accepted assert*Exists() duplication pattern). Verified: 1894/1894 dashboard-api unit tests, 28/28 packages/database unit tests, 29/29 packages/database integration tests, 25/25 dashboard-api e2e tests -- all independently re-run against a real local disposable PostgreSQL 17 database. Backend only -- no dashboard-web UI yet, matching every prior module precedent.",
       "scope_excludes": "This gate approval does not itself authorize a production deployment beyond the merge itself -- given under the combined \"gate it, push, open PR, and merge\" instruction, all four steps are executed together under that explicit combined authorization."
+    },
+    {
+      "id": "G4-dashboard-web-integrations",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-integrations",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-07T00:00:00Z",
+      "approved_commit": "dashboard-web-integrations (staged, pre-commit)",
+      "record": "docs/project-state/dashboard-web-integrations-approval-checklist.md",
+      "notes": "dashboard-web Integrations UI, closing this module's last named gap on top of the already-gated, already-live backend (G4-integrations, PR #123). List/create/detail/edit routes under /integrations, an IntegrationVerifyAction and IntegrationActiveToggle on the detail page, and three sub-resource sections (real CRUD for environments and secret metadata, read-only for webhook events). Reviewed at light tier per the 2026-08-27 standing rule -- 1 finding fixed (a genuine no-op tolerateDiscard() wrap). No secret value is ever rendered or accepted anywhere, confirmed by direct code read. Security review skipped -- no new endpoint, no new sink. 165/165 dashboard-web unit test files (2040/2040 tests), typecheck clean across 4 packages, production build clean with all 4 routes present.",
+      "scope_excludes": "This gate approval does not itself authorize a production deployment beyond the merge itself -- given under the combined \"gate it, push, open PR, and merge\" instruction, all four steps are executed together under that explicit combined authorization."
     }
   ],
   "budget": {
@@ -3841,7 +3855,25 @@
       "project_version_before": 146,
       "project_version_after": 147,
       "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "completed required second-role human review of dashboard-web-integrations",
+      "actor": "Jitesh D",
+      "actor_type": "human",
+      "details": "Reviewed the dashboard-web Integrations UI, closing this module's last named gap on top of the already-gated, already-live backend (G4-integrations, PR #123). List/create/detail/edit routes under /integrations, an IntegrationVerifyAction and IntegrationActiveToggle on the detail page, and three sub-resource sections (real CRUD for environments and secret metadata, read-only for webhook events). Reviewed at light tier per the 2026-08-27 standing rule -- a small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new endpoint. A direct read-through pass found 1 finding, fixed: getIntegrationDetail() wrapped each sub-resource fetch in both tolerateDiscard() and a .catch(), but the .catch() alone already prevents rejection, making the wrapper a genuine no-op -- removed, doc comments corrected. No secret value is ever rendered or accepted anywhere, confirmed by direct code read. Security review skipped per the same standing rule -- no new endpoint, no new sink. Jitesh D returned Approves, no disputes.",
+      "project_version_before": 147,
+      "project_version_after": 148,
+      "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "approved gate G4-dashboard-web-integrations for dashboard-web-integrations -- decision: CONFIRM",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-integrations approved (WebDesk Solution, CONFIRM) for the dashboard-web Integrations UI -- clean pass, not an override, since the second-role human review (Jitesh D, Approves) was already complete before the gate was requested. See docs/project-state/dashboard-web-integrations-approval-checklist.md for the full record.",
+      "project_version_before": 148,
+      "project_version_after": 149,
+      "timestamp": "2026-09-07T00:00:00Z"
     }
   ],
-  "current_gate": "G4-integrations"
+  "current_gate": "G4-dashboard-web-integrations"
 }

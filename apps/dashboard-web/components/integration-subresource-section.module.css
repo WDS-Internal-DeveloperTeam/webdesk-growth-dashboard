@@ -1,0 +1,187 @@
+/* Shared by integration-environments-section.tsx, integration-secret-metadata-section.tsx, and
+ * integration-webhook-events-section.tsx — mirrors project-subresource-section.module.css's own
+ * shape exactly, composing from integration-form.module.css instead of project-form.module.css.
+ * All three render the same list-of-rows-plus-add-form shape (webhook events omits the
+ * edit/delete-button/add-form classes it doesn't need — read-only, D-scope). */
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--webdesk-dashboard-space-md);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  font-size: var(--webdesk-dashboard-font-size-sm);
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 10rem;
+  flex: 1;
+}
+
+.primaryText {
+  color: var(--webdesk-dashboard-color-foreground);
+  word-break: break-word;
+}
+
+.secondaryText {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  word-break: break-word;
+}
+
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.actionButton {
+  flex-shrink: 0;
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: 1px solid var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+  padding: 0.3rem var(--webdesk-dashboard-space-sm);
+  cursor: pointer;
+}
+
+.actionButton:hover,
+.actionButton:focus-visible {
+  background: var(--webdesk-dashboard-color-muted-surface);
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.deleteButton {
+  composes: actionButton;
+  color: var(--webdesk-dashboard-color-danger);
+  border-color: var(--webdesk-dashboard-color-danger);
+}
+
+.deleteButton:hover,
+.deleteButton:focus-visible {
+  background: var(--webdesk-dashboard-color-danger-surface);
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  width: 100%;
+}
+
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-sm);
+  padding: var(--webdesk-dashboard-space-sm) 0.75rem;
+  border: 1px dashed var(--webdesk-dashboard-color-border);
+  border-radius: var(--webdesk-dashboard-radius-sm);
+}
+
+.addFormTitle {
+  font-size: var(--webdesk-dashboard-font-size-xs);
+  font-weight: var(--webdesk-dashboard-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0;
+}
+
+.fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.fieldRow > * {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webdesk-dashboard-space-xs);
+}
+
+.label {
+  composes: label from "./integration-form.module.css";
+}
+
+.input {
+  composes: input from "./integration-form.module.css";
+}
+
+.textarea {
+  composes: textarea from "./integration-form.module.css";
+}
+
+.select {
+  composes: select from "./integration-form.module.css";
+}
+
+.helperText {
+  composes: helperText from "./integration-form.module.css";
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: var(--webdesk-dashboard-space-sm);
+}
+
+.submitButton {
+  composes: submitButton from "./integration-form.module.css";
+}
+
+.cancelButton {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cancelButton:focus-visible {
+  outline: 2px solid var(--webdesk-dashboard-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.error {
+  composes: error from "./error-message.module.css";
+  padding: var(--webdesk-dashboard-space-xs) var(--webdesk-dashboard-space-sm);
+  margin-top: var(--webdesk-dashboard-space-xs);
+}
+
+.muted {
+  font-size: var(--webdesk-dashboard-font-size-sm);
+  color: var(--webdesk-dashboard-color-foreground-muted);
+  margin: 0 0 var(--webdesk-dashboard-space-sm);
+}

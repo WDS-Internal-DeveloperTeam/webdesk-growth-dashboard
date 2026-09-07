@@ -5742,7 +5742,59 @@ module-registry` clean (43 modules, 21 permission groups), `pnpm audit` 0 vulner
     correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Integrations
     module backend is now genuinely live in production.** No `dashboard-web` UI exists yet for
     this module — a separate, not-yet-requested next step, matching every prior module's own
-    backend-first precedent.
+    backend-first precedent. **Update (2026-09-07): the `dashboard-web` UI has since been built,
+    reviewed, and gated — see item 94 below.**
+
+94. **`dashboard-web` Integrations UI — built, reviewed, gated (2026-09-07).** Closes this
+    module's last named gap, following the backend's own build-to-production arc (PR #123, item
+    93 above). Built directly on the explicit "Start the dashboard-web UI for it" instruction. No
+    approved wireframe exists for this module — the IA mirrors the real backend contract directly
+    (routes/DTOs read first, not assumed), matching every prior module's own "smallest honest
+    reading" precedent for an unsourced screen. Four routes under `app/(shell)/integrations/`
+    (list, create, detail, edit), mirroring Brand Library's own file layout — the closest sibling
+    (a single primary table, no bespoke workflow, a distinct `M`-gated toggle action). The detail
+    page composes an Identity section, a Status section with a new `IntegrationVerifyAction`
+    (`POST /integrations/:id/verify`) and `IntegrationActiveToggle` (`POST
+/integrations/:id/toggle-active`, mirroring `ContentTemplatePublishActions`' own toggle shape),
+    and three real sub-resource sections mirroring `ProjectEnvironmentsSection`'s established CRUD
+    pattern: `IntegrationEnvironmentsSection` and `IntegrationSecretMetadataSection` (both full
+    create/list/update/delete — the secret-metadata section never renders or accepts a secret
+    value, only `secretName`/`storageLocation`/rotation timestamps/notes, matching the backend's
+    own `SecretMetadataEntity` exactly) and `IntegrationWebhookEventsSection` (deliberately
+    **read-only**, no create/update/delete UI — the backend's own bare `POST /webhook-events`
+    route is a receiver-shaped endpoint with no real receiver wired up yet, and building a manual
+    "log a fake webhook" form was judged a control surface the design doesn't call for; a
+    deliberate, flagged scope reduction, not an oversight). `configReference`/`notes` stay plain
+    `<input>`/`<textarea>` fields, not `RichTextEditor` — an explicit, documented exception to the
+    2026-08-22 standing rule, since the backend's own DTOs never sanitize these fields as HTML
+    (plain ops metadata), matching the identical, already-established exception for Ready for
+    Claude Queue's own long-text fields. New `packages/shared-types` additions
+    (`IntegrationProvider`/`IntegrationStatus`/`IntegrationVerificationResult`/`Integration`/
+    `IntegrationEnvironment`/`WebhookEventProcessingStatus`/`WebhookEvent`/`SecretMetadata`)
+    mirror `packages/database/src/integrations/entities.ts` exactly. Built by a background agent
+    with a fully-specified prompt, then independently re-verified in full by the orchestrating
+    session — every high-risk file read directly, every validation command re-run fresh rather
+    than trusted from the agent's own report: typecheck clean across `@webdesk/shared-types`/
+    `dashboard-web`/`dashboard-api`/`dashboard-worker` (all 4), lint + CSS-token-check clean (112
+    files), 165/165 `dashboard-web` unit test files (2040/2040 tests, matching the agent's own
+    count exactly), a clean production build with all 4 new routes present. **Reviewed at light
+    tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a direct
+    read-through pass of every new component/route/lib file found **1 finding, fixed**:
+    `getIntegrationDetail()` wrapped each of its three sub-resource fetches in both
+    `tolerateDiscard()` AND a `.catch()`, but the `.catch()` alone already converts every
+    rejection into a resolved `[]`, so the promise handed to `tolerateDiscard()` could never
+    reject — a genuine no-op, and its own doc comment credited the wrong mechanism for the real
+    failure isolation. Fixed by removing the redundant wrapping and correcting the doc comments;
+    re-validated (165/165 test files, 2040/2040 tests unchanged, confirming the fix was
+    behavior-preserving). Security review skipped per the same standing rule — no new endpoint, no
+    new sink; every rendered field is plain JSX text, never `dangerouslySetInnerHTML`. See
+    `docs/implementation/module-integrations.md`'s `## dashboard-web UI` section and
+    `docs/project-state/dashboard-web-integrations-approval-checklist.md`. **Jitesh D reviewed
+    the branch and returned "Approves,"** no disputes raised. **The gate
+    (G4-dashboard-web-integrations) was then separately requested and approved** — WebDesk
+    Solution, decision CONFIRM, on branch `dashboard-web-integrations` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-integrations`).
 
 ## Recent decisions
 
