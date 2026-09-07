@@ -44,9 +44,10 @@ Scan Center's/Ready for Claude Queue's own precedent of not building an executio
 doesn't exist, and System Settings' own precedent of not duplicating a table that already lives
 elsewhere.
 
-**No new table, no new RBAC migration.** Migration `00122` marks
-`module_registry.implementation_status = 'in_development'` for `audit_logs_and_system_health` —
-the only schema change in this pass. No confidentiality/redaction mechanism beyond what
+**No new table, no new RBAC migration.** Migration `00122` (later renumbered to `00124` — see the
+As-built section) marks `module_registry.implementation_status = 'in_development'` for
+`audit_logs_and_system_health` — the only schema change in this pass. No confidentiality/redaction
+mechanism beyond what
 `AuditEventEntity` already carries (this module surfaces `beforeState`/`afterState` unredacted,
 matching Decision and Activity Log's own already-accepted precedent).
 
@@ -71,13 +72,17 @@ naming were swapped.
   (9 unit tests, mirrors `decision-and-activity-log.dto.spec.ts`)
 - `apps/dashboard-api/test/audit-logs-and-system-health.e2e-spec.ts` (8 e2e tests, real disposable
   database + real seeded RBAC, mirrors `decision-and-activity-log.e2e-spec.ts`)
-- `packages/database/src/migrations/00122-mark-audit-logs-and-system-health-in-development.ts` —
+- `packages/database/src/migrations/00124-mark-audit-logs-and-system-health-in-development.ts` —
   the only schema change: marks `module_registry.implementation_status = 'in_development'` for
-  `audit_logs_and_system_health`. Numbered `00122` (not `00120`, the next number after the
-  branch's own base `00119`) per this task's own explicit instruction, since `00120`/`00121` were
-  reserved by other concurrent work at build time (confirmed: a concurrently-built
+  `audit_logs_and_system_health`. Originally numbered `00122` (not `00120`, the next number after
+  the branch's own base `00119`) per this task's own explicit instruction, since `00120`/`00121`
+  were reserved by other concurrent work at build time (confirmed: a concurrently-built
   `module-system-settings` branch, discovered mid-build — see "Working-directory sharing incident"
-  below — used exactly those two numbers for its own migration).
+  below — used exactly those two numbers for its own migration). **Renumbered a second time, to
+  `00124`, after opening the PR** — a real, independently-built Integrations module (module #41)
+  merged to `main` claiming `00122`/`00123` for its own migrations, discovered when the PR's CI
+  checks never ran (`mergeStateStatus: DIRTY`, `mergeable: CONFLICTING`) — see the "Second
+  renumbering" subsection below.
 
 ### Files changed
 
@@ -205,3 +210,64 @@ report, since this build did not delegate to a subagent).
    (documented above), not a truncated one.
 2. Nothing else deviated — the file structure, naming, migration content, route shape, and test
    coverage all mirror Decision and Activity Log file-for-file as instructed.
+
+### Second renumbering — a real collision with the concurrently-built Integrations module
+
+After the gate was approved and PR #126 opened, CI never actually ran on the PR —
+`gh pr view --json mergeable,mergeStateStatus` showed `mergeable: CONFLICTING`,
+`mergeStateStatus: DIRTY`, which silently prevents GitHub Actions from even creating a
+`pull_request` run (the same class of gotcha this project's own history already documents once,
+for the Help Center PR #118). Fetching `origin/main` showed it had moved forward: a separate,
+independently-built **Integrations** module (module #41, PR #123) had merged, and its own
+migrations had themselves been renumbered `00120`/`00121` → `00122`/`00123` after a real
+collision with System Settings — landing on exactly the same `00122` this branch's own migration
+used.
+
+Merged `origin/main` into this branch. `CLAUDE.md` and `apps/dashboard-api/src/app.module.ts`
+merged automatically; `outputs/webdesk-growth-dashboard/project.json` conflicted (both branches
+had appended `gates[]`/`audit_log` entries at the same array position) — resolved by
+reconstructing the file programmatically from the two branches' pre-merge tips rather than
+hand-editing conflict markers in a ~4,000-line JSON file: took `origin/main`'s full `gates[]`/
+`audit_log` as the base (it already carries the Integrations module's own entries), then appended
+this branch's own new entries (`G4-audit-logs-and-system-health`'s gate object, the
+`merged_to_main`/`gate_approved` audit-log entries), re-sequencing `project_version_before`/
+`_after` to continue main's own counter. Verified the result is valid JSON and that no gate/
+audit-log entry was lost from either side before proceeding.
+
+Renumbered this branch's own migration `00122-mark-audit-logs-and-system-health-in-development.ts`
+→ `00124-mark-audit-logs-and-system-health-in-development.ts` (`git mv`, content unchanged — the
+file has no hardcoded migration-number string inside it) and updated every reference to the old
+number across `CLAUDE.md`, this doc, and the approval checklist (leaving quotes of the user's own
+original "number the migration from 00122" instruction untouched, and leaving every reference to
+Integrations' own real `00122`/`00123` migrations alone).
+
+**A stale compiled `dist/` artifact caused a real false-duplicate failure along the way** — the
+exact class of gotcha this project's own history already documents for the Integrations module's
+own renumbering: `tsc` doesn't delete a compiled `.js` file for a source file that's since been
+renamed/removed, so `packages/database/dist/migrations/` still held a compiled
+`00122-mark-audit-logs-and-system-health-in-development.js` alongside the new
+`00124-mark-audit-logs-and-system-health-in-development.js`, and the migration runner (which reads
+`dist/`, not `src/`) applied both — surfacing as `Applied 125 migration(s)` including a
+duplicate-looking `00122-mark-audit-logs-and-system-health-in-development` entry alongside
+Integrations' own genuine `00122-create-integrations`. Diagnosed by listing
+`packages/database/dist/migrations/` directly; fixed by `rm -rf packages/database/dist
+packages/database/dist-cjs` and rebuilding — not a defect in the migration content itself.
+
+**Full re-validation after both fixes**, against a fresh local disposable PostgreSQL 17 database
+(`webdesk_verify_alsh2`):
+
+- `packages/database`/`dashboard-api` typecheck and lint (`--max-warnings=0`) — clean.
+- Migration `up`: **Applied 124 migration(s)**, clean, no duplicates. Down/up round-trip on
+  `00124` specifically: clean.
+- `validate:module-registry`: "43 modules, 21 permission groups, all references resolve" —
+  unaffected.
+- `dashboard-api` unit tests: **1927/1927 passed, 124/124 files** (up from 1885/119 — the
+  difference is Integrations' own 42 new tests, now present on this branch after the merge, not a
+  regression).
+- `dashboard-api` full e2e/integration suite: **886/886 passed, 47/47 files** (up from 861/46 for
+  the same reason).
+- `pnpm audit`: "No known vulnerabilities found."
+- `prettier --check` on every changed file: clean.
+
+No code inside `audit-logs-and-system-health.*` itself changed during this renumbering — only the
+migration's filename and every doc/CLAUDE.md/`project.json` reference to it.

@@ -48,4 +48,5 @@ export * from "./change-center/index.js";
 export * from "./import-and-export-center/index.js";
 export * from "./release-center/index.js";
 export * from "./help-center/index.js";
+export * from "./integrations/index.js";
 export * from "./system-settings/index.js";
