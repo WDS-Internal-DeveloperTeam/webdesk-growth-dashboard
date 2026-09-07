@@ -4,27 +4,30 @@
 correctness/efficiency level, 7 PLAUSIBLE; 8 fixed, 2 accepted as tracked debt matching
 already-established codebase patterns). Security review complete (0 findings above threshold).
 Required second-role human review complete — Jitesh D, "Approves," no disputes raised. Gate
-`G4-integrations` approved (WebDesk Solution, CONFIRM). Push, PR, and merge authorized under the
-combined "gate it, push, open PR, and merge" instruction — see the "Sign-off" section below for
-the exact commit/PR/merge record once each step completes.
+`G4-integrations` approved (WebDesk Solution, CONFIRM). Pushed to `origin`, opened as
+[PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123), all 14
+CI checks green, merged as `6d912264df6ff92b99fc74db4cfc30e3709f1e66`, and **verified live in
+production.** This slice's build-to-production arc is complete (backend only — no `dashboard-web`
+UI exists yet, matching every prior module's own backend-first precedent).
 
 ## Completion condition
 
 Every item below must be genuinely true, verified against real evidence, before a gate decision
 for this slice can be requested.
 
-| #   | Item                                       | Status                                                                                                                                                                                                                                                                                                                                                                                          |
-| --- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Authorization to build                     | ✅ Explicit "start integrations module" instruction — module #41 on the Recommended Module Roadmap, confirmed Wave 1 (no dependencies) in `docs/phase-plans/module-implementation-roadmap.md`                                                                                                                                                                                                   |
-| 2   | Genuine scoping confirmed                  | ✅ Two genuine design forks confirmed directly with the user (`AskUserQuestion`) before any code was written: execution scope (record-keeping only, matching Scan Center/Technical Center/Ready for Claude Queue's own precedent — no real outbound calls) and table scope (all 4 named tables built now, not deferred) — see `docs/implementation/module-integrations.md`'s `## Scope` section |
-| 3   | Required tests pass                        | ✅ 1894/1894 `dashboard-api` unit tests (42 new), 28/28 `packages/database` unit tests, 29/29 `packages/database` integration tests, 25/25 `dashboard-api` e2e tests (23 original + 2 new pagination regression tests) — all independently re-run by the orchestrating session against a real local disposable PostgreSQL 17 database, not trusted from the build agent's own report            |
-| 4   | Full validation clean                      | ✅ typecheck/lint/prettier all clean (independently re-run); migration `00122`/`00123` down/down/up round-trip clean (121 migrations, independently re-run, both new indexes confirmed present via a direct `pg_indexes` query); `validate:module-registry` — 43 modules, 21 permission groups, unaffected; `pnpm audit --audit-level=high` — 0 vulnerabilities                                 |
-| 5   | Independent code review complete           | ✅ This project's own `code-review` skill (high effort, 8-angle finder pass, 1-vote verification) — 10 candidates kept in the final report (3 CONFIRMED, 7 PLAUSIBLE). 8 fixed, 2 accepted as tracked debt — see "Independent code review — summary" below                                                                                                                                      |
-| 6   | Security review complete                   | ✅ `security-review` skill run separately (full tier — a new RBAC-gated endpoint class) — 0 findings above threshold                                                                                                                                                                                                                                                                            |
-| 7   | Known out-of-scope gaps flagged, not fixed | ✅ 2 findings left open, each recorded with an explicit reason (a real, pre-existing, repo-wide RBAC-naming inconsistency predating this branch; an already-accepted duplication pattern present across ≥10 sibling `assert*Exists()` helpers) — see below                                                                                                                                      |
-| 8   | Live end-to-end verified                   | ✅ Independently re-verified by the orchestrating session at every step — every high-risk file read directly (RBAC decorator placement, IDOR scoping, unique-constraint handling, both `packages/database` barrel exports), every test suite re-run fresh, both new indexes confirmed present via a direct database query                                                                       |
-| 9   | Documentation updated                      | ✅ `docs/implementation/module-integrations.md` — single-file `## Scope` (written before code) + `## As-built` (appended after), including the code-review and security-review outcomes                                                                                                                                                                                                         |
-| 10  | Exact branch verified and recorded         | Branch `module-integrations`, staged and ready for gate/push/PR — not yet committed                                                                                                                                                                                                                                                                                                             |
+| #   | Item                                        | Status                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Authorization to build                      | ✅ Explicit "start integrations module" instruction — module #41 on the Recommended Module Roadmap, confirmed Wave 1 (no dependencies) in `docs/phase-plans/module-implementation-roadmap.md`                                                                                                                                                                                                                                         |
+| 2   | Genuine scoping confirmed                   | ✅ Two genuine design forks confirmed directly with the user (`AskUserQuestion`) before any code was written: execution scope (record-keeping only, matching Scan Center/Technical Center/Ready for Claude Queue's own precedent — no real outbound calls) and table scope (all 4 named tables built now, not deferred) — see `docs/implementation/module-integrations.md`'s `## Scope` section                                       |
+| 3   | Required tests pass                         | ✅ 1914/1914 `dashboard-api` unit tests, 28/28 `packages/database` unit tests, 29/29 `packages/database` integration tests, 25/25 `dashboard-api` e2e tests (23 original + 2 new pagination regression tests) — all independently re-run by the orchestrating session against a real local disposable PostgreSQL 17 database, not trusted from the build agent's own report, including a full re-run after the post-merge renumbering |
+| 4   | Full validation clean                       | ✅ typecheck/lint/prettier all clean (independently re-run); migration `00122`/`00123` round-trip clean against a freshly reset 123-migration database (both new indexes confirmed present via a direct `pg_indexes` query); `validate:module-registry` — 43 modules, 21 permission groups, unaffected; `pnpm audit --audit-level=high` — 0 vulnerabilities                                                                           |
+| 5   | Independent code review complete            | ✅ This project's own `code-review` skill (high effort, 8-angle finder pass, 1-vote verification) — 10 candidates kept in the final report (3 CONFIRMED, 7 PLAUSIBLE). 8 fixed, 2 accepted as tracked debt — see "Independent code review — summary" below                                                                                                                                                                            |
+| 6   | Security review complete                    | ✅ `security-review` skill run separately (full tier — a new RBAC-gated endpoint class) — 0 findings above threshold                                                                                                                                                                                                                                                                                                                  |
+| 7   | Known out-of-scope gaps flagged, not fixed  | ✅ 2 findings left open, each recorded with an explicit reason (a real, pre-existing, repo-wide RBAC-naming inconsistency predating this branch; an already-accepted duplication pattern present across ≥10 sibling `assert*Exists()` helpers) — see below                                                                                                                                                                            |
+| 8   | Live end-to-end verified                    | ✅ Independently re-verified by the orchestrating session at every step — every high-risk file read directly (RBAC decorator placement, IDOR scoping, unique-constraint handling, both `packages/database` barrel exports), every test suite re-run fresh, both new indexes confirmed present via a direct database query; `dashboard-api`'s `/health` confirmed the exact merged commit serving in production                        |
+| 9   | Documentation updated                       | ✅ `docs/implementation/module-integrations.md` — single-file `## Scope` (written before code) + `## As-built` (appended after), including the code-review, security-review, and post-merge renumbering outcomes                                                                                                                                                                                                                      |
+| 10  | Exact commit/PR/merge verified and recorded | Branch `module-integrations`, merged as [PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123), merge commit `6d912264df6ff92b99fc74db4cfc30e3709f1e66`, all 14 CI checks green                                                                                                                                                                                                                   |
+| 11  | Live in production, independently verified  | ✅ `dashboard-api`'s `/health` returned `build.commitSha == 6d912264df6ff92b99fc74db4cfc30e3709f1e66`, confirming the exact merged commit is what's serving; `GET /integrations` returned a clean `401` (route live, `SessionGuard` enforcing — not a `404`); `dashboard-web`'s `/` still resolves (307) to `/auth/sign-in` for an unauthenticated visitor, confirming the session gate is intact                                     |
 
 ## Forbidden-actions check
 
@@ -109,3 +112,33 @@ before the gate was requested) — see `outputs/webdesk-growth-dashboard/project
 **"Gate it, push, open PR, and merge" was then given as one combined instruction** — commit,
 push to `origin`, open a PR, wait for CI, and merge each executed under that same explicit
 authorization.
+
+## A real migration-number collision, resolved
+
+Pushing the branch and opening [PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123)
+initially showed `mergeable: CONFLICTING` with no CI run at all — the exact pattern this project's
+own history documents: a real merge conflict silently prevents GitHub Actions from even creating a
+`pull_request` run. `git fetch origin main` confirmed the cause: the System Settings module (PR
+#122) had merged concurrently and independently claimed migration numbers `00120`/`00121` — the
+same numbers this branch's own migrations used. Resolved by merging `origin/main` (only
+`packages/database/src/index.ts`/`index.cjs.ts`'s barrel exports and `project.json`'s
+`gates[]`/`audit_log` arrays conflicted, both resolved by keeping both sides' content and
+re-sequencing) and renumbering this branch's own migrations `00120`/`00121` → `00122`/`00123`,
+updating every internal reference (doc comments, test files, `CLAUDE.md`, this checklist). A stale
+compiled `dist/` build artifact from before the rename briefly caused a false duplicate-migration
+failure on the first re-validation attempt — diagnosed and cleared (`rm -rf dist dist-cjs` before
+rebuilding), not a defect in the migration content itself. Fully re-verified against a freshly
+reset local disposable PostgreSQL 17 database: a clean 123-migration round-trip, 1914/1914
+`dashboard-api` unit tests, 29/29 `module-integrations` integration tests, 25/25 module e2e tests,
+`validate:module-registry` clean, `pnpm audit` 0 vulnerabilities — before pushing again. All 14 CI
+checks then confirmed green.
+
+**"Merge PR #123" was then executed** — merged with a real merge commit (not squash/rebase),
+matching every prior merge in this project's history — merge commit
+`6d912264df6ff92b99fc74db4cfc30e3709f1e66`. Both Vercel projects auto-deployed on push to `main`
+and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+`/health` returned `build.commitSha == 6d912264df6ff92b99fc74db4cfc30e3709f1e66`, confirming the
+exact merged commit is what's serving; `GET /integrations` returned a clean `401` (route live,
+`SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed); and
+`dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`.
+**The Integrations module backend is now genuinely live in production.**
