@@ -89,10 +89,13 @@ backend-first precedent.
 
 ## As-built
 
-Built directly (not delegated) on branch `module-integrations`. Migrations `00120`
+Built directly (not delegated) on branch `module-integrations`. Migrations `00122`
 (`create-integrations` — all four tables, indexes, the `pg_trgm` GIN index on `display_name`, plain
-btree indexes on every sub-resource's `integration_id` FK column) and `00121`
-(`mark-integrations-in-development`).
+btree indexes on every sub-resource's `integration_id` FK column) and `00123`
+(`mark-integrations-in-development`) — renumbered from `00120`/`00121` after merging `origin/main`,
+which had concurrently claimed those numbers for the System Settings module (PR #122). Every
+internal reference (doc comments, test files, this doc) updated to match; the renumbering was
+independently re-verified against a fresh local database (see "Post-merge re-validation" below).
 
 **`packages/database/src/integrations/`** — `entities.ts` (plain TS types), `models.ts` (Sequelize
 `define()`s, `webhook_events` uses `updatedAt: false` to keep only `created_at` — genuinely
@@ -135,7 +138,7 @@ A real local disposable PostgreSQL 17 instance was available in this environment
 - **`pnpm audit --audit-level=high`**: 0 known vulnerabilities.
 - **`boundaries:check`** (dependency-cruiser, ADR-0006): 0 errors (10 pre-existing warnings on
   files this branch never touched).
-- **Migration round-trip** (real database): `migrate up` → applied `00120`/`00121` cleanly;
+- **Migration round-trip** (real database): `migrate up` → applied `00122`/`00123` cleanly;
   `migrate:down` twice → reverted both cleanly, `migrate:status` confirmed both pending again;
   `migrate up` again → re-applied cleanly, `migrate:status` confirmed `Executed (121) / Pending
 (0): none`.
@@ -190,7 +193,7 @@ PLAUSIBLE. **8 fixed**, 2 left as accepted, tracked debt:
   solely on the repository's own null-return path; two unit tests updated to assert the repository
   method itself is called with the missing id (not a redundant pre-fetch).
 - **CONFIRMED**: `IntegrationRepository.list()` orders by `updated_at DESC, id ASC` with no
-  supporting index. Fixed — `integrations_updated_at_id_idx` added to migration `00120` (amended,
+  supporting index. Fixed — `integrations_updated_at_id_idx` added to migration `00122` (amended,
   not superseded — it hadn't shipped anywhere yet), verified present in the real database.
 - **PLAUSIBLE, fixed**: the 3 sub-resource repositories hand-typed their `create()`/`update()`
   input shapes instead of deriving via `Omit<>`/`Pick<>` from the entity, unlike

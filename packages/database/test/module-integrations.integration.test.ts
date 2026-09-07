@@ -10,7 +10,7 @@ import { closeConnection } from "../src/connection.js";
 import { buildMigrator } from "../src/migrate.js";
 
 /**
- * Exercises the Integrations schema (migration `00120`) against a REAL, disposable PostgreSQL
+ * Exercises the Integrations schema (migration `00122`) against a REAL, disposable PostgreSQL
  * database. Mirrors ../test/module-brand-library.integration.test.ts's/
  * ../test/module-scan-center.integration.test.ts's own structure — real create/read/update/delete
  * round trips, the unique-constraint race on `integrations.public_id`, the FK-existence

@@ -1,6 +1,6 @@
 /**
  * The Integrations module foundation — persistence-layer shapes for `integrations`,
- * `integration_environments`, `webhook_events`, and `secret_metadata` (migration `00120`,
+ * `integration_environments`, `webhook_events`, and `secret_metadata` (migration `00122`,
  * `docs/implementation/module-integrations.md`, module #41). Record-keeping only (D1) — no real
  * outbound calls to any external service are made anywhere in this package.
  */

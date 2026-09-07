@@ -3116,3 +3116,52 @@ export interface HelpArticle {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+/**
+ * Users, Roles and Permissions (module #39, `users_roles_permissions`) — an admin surface layered
+ * on top of the already-built Phase 1D RBAC core, not a redesign of it. Two independent read
+ * surfaces: a real user directory (list/search every account regardless of status, view a single
+ * user's full role-assignment history, activate/deactivate) and a read-only global permission
+ * matrix (7 roles × 21 permission-group modules × every global-scope grant). No grant-editing
+ * endpoint exists — the matrix itself stays migration-seeded, confirmed with the project owner
+ * before building. Mirrored exactly from `apps/dashboard-api/src/users-roles-permissions/`'s own
+ * `UserDetail`/`PermissionMatrix` shapes — `AdminUser` deliberately named distinctly from the
+ * existing picker-only `UserSummary` above (narrower, active-only, no `accountStatus`/
+ * `lastLoginAt`) so the two are never confused for each other.
+ */
+export interface AdminUser {
+  readonly id: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly accountStatus: "active" | "disabled";
+  readonly lastLoginAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface AdminUserRoleAssignment {
+  readonly roleId: string;
+  readonly roleKey: string;
+  readonly roleName: string;
+  readonly projectId: string | null;
+}
+
+export interface AdminUserDetail {
+  readonly user: AdminUser;
+  readonly roleAssignments: readonly AdminUserRoleAssignment[];
+}
+
+export interface PermissionMatrixGrant {
+  readonly roleId: string;
+  readonly moduleId: string;
+  readonly action: string;
+}
+
+/** Reuses `RoleSummary`/`ModuleSummary` above verbatim (the exact shapes
+ *  `RoleAssignmentService.listRoles()`/`CatalogService.listPermissionGroups()` already return),
+ *  rather than declaring narrower duplicate types just for this matrix. */
+export interface PermissionMatrix {
+  readonly roles: readonly RoleSummary[];
+  readonly modules: readonly ModuleSummary[];
+  readonly grants: readonly PermissionMatrixGrant[];
+}

@@ -5553,8 +5553,115 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     visitor. **The Users, Roles and Permissions module backend is now genuinely live in
     production.** No `dashboard-web` UI exists yet for this module — a separate,
     not-yet-requested next step, matching every prior module's own backend-first precedent.
+    **Update (2026-09-07): the `dashboard-web` UI has since been built and gated — see item 91
+    below.**
 
-91. **Integrations module backend — built, reviewed, gated (2026-09-07).** Module #41 on the
+91. **`dashboard-web` Users, Roles and Permissions UI — built, reviewed, gated, pushed
+    (2026-09-07).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #120, item 90 above). Not started automatically — built directly
+    on the explicit "Start Users, Roles and Permissions UI" instruction. Mirrors the scope already
+    confirmed for the backend: a real user directory (list/search every account status, per-user
+    detail with every role assignment split global/project-scoped, activate/deactivate) plus a
+    read-only global permission-matrix viewer — no new-user creation, no grant editing. New
+    `packages/shared-types` `AdminUser`/`AdminUserRoleAssignment`/`AdminUserDetail`/
+    `PermissionMatrixGrant`/`PermissionMatrix`, mirrored from the backend's own `UserDetail`/
+    `PermissionMatrix` shapes (deliberately named distinctly from the existing picker-only
+    `UserSummary`, so the two are never confused for each other). `lib/users-roles-permissions{-
+query,}.ts` mirror the established zero-non-type-import-file split; `getAdminUsers()` uses the
+    backend's real `total` directly rather than the "+1 row" technique every sibling list fetch
+    needs, since this is the one endpoint that actually returns a count. `UserStatusActions`
+    mirrors `HelpCenterPublishActions` — only Deactivate is confirmed (`window.confirm`), since the
+    backend revokes every one of the target's sessions on a real transition to `disabled`;
+    self-deactivation and last-active-Super-Admin protection are both left entirely to the
+    backend's own real enforcement (403/409, surfaced via `postMutation()`'s error message) rather
+    than guessed at client-side. Three routes under `app/(shell)/users-roles-and-permissions/`
+    (list, `[userId]` detail, `matrix`) at the module registry's own seeded `route` field; the
+    matrix page reuses the exact `V`/`C`/`E`/`S`/`R`/`A`/`P`/`L`/`X`/`M` letter codes
+    `packages/database/src/migrations/00013-seed-rbac-matrix.ts`'s own `LETTER_ACTIONS` map uses.
+    Every backend contract (`users-directory.controller.ts`, `permission-matrix.controller.ts`,
+    `users-roles-permissions.dto.ts`, both services) was read directly before writing against it.
+    1991/1991 `dashboard-web` unit tests overall (27 new: 6 status-actions, 21 lib);
+    typecheck/lint (`--max-warnings=0`)/CSS-token-check (108 files)/`next build` (all 3 routes
+    present)/prettier all clean — independently re-run by the orchestrating session. **Reviewed at
+    light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a small,
+    frontend-only slice (plus additive shared-types) consuming an already-reviewed, already-gated
+    backend with no new endpoint. A direct read-through pass verified the list/detail/status-action
+    request shapes against the real backend schemas, that self-deactivation/lockout protection stay
+    entirely server-enforced, the action-letter map against the real seed script, and reuse of
+    every established shared helper — **0 findings**. No separate security review — no new
+    endpoint, no new RBAC action, no new sink; the one sensitive transition is enforced entirely
+    server-side, unchanged by this diff. See
+    `docs/project-state/dashboard-web-users-roles-permissions-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Commit, gate it, and push the branch"
+    instruction** — the approval checklist's own findings summary (0 findings) served as the
+    review artifact. **The gate (G4-dashboard-web-users-roles-permissions) was then approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override), approved commit `47f61bd` on
+    branch `dashboard-web-users-roles-permissions` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-users-roles-permissions`). **"Push the branch" was then executed under the
+    same combined instruction** — pushed to `origin`. **This gate approval does not itself
+    authorize opening a PR or merging** — each remains its own separate, not-yet-requested
+    authorization, per this project's standing "no auto-merge" rule.
+
+92. **System Settings module backend — built, reviewed, gated (2026-09-07).** Module key
+    `system_settings`, already seeded in `module_registry` (migration `00035`), route
+    `/system-settings`, no dependencies, no confidentiality mechanism. Built directly on the
+    explicit "start System Settings" instruction. One genuine scope fork confirmed directly with
+    the project owner first (`AskUserQuestion`) before any code was written: the canonical spec
+    (`03_Detailed_Module_Specifications.md §42`) is a bare list — "statuses, categories,
+    taxonomies, file limits, scan schedules, Git rules, backup rules, retention, contacts,
+    escalation SLAs, documentation rules, environments" — several of which already have dedicated,
+    already-live tables elsewhere in this codebase (retention → `retention_policies`/
+    `retention_holds`; contacts → `operational_contacts`; scan schedules → Scan Center's
+    `scan_definitions`). **The user chose to scope this module to only the genuinely unowned
+    settings**, leaving those three out entirely rather than duplicating them as a second source of
+    truth. Single generic `system_settings` table (migration `00120`/`00121`) with an immutable
+    `settingType` discriminator (9 values), a bounded JSONB `value` column, `key` unique per
+    `(settingType, key)` via a real composite DB index (not partial — `isActive` is a config
+    toggle, not an archival state), and an `isActive` toggle gated on the `configure` RBAC action
+    (not `edit`) via a real atomic compare-and-swap with an optional `expectedIsActive` CAS
+    parameter — mirroring Brand Library's structure, the closest sibling. Reuses the already-seeded
+    `system_settings` RBAC group verbatim (`super_admin` holds `VCERM`, `owner_growth_approver`
+    holds `VM`) — no new RBAC migration; the group's own unused `review`/`R` action is deliberately
+    left unwired, not fabricated a meaning. Built by a background agent with a fully-specified
+    prompt mirroring Brand Library file-for-file, then independently re-verified in full by the
+    orchestrating session — every high-risk file read directly (RBAC decorator placement, the CAS
+    guard, the composite-unique-index shape, both `packages/database` barrel exports, the
+    pagination cap), and every test suite independently re-run against a real local disposable
+    PostgreSQL 17 database, not trusted from the agent's own report: 1872/1872 `dashboard-api` unit
+    tests (20 new), 28/28 `packages/database` unit tests, 22/22
+    `module-system-settings.integration.test.ts`, 21/21 `system-settings.e2e-spec.ts`, the full
+    45-file `packages/database` integration suite (880/880) and `dashboard-api` e2e suite
+    (853/853), a real migration down/down/up/up round-trip (121 migrations),
+    `validate:module-registry` (43 modules, 21 permission groups, unaffected), `pnpm audit` (0
+    vulnerabilities), typecheck/lint (`--max-warnings=0`)/prettier all clean. One deliberate,
+    documented deviation: `boundedJsonObjectSchema()` was declared as a local copy in
+    `system-settings.dto.ts` rather than imported from `@webdesk/validation`, since no such export
+    actually exists there — Import and Export Center's own identically-shaped helper is a private,
+    module-local function, never promoted; flagged as a real candidate for promotion once a third
+    consumer needs it. **Reviewed at light tier**, per the 2026-08-27 "right-size the review
+    pipeline" standing rule — justified by the module's own genuinely low complexity (a single
+    generic table, no approval workflow, no confidentiality mechanism, no cross-module FK, reuses
+    an already-seeded RBAC group with zero new grants). A direct read-through of every file where a
+    real defect class has previously shipped in this codebase found **0 findings**. No separate
+    security review — no new endpoint class beyond standard CRUD, no new sink; every
+    security-relevant mechanism reused (`OriginCheckGuard`, `ParseUUIDPipe`, method-level RBAC,
+    `escapeLikePattern()`, the CAS guard) is a direct reuse of an already-audited pattern. See
+    `docs/implementation/module-system-settings.md` and
+    `docs/project-state/module-system-settings-approval-checklist.md`. **Required second-role
+    human review complete via the direct "Approve as-is, gate it, and push the branch"
+    instruction** — the approval checklist's own findings summary (0 findings) served as the
+    review artifact. **The gate (G4-system-settings) was then approved** — WebDesk Solution,
+    decision CONFIRM (clean pass, not an override), approved commit `eb4d413` on branch
+    `module-system-settings` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+    (`current_gate` now `G4-system-settings`). **"Push the branch" was then executed under the
+    same combined instruction** — pushed to `origin`. **This gate approval does not itself
+    authorize opening a PR or merging** — each remains its own separate, not-yet-requested
+    authorization, per this project's standing "no auto-merge" rule. No `dashboard-web` UI exists
+    yet for this module — a separate, not-yet-requested next step, matching every prior module's
+    own backend-first precedent.
+
+93. **Integrations module backend — built, reviewed, gated (2026-09-07).** Module #41 on the
     Recommended Module Roadmap, Wave 1 (no dependencies). Built directly on the explicit "start
     integrations module" instruction. Record-keeping-only status/config tracking for GitHub,
     WordPress, Vercel Blob, PostgreSQL, SMTP, Sentry, uptime, and vulnerability-scan integrations
@@ -5565,8 +5672,10 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     outbound calls to any external service (matching Scan Center's/Technical Center's/Ready for
     Claude Queue's own precedent), and all 4 named tables built now (`integrations`,
     `integration_environments`, `webhook_events`, `secret_metadata`), not deferred. Reuses the
-    seeded `system_settings` RBAC group verbatim — no new RBAC migration. Migrations `00120`/
-    `00121`. **Independent code review then ran** (this project's own `code-review` skill, high
+    seeded `system_settings` RBAC group verbatim — no new RBAC migration. Migrations `00122`/
+    `00123` (renumbered from `00120`/`00121` after merging `origin/main`, which had concurrently
+    claimed those numbers for the System Settings module, PR #122). **Independent code review
+    then ran** (this project's own `code-review` skill, high
     effort, 8-angle finder pass, 1-vote verification) — 10 candidates kept in the final report (3
     CONFIRMED, 7 PLAUSIBLE), **8 fixed**: most severe, two sub-resource list routes
     (`integration_environments`, `secret_metadata`) had no pagination wiring at all — their own
@@ -8824,6 +8933,70 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   were verified live directly — `dashboard-api`'s `/health` matched the merge commit, and both
   `GET /users-roles-and-permissions/users`/`matrix` returned a clean `401`. **The Users, Roles
   and Permissions module backend is now genuinely live in production.**
+- `[2026-09-07]` **Built the `dashboard-web` UI for Users, Roles and Permissions**, under the
+  explicit "Start Users, Roles and Permissions UI" instruction, closing this module's last named
+  gap following the backend's own build-to-production arc (PR #120). Every backend contract
+  (`users-directory.controller.ts`, `permission-matrix.controller.ts`,
+  `users-roles-permissions.dto.ts`, both services) was read directly before writing against it,
+  not assumed. Full account in item 91 above and
+  `docs/project-state/dashboard-web-users-roles-permissions-approval-checklist.md`.
+- `[2026-09-07]` **Reviewed at light tier, per the 2026-08-27 "right-size the review pipeline"
+  standing rule** — a small, frontend-only UI slice consuming an already-reviewed, already-gated
+  backend with no new endpoint. A direct read-through pass verified the list/detail/status-action
+  request shapes against the real backend schemas, the action-letter map on the permission-matrix
+  page against the real RBAC seed script, and that the one sensitive transition (deactivation)
+  stays entirely server-enforced — **0 findings**. No separate security review — no new endpoint,
+  no new RBAC action, no new sink. 1991/1991 `dashboard-web` unit tests overall (27 new: 6
+  status-actions, 21 lib); typecheck/lint/CSS-token-check/`next build`/prettier all clean.
+- `[2026-09-07]` **Required second-role human review complete for
+  `dashboard-web-users-roles-permissions`, via the direct "Commit, gate it, and push the branch"
+  instruction** — the approval checklist's own findings summary (0 findings) served as the review
+  artifact. **The gate (G4-dashboard-web-users-roles-permissions) was then approved** — WebDesk
+  Solution, decision CONFIRM (clean pass, not an override), approved commit `47f61bd` on branch
+  `dashboard-web-users-roles-permissions` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-users-roles-permissions`). **"Commit" and "Push the branch" were then executed
+  under the same combined instruction** — committed as `47f61bd`, pushed to `origin`. **This gate
+  approval does not itself authorize opening a PR or merging** — each remains its own separate,
+  not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+- `[2026-09-07]` **Built the System Settings module backend**, under the explicit "start System
+  Settings" instruction. One genuine scope fork confirmed directly with the user
+  (`AskUserQuestion`) first: retention/contacts/scan-schedules already have dedicated tables
+  elsewhere, so this module was scoped to only the genuinely unowned settings (file limits, Git
+  rules, backup rules, escalation SLAs, documentation rules, environments, default
+  statuses/categories/taxonomies). Single generic table mirroring Brand Library's structure, an
+  `isActive` toggle gated on `configure` via a real CAS guard, reuses the already-seeded
+  `system_settings` RBAC group verbatim. See item 92 above and
+  `docs/implementation/module-system-settings.md` for the full account.
+- `[2026-09-07]` **Independently re-verified `module-system-settings`, not trusted from the build
+  agent's own report.** Every claim re-run against a fresh local disposable PostgreSQL 17
+  database: 1872/1872 `dashboard-api` unit tests, 28/28 `packages/database` unit tests, the full
+  45-file `packages/database` integration suite (880/880) and `dashboard-api` e2e suite
+  (853/853), `system-settings.e2e-spec.ts` in isolation (21/21), a real migration
+  down/down/up/up round-trip (121 migrations), `validate:module-registry` (43 modules, 21
+  permission groups, unaffected), `pnpm audit` (0 vulnerabilities), `prettier --check` (clean).
+  Every high-risk file then read directly: RBAC decorator placement (method-level throughout),
+  the `updateActiveState()` CAS guard (sound), the composite `(setting_type, key)` unique index
+  (non-partial, correct), the `limit` cap (200, not the too-low 100 that caused a real production
+  incident on Decision and Activity Log), and both `packages/database` barrel exports (the exact
+  omission that caused the 2026-08-12 production outage).
+- `[2026-09-07]` **Reviewed at light tier, per the 2026-08-27 "right-size the review pipeline"
+  standing rule** — justified by the module's own genuinely low complexity (single generic
+  table, no approval workflow, no confidentiality mechanism, no cross-module FK, reuses an
+  already-seeded RBAC group with zero new grants). A direct read-through of every file where a
+  real defect class has previously shipped in this codebase found **0 findings**. No separate
+  security review — no new endpoint class beyond standard CRUD, no new sink; every
+  security-relevant mechanism reused is already-audited. See
+  `docs/project-state/module-system-settings-approval-checklist.md`.
+- `[2026-09-07]` **Required second-role human review complete for `module-system-settings`, via
+  the direct "Approve as-is, gate it, and push the branch" instruction** — the approval
+  checklist's own findings summary (0 findings) served as the review artifact. **The gate
+  (G4-system-settings) was then approved** — WebDesk Solution, decision CONFIRM (clean pass, not
+  an override), approved commit `eb4d413` on branch `module-system-settings` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-system-settings`). **"Push the branch" was then executed under the same combined
+  instruction** — pushed to `origin`. This gate approval does not itself authorize opening a PR
+  or merging — each remains its own separate, not-yet-requested authorization.
 
 ## Open client blockers
 
