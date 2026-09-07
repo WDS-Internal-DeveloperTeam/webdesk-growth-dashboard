@@ -271,3 +271,63 @@ packages/database/dist-cjs` and rebuilding — not a defect in the migration con
 
 No code inside `audit-logs-and-system-health.*` itself changed during this renumbering — only the
 migration's filename and every doc/CLAUDE.md/`project.json` reference to it.
+
+## As-built — `dashboard-web` UI
+
+Closes this module's last named gap, following the backend's own build-to-production arc
+(PR #126, merge commit `0ad2a9aa722f3eb5e20121d648c28b866c550ac3`). Built directly on the explicit
+"start Audit Logs and System Health dashboard-web UI" instruction. No approved wireframe/screen
+spec exists for this module — renders exactly what `GET /audit-logs-and-system-health/events`
+returns and supports (an `eventType`, `entityType`, `entityId`, `actorUserId`, `projectId` filter,
+a `from`/`to` date range, and offset pagination), mirroring Decision and Activity Log's own list
+page file-for-file — the closest sibling (organization-wide, filter-heavy, read-only, reusing the
+same `system_settings` RBAC group).
+
+**No detail page and no create/edit form** — this module is a pure read-only query surface over
+the existing, immutable `audit_events` table, for the identical reason Decision and Activity
+Log's own UI has neither (no write path exists anywhere in it — `AuditService.record()` remains
+the sole writer, called by other modules' own services). A single list route
+(`/audit-logs-and-system-health`, the module registry's own seeded `route` value) is the entire
+UI.
+
+No new `packages/shared-types` were needed — `AuditEventType`/`AuditActorType`/`AuditEvent` (the
+full ~41-value union) already exist, added when Decision and Activity Log's own UI was built.
+`lib/audit-logs-and-system-health-query.ts` (zero-non-type-import file — query parsing, href
+building, and this module's own 25-value event-type allowlist/label map, hand-mirrored from
+`apps/dashboard-api/src/audit-logs-and-system-health/audit-logs-and-system-health.constants.ts`'s
+`AUDIT_LOGS_AND_SYSTEM_HEALTH_EVENT_TYPES`) and `lib/audit-logs-and-system-health.ts` (the
+server-side fetch function) mirror `lib/decision-and-activity-log-query.ts`/
+`lib/decision-and-activity-log.ts`'s own split exactly.
+
+Deliberately narrows the backend's own richer query contract to the smallest honest UI, matching
+Decision and Activity Log's own choices: a single-value `<select>` for `eventType` (the backend
+accepts a repeated array); `from`/`to` as plain `<input type="date">` fields converted to UTC
+start-of-day/end-of-day ISO datetimes at request time; `actorUserId`/`projectId` as plain,
+client-side UUID-format-checked text inputs (no picker exists), each degrading to "no filter
+applied" on an invalid shape rather than round-tripping a garbled value that would 400 the whole
+page. The backend's own `limit` cap is `.max(200)` (not the too-low `.max(100)` that caused a real
+production incident on Decision and Activity Log, `docs/implementation/module-decision-and-activity-log.md`'s
+own "Incident" section) — verified directly before building, so the identical bug class isn't
+repeated here. Each row's `before`/`after` state (when present) renders via a
+`<details>`/`<summary>` disclosure — zero client JS — rather than a dedicated detail page, since an
+audit event has no lifecycle of its own to navigate to. Actor names are resolved via the existing
+`getUsersByIds()` (degrades to the raw id on a 403/404) rather than a new lookup mechanism.
+
+**Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a
+small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new
+endpoint and no new shared-types. A direct read-through pass verified the filter contract against
+the real backend `listAuditLogsAndSystemHealthEventsQuerySchema` (event-type allowlist
+enforcement — the 25-value list checked byte-for-byte against the backend's own constant, UUID
+validation, length caps), the `from`/`to` UTC-boundary conversion, the actor/project UUID-format
+short-circuit before either is ever sent to the backend, the `limit` cap headroom, and reuse of
+every established shared helper (`list-filter-styles.ts`, `list-table-styles.ts`, `pagination.ts`,
+`search-params.ts`, `uuid.ts`, `format-timestamp.ts`, `users.ts`) — **0 findings**. A separate
+security review was skipped per the same standing rule — no new endpoint, no new RBAC action, no
+new sink; `before`/`after` state renders via `JSON.stringify()` inside a `<pre>`, never
+`dangerouslySetInnerHTML`.
+
+18 new `dashboard-web` unit tests (query parsing, href building, label mapping, and the fetch
+function's URL construction, UUID-shape short-circuiting, and pagination trim), 2097/2097 overall;
+typecheck clean across `dashboard-web`/`dashboard-api`/`dashboard-worker`, `eslint
+--max-warnings=0` + CSS-token check (114 files) clean, `next build` clean with the new route
+present, `prettier --check` clean — all independently re-run by the orchestrating session.
