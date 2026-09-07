@@ -1456,6 +1456,20 @@
       "record": "docs/project-state/module-users-roles-permissions-approval-checklist.md",
       "notes": "Users, Roles and Permissions module backend (registry key users_roles_permissions) -- a real user directory (list/search every status, per-user detail with all role assignments, activate/deactivate) plus a read-only global RBAC permission-matrix viewer (7 roles x 21 modules), layered on the already-built Phase 1D RBAC core per the canonical roadmap's own \"administer the UI, do not redesign authorization architecture\" instruction. No new tables -- reuses users/user_roles/roles/role_permissions/module_registry. Migration 00118 marks the module in_development; migration 00119 adds pg_trgm indexes for the new admin directory search. Independent code review (high effort, 8-angle finder pass) found 10 candidates, 9 fixed -- most severe: no malformed-UUID guard, the limit cap at 100 instead of the established 200 convention (repeating a real prior production incident), and no guard against deactivating the last active super_admin. 1 left as deliberate, tracked debt: reusing the users_roles:edit action for both role assignment and account deactivation, since splitting it means a new RBAC seed migration, out of scope per the roadmap's own no-redesign instruction. Security review (full tier, given the authentication-adjacent surface) found 1 HIGH finding, fixed: the self-deactivation and last-active-super_admin guards both compared the raw, attacker-suppliable userId path param via case-sensitive equality against DB-sourced ids, while ParseUUIDPipe doesn't canonicalize case and Postgres uuid columns compare case-insensitively -- letting a caller bypass both guards with a case-swapped copy of their own id. Fixed by canonicalizing to the DB-returned id for every subsequent comparison. Verified: a real 119-migration round-trip against a local disposable database (both trigram indexes confirmed present), typecheck/lint/prettier all clean, 1852/1852 dashboard-api unit tests passing. Backend only -- no dashboard-web UI yet, matching every prior module's own precedent.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
+    },
+    {
+      "id": "G4-dashboard-web-users-roles-permissions",
+      "type": "qa-security-gate",
+      "scope": "dashboard-web-users-roles-permissions",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-07T00:00:00Z",
+      "approved_commit": "47f61bd (branch dashboard-web-users-roles-permissions)",
+      "record": "docs/project-state/dashboard-web-users-roles-permissions-approval-checklist.md",
+      "notes": "dashboard-web Users, Roles and Permissions UI, closing this module's last named gap on top of the already-gated backend (G4-users-roles-permissions, PR #120, merged and live). A real user directory (list/search every account status, per-user detail with role assignments split global/project-scoped, activate/deactivate) plus a read-only global permission-matrix viewer (7 roles x 21 permission-group modules). No new-user creation, no grant editing. UserStatusActions mirrors HelpCenterPublishActions -- only Deactivate is confirmed (window.confirm), since the backend revokes every session on a real transition to disabled; self-deactivation and last-active-Super-Admin protection are both left to the backend's own real enforcement. The permission-matrix page reuses the exact V/C/E/S/R/A/P/L/X/M letter codes 00013-seed-rbac-matrix.ts's own LETTER_ACTIONS map uses. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through pass against every real backend contract (controllers/DTOs/services read directly, not assumed) -- 0 findings. No separate security review -- no new endpoint/RBAC action/sink; the one sensitive transition (deactivation) is enforced entirely server-side. 1991/1991 dashboard-web unit tests overall (27 new).",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Commit, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
     }
   ],
   "budget": {
@@ -3754,7 +3768,16 @@
       "project_version_before": 141,
       "project_version_after": 142,
       "timestamp": "2026-09-03T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-dashboard-web-users-roles-permissions approved (CONFIRM) for the dashboard-web Users, Roles and Permissions UI -- a real user directory (search/status filter, per-user detail, activate/deactivate) plus a read-only global permission-matrix viewer, layered on the already-gated backend (G4-users-roles-permissions, PR #120, live in production). Reviewed at light tier per the 2026-08-27 standing rule (0 findings). Approved commit 47f61bd on branch dashboard-web-users-roles-permissions, via the direct 'Commit, gate it, and push the branch' instruction. Push executed alongside this gate per that same combined authorization -- opening a PR and merging remain separate, not-yet-requested authorizations.",
+      "project_version_before": 142,
+      "project_version_after": 143,
+      "timestamp": "2026-09-07T00:00:00Z"
     }
   ],
-  "current_gate": "G4-users-roles-permissions"
+  "current_gate": "G4-dashboard-web-users-roles-permissions"
 }
