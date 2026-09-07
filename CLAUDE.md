@@ -5398,7 +5398,36 @@ CONFLICT` target matches the real index (verified by running it twice in a row �
     ("Ran the migration, all confirmed working now"). **The `notifications_view` grant is now
     genuinely live in production, closing out this slice's full build-to-production arc** — a
     real `super_admin` session can now view the Notification Center; `notifications_configure`
-    and every other role remain zero-seeded, unchanged.
+    and every other role remain zero-seeded, unchanged. **Update (2026-09-07): widened to a
+    second role, `owner_growth_approver` — built, reviewed, gated, and pushed as branch
+    `grant-notifications-view-owner-growth-approver`, not yet merged.** Not started
+    automatically — the user asked directly to "start whatever missing in the notification
+    center," and after a review of the module reported it functionally live but practically
+    unusable by anyone except `super_admin`, presented four possible next steps
+    (`AskUserQuestion`); the user chose to widen `notifications_view` further, to
+    `owner_growth_approver` (already holds nearly every other `system_settings` action).
+    Migration `00125-grant-notifications-view-to-owner-growth-approver.ts` mirrors migration
+    `00117`'s own shape exactly — one additive `role_permissions` row, safely re-runnable via
+    the same `ON CONFLICT` guard. Verified against a real local disposable PostgreSQL 17
+    database: a full 125-migration round-trip, exactly two roles (`super_admin`,
+    `owner_growth_approver`) now hold the grant, a clean down/up re-run confirming no
+    duplicate, typecheck/prettier clean. Reviewed the same way as the `super_admin` grant — a
+    direct security-focused read-through (RBAC change, full tier by default) — **0 findings**.
+    **A real working-directory collision with the concurrent session building the
+    `dashboard-web` Audit Logs and System Health UI (item 94 below) was discovered and resolved
+    mid-task** — a branch checkout race briefly caused the `project.json` gate-record edit to
+    land against the wrong branch's file state; caught via `git reflog`/`git branch --contains`
+    before committing (no commit history was contaminated, only an uncommitted edit was
+    affected), fixed by re-verifying the correct branch and redoing the edit immediately. See
+    `docs/implementation/grant-notifications-view-permission.md`'s "Slice 2" and
+    `docs/project-state/grant-notifications-view-owner-growth-approver-approval-checklist.md`.
+    **Required second-role human review and the gate were both completed via the direct
+    "Approve as-is, gate it, and push the branch" instruction** — gate
+    `G4-grant-notifications-view-owner-growth-approver` approved (WebDesk Solution, CONFIRM),
+    approved commit `75ee2c2` — see `outputs/webdesk-growth-dashboard/project.json`'s `gates[]`
+    (`current_gate` now `G4-grant-notifications-view-owner-growth-approver`). **Pushed to
+    `origin`** — not yet opened as a PR, merged, or run against production; each remains its
+    own separate, not-yet-requested authorization.
 
 89. **`dashboard-web` Help Center UI — built, reviewed, gated, merged
     ([PR #119](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/119),
