@@ -3165,3 +3165,39 @@ export interface PermissionMatrix {
   readonly modules: readonly ModuleSummary[];
   readonly grants: readonly PermissionMatrixGrant[];
 }
+
+/**
+ * System Settings (module #42, `system_settings`) — a single generic table for the genuinely
+ * unowned configuration surfaces the canonical spec names (statuses/categories/taxonomies, file
+ * limits, Git rules, backup rules, escalation SLAs, documentation rules, environments), scoped
+ * deliberately narrow: retention, contacts, and scan schedules already have their own dedicated,
+ * already-live tables elsewhere in this codebase and are explicitly out of scope here. Mirrors
+ * `packages/database/src/system-settings/entities.ts`'s own `SystemSettingEntity` shape exactly.
+ * No approval workflow — the only lifecycle is `isActive`, a plain boolean governed via a
+ * dedicated `POST .../:id/active-state` route only (never accepted through create/update), gated
+ * on the `configure` RBAC action rather than `edit`.
+ */
+export type SystemSettingType =
+  | "status_definition"
+  | "category_definition"
+  | "taxonomy_definition"
+  | "file_limit"
+  | "git_rule"
+  | "backup_rule"
+  | "escalation_sla"
+  | "documentation_rule"
+  | "environment";
+
+export interface SystemSetting {
+  readonly id: string;
+  readonly publicId: string;
+  readonly settingType: SystemSettingType;
+  readonly key: string;
+  readonly value: Record<string, unknown>;
+  readonly description: string | null;
+  readonly isActive: boolean;
+  readonly createdBy: string | null;
+  readonly updatedBy: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
