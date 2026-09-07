@@ -49,6 +49,7 @@ import { SectionAndPatternLibraryModule } from "./section-and-pattern-library/se
 import { WireframeLibraryModule } from "./wireframe-library/wireframe-library.module.js";
 import { ServiceLibraryModule } from "./service-library/service-library.module.js";
 import { SystemOperationsModule } from "./system-operations/system-operations.module.js";
+import { SystemSettingsModule } from "./system-settings/system-settings.module.js";
 import { UsersModule } from "./users/users.module.js";
 import { UsersRolesPermissionsModule } from "./users-roles-permissions/users-roles-permissions.module.js";
 import { WebsiteStrategyCenterModule } from "./website-strategy-center/website-strategy-center.module.js";
@@ -127,6 +128,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
     WireframeLibraryModule,
     ServiceLibraryModule,
     SystemOperationsModule,
+    SystemSettingsModule,
     UsersModule,
     UsersRolesPermissionsModule,
     WebsiteStrategyCenterModule,
