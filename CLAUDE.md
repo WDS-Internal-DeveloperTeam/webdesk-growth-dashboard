@@ -5554,6 +5554,65 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     production.** No `dashboard-web` UI exists yet for this module — a separate,
     not-yet-requested next step, matching every prior module's own backend-first precedent.
 
+91. **Integrations module backend — built, reviewed, gated (2026-09-07).** Module #41 on the
+    Recommended Module Roadmap, Wave 1 (no dependencies). Built directly on the explicit "start
+    integrations module" instruction. Record-keeping-only status/config tracking for GitHub,
+    WordPress, Vercel Blob, PostgreSQL, SMTP, Sentry, uptime, and vulnerability-scan integrations
+    — the canonical spec gives no field-level schema, only a table-name list
+    (`04_Data_Model_and_Ownership.md`) and the module registry's own seeded confidentiality note
+    ("secret values never stored — metadata/verification status only"). Two design forks
+    confirmed directly with the user first (`AskUserQuestion`): record-keeping only, no real
+    outbound calls to any external service (matching Scan Center's/Technical Center's/Ready for
+    Claude Queue's own precedent), and all 4 named tables built now (`integrations`,
+    `integration_environments`, `webhook_events`, `secret_metadata`), not deferred. Reuses the
+    seeded `system_settings` RBAC group verbatim — no new RBAC migration. Migrations `00120`/
+    `00121`. **Independent code review then ran** (this project's own `code-review` skill, high
+    effort, 8-angle finder pass, 1-vote verification) — 10 candidates kept in the final report (3
+    CONFIRMED, 7 PLAUSIBLE), **8 fixed**: most severe, two sub-resource list routes
+    (`integration_environments`, `secret_metadata`) had no pagination wiring at all — their own
+    already-written query schemas were dead code, and the underlying repository calls were
+    unbounded `findAll`s — fixed by threading a real `{limit, offset}` filter through both
+    repositories/services/controllers, with 2 new e2e regression tests proving it end-to-end. Also
+    fixed: a wasted, discarded `findById()` pre-fetch in `update()`/`setActive()`; a missing index
+    backing `integrations.list()`'s own `ORDER BY updated_at DESC, id ASC`; three sub-resource
+    repositories hand-typing their input shapes instead of deriving via `Omit<>`, inconsistent
+    with `IntegrationRepository`'s own derived type in the same PR; a 3×-duplicated empty-patch
+    `.refine()` guard, collapsed into a local `rejectEmptyPatch<T>()` helper mirroring
+    `portfolio-library.dto.ts`'s own precedent; `webhook_events`' doc comments overclaiming
+    DB-trigger-level immutability "matching the `audit_events` precedent (ADR-0017)" when no such
+    trigger exists — relabeled to match `review_decisions`' own honest, application-level
+    phrasing; a phantom `integration_environments.lastVerifiedAt` write path with no route ever
+    able to populate it — removed from `update()`'s accepted patch type; and a missing index
+    backing `webhook_events.processing_status`'s own filter. **2 findings left as accepted,
+    tracked debt**: bare RBAC action names (`view`/`create`/`edit`/`review`/`configure`) on the
+    shared `system_settings` group, unlike older consumers (`jobs`, `notifications`, `retention`)
+    that namespace their action strings — verified this is NOT a fresh deviation, since the two
+    most recently shipped `system_settings` consumers (Decision and Activity Log, Help Center)
+    already use this identical bare-action pattern, a real pre-existing repo-wide inconsistency
+    predating this branch; and the "parent integration exists" check hand-copied 3-4× across the
+    three sub-resource services, matching an already-accepted duplication pattern present across
+    ≥10 sibling `assert*Exists()` helpers elsewhere in this codebase. **A separate
+    `security-review` skill run then found 0 findings above threshold** (full tier, given this is
+    a new RBAC-gated endpoint class) — confirmed method-level `@RequirePermission` throughout,
+    `OriginCheckGuard` on every mutating route, real IDOR scoping on both `:integrationId`-nested
+    sub-resources (exercised by real e2e cross-integration-404 tests), `escapeLikePattern()` on
+    the search filter, and — the module's own core design goal — no field anywhere in the DTOs/
+    entities/migration ever accepts an actual secret value (asserted by a real e2e test). Every
+    validation step independently re-run against a real local disposable PostgreSQL 17 database,
+    not trusted from the build agent's own report: 1894/1894 `dashboard-api` unit tests (42 new),
+    28/28 `packages/database` unit tests, 29/29 `packages/database` integration tests, 25/25
+    `dashboard-api` e2e tests (23 original + 2 new), a real migration `down`/`down`/`up`
+    round-trip (both new indexes confirmed present via a direct `pg_indexes` query), `validate:
+module-registry` clean (43 modules, 21 permission groups), `pnpm audit` 0 vulnerabilities. See
+    `docs/implementation/module-integrations.md` and
+    `docs/project-state/module-integrations-approval-checklist.md`. **Jitesh D reviewed the
+    branch and returned "Approves,"** accepting the 2 open findings as tracked debt. **The gate
+    (G4-integrations) was then separately requested and approved** — WebDesk Solution, decision
+    CONFIRM, on branch `module-integrations` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-integrations`). Backend only — no `dashboard-web` UI yet, matching every prior module's
+    own backend-first precedent.
+
 ## Recent decisions
 
 > Entries older than ~1 week are compressed to one line each, pointing to the full
