@@ -6,6 +6,7 @@ import {
   baseEnvSchema,
 } from "@webdesk/configuration";
 import { LoggerModule } from "nestjs-pino";
+import { AuditLogsAndSystemHealthModule } from "./audit-logs-and-system-health/audit-logs-and-system-health.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { AuthzModule } from "./authz/authz.module.js";
 import { BrandLibraryModule } from "./brand-library/brand-library.module.js";
@@ -87,6 +88,7 @@ const buildMetadata = getBuildMetadata(API_VERSION);
       },
     }),
     HealthModule,
+    AuditLogsAndSystemHealthModule,
     AuthModule,
     AuthzModule,
     BrandLibraryModule,
