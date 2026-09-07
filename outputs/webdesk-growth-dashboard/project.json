@@ -3896,6 +3896,15 @@
       "project_version_before": 149,
       "project_version_after": 150,
       "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "merged_to_main",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "PR #126 (module-audit-logs-and-system-health) merged to main -- all 14 CI checks green beforehand. Two real merge conflicts against main surfaced along the way, both from concurrently-merging sessions: (1) an independently-built Integrations module (PR #123) had claimed migration numbers 00122/00123, colliding with this branch's own 00122 -- resolved by renumbering to 00124, updating every reference, and clearing a stale compiled dist/ artifact that briefly caused a false duplicate-migration failure; (2) a second concurrent session's dashboard-web System Settings UI (PR #125) merged while CI was running on the first fix, requiring a second main-merge with CLAUDE.md/project.json conflicts resolved (including a duplicate item-94 numbering) and a full re-verification. Merged with a real merge commit (not squash/rebase) -- 0ad2a9aa722f3eb5e20121d648c28b866c550ac3. dashboard-api auto-deployed on push to main and was verified live directly, not just via CI's own Vercel status check -- /health returned build.commitShaShort == 0ad2a9a, confirming the exact merged commit is what's serving; GET /audit-logs-and-system-health/events returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed); and dashboard-web's / correctly redirects (307) an unauthenticated visitor to /auth/sign-in. The Audit Logs and System Health module backend is now genuinely live in production. No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module's own backend-first precedent.",
+      "project_version_before": 150,
+      "project_version_after": 151,
+      "timestamp": "2026-09-07T00:00:00Z"
     }
   ],
   "current_gate": "G4-audit-logs-and-system-health"
