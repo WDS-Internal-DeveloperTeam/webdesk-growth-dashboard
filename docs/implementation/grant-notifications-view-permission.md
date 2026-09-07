@@ -74,3 +74,62 @@ rather than an 8-angle fan-out on a one-file diff:
   interpolated input.
 
 **0 findings.**
+
+---
+
+## Slice 2: Grant `notifications_view` to `owner_growth_approver`
+
+### Scope
+
+Not started automatically — built on the explicit "start whatever missing in the notification
+center" instruction. Investigated the module first and reported it as functionally live but
+practically unusable by anyone except `super_admin` (see the notification-center review this
+followed). Presented four possible next steps directly (`AskUserQuestion`): widen the
+`notifications_view` grant, grant `notifications_configure`, add a dedicated RBAC permission
+group, or build real SMTP delivery. **The user chose to widen `notifications_view`** and, when
+asked which role, chose **`owner_growth_approver`** — it already holds nearly every other
+`system_settings` action alongside `super_admin`. `notifications_configure` stays zero-seeded for
+every role — out of scope for this request, same as slice 1.
+
+### As-built
+
+New migration
+`packages/database/src/migrations/00125-grant-notifications-view-to-owner-growth-approver.ts`, off
+`main` at commit `35e612e` (post–PR #128). Identical shape to slice 1's own migration — one
+`role_permissions` row (`role_id` = `owner_growth_approver`, `module_id` = `system_settings`,
+`action = 'notifications_view'`), resolved by joining on the real `key` columns, guarded by the
+same `ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL DO NOTHING` against the
+real partial unique index, safely re-runnable. `down()` deletes only that exact
+`(role, module, action)` triple. No application code changed.
+
+### Validation
+
+Run against a fresh local disposable PostgreSQL 17 database (`webdesk_notif_test`, dropped after
+use — never against production):
+
+- Full `migrate up` (all 125 migrations) — clean, `00125` applies without error.
+- Verified exactly two rows now hold `notifications_view`: `super_admin` and
+  `owner_growth_approver`, both on `system_settings` — no other role or action affected.
+- `migrate down` on `00125` alone (row count → 1, `super_admin` only), then `migrate up` again
+  (row count → 2 again, no duplicate) — a clean down/up round-trip, confirming `ON CONFLICT`
+  idempotency held under a real re-run.
+- `pnpm --filter @webdesk/database typecheck` — clean.
+- `prettier --check` on the new file — clean.
+
+### Review
+
+Reviewed the same way as slice 1 — a genuine RBAC/permission change, but a one-file, additive,
+read-only-grant diff mirroring an already-reviewed pattern exactly, so a direct security-focused
+read-through was judged proportionate over an 8-angle fan-out:
+
+- Confirmed the `up()` `WHERE` clause resolves to exactly one `(role, module)` pair.
+- Confirmed the `ON CONFLICT` target matches the real partial unique index (verified by running it
+  twice in a row — the second run stayed a no-op).
+- Confirmed `down()` is scoped to the exact triple, not a blanket delete.
+- Confirmed no application code changed — `PermissionGuard`/`@RequirePermission` untouched; this
+  only makes an existing, already-audited check start succeeding for a second role on the same
+  read action.
+- Confirmed no SQL-injection surface — every value is a static literal.
+
+**0 findings.** Not yet second-role human reviewed, gated, pushed, or merged — each remains a
+separate, not-yet-requested next step, per this project's standing "no auto-merge" rule.
