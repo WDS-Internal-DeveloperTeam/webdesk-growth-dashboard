@@ -3167,6 +3167,89 @@ export interface PermissionMatrix {
 }
 
 /**
+ * Integrations (module #41, `integrations`) — record-keeping only, no real outbound calls to any
+ * external service (D1, `docs/implementation/module-integrations.md`). Mirrors
+ * `packages/database/src/integrations/entities.ts` field-for-field.
+ */
+export type IntegrationProvider =
+  | "github"
+  | "wordpress"
+  | "vercel_blob"
+  | "postgresql"
+  | "smtp"
+  | "sentry"
+  | "uptime_monitor"
+  | "vulnerability_scanner"
+  | "upstash"
+  | "other";
+
+export type IntegrationStatus = "connected" | "disconnected" | "error" | "not_configured";
+
+export type IntegrationVerificationResult = "success" | "failure" | "unknown";
+
+/** The primary entity — one row per external service connection. `configReference` describes
+ *  WHERE the real secret/config lives — never the secret value itself. No hard delete —
+ *  `isActive: false` is the retirement mechanism. */
+export interface Integration {
+  readonly id: string;
+  readonly publicId: string;
+  readonly provider: IntegrationProvider;
+  readonly displayName: string;
+  readonly status: IntegrationStatus;
+  readonly configReference: string | null;
+  readonly notes: string | null;
+  readonly lastVerifiedAt: string | null;
+  readonly lastVerifiedByUserId: string | null;
+  readonly lastVerificationResult: IntegrationVerificationResult | null;
+  readonly lastVerificationNotes: string | null;
+  readonly isActive: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** A real one-to-many sub-resource — a real FK `integrationId`. Real delete allowed. */
+export interface IntegrationEnvironment {
+  readonly id: string;
+  readonly integrationId: string;
+  readonly environmentName: string;
+  readonly status: IntegrationStatus;
+  readonly configReference: string | null;
+  readonly notes: string | null;
+  readonly lastVerifiedAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export type WebhookEventProcessingStatus = "received" | "processed" | "failed";
+
+/** An append-only, queryable local delivery log — no update, no delete route exists at all.
+ *  `integrationId` is nullable — an event may arrive before it can be matched to a known
+ *  integration. */
+export interface WebhookEvent {
+  readonly id: string;
+  readonly integrationId: string | null;
+  readonly eventType: string;
+  readonly receivedAt: string;
+  readonly payloadSummary: string | null;
+  readonly processingStatus: WebhookEventProcessingStatus;
+  readonly errorMessage: string | null;
+  readonly createdAt: string;
+}
+
+/** Tracks which secret exists for an integration, never the value. Real FK, `CASCADE`. */
+export interface SecretMetadata {
+  readonly id: string;
+  readonly integrationId: string;
+  readonly secretName: string;
+  readonly storageLocation: string;
+  readonly lastRotatedAt: string | null;
+  readonly rotationDueAt: string | null;
+  readonly notes: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/**
  * System Settings (module #42, `system_settings`) — a single generic table for the genuinely
  * unowned configuration surfaces the canonical spec names (statuses/categories/taxonomies, file
  * limits, Git rules, backup rules, escalation SLAs, documentation rules, environments), scoped

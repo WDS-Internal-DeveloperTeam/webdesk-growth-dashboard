@@ -262,7 +262,222 @@ raw SQL is static DDL in the migration).
 
 ### Status
 
-Code review and security review both complete, all confirmed/plausible findings fixed or recorded
-as accepted tracked debt. **Not yet second-role human reviewed, gated, pushed, or merged** — each
-remains its own separate, explicit authorization per this project's standing "no auto-merge"
-rule; the working tree is left staged but uncommitted for that review.
+Reviewed by Jitesh D ("Approves"), gate `G4-integrations` approved, merged as
+[PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123) (merge
+commit `6d912264df6ff92b99fc74db4cfc30e3709f1e66`), verified live in production. See
+`docs/project-state/module-integrations-approval-checklist.md` for the full sign-off record. No
+`dashboard-web` UI existed yet as of this section — see below for its own build.
+
+## `dashboard-web` UI
+
+### Scope
+
+Built directly on the explicit "Start the dashboard-web UI for it" instruction, following the
+backend's own build-to-production arc. No approved wireframe exists for this module — the IA
+below mirrors the real backend contract directly (routes/DTOs read first, not assumed), matching
+every prior module's own "smallest honest reading" precedent for an unsourced screen.
+
+Four routes under `app/(shell)/integrations/` (the module registry's own seeded `route` field):
+list (`/integrations`), create (`/integrations/new`), detail
+(`/integrations/[integrationId]`), edit (`/integrations/[integrationId]/edit`) — mirroring Brand
+Library's own file layout, the closest sibling (a single primary table, no bespoke workflow, a
+distinct `M`-gated toggle action).
+
+The detail page composes: an Identity section (provider/displayName/configReference/notes/
+publicId), a Status section with a new `IntegrationVerifyAction` (a `result` select +
+optional `notes`, `POST /integrations/:id/verify`) and a new `IntegrationActiveToggle`
+(`POST /integrations/:id/toggle-active`, mirrors `ContentTemplatePublishActions`' toggle
+shape), and three real sub-resource sections mirroring `ProjectEnvironmentsSection`'s/
+`ProjectRepositoriesSection`'s own established CRUD pattern:
+
+- `IntegrationEnvironmentsSection` — full create/list/update/delete
+  (`/integrations/:integrationId/environments...`).
+- `IntegrationSecretMetadataSection` — full create/list/update/delete
+  (`/integrations/:integrationId/secret-metadata...`) — never renders a secret value (none is
+  ever returned by the backend); only `secretName`/`storageLocation`/rotation dates/notes.
+- `IntegrationWebhookEventsSection` — **read-only** list only (`GET
+/integrations/:integrationId/webhook-events`) — no create/update/delete UI. The backend's own
+  organization-wide bare `POST /webhook-events` route (for an event arriving before it can be
+  matched to a known integration) is deliberately NOT exposed as a UI form in this pass — it's a
+  receiver-shaped endpoint with no real receiver wired up yet (D1, backend scope doc), and
+  fabricating a manual "log a fake webhook" form adds a control surface the design doesn't call
+  for. This is a deliberate, flagged scope reduction, not an oversight.
+
+`notes`/`configReference` render as plain `<textarea>`/`<input>` fields, NOT `RichTextEditor` —
+an explicit, documented exception to the 2026-08-22 standing rule: the backend's own DTOs
+(`integrations.dto.ts`) never sanitize these fields as HTML (plain ops metadata, per the
+backend's own design doc), so treating them as rich text on the frontend alone would be
+dishonest, matching the identical, already-established exception for Ready for Claude Queue's
+own long-text fields.
+
+`create()`/`update()` treat `publicId`/`provider` as create-only (immutable after create,
+matching every sibling discriminator-field convention). New `packages/shared-types` additions:
+`IntegrationProvider`/`IntegrationStatus`/`IntegrationVerificationResult`/`Integration`/
+`IntegrationEnvironment`/`WebhookEventProcessingStatus`/`WebhookEvent`/`SecretMetadata`,
+mirroring `packages/database/src/integrations/entities.ts` exactly.
+
+### As-built — `dashboard-web` UI
+
+Built directly (not delegated) on branch `dashboard-web-integrations`. Every backend contract file
+(`integrations.dto.ts`, all 4 controllers, `packages/database/src/integrations/entities.ts`) was
+read directly before writing any frontend code, and every reference template
+(`BrandLibraryForm`/`BrandLibraryPublishActions`, `ProjectEnvironmentsSection`/
+`ProjectRepositoriesSection`, the Decision and Activity Log list page) was read in full before
+mirroring it.
+
+**`packages/shared-types/src/index.ts`** — appended `IntegrationProvider`/`IntegrationStatus`/
+`IntegrationVerificationResult`/`Integration`/`IntegrationEnvironment`/
+`WebhookEventProcessingStatus`/`WebhookEvent`/`SecretMetadata`, mirroring
+`packages/database/src/integrations/entities.ts` field-for-field. The package's `dist`/`dist-cjs`
+output was stale from a prior session's work (unrelated `AdminUser`/`PermissionMatrix` types were
+already missing from the built output before this branch touched anything) — rebuilt via
+`pnpm --filter @webdesk/shared-types build` before `dashboard-web`'s own typecheck could pass.
+
+**`apps/dashboard-web/lib/`**:
+
+- `integrations-query.ts` (zero non-type imports) — `PROVIDER_VALUES`/`PROVIDER_LABEL`,
+  `STATUS_VALUES`/`STATUS_LABEL`/`integrationStatusBadge()`,
+  `VERIFICATION_RESULT_VALUES`/`VERIFICATION_RESULT_LABEL`/`verificationResultBadge()` (a `null`
+  result — "never verified" — is deliberately distinguished from the real `"unknown"` enum value),
+  `integrationActiveBadge()` (mirrors `brandLibraryPublishBadge()`'s healthy/notConfigured
+  reasoning), `WEBHOOK_PROCESSING_STATUS_VALUES`/`_LABEL`/`webhookProcessingStatusBadge()`,
+  `IntegrationsQuery`/`parseIntegrationsSearchParams()`/`buildIntegrationsHref()` (validated
+  against the real `listIntegrationsQuerySchema` enum values, matching `parseBrandLibrarySearchParams()`'s
+  own defense-in-depth convention).
+- `integrations.ts` — `getIntegrations()` (list, "request one row past the page size" pagination
+  technique), `getIntegration()` (UUID-shape short-circuit before any network call), a
+  `getIntegrationEnvironments()`/`getSecretMetadata()`/`getWebhookEvents()` trio (each capped at
+  `?limit=200`, wiring the backend's own code-review-added pagination cap rather than an unbounded
+  fetch), and `getIntegrationDetail()`, which fetches the integration then its three sub-resource
+  lists in parallel via `Promise.all` + `tolerateDiscard()` (imported from `lib/business-knowledge.ts`,
+  the established convention) with each sub-fetch independently `.catch()`-degrading to `[]` and
+  `console.error`-logging — a transient failure on, say, webhook events must not crash the whole
+  detail page, matching `getProjectDetail()`'s own established failure-isolation pattern.
+
+**`apps/dashboard-web/components/`**:
+
+- `integration-form.tsx` + `.module.css` — create/edit form. `publicId`/`provider` create-only
+  (read-only on edit); `displayName` required; `configReference`/`notes` plain `<input>`/
+  `<textarea>` (NOT `RichTextEditor` — the documented exception, since the backend never sanitizes
+  these as HTML). `status`/`lastVerified*`/`isActive` are never form fields.
+- `integration-verify-action.tsx` + `.module.css` — a `result` `<select>` (required) + optional
+  `notes` textarea, `POST /integrations/:id/verify`. Always starts empty (records a NEW result,
+  doesn't reflect the integration's current `lastVerificationResult`); resets and calls
+  `router.refresh()` on success.
+- `integration-active-toggle.tsx` + `.module.css` — a single toggle button
+  (`POST /integrations/:id/toggle-active`), mirroring `BrandLibraryPublishActions`' `useSyncedState()`
+  re-sync pattern; no `window.confirm()` either direction, since `isActive` has no approval-status
+  gate and is freely reversible.
+- `integration-environments-section.tsx` — real create/list/update/delete CRUD, file-for-file
+  mirroring `ProjectEnvironmentsSection` (inline add row, inline edit with an `updatedAt`-keyed
+  resync effect, `usePendingIds()` for per-row in-flight tracking). No `router.refresh()` after a
+  mutation — no other section reads environment data.
+- `integration-secret-metadata-section.tsx` — same CRUD shape for `secret_metadata`. Never
+  renders or accepts a secret value field (the backend entity has none). `lastRotatedAt`/
+  `rotationDueAt` use `type="datetime-local"` inputs converted to/from a full ISO datetime string
+  via the existing shared `lib/datetime-local.ts` helpers (`toDateTimeLocalValue()`/
+  `fromDateTimeLocalValue()`), since the backend's `z.string().datetime()` needs more than a bare
+  date.
+- `integration-webhook-events-section.tsx` — **read-only**, not a `"use client"` component (plain
+  server-rendered rows). No create/update/delete UI, per the documented scope reduction — the
+  backend's own bare `POST /webhook-events` receiver-shaped route is deliberately not exposed as a
+  form.
+- `integration-subresource-section.module.css` — shared base for the three sub-resource sections,
+  mirroring `project-subresource-section.module.css`'s own shape, composing from
+  `integration-form.module.css` instead of `project-form.module.css`.
+
+**`apps/dashboard-web/app/(shell)/integrations/`** — four routes at the module registry's own
+seeded `route` field (`/integrations`): `page.tsx` (list — provider/status/isActive filters,
+search, offset pagination, mirroring `brand-library/page.tsx` file-for-file), `new/page.tsx`,
+`[integrationId]/page.tsx` (detail — Identity/Configuration/Status sections, the verify action, the
+active toggle, and the three sub-resource sections; "Edit" is always shown, since `isActive` has no
+terminal state unlike an `approvalStatus` workflow), `[integrationId]/edit/page.tsx`.
+
+**Tests** — 6 new files, 49 new tests, all independently re-run and passing:
+`integrations-query.test.tsx` (20 — search-param parsing/href building/every badge-mapping
+function), `integrations.test.tsx` (7 — `getIntegrations()`/`getIntegration()`'s pagination,
+malformed-id short-circuit, 404/error handling), `integration-form.test.tsx` (7 — required fields,
+no rich-text editor rendered, create/edit payload shape, omit-vs-null nullish contract, read-only
+`publicId`/`provider` on edit), `integration-verify-action.test.tsx` (4 — required field, payload
+shape, form reset + refresh on success, error handling), `integration-active-toggle.test.tsx` (6 —
+label per state, no-confirm toggle, optimistic flip, prop resync, error handling),
+`integration-environments-section.test.tsx` (5 — empty state, add, delete, error message,
+`updatedAt`-keyed resync of an open edit form without wiping an in-progress unsaved edit).
+
+### Validation — all commands below were actually run against this branch, real output captured
+
+A real local checkout was used for every check; no local `dashboard-api`/database was available in
+this environment (matching several prior modules' own noted limitation), so only the live-render
+check below covers the unauthenticated-redirect path — the authenticated success-path rendering
+was not visually confirmed, same limitation the Projects/Business-Knowledge-Center list pages'
+own as-built records already noted for themselves.
+
+- **`@webdesk/shared-types` build**: `pnpm --filter @webdesk/shared-types build` — clean
+  (`tsc` + the CJS build + the CJS `package.json` writer). Required before `dashboard-web`'s own
+  typecheck could resolve the new types — the package's `dist`/`dist-cjs` output was stale
+  entering this branch (unrelated to this branch's own changes, see above).
+- **Typecheck**: `pnpm --filter @webdesk/shared-types typecheck`,
+  `pnpm --filter dashboard-web typecheck`, `pnpm --filter dashboard-api typecheck`, and
+  `pnpm --filter dashboard-worker typecheck` — all four clean, 0 errors, re-run a second time after
+  the prettier auto-fix pass below and still clean.
+- **Lint**: `pnpm --filter dashboard-web lint` (`eslint app lib components tests
+--max-warnings=0` + `node scripts/check-css-tokens.mjs`) — clean; the CSS-token check reported
+  "CSS token check passed (112 CSS Module file(s) checked)" both before and after the prettier fix.
+- **Prettier**: `pnpm exec prettier --check` on every file created/touched flagged 10 files on the
+  first pass (real formatting drift, not a false positive — long lines/import wrapping); fixed with
+  `pnpm exec prettier --write` on exactly those 10 files, then every file (23 total) re-checked
+  clean.
+- **Unit tests**: `pnpm --filter dashboard-web test -- --run` — **165/165 test files, 2040/2040
+  tests passed**, both before and after the prettier auto-fix pass (identical counts, confirming
+  the formatting change was purely cosmetic). All 6 new files individually confirmed present and
+  passing in the run: `integration-form.test.tsx` (7), `integration-environments-section.test.tsx`
+  (5), `integration-verify-action.test.tsx` (4), `integration-active-toggle.test.tsx` (6),
+  `integrations-query.test.tsx` (20), `integrations.test.tsx` (7).
+- **Production build**: `pnpm --filter dashboard-web build` — clean, `Compiled successfully`, all
+  4 new routes (`/integrations`, `/integrations/[integrationId]`,
+  `/integrations/[integrationId]/edit`, `/integrations/new`) present in the build's own route
+  table, all dynamically (`ƒ`) rendered as expected (every route calls `getServerSession()`).
+- **Live-rendered in the Browser pane** (`next dev`, no backend available): all four new routes —
+  `/integrations`, `/integrations/new`, `/integrations/:id`, `/integrations/:id/edit` — confirmed
+  to redirect (`307`) an unauthenticated visitor cleanly to `/auth/sign-in` (`200`), zero console
+  errors, zero server errors (`preview_logs` with `level: "error"` returned "No server errors
+  found").
+
+### Independent verification and code review
+
+Independently re-run by the orchestrating session, not trusted from the build agent's own report:
+typecheck (`@webdesk/shared-types`/`dashboard-web`/`dashboard-api`/`dashboard-worker`, all 4
+clean), lint + CSS-token check (clean), unit tests (165/165 files, 2040/2040 tests, matching the
+agent's own count exactly), a production build (all 4 new routes present). Every component read
+directly (`integration-form.tsx`, `integration-verify-action.tsx`,
+`integration-active-toggle.tsx`, `integration-secret-metadata-section.tsx`,
+`integration-webhook-events-section.tsx`, the detail page, the list page, `lib/integrations.ts`),
+confirming: no secret value is ever rendered or accepted anywhere (`SecretMetadataFormValues` has
+no such field); every mutation submits via the established `credentials: "include"` fetch pattern;
+`configReference`/`notes` correctly stay plain `<input>`/`<textarea>` fields, not `RichTextEditor`
+(the documented exception); the list page correctly preserves `pageSize` across a filter submit via
+a hidden field (the exact bug class this app has hit and fixed before); and the sub-resource
+sections mirror `ProjectEnvironmentsSection`'s own established CRUD shape.
+
+**Reviewed at light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a
+small, frontend-only UI slice consuming an already-reviewed, already-gated backend with no new
+endpoint. A direct read-through pass found **1 finding, fixed**: `getIntegrationDetail()` wrapped
+each of its three sub-resource fetches in both `tolerateDiscard()` AND a `.catch()` — but the
+`.catch()` alone already converts every rejection into a resolved `[]`, so the promise handed to
+`tolerateDiscard()` could never reject in the first place, making the wrapper a genuine no-op
+(and its own doc comment attributed the failure-isolation to the wrong mechanism). Fixed by
+removing the redundant `tolerateDiscard()` import/wrapping and correcting the doc comments on
+`getWebhookEvents()`/`getIntegrationDetail()` to credit the real mechanism (the per-fetch
+`.catch()`). Re-validated after the fix: typecheck/lint clean, 165/165 unit test files (2040/2040
+tests, unchanged — confirming the fix was behavior-preserving), prettier clean.
+
+Security review skipped per the same standing rule — no new endpoint, no new RBAC action, no new
+sink; every rendered field (including `payloadSummary`/`errorMessage` on the read-only webhook
+events list) is plain JSX text, never `dangerouslySetInnerHTML`.
+
+### Status
+
+Built, fully validated, live-rendered, and code-reviewed (1 finding, fixed) — not yet second-role
+human reviewed, gated, merged, or pushed to `origin`. Each remains its own separate,
+not-yet-requested next step, matching this project's standing discipline for every prior module's
+own `dashboard-web` UI slice.
