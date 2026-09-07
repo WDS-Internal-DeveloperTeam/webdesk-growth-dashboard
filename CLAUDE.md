@@ -5657,9 +5657,8 @@ query,}.ts` mirror the established zero-non-type-import-file split; `getAdminUse
     (`current_gate` now `G4-system-settings`). **"Push the branch" was then executed under the
     same combined instruction** — pushed to `origin`. **This gate approval does not itself
     authorize opening a PR or merging** — each remains its own separate, not-yet-requested
-    authorization, per this project's standing "no auto-merge" rule. No `dashboard-web` UI exists
-    yet for this module — a separate, not-yet-requested next step, matching every prior module's
-    own backend-first precedent.
+    authorization, per this project's standing "no auto-merge" rule. **Update (2026-09-07): the
+    `dashboard-web` UI has since been built and gated — see item 94 below.**
 
 93. **Integrations module backend — built, reviewed, gated, merged
     ([PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123),
@@ -5795,6 +5794,57 @@ module-registry` clean (43 modules, 21 permission groups), `pnpm audit` 0 vulner
     Solution, decision CONFIRM, on branch `dashboard-web-integrations` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
     `G4-dashboard-web-integrations`).
+
+95. **`dashboard-web` System Settings UI — built, reviewed, gated, pushed (2026-09-07).** Closes
+    this module's last named gap, following the backend's own build-to-production arc (PR #122,
+    item 92 above). Built directly on the explicit "start System Settings - dashboard-web UI"
+    instruction. Mirrors Brand Library's UI structure file-for-file — the closest sibling (single
+    generic table, no approval workflow). New `packages/shared-types` `SystemSetting`/
+    `SystemSettingType`, mirroring `packages/database/src/system-settings/entities.ts` exactly.
+    `lib/system-settings-query.ts`/`lib/system-settings.ts` mirror the established zero-non-type-
+    import-file split every sibling module uses. `SystemSettingForm` treats `publicId`/
+    `settingType` as create-only, matching `updateSystemSettingSchema`'s own `.omit({publicId,
+settingType})` contract; `value` is a raw-JSON `<textarea>`, required on create (matching the
+    backend's own non-nullish `value` field) and, on edit, omitted from the payload entirely when
+    left blank rather than sent as an empty object — there is no way to "clear" it, by design, since
+    `value` isn't nullable on either DTO — mirroring `ImportTemplateForm`'s own established
+    JSON-textarea handling; `description` stays a plain `<textarea>`, never `RichTextEditor`, since
+    the backend's own DTO comment is explicit this is "internal config, not authored content," with
+    no sanitization wired. `SystemSettingActiveStateActions` is the module's one lifecycle action —
+    a plain `isActive` toggle posting `{isActive, expectedIsActive}` to
+    `POST .../settings/:id/active-state`, gated on the `configure` RBAC action (not `edit`) via a
+    real CAS guard the backend itself enforces dynamically inside the service (the route only
+    requires `view` at the guard level), so a caller lacking `configure` still reaches the button and
+    the backend's own 403 is the real, sole enforcement point — matching every sibling
+    `*StatusActions`/`*PublishActions` component's own relationship to its backend gate. Uses the
+    shared `useSyncedState()` hook from the start. Four routes under `app/(shell)/system-settings/`
+    at the module registry's own seeded `route` field. **Built directly, then independently
+    re-verified in an isolated git worktree** (another session was concurrently active on the main
+    checkout building an unrelated module, including a live `git reset` mid-session — isolating this
+    work in `.claude/worktrees/dashboard-web-system-settings` avoided any collision) — every
+    validation command re-run fresh: `@webdesk/shared-types`/`dashboard-web`/`dashboard-api`/
+    `dashboard-worker` typecheck clean, `eslint --max-warnings=0` + CSS-token-check (110 files)
+    clean, 2030/2030 `dashboard-web` unit tests passing (39 new), `next build` clean with all 4 new
+    routes present, `prettier --check` clean. **Reviewed at light tier**, per the 2026-08-27
+    "right-size the review pipeline" standing rule — a small, frontend-only UI slice consuming an
+    already-reviewed, already-gated backend with no new endpoint. A direct read-through pass
+    verified the create-only field contract against the real backend DTO, the JSON-value client-
+    side parse/validate flow, and the `isActive` CAS-toggle payload shape against the real backend
+    schema — **0 findings**. Security review skipped per the same standing rule — no new endpoint,
+    no new RBAC action, no new sink; `description` renders as plain JSX text, never
+    `dangerouslySetInnerHTML`. See
+    `docs/project-state/dashboard-web-system-settings-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Approve as-is, gate it, and push the branch"
+    instruction** — the approval checklist's own findings summary (0 findings) served as the review
+    artifact. **The gate (G4-dashboard-web-system-settings) was then approved** — WebDesk Solution,
+    decision CONFIRM (clean pass, not an override), approved commit `8b9f940` on branch
+    `dashboard-web-system-settings` — see `outputs/webdesk-growth-dashboard/project.json`'s
+    `gates[]` (`current_gate` now `G4-dashboard-web-system-settings`). **"Push the branch" was then
+    executed under the same combined instruction** — pushed to `origin`, after first merging
+    `origin/main` in (two concurrent PRs, #123/#124, had landed since this branch started — no
+    conflicts, fully re-verified after the merge). **This gate approval does not itself authorize
+    opening a PR or merging** — each remains its own separate, not-yet-requested authorization, per
+    this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
