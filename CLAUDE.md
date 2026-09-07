@@ -5553,6 +5553,55 @@ library.ts`'s own zero-non-type-import-file split. `category` is create-only (sh
     visitor. **The Users, Roles and Permissions module backend is now genuinely live in
     production.** No `dashboard-web` UI exists yet for this module — a separate,
     not-yet-requested next step, matching every prior module's own backend-first precedent.
+    **Update (2026-09-07): the `dashboard-web` UI has since been built and gated — see item 91
+    below.**
+
+91. **`dashboard-web` Users, Roles and Permissions UI — built, reviewed, gated, pushed
+    (2026-09-07).** Closes this module's last named gap, following the backend's own
+    build-to-production arc (PR #120, item 90 above). Not started automatically — built directly
+    on the explicit "Start Users, Roles and Permissions UI" instruction. Mirrors the scope already
+    confirmed for the backend: a real user directory (list/search every account status, per-user
+    detail with every role assignment split global/project-scoped, activate/deactivate) plus a
+    read-only global permission-matrix viewer — no new-user creation, no grant editing. New
+    `packages/shared-types` `AdminUser`/`AdminUserRoleAssignment`/`AdminUserDetail`/
+    `PermissionMatrixGrant`/`PermissionMatrix`, mirrored from the backend's own `UserDetail`/
+    `PermissionMatrix` shapes (deliberately named distinctly from the existing picker-only
+    `UserSummary`, so the two are never confused for each other). `lib/users-roles-permissions{-
+query,}.ts` mirror the established zero-non-type-import-file split; `getAdminUsers()` uses the
+    backend's real `total` directly rather than the "+1 row" technique every sibling list fetch
+    needs, since this is the one endpoint that actually returns a count. `UserStatusActions`
+    mirrors `HelpCenterPublishActions` — only Deactivate is confirmed (`window.confirm`), since the
+    backend revokes every one of the target's sessions on a real transition to `disabled`;
+    self-deactivation and last-active-Super-Admin protection are both left entirely to the
+    backend's own real enforcement (403/409, surfaced via `postMutation()`'s error message) rather
+    than guessed at client-side. Three routes under `app/(shell)/users-roles-and-permissions/`
+    (list, `[userId]` detail, `matrix`) at the module registry's own seeded `route` field; the
+    matrix page reuses the exact `V`/`C`/`E`/`S`/`R`/`A`/`P`/`L`/`X`/`M` letter codes
+    `packages/database/src/migrations/00013-seed-rbac-matrix.ts`'s own `LETTER_ACTIONS` map uses.
+    Every backend contract (`users-directory.controller.ts`, `permission-matrix.controller.ts`,
+    `users-roles-permissions.dto.ts`, both services) was read directly before writing against it.
+    1991/1991 `dashboard-web` unit tests overall (27 new: 6 status-actions, 21 lib);
+    typecheck/lint (`--max-warnings=0`)/CSS-token-check (108 files)/`next build` (all 3 routes
+    present)/prettier all clean — independently re-run by the orchestrating session. **Reviewed at
+    light tier**, per the 2026-08-27 "right-size the review pipeline" standing rule — a small,
+    frontend-only slice (plus additive shared-types) consuming an already-reviewed, already-gated
+    backend with no new endpoint. A direct read-through pass verified the list/detail/status-action
+    request shapes against the real backend schemas, that self-deactivation/lockout protection stay
+    entirely server-enforced, the action-letter map against the real seed script, and reuse of
+    every established shared helper — **0 findings**. No separate security review — no new
+    endpoint, no new RBAC action, no new sink; the one sensitive transition is enforced entirely
+    server-side, unchanged by this diff. See
+    `docs/project-state/dashboard-web-users-roles-permissions-approval-checklist.md`. **Required
+    second-role human review complete via the direct "Commit, gate it, and push the branch"
+    instruction** — the approval checklist's own findings summary (0 findings) served as the
+    review artifact. **The gate (G4-dashboard-web-users-roles-permissions) was then approved** —
+    WebDesk Solution, decision CONFIRM (clean pass, not an override), approved commit `47f61bd` on
+    branch `dashboard-web-users-roles-permissions` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-dashboard-web-users-roles-permissions`). **"Push the branch" was then executed under the
+    same combined instruction** — pushed to `origin`. **This gate approval does not itself
+    authorize opening a PR or merging** — each remains its own separate, not-yet-requested
+    authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
@@ -8765,6 +8814,32 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   were verified live directly — `dashboard-api`'s `/health` matched the merge commit, and both
   `GET /users-roles-and-permissions/users`/`matrix` returned a clean `401`. **The Users, Roles
   and Permissions module backend is now genuinely live in production.**
+- `[2026-09-07]` **Built the `dashboard-web` UI for Users, Roles and Permissions**, under the
+  explicit "Start Users, Roles and Permissions UI" instruction, closing this module's last named
+  gap following the backend's own build-to-production arc (PR #120). Every backend contract
+  (`users-directory.controller.ts`, `permission-matrix.controller.ts`,
+  `users-roles-permissions.dto.ts`, both services) was read directly before writing against it,
+  not assumed. Full account in item 91 above and
+  `docs/project-state/dashboard-web-users-roles-permissions-approval-checklist.md`.
+- `[2026-09-07]` **Reviewed at light tier, per the 2026-08-27 "right-size the review pipeline"
+  standing rule** — a small, frontend-only UI slice consuming an already-reviewed, already-gated
+  backend with no new endpoint. A direct read-through pass verified the list/detail/status-action
+  request shapes against the real backend schemas, the action-letter map on the permission-matrix
+  page against the real RBAC seed script, and that the one sensitive transition (deactivation)
+  stays entirely server-enforced — **0 findings**. No separate security review — no new endpoint,
+  no new RBAC action, no new sink. 1991/1991 `dashboard-web` unit tests overall (27 new: 6
+  status-actions, 21 lib); typecheck/lint/CSS-token-check/`next build`/prettier all clean.
+- `[2026-09-07]` **Required second-role human review complete for
+  `dashboard-web-users-roles-permissions`, via the direct "Commit, gate it, and push the branch"
+  instruction** — the approval checklist's own findings summary (0 findings) served as the review
+  artifact. **The gate (G4-dashboard-web-users-roles-permissions) was then approved** — WebDesk
+  Solution, decision CONFIRM (clean pass, not an override), approved commit `47f61bd` on branch
+  `dashboard-web-users-roles-permissions` — see
+  `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+  `G4-dashboard-web-users-roles-permissions`). **"Commit" and "Push the branch" were then executed
+  under the same combined instruction** — committed as `47f61bd`, pushed to `origin`. **This gate
+  approval does not itself authorize opening a PR or merging** — each remains its own separate,
+  not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Open client blockers
 
