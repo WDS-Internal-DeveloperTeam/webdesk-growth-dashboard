@@ -3,9 +3,11 @@
 **Status:** Built, code-reviewed at light tier (1 finding, fixed). Security review skipped per the
 2026-08-27 standing rule (no new endpoint, no new sink). Required second-role human review
 complete — Jitesh D, "Approves," no disputes raised. Gate `G4-dashboard-web-integrations`
-approved (WebDesk Solution, CONFIRM). Push, PR, and merge authorized under the combined "gate it,
-push, open PR, and merge" instruction — see "Sign-off" below for the exact commit/PR/merge record
-once each step completes.
+approved (WebDesk Solution, CONFIRM). Pushed to `origin`, opened as
+[PR #127](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/127), all 14
+CI checks green, merged as `164b9cd7ab0f6af6a7f45cc3d091ad5a3f1b7119`, and **verified live in
+production.** This slice's build-to-production arc is complete — backend and now the full UI are
+both live for the Integrations module.
 
 ## Completion condition
 
@@ -56,3 +58,27 @@ complete before the gate was requested) — see `outputs/webdesk-growth-dashboar
 **"Gate it, push, open PR, and merge" was then given as one combined instruction** — commit, push
 to `origin`, open a PR, wait for CI, and merge each executed under that same explicit
 authorization.
+
+## Merge
+
+Pushing and opening [PR #127](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/127)
+coincided with a burst of concurrent merges from other sessions (System Settings backend/UI, Audit
+Logs and System Health backend all landed to `main` within the same window). The branch needed
+`origin/main` merged in three separate times before it could merge cleanly — resolving real
+conflicts each time in `packages/shared-types/src/index.ts`, `project.json`'s `gates[]`/
+`audit_log`, and `CLAUDE.md`'s item numbering. The first merge attempt was accidentally committed
+as a single-parent commit rather than a real merge (caught via a direct `git log --format=%P`
+check before pushing further, corrected by resetting and re-merging properly with a verified
+two-parent commit). Fully re-validated after every merge: typecheck clean across all 4 consumer
+packages, lint + CSS-token-check clean, 168/168 `dashboard-web` unit test files (2079/2079 tests),
+production build clean. All 14 CI checks then confirmed green.
+
+**"Merge PR #127" was then executed** — merged with a real merge commit (not squash/rebase),
+matching every prior merge in this project's history — merge commit
+`164b9cd7ab0f6af6a7f45cc3d091ad5a3f1b7119`. Both Vercel projects auto-deployed on push to `main`
+and were verified live directly, not just via CI's own Vercel status check — `dashboard-api`'s
+`/health` returned `build.commitSha == 164b9cd7ab0f6af6a7f45cc3d091ad5a3f1b7119`, confirming the
+exact merged commit is what's serving; `dashboard-web`'s `/integrations` correctly redirects
+(307) an unauthenticated visitor to `/auth/sign-in` (a transient stale-edge-cache `404` on the
+very first check was ruled out via a cache-busted retry, not a real defect). **The `dashboard-web`
+Integrations UI is now genuinely live in production.**

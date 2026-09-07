@@ -5844,7 +5844,10 @@ module-registry` clean (43 modules, 21 permission groups), `pnpm audit` 0 vulner
     backend-first precedent. **Update (2026-09-07): the `dashboard-web` UI has since been built,
     reviewed, and gated — see item 94 below.**
 
-95. **`dashboard-web` Integrations UI — built, reviewed, gated (2026-09-07).** Closes this
+95. **`dashboard-web` Integrations UI — built, reviewed, gated, merged
+    ([PR #127](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/127),
+    merge commit `164b9cd7ab0f6af6a7f45cc3d091ad5a3f1b7119`); now genuinely live in production
+    (2026-09-07).** Closes this
     module's last named gap, following the backend's own build-to-production arc (PR #123, item
     93 above). Built directly on the explicit "Start the dashboard-web UI for it" instruction. No
     approved wireframe exists for this module — the IA mirrors the real backend contract directly
@@ -5893,7 +5896,24 @@ module-registry` clean (43 modules, 21 permission groups), `pnpm audit` 0 vulner
     (G4-dashboard-web-integrations) was then separately requested and approved** — WebDesk
     Solution, decision CONFIRM, on branch `dashboard-web-integrations` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
-    `G4-dashboard-web-integrations`).
+    `G4-dashboard-web-integrations`). **"Gate it, push, open PR, and merge" was then given as one
+    combined instruction.** Given the pace of concurrent merges from other sessions during this
+    review (System Settings backend/UI, Audit Logs and System Health backend all landed within the
+    same window), the branch needed `origin/main` merged in three separate times before it could
+    merge cleanly — the first attempt was accidentally committed as a single-parent commit rather
+    than a real merge (caught via a direct `git log --format=%P` check before pushing further,
+    corrected by resetting and re-merging properly). All 14 CI checks then confirmed green.
+    **"Merge PR #127" was then executed** — merge commit
+    `164b9cd7ab0f6af6a7f45cc3d091ad5a3f1b7119`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+164b9cd7ab0f6af6a7f45cc3d091ad5a3f1b7119`, confirming the exact merged commit is what's serving;
+    `dashboard-web`'s `/integrations` correctly redirects (307) an unauthenticated visitor to
+    `/auth/sign-in` (a transient stale-edge-cache `404` on the very first check was ruled out via a
+    cache-busted retry, not a real defect). **The `dashboard-web` Integrations UI is now genuinely
+    live in production**, closing out this slice's full build-to-production arc — backend and now
+    the full UI (list, detail, create/edit form, verify/toggle actions, 3 sub-resource sections)
+    are both live for the Integrations module.
 
 96. **`dashboard-web` System Settings UI — built, reviewed, gated, pushed (2026-09-07).** Closes
     this module's last named gap, following the backend's own build-to-production arc (PR #122,
