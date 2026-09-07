@@ -5661,7 +5661,10 @@ query,}.ts` mirror the established zero-non-type-import-file split; `getAdminUse
     yet for this module — a separate, not-yet-requested next step, matching every prior module's
     own backend-first precedent.
 
-93. **Integrations module backend — built, reviewed, gated (2026-09-07).** Module #41 on the
+93. **Integrations module backend — built, reviewed, gated, merged
+    ([PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123),
+    merge commit `6d912264df6ff92b99fc74db4cfc30e3709f1e66`); now genuinely live in production
+    (2026-09-07).** Module #41 on the
     Recommended Module Roadmap, Wave 1 (no dependencies). Built directly on the explicit "start
     integrations module" instruction. Record-keeping-only status/config tracking for GitHub,
     WordPress, Vercel Blob, PostgreSQL, SMTP, Sentry, uptime, and vulnerability-scan integrations
@@ -5719,8 +5722,27 @@ module-registry` clean (43 modules, 21 permission groups), `pnpm audit` 0 vulner
     (G4-integrations) was then separately requested and approved** — WebDesk Solution, decision
     CONFIRM, on branch `module-integrations` — see
     `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
-    `G4-integrations`). Backend only — no `dashboard-web` UI yet, matching every prior module's
-    own backend-first precedent.
+    `G4-integrations`). **"Gate it, push, open PR, and merge" was then given as one combined
+    instruction.** Pushing and opening [PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123)
+    first surfaced a real migration-number collision — the concurrently-merged System Settings
+    module (PR #122) had independently claimed the same `00120`/`00121` numbers — resolved by
+    merging `origin/main`, renumbering to `00122`/`00123`, updating every internal reference, and
+    fully re-validating against a freshly reset local disposable PostgreSQL 17 database (1914/1914
+    `dashboard-api` unit tests, 29/29 module integration tests, 25/25 module e2e tests, a clean
+    123-migration round-trip — a stale compiled `dist/` build artifact from before the rename
+    briefly caused a false duplicate-migration failure along the way, diagnosed and cleared, not a
+    defect in the migration content) before pushing again. All 14 CI checks then confirmed green.
+    **"Merge PR #123" was then executed** — merge commit
+    `6d912264df6ff92b99fc74db4cfc30e3709f1e66`. Both Vercel projects auto-deployed on push to
+    `main` and were verified live directly, not just via CI's own Vercel status check —
+    `dashboard-api`'s `/health` returned `build.commitSha ==
+6d912264df6ff92b99fc74db4cfc30e3709f1e66`, confirming the exact merged commit is what's serving;
+    `GET /integrations` returned a clean `401` (route live, `SessionGuard` enforcing — not a
+    `404`, which would mean the module never actually deployed); and `dashboard-web`'s `/`
+    correctly redirects (307) an unauthenticated visitor to `/auth/sign-in`. **The Integrations
+    module backend is now genuinely live in production.** No `dashboard-web` UI exists yet for
+    this module — a separate, not-yet-requested next step, matching every prior module's own
+    backend-first precedent.
 
 ## Recent decisions
 
