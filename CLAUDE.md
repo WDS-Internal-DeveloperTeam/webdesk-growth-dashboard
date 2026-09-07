@@ -5675,7 +5675,10 @@ bb14f12e4d7bd6ce167142d500dee4c7697dd490`, confirming the exact merged commit is
     matching every prior module's own backend-first precedent. **Update (2026-09-07): the
     `dashboard-web` UI has since been built and gated — see item 95 below.**
 
-93. **Audit Logs and System Health module backend — built, reviewed, gated (2026-09-07).** Module
+93. **Audit Logs and System Health module backend — built, reviewed, gated, merged
+    ([PR #126](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/126),
+    merge commit `0ad2a9aa722f3eb5e20121d648c28b866c550ac3`); now genuinely live in production
+    (2026-09-07).** Module
     key `audit_logs_and_system_health`, already seeded in `module_registry` (migration `00035`),
     the last unbuilt module on the Recommended Module Roadmap. Built directly on the explicit
     "number the migration from 00122" instruction, with the target module confirmed directly
@@ -5731,9 +5734,31 @@ bb14f12e4d7bd6ce167142d500dee4c7697dd490`, confirming the exact merged commit is
     review artifact. **The gate (G4-audit-logs-and-system-health) was then approved** — WebDesk
     Solution, decision CONFIRM (clean pass, not an override), approved commit `ae66ece` on branch
     `module-audit-logs-and-system-health` — see `outputs/webdesk-growth-dashboard/project.json`'s
-    `gates[]` (`current_gate` now `G4-audit-logs-and-system-health`). **This gate approval does
-    not itself authorize pushing the branch, opening a PR, or merging** — each remains its own
-    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
+    `gates[]` (`current_gate` now `G4-audit-logs-and-system-health`). **"Push the branch" and
+    "Open a PR" were then separately requested and executed** — pushed to `origin`, opened as
+    [PR #126](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/126).
+    **Two real merge conflicts against `main` surfaced along the way, both from concurrently
+    merging sessions**: (1) an independently-built Integrations module (PR #123) had claimed
+    migration numbers `00122`/`00123`, colliding with this branch's own `00122` — resolved by
+    renumbering to `00124`, updating every reference across `CLAUDE.md`/the implementation doc/
+    the approval checklist, and clearing a stale compiled `dist/` artifact that briefly caused a
+    false duplicate-migration failure (the exact class of gotcha this project's own history
+    already documents for Integrations' own renumbering); (2) a second concurrent session's
+    `dashboard-web` System Settings UI (PR #125) merged while CI was running on the first fix,
+    requiring a second `main`-merge with `CLAUDE.md`/`project.json` conflicts resolved (including
+    a duplicate item-`94` numbering, fixed by renumbering the later entry to `95`) and a full
+    re-verification. All 14 CI checks confirmed green after each fix. **"Merge PR #126" was then
+    separately requested and executed** — merged with a real merge commit (not squash/rebase),
+    matching every prior merge in this project's history — merge commit
+    `0ad2a9aa722f3eb5e20121d648c28b866c550ac3`. `dashboard-api` auto-deployed on push to `main`
+    and was verified live directly, not just via CI's own Vercel status check — `/health`
+    returned `build.commitShaShort == 0ad2a9a`, confirming the exact merged commit is what's
+    serving; `GET /audit-logs-and-system-health/events` returned a clean `401` (route live,
+    `SessionGuard` enforcing — not a `404`, which would mean the module never actually deployed);
+    and `dashboard-web`'s `/` correctly redirects (307) an unauthenticated visitor to
+    `/auth/sign-in`. **The Audit Logs and System Health module backend is now genuinely live in
+    production.** No `dashboard-web` UI exists yet for this module — a separate,
+    not-yet-requested next step, matching every prior module's own backend-first precedent.
 
 94. **Integrations module backend — built, reviewed, gated, merged
     ([PR #123](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/123),
@@ -9249,6 +9274,21 @@ cbc10ec`, confirming the exact merged commit is what's serving; `GET
   `gates[]` (`current_gate` now `G4-audit-logs-and-system-health`). This gate approval does not
   itself authorize pushing the branch, opening a PR, or merging — each remains its own separate,
   not-yet-requested authorization.
+- `[2026-09-07]` **"Push and open a PR" was separately requested and executed** on
+  `module-audit-logs-and-system-health` — opened as
+  [PR #126](https://github.com/WDS-Internal-DeveloperTeam/webdesk-growth-dashboard/pull/126). CI
+  never ran at first (`mergeStateStatus: DIRTY`) — a real migration-number collision with a
+  concurrently-merged Integrations module (`00122`/`00123`), resolved by renumbering to `00124`
+  and clearing a stale compiled `dist/` artifact. A second, independent concurrent-merge conflict
+  then surfaced while CI was running the fix (a `dashboard-web` System Settings UI PR landing) —
+  resolved the same way, including a duplicate `CLAUDE.md` item-`94` numbering. All 14 CI checks
+  green after each fix.
+- `[2026-09-07]` **"Merge PR #126 once green" was requested and executed** once all 14 checks
+  passed and `mergeStateStatus` was confirmed `CLEAN` — merged with a real merge commit (not
+  squash/rebase) — `0ad2a9aa722f3eb5e20121d648c28b866c550ac3`. `dashboard-api` auto-deployed on
+  push to `main` and was verified live directly — `/health` matched the merge commit, and `GET
+/audit-logs-and-system-health/events` returned a clean `401`. **The Audit Logs and System Health
+  module backend is now genuinely live in production.**
 
 ## Open client blockers
 
