@@ -1470,6 +1470,20 @@
       "record": "docs/project-state/dashboard-web-users-roles-permissions-approval-checklist.md",
       "notes": "dashboard-web Users, Roles and Permissions UI, closing this module's last named gap on top of the already-gated backend (G4-users-roles-permissions, PR #120, merged and live). A real user directory (list/search every account status, per-user detail with role assignments split global/project-scoped, activate/deactivate) plus a read-only global permission-matrix viewer (7 roles x 21 permission-group modules). No new-user creation, no grant editing. UserStatusActions mirrors HelpCenterPublishActions -- only Deactivate is confirmed (window.confirm), since the backend revokes every session on a real transition to disabled; self-deactivation and last-active-Super-Admin protection are both left to the backend's own real enforcement. The permission-matrix page reuses the exact V/C/E/S/R/A/P/L/X/M letter codes 00013-seed-rbac-matrix.ts's own LETTER_ACTIONS map uses. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through pass against every real backend contract (controllers/DTOs/services read directly, not assumed) -- 0 findings. No separate security review -- no new endpoint/RBAC action/sink; the one sensitive transition (deactivation) is enforced entirely server-side. 1991/1991 dashboard-web unit tests overall (27 new).",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Commit, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
+    },
+    {
+      "id": "G4-system-settings",
+      "type": "qa-security-gate",
+      "scope": "module-system-settings",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-07T00:00:00Z",
+      "approved_commit": "eb4d413 (branch module-system-settings)",
+      "record": "docs/project-state/module-system-settings-approval-checklist.md",
+      "notes": "System Settings module backend -- module key system_settings, already seeded in module_registry (migration 00035), no dependencies, no confidentiality mechanism. Scope confirmed directly with the project owner (AskUserQuestion): owns only the genuinely unowned settings -- file limits, Git rules, backup rules, escalation SLAs, documentation rules, environments, default statuses/categories/taxonomies -- since retention, contacts, and scan schedules already have their own dedicated, already-live tables elsewhere. Single generic system_settings table with an immutable settingType discriminator, a bounded JSONB value column, key unique per (settingType, key) via a real composite DB index, and an isActive toggle gated on the configure RBAC action (not edit) via a real atomic compare-and-swap, orthogonal to the edit-gated content update -- mirroring Brand Library's structure, the closest sibling. Reuses the already-seeded system_settings RBAC group verbatim; the review (R) action is deliberately left unwired. Reviewed at light tier per the 2026-08-27 standing rule -- a direct read-through of every file where a real defect class has previously shipped in this codebase (RBAC decorator placement, CAS races, unique-constraint TOCTOU handling, both packages/database barrel exports, the pagination cap) -- 0 findings. 1872/1872 dashboard-api unit tests (20 new), 28/28 packages/database unit tests, 22/22 module-system-settings.integration.test.ts, 21/21 system-settings.e2e-spec.ts, the full 45-file packages/database integration suite (880/880) and dashboard-api e2e suite (853/853), all independently re-run by the orchestrating session against a fresh local disposable PostgreSQL 17 database, not trusted from the build agent's own report. A real migration down/down/up/up round-trip (121 migrations), validate:module-registry (43 modules, 21 permission groups, unaffected), and pnpm audit (0 vulnerabilities) were also independently re-run.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined 'Approve as-is, gate it, and push the branch' instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations."
     }
   ],
   "budget": {
@@ -3777,7 +3791,25 @@
       "project_version_before": 142,
       "project_version_after": 143,
       "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "gate_approved",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-system-settings approved (CONFIRM) for the System Settings module backend -- a single generic system_settings table covering only the genuinely unowned config items (file limits, Git rules, backup rules, escalation SLAs, documentation rules, environments, default statuses/categories/taxonomies), reusing the already-seeded system_settings RBAC group verbatim. Reviewed at light tier per the 2026-08-27 standing rule (0 findings). Approved commit eb4d413 on branch module-system-settings, via the direct 'Approve as-is, gate it, and push the branch' instruction. Push executed alongside this gate per that same combined authorization -- opening a PR and merging remain separate, not-yet-requested authorizations.",
+      "project_version_before": 143,
+      "project_version_after": 144,
+      "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "merged_to_main",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "PR #122 (module-system-settings) merged to main -- all 14 CI checks green beforehand. Merged with a real merge commit (not squash/rebase) -- bb14f12e4d7bd6ce167142d500dee4c7697dd490. dashboard-api auto-deployed on push to main and was verified live directly, not just via CI's own Vercel status check -- /health returned build.commitSha == bb14f12e4d7bd6ce167142d500dee4c7697dd490, confirming the exact merged commit is what's serving; GET /system-settings/settings returned a clean 401 (route live, SessionGuard enforcing -- not a 404, which would mean the module never actually deployed); and dashboard-web's / correctly redirects (307) an unauthenticated visitor to /auth/sign-in. The System Settings module backend is now genuinely live in production. No dashboard-web UI exists yet for this module -- a separate, not-yet-requested next step, matching every prior module's own backend-first precedent.",
+      "project_version_before": 144,
+      "project_version_after": 145,
+      "timestamp": "2026-09-07T00:00:00Z"
     }
   ],
-  "current_gate": "G4-dashboard-web-users-roles-permissions"
+  "current_gate": "G4-system-settings"
 }
