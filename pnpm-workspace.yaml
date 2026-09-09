@@ -61,6 +61,31 @@ allowBuilds:
 # docs/project-state/dependency-audit-2026-08-08.md (this session's bumps)
 # for the full record.
 #
+# js-yaml: floor raised 4.3.1 -> 4.3.2 (2026-09-09): GHSA-2883-xcg3-v3hh
+# (maxTotalMergeKeys does not limit CPU use for empty merge sources, high),
+# patched >=4.3.2 -- the existing >=4.3.1 override was one patch short of this
+# advisory's own fix, the same "floor was one patch short" shape already
+# documented above for qs. Confirmed via `pnpm audit` directly, dev-tooling
+# only (eslint's own dependency chain), never bundled into either app's
+# runtime output.
+#
+# multer: overridden here despite the caution above (originally written when
+# multer was exact-pinned by @nestjs/platform-express 10.x with "no fix
+# anywhere in the 10.x line") -- this project is now on NestJS 11.x
+# (@nestjs/platform-express@11.1.28), which still exact-pins
+# `"multer": "2.2.0"` (confirmed by reading that package's own package.json
+# directly, not assumed), but 2.2.0 -> 2.3.0 is a same-major, patch-level bump
+# fixing three real advisories (GHSA-wc9g-mqfw-jrwm, GHSA-qfvm-cv95-jqjf,
+# GHSA-535w-7cp7-47q4) -- @nestjs/platform-express only calls multer's stable,
+# unchanged-across-2.x `multer()` middleware factory API, so this is safe to
+# force despite the exact pin, unlike overriding an internal framework
+# dependency whose own internals might assume the exact pinned shape.
+#
+# sharp: next@16.3.3's own optionalDependencies range (`^0.35.3`) already
+# permits the patched 0.35.4, but pnpm had resolved to the range's floor
+# (0.35.3, unpatched) rather than the latest satisfying version -- GHSA-g89c-
+# p67h-r497/GHSA-2jg2-4ch7-h545 (libheif vulnerabilities), patched >=0.35.4.
+#
 # htmlparser2: NOT a security patch, unlike every entry above -- a deliberate
 # MAJOR-VERSION DOWNGRADE working around a real production outage
 # (2026-08-20). sanitize-html@2.17.7 (still the latest release) requires
@@ -88,7 +113,7 @@ overrides:
   tmp: ">=0.2.6 <0.3.0"
   esbuild: ">=0.25.0 <0.26.0"
   webpack: ">=5.104.1 <6.0.0"
-  js-yaml: ">=4.3.1 <5.0.0"
+  js-yaml: ">=4.3.2 <5.0.0"
   lodash: ">=4.17.24 <5.0.0"
   # Floor raised 6.15.2 -> 6.16.0 (2026-09-02): GHSA-x5fp-wj9c-mxmx (array-limit bypass, patched
   # >=6.15.4) and GHSA-4mjr-xmp4-gh2g (isBuffer-controlled DoS, patched >=6.16.0), both newly
@@ -112,3 +137,5 @@ overrides:
   # business-knowledge-center-rich-content-attachments.md). A patch-version bump from the
   # previously-resolved 0.8.14; confirmed via `pnpm why @xmldom/xmldom`.
   "@xmldom/xmldom": ">=0.8.15 <1.0.0"
+  multer: ">=2.3.0 <3.0.0"
+  sharp: ">=0.35.4 <0.36.0"
