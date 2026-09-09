@@ -1568,6 +1568,20 @@
       "record": "docs/project-state/grant-notifications-view-owner-growth-approver-approval-checklist.md",
       "notes": "Grants owner_growth_approver the notifications_view action on the system_settings module -- the second of two roles now widened for this module, alongside super_admin (G4-grant-notifications-view-permission). Not started automatically -- built directly on the explicit \"start whatever missing in the notification center\" instruction, following a review of the module that reported it functionally live but practically unusable by anyone except super_admin. Presented four possible next steps directly (AskUserQuestion): widen the notifications_view grant, grant notifications_configure, add a dedicated RBAC permission group, or build real SMTP delivery -- the user chose to widen notifications_view, then chose owner_growth_approver as the target role, since it already holds nearly every other system_settings action alongside super_admin. notifications_configure stays zero-seeded for every role -- out of scope for this request. New migration 00125-grant-notifications-view-to-owner-growth-approver.ts mirrors migration 00117's own shape exactly -- one additive role_permissions row, resolved by joining on roles'/modules' real key columns, guarded by ON CONFLICT (role_id, module_id, action) WHERE project_id IS NULL DO NOTHING against the real partial unique index, safely re-runnable; down() deletes only that exact (role, module, action) triple. No application code changed -- PermissionGuard/@RequirePermission are unmodified. Verified against a real local disposable PostgreSQL 17 database (never production): a full 125-migration up, confirmed exactly two roles now hold the grant (super_admin, owner_growth_approver) with no other role/action affected, then a migrate down/up round-trip on 00125 alone confirming the row disappears and reappears cleanly with no duplicate. 28/28 @webdesk/database unit tests, typecheck/prettier clean. This is a genuine RBAC/permission change, which this project's own 2026-08-27 right-size-the-review-pipeline standing rule reserves for the full tier by default -- given a one-file, no-application-code-touched, additive-read-only-grant diff mirroring an already-reviewed pattern exactly, a direct security-focused read-through was judged proportionate rather than an 8-angle fan-out: confirmed the up() WHERE clause resolves to exactly one (role, module) pair, the ON CONFLICT target matches the real index (verified by running it twice in a row -- the second run stayed a no-op), down() is scoped to the exact triple (not a blanket delete), no application code changed, and no SQL-injection surface (every value is a static literal). 0 findings.",
       "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- given under the combined \"Approve as-is, gate it, and push the branch\" instruction, pushing the branch is executed alongside this gate per that explicit combined authorization; opening a PR and merging remain their own separate, not-yet-requested authorizations. This gate also does not authorize running the migration against the real production database -- that remains the user's own action, per this project's standing credential-handling discipline (the user runs pnpm --filter @webdesk/database run migrate themselves after the code is merged)."
+    },
+    {
+      "id": "G4-wordpress-adapter",
+      "type": "qa-security-gate",
+      "scope": "wordpress-adapter",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-09T00:00:00Z",
+      "approved_commit": "e29d822 (branch wordpress-adapter)",
+      "record": "docs/project-state/wordpress-adapter-approval-checklist.md",
+      "notes": "WordPress adapter (packages/integrations) -- WordPressRestAdapter (REST API adapter: getPost/listPosts/getPostMeta/getPublicationState/createDraft/updateDraft/healthCheck, Basic Auth, 429 backoff, Zod boundary validation, approved-draft-only write enforcement) and wp-cli-actions.ts (the 5 named WP-CLI actions per 02-wp-cli-and-deployment.md, NotConfiguredWpCliExecutor as the only wired-in implementation since WP-CLI/SSH provisioning is unconfirmed). No dashboard-api DI wiring -- deliberately out of scope, no real business module reads from or writes to WordPress yet. Two design decisions confirmed directly with the user first: split WORDPRESS_APP_USERNAME/WORDPRESS_APP_PASSWORD env vars (over a single combined WORDPRESS_APP string), and build scope limited to the adapter package itself. 60/60 unit tests, typecheck/lint/build clean, live-verified end-to-end against a real local WordPress install using a freshly-generated-then-revoked Application Password. Independent code review (this project's own code-review skill, high effort, 8 finder angles) surfaced 10 findings, all CONFIRMED and all fixed -- most severe, the profile spec's own bare-postId shape for getPostMeta/getPublicationState/updateDraft would have hardcoded all three to the built-in post REST route with no compile-time signal, fixed by widening the interface to thread postType through uniformly. Also fixed: three methods not checking for a 404 before Zod-parsing the response, a nullable-link schema inconsistency, an error-body fallback that could never succeed, a WP-CLI version-check parsing the wrong output format, a schema rejecting WordPress's empty-meta-as-[] quirk, WORDPRESS_BASE_URL not reusing the shared safeHttpUrlSchema, an unclamped server-controlled retry delay, healthCheck() inheriting the full 429 backoff instead of failing fast, and a WP-CLI action silently swallowing a failed command. No separate security-review skill run -- the code review already covered credential handling, URL-scheme validation, and boundary validation directly, and no new endpoint/inbound surface exists yet. See docs/implementation/wordpress-adapter.md for the full account.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -4010,7 +4024,16 @@
       "project_version_before": 157,
       "project_version_after": 158,
       "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "approved gate G4-wordpress-adapter for wordpress-adapter -- decision: CONFIRM",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-wordpress-adapter approved (WebDesk Solution, CONFIRM) for the WordPress adapter build (packages/integrations) -- given directly via the explicit 'Gate it and push the branch' instruction. Independent code review (10/10 findings fixed) and live end-to-end verification against a real local WordPress install both complete before the gate was requested; no separate security-review skill run, disclosed explicitly in the approval checklist rather than absorbed silently. See docs/project-state/wordpress-adapter-approval-checklist.md for the full record.",
+      "project_version_before": 158,
+      "project_version_after": 159,
+      "timestamp": "2026-09-09T00:00:00Z"
     }
   ],
-  "current_gate": "G4-grant-notifications-view-owner-growth-approver"
+  "current_gate": "G4-wordpress-adapter"
 }

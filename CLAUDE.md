@@ -224,7 +224,13 @@ operational-infrastructure.md`) surfaced 10 gaps; the user decided each of the 5
 2. Resolve remaining setup inputs in `docs/project-state/setup-input-register.md` — GitHub App
    creation and Google Workspace OAuth client are both **done** (2026-08-12, see "Recent
    decisions"); still open: the real emergency-administrator account list and the WordPress
-   Application Password account. (`WEB_APP_ORIGIN` also resolved 2026-08-12.)
+   Application Password account (production/development — staging is the only one set).
+   (`WEB_APP_ORIGIN` also resolved 2026-08-12.) **A local WordPress dev/test environment was set
+   up 2026-09-09** (`http://localhost/wds/`, a restore of the real staging site's Jetpack
+   backup) and verified working end-to-end for REST API + Application Password auth — see the
+   register's own "Local WordPress dev/test environment" row for the full account, including two
+   real defects found and fixed during verification. This is a local copy for adapter
+   development/testing only; it does not resolve the real staging/production credentials above.
 3. Provision the actual Neon database once a later task actually needs a live connection —
    not before, and not automatically. **That need now concretely exists** — `dashboard-api`'s
    deployed Vercel Function fails at bootstrap on missing `DATABASE_URL` (see "Current state" —
@@ -5994,6 +6000,55 @@ settingType})` contract; `value` is a raw-JSON `<textarea>`, required on create 
     conflicts, fully re-verified after the merge). **This gate approval does not itself authorize
     opening a PR or merging** — each remains its own separate, not-yet-requested authorization, per
     this project's standing "no auto-merge" rule.
+
+97. **WordPress adapter (`packages/integrations`) — built, unit-tested, independently code-reviewed
+    (10/10 findings fixed), live-verified end-to-end against a real WordPress install, gated, and
+    pushed as its own branch — not yet opened as a PR or merged (2026-09-09).** Built directly on
+    the explicit "start the
+    WordPress adapter in packages/integrations" instruction, following that same day's local
+    WordPress dev-environment setup/verification work (see item 2's own note and
+    `docs/project-state/setup-input-register.md`'s "Local WordPress dev/test environment" row).
+    Two design decisions confirmed directly with the user first (`AskUserQuestion`): split
+    `WORDPRESS_APP_USERNAME`/`WORDPRESS_APP_PASSWORD` env vars (over a single combined
+    `WORDPRESS_APP` string), and scope limited to the REST API adapter + WP-CLI named-action
+    stubs, explicitly excluding `dashboard-api` DI wiring (no real business module reads from or
+    writes to WordPress today, so wiring a provider now would be speculative). `WordPressRestAdapter`
+    implements `getPost`/`listPosts`/`getPostMeta`/`getPublicationState`/`createDraft`/`updateDraft`/
+    `healthCheck`, enforcing "approved-draft-only, never direct publish" at the type and runtime
+    level. `wp-cli-actions.ts` provides the 5 named, parameterized WP-CLI actions per
+    `02-wp-cli-and-deployment.md`, with `NotConfiguredWpCliExecutor` as the only wired-in
+    implementation today (WP-CLI/SSH provisioning is still unconfirmed) — it throws rather than
+    fabricating a result, mirroring `UnconfiguredNotificationDeliveryAdapter`'s own discipline. 60
+    unit tests (mocked `fetch`/`WpCliExecutor`), plus real live verification against the local
+    WordPress install using a freshly-generated-then-revoked Application Password. **Independent
+    code review then ran** (this project's own `code-review` skill, high effort, 8 finder angles) —
+    10 findings kept in the final report, **all 10 CONFIRMED and all 10 fixed**: most severe, the
+    profile spec's own bare-`postId` shape for `getPostMeta`/`getPublicationState`/`updateDraft`
+    would have hardcoded all three to the built-in `post` REST route with no compile-time signal —
+    widened the interface to thread `postType` through uniformly before any real caller existed to
+    be broken by widening it later. Also fixed: three methods not checking for a 404 before
+    Zod-parsing the response (threw confusing `ZodError`s instead of clean `WordPressApiError`s); a
+    schema/schema inconsistency on nullable `link`; an error-body fallback that could never actually
+    succeed (`response.text()` after `response.json()` already consumed the body); a WP-CLI version
+    check parsing the wrong output format; a schema rejecting WordPress's own empty-meta-as-`[]`
+    quirk; `WORDPRESS_BASE_URL` not reusing the shared `safeHttpUrlSchema`; an unclamped
+    server-controlled retry delay; `healthCheck()` inheriting the full 429 backoff instead of
+    failing fast; and a WP-CLI action silently swallowing a failed command. A pre-existing,
+    unrelated test-files-leak-into-`dist/` defect (shared with `vercel-blob-adapter.test.ts`) was
+    also closed. No separate security-review skill run — the code review already covered
+    credential handling, URL-scheme validation, and boundary validation directly, and no new
+    endpoint/inbound surface exists yet. See `docs/implementation/wordpress-adapter.md` for the full
+    account. **Required second-role human review complete via the direct "Gate it and push the
+    branch" instruction** — the approval checklist's own findings table served as the review
+    artifact, since there were no open findings of any kind on this branch. **The gate
+    (G4-wordpress-adapter) was then approved** — WebDesk Solution, decision CONFIRM (clean pass,
+    not an override), on branch `wordpress-adapter` — see
+    `outputs/webdesk-growth-dashboard/project.json`'s `gates[]` (`current_gate` now
+    `G4-wordpress-adapter`) and
+    `docs/project-state/wordpress-adapter-approval-checklist.md`'s "Sign-off" section. **"Push the
+    branch" was then executed under the same combined instruction** — pushed to `origin`. **This
+    gate approval does not itself authorize opening a PR or merging** — each remains its own
+    separate, not-yet-requested authorization, per this project's standing "no auto-merge" rule.
 
 ## Recent decisions
 
