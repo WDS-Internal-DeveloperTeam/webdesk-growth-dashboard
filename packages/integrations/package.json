@@ -2,7 +2,7 @@
   "name": "@webdesk/integrations",
   "version": "0.1.0",
   "private": true,
-  "description": "Integration adapters — GitHub/WordPress/Google Workspace/Vercel background jobs remain interfaces only (Phase 1A); the Vercel Blob adapter has a real implementation (VercelBlobAdapter) built for Business Knowledge Center attachments. See docs/contracts/*.md for the full contract each interface formalizes. Dual ESM+CJS build (dist/ + dist-cjs/) — required for dashboard-api's Vercel Function bundler, same as @webdesk/configuration/database/shared-types/validation (see CLAUDE.md's Cautions section).",
+  "description": "Integration adapters — GitHub/Google Workspace/Vercel background jobs remain interfaces only (Phase 1A). Real implementations: VercelBlobAdapter (Business Knowledge Center attachments), WordPressRestAdapter (REST API, Application Password auth), and the named WP-CLI actions in wp-cli-actions.ts (mechanism only — no real SSH executor wired in yet, WP-CLI/SSH provisioning is unconfirmed). See docs/contracts/*.md for the full contract each interface formalizes. Dual ESM+CJS build (dist/ + dist-cjs/) — required for dashboard-api's Vercel Function bundler, same as @webdesk/configuration/database/shared-types/validation (see CLAUDE.md's Cautions section).",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,7 +22,9 @@
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
-    "@webdesk/configuration": "workspace:*"
+    "@webdesk/configuration": "workspace:*",
+    "@webdesk/validation": "workspace:*",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

@@ -1540,6 +1540,20 @@
       "record": "docs/project-state/dashboard-web-integrations-approval-checklist.md",
       "notes": "dashboard-web Integrations UI, closing this module's last named gap on top of the already-gated, already-live backend (G4-integrations, PR #123). List/create/detail/edit routes under /integrations, an IntegrationVerifyAction and IntegrationActiveToggle on the detail page, and three sub-resource sections (real CRUD for environments and secret metadata, read-only for webhook events). Reviewed at light tier per the 2026-08-27 standing rule -- 1 finding fixed (a genuine no-op tolerateDiscard() wrap). No secret value is ever rendered or accepted anywhere, confirmed by direct code read. Security review skipped -- no new endpoint, no new sink. 165/165 dashboard-web unit test files (2040/2040 tests), typecheck clean across 4 packages, production build clean with all 4 routes present.",
       "scope_excludes": "This gate approval does not itself authorize a production deployment beyond the merge itself -- given under the combined \"gate it, push, open PR, and merge\" instruction, all four steps are executed together under that explicit combined authorization."
+    },
+    {
+      "id": "G4-wordpress-adapter",
+      "type": "qa-security-gate",
+      "scope": "wordpress-adapter",
+      "status": "passed",
+      "decision": "CONFIRM",
+      "approver": "WebDesk Solution",
+      "decided_by": "WebDesk Solution",
+      "decided_at": "2026-09-09T00:00:00Z",
+      "approved_commit": "wordpress-adapter (staged, pre-commit)",
+      "record": "docs/project-state/wordpress-adapter-approval-checklist.md",
+      "notes": "WordPress adapter (packages/integrations) -- WordPressRestAdapter (REST API adapter: getPost/listPosts/getPostMeta/getPublicationState/createDraft/updateDraft/healthCheck, Basic Auth, 429 backoff, Zod boundary validation, approved-draft-only write enforcement) and wp-cli-actions.ts (the 5 named WP-CLI actions per 02-wp-cli-and-deployment.md, NotConfiguredWpCliExecutor as the only wired-in implementation since WP-CLI/SSH provisioning is unconfirmed). No dashboard-api DI wiring -- deliberately out of scope, no real business module reads from or writes to WordPress yet. Two design decisions confirmed directly with the user first: split WORDPRESS_APP_USERNAME/WORDPRESS_APP_PASSWORD env vars (over a single combined WORDPRESS_APP string), and build scope limited to the adapter package itself. 60/60 unit tests, typecheck/lint/build clean, live-verified end-to-end against a real local WordPress install using a freshly-generated-then-revoked Application Password. Independent code review (this project's own code-review skill, high effort, 8 finder angles) surfaced 10 findings, all CONFIRMED and all fixed -- most severe, the profile spec's own bare-postId shape for getPostMeta/getPublicationState/updateDraft would have hardcoded all three to the built-in post REST route with no compile-time signal, fixed by widening the interface to thread postType through uniformly. Also fixed: three methods not checking for a 404 before Zod-parsing the response, a nullable-link schema inconsistency, an error-body fallback that could never succeed, a WP-CLI version-check parsing the wrong output format, a schema rejecting WordPress's empty-meta-as-[] quirk, WORDPRESS_BASE_URL not reusing the shared safeHttpUrlSchema, an unclamped server-controlled retry delay, healthCheck() inheriting the full 429 backoff instead of failing fast, and a WP-CLI action silently swallowing a failed command. No separate security-review skill run -- the code review already covered credential handling, URL-scheme validation, and boundary validation directly, and no new endpoint/inbound surface exists yet. See docs/implementation/wordpress-adapter.md for the full account.",
+      "scope_excludes": "This gate approval does not itself authorize opening a PR or merging -- each remains its own separate, not-yet-requested authorization, per this project's standing no-auto-merge rule."
     }
   ],
   "budget": {
@@ -3946,7 +3960,16 @@
       "project_version_before": 153,
       "project_version_after": 154,
       "timestamp": "2026-09-07T00:00:00Z"
+    },
+    {
+      "action": "approved gate G4-wordpress-adapter for wordpress-adapter -- decision: CONFIRM",
+      "actor": "WebDesk Solution",
+      "actor_type": "human",
+      "details": "Gate G4-wordpress-adapter approved (WebDesk Solution, CONFIRM) for the WordPress adapter build (packages/integrations) -- given directly via the explicit 'Gate it and push the branch' instruction. Independent code review (10/10 findings fixed) and live end-to-end verification against a real local WordPress install both complete before the gate was requested; no separate security-review skill run, disclosed explicitly in the approval checklist rather than absorbed silently. See docs/project-state/wordpress-adapter-approval-checklist.md for the full record.",
+      "project_version_before": 154,
+      "project_version_after": 155,
+      "timestamp": "2026-09-09T00:00:00Z"
     }
   ],
-  "current_gate": "G4-dashboard-web-integrations"
+  "current_gate": "G4-wordpress-adapter"
 }

@@ -16,10 +16,71 @@ export interface GitHubAdapter {
   getCommitStatus(owner: string, repo: string, sha: string): Promise<unknown>;
 }
 
-/** Formalizes docs/contracts/wordpress-integration-contract.md. */
+/**
+ * Formalizes docs/contracts/wordpress-integration-contract.md — REVISED here, its first real
+ * implementation (`wordpress-adapter.ts`, `WordPressRestAdapter`), starting from the concrete
+ * interface spec in `webdesk-nodejs/skills/.../integrations/wordpress/01-rest-api-and-app-passwords.md`
+ * (mirrors `BlobStorageAdapter`'s own precedent of being revised for its first real
+ * implementation) but widened during code review: the profile doc's own snippet gives
+ * `getPostMeta`/`getPublicationState`/`updateDraft` a bare `postId` with no `postType`, which
+ * would have hardcoded all three to the built-in `post` REST route with no compile-time signal —
+ * WordPress has no type-agnostic "get any post by ID" route, each post type has its own base
+ * route. Every method that touches a specific post now takes `postType` uniformly, closing that
+ * gap before any real caller exists to be broken by widening it later. Two further differences
+ * from the original Phase 1A stub: (1) no generic `upsertPost` — writes are split into
+ * `createDraft`/`updateDraft`, both of which enforce "approved-draft-only, never direct publish"
+ * at the type level (no `status` field wider than the literal `"draft"`); (2) `id`/`postId` are
+ * `number`, matching WordPress's own REST API (`upsertPost`'s original `string` was never
+ * accurate). `getPost` returns `WPPost | null` (not the profile doc's non-nullable `WPPost`) —
+ * `null` on a 404 is the "no data" signal the contract's own "Error handling" section requires be
+ * distinguished from a real failure.
+ */
 export interface WordPressAdapter {
-  getPost(postType: string, id: string): Promise<unknown>;
-  upsertPost(postType: string, id: string | null, data: Record<string, unknown>): Promise<unknown>;
+  getPost(postType: string, id: number): Promise<WPPost | null>;
+  listPosts(postType: string, query: WPListQuery): Promise<WPPost[]>;
+  getPostMeta(postType: string, postId: number, key: string): Promise<unknown>;
+  getPublicationState(
+    postType: string,
+    postId: number,
+  ): Promise<{ status: string; url: string | null }>;
+  /** Always creates with `status: "draft"` — see `WordPressRestAdapter`'s own doc comment for the code-level enforcement. */
+  createDraft(postType: string, data: WPDraftInput): Promise<WPPost>;
+  /** Never changes `status` away from `"draft"` — see `WordPressRestAdapter`'s own doc comment for the code-level enforcement. */
+  updateDraft(postType: string, postId: number, data: Partial<WPDraftInput>): Promise<WPPost>;
+  healthCheck(): Promise<{ ok: boolean; latencyMs: number; wpVersion?: string }>;
+}
+
+/** A normalized subset of a WordPress REST API post object — see `wordpress-adapter.ts`'s `wpPostSchema` for the exact validated shape. */
+export interface WPPost {
+  readonly id: number;
+  readonly status: string;
+  readonly type: string;
+  readonly slug: string;
+  readonly link: string | null;
+  readonly date: string;
+  readonly modified: string;
+  readonly title: { readonly rendered: string };
+  readonly content?: { readonly rendered: string };
+  readonly excerpt?: { readonly rendered: string };
+  readonly meta?: Readonly<Record<string, unknown>>;
+}
+
+export interface WPListQuery {
+  readonly page?: number;
+  readonly perPage?: number;
+  readonly search?: string;
+  readonly status?: readonly string[];
+  readonly orderby?: string;
+  readonly order?: "asc" | "desc";
+}
+
+export interface WPDraftInput {
+  readonly title?: string;
+  readonly content?: string;
+  readonly excerpt?: string;
+  readonly meta?: Readonly<Record<string, unknown>>;
+  /** Only ever `"draft"` — see `assertDraftOnly` in `wordpress-adapter.ts`. */
+  readonly status?: "draft";
 }
 
 /** Formalizes docs/contracts/google-workspace-auth-contract.md. */
